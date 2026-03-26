@@ -1,55 +1,90 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import AppShell from "@/components/layout/AppShell";
 import StatusPill from "@/components/ui/StatusPill";
 import GradientButton from "@/components/ui/GradientButton";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { api, Alert, AlertSubscription } from "@/lib/api";
 
 const categories = ["DeFi", "AI", "Macro", "L2s", "Stablecoins"];
 const accounts = ["Vitalik", "CZ", "Cobie", "Hasu"];
 const reportTypes = ["Research", "Earnings", "On-chain analysis"];
 
-const alertCards = [
-  {
-    type: "Big account posted",
-    context: "@VitalikButerin just dropped a thread on enshrined PBS.",
-    draft:
-      "Vitalik's PBS take is interesting but misses the centralizing force of builder auctions. The real question is whether inclusion lists can fix it.",
-    time: "~4 min ago",
-    pillLabel: "4 min",
-  },
-  {
-    type: "Trending topic",
-    context: "#EigenLayer restaking TVL just crossed $10B.",
-    draft:
-      "EigenLayer at $10B TVL but nobody's stress-testing the slashing conditions. This is 2021 yield farming energy all over again.",
-    time: "~12 min ago",
-    pillLabel: "12 min",
-  },
-  {
-    type: "New report dropped",
-    context: "Delphi Research: 'State of L2 Sequencing' published.",
-    draft:
-      "New Delphi report on L2 sequencing is a must-read. 3-thread summary incoming.",
-    time: "~25 min ago",
-    pillLabel: "25 min",
-  },
-];
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `~${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `~${hrs}h ago`;
+  return `~${Math.floor(hrs / 24)}d ago`;
+}
 
 export default function AlertsPage() {
+  const { token } = useAuth();
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [subscriptions, setSubscriptions] = useState<AlertSubscription[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeCategories, setActiveCategories] = useState<Set<string>>(
     new Set(["DeFi", "AI"])
   );
 
-  const toggleCategory = (cat: string) => {
+  const loadData = useCallback(async () => {
+    if (!token) { setLoading(false); return; }
+    setLoading(true);
+    try {
+      const [alertRes, subRes] = await Promise.all([
+        api.alerts.feed(token),
+        api.alerts.subscriptions(token),
+      ]);
+      setAlerts(alertRes.alerts);
+      setSubscriptions(subRes.subscriptions);
+
+      // Sync active categories from subscriptions
+      const catSubs = subRes.subscriptions
+        .filter((s) => s.type === "CATEGORY" && s.isActive)
+        .map((s) => s.value);
+      if (catSubs.length > 0) setActiveCategories(new Set(catSubs));
+    } catch (e) {
+      console.error("Failed to load alerts:", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const toggleCategory = async (cat: string) => {
     setActiveCategories((prev) => {
       const next = new Set(prev);
       if (next.has(cat)) next.delete(cat);
       else next.add(cat);
       return next;
     });
+    // Subscribe if not already subscribed
+    if (!activeCategories.has(cat) && token) {
+      const existing = subscriptions.find((s) => s.type === "CATEGORY" && s.value === cat);
+      if (!existing) {
+        try {
+          const { subscription } = await api.alerts.subscribe(token, "CATEGORY", cat);
+          setSubscriptions((prev) => [...prev, subscription]);
+        } catch (e) {
+          console.error("Failed to subscribe:", e);
+        }
+      }
+    }
   };
+
+  // Use real alerts if available, fall back to static samples
+  const staticAlerts = [
+    { id: "s1", type: "Big account posted", title: "@VitalikButerin just dropped a thread on enshrined PBS.", context: "@VitalikButerin just dropped a thread on enshrined PBS.", draftReply: "Vitalik's PBS take is interesting but misses the centralizing force of builder auctions. The real question is whether inclusion lists can fix it.", createdAt: new Date(Date.now() - 4 * 60000).toISOString() },
+    { id: "s2", type: "Trending topic", title: "#EigenLayer restaking TVL just crossed $10B.", context: "#EigenLayer restaking TVL just crossed $10B.", draftReply: "EigenLayer at $10B TVL but nobody's stress-testing the slashing conditions. This is 2021 yield farming energy all over again.", createdAt: new Date(Date.now() - 12 * 60000).toISOString() },
+    { id: "s3", type: "New report dropped", title: "Delphi Research: 'State of L2 Sequencing' published.", context: "Delphi Research: 'State of L2 Sequencing' published.", draftReply: "New Delphi report on L2 sequencing is a must-read. 3-thread summary incoming.", createdAt: new Date(Date.now() - 25 * 60000).toISOString() },
+  ];
+
+  const displayAlerts = alerts.length > 0 ? alerts : staticAlerts;
 
   return (
     <AppShell>
@@ -96,21 +131,14 @@ export default function AlertsPage() {
             </p>
             <div className="space-y-2">
               {accounts.map((name) => (
-                <div
-                  key={name}
-                  className="flex items-center justify-between"
-                >
+                <div key={name} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full bg-atlas-surface flex items-center justify-center text-xs text-atlas-text-secondary">
                       {name[0]}
                     </div>
                     <span className="text-sm text-atlas-text">{name}</span>
                   </div>
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    className="accent-atlas-teal"
-                  />
+                  <input type="checkbox" defaultChecked className="accent-atlas-teal" />
                 </div>
               ))}
               <p className="text-atlas-teal text-xs cursor-pointer hover:underline">
@@ -126,15 +154,8 @@ export default function AlertsPage() {
             </p>
             <div className="space-y-2">
               {reportTypes.map((type) => (
-                <label
-                  key={type}
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    className="accent-atlas-teal"
-                  />
+                <label key={type} className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" defaultChecked className="accent-atlas-teal" />
                   <span className="text-sm text-atlas-text">{type}</span>
                 </label>
               ))}
@@ -148,15 +169,8 @@ export default function AlertsPage() {
             </p>
             <div className="space-y-2">
               {["Portal", "Telegram"].map((ch) => (
-                <label
-                  key={ch}
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    className="accent-atlas-teal"
-                  />
+                <label key={ch} className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" defaultChecked className="accent-atlas-teal" />
                   <span className="text-sm text-atlas-text">{ch}</span>
                 </label>
               ))}
@@ -169,43 +183,41 @@ export default function AlertsPage() {
 
         {/* Main Feed */}
         <div className="flex-1 space-y-4">
-          {alertCards.map((alert, i) => (
-            <div
-              key={i}
-              className="bg-atlas-surface border border-glass-border rounded-2xl p-6"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-atlas-text">
-                  {alert.type}
-                </span>
-                <StatusPill label={alert.pillLabel} variant="speed" />
-              </div>
-              <p className="text-sm text-atlas-text-secondary mb-2 pl-3 border-l-2 border-glass-border">
-                {alert.context}
-              </p>
-              <p className="text-sm text-atlas-text mb-3">{alert.draft}</p>
-              <p className="text-xs text-atlas-text-muted mb-4">
-                Reply opportunity — {alert.time}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <GradientButton variant="outline-teal">
-                  Reply now
-                </GradientButton>
-                <GradientButton variant="outline-teal">
-                  Post as new
-                </GradientButton>
-                <GradientButton variant="outline-teal">
-                  Edit in Crafting Station
-                </GradientButton>
-                <button
-                  type="button"
-                  className="px-4 py-2 text-sm text-atlas-text-secondary hover:text-atlas-text transition-colors"
-                >
-                  Skip
-                </button>
-              </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-12 text-atlas-text-secondary">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              Loading alerts…
             </div>
-          ))}
+          ) : (
+            displayAlerts.map((alert) => (
+              <div key={alert.id} className="bg-atlas-surface border border-glass-border rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-atlas-text">{alert.type}</span>
+                  <StatusPill label={timeAgo(alert.createdAt).replace("~", "").replace(" ago", "")} variant="speed" />
+                </div>
+                <p className="text-sm text-atlas-text-secondary mb-2 pl-3 border-l-2 border-glass-border">
+                  {alert.context || alert.title}
+                </p>
+                {alert.draftReply && (
+                  <p className="text-sm text-atlas-text mb-3">{alert.draftReply}</p>
+                )}
+                <p className="text-xs text-atlas-text-muted mb-4">
+                  Reply opportunity — {timeAgo(alert.createdAt)}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <GradientButton variant="outline-teal">Reply now</GradientButton>
+                  <GradientButton variant="outline-teal">Post as new</GradientButton>
+                  <GradientButton variant="outline-teal">Edit in Crafting Station</GradientButton>
+                  <button
+                    type="button"
+                    className="px-4 py-2 text-sm text-atlas-text-secondary hover:text-atlas-text transition-colors"
+                  >
+                    Skip
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
 
           {/* Bottom Controls */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 gap-3 sm:gap-0">
@@ -216,16 +228,10 @@ export default function AlertsPage() {
               <option>Reports</option>
             </select>
             <div className="flex gap-4">
-              <button
-                type="button"
-                className="text-atlas-teal text-sm hover:underline"
-              >
+              <button type="button" className="text-atlas-teal text-sm hover:underline">
                 Mark all as read
               </button>
-              <button
-                type="button"
-                className="text-atlas-text-secondary text-sm hover:text-atlas-text"
-              >
+              <button type="button" className="text-atlas-text-secondary text-sm hover:text-atlas-text">
                 Pause alerts for 1 hour
               </button>
             </div>
