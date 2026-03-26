@@ -187,7 +187,7 @@ export default function AlertsPage() {
               <p className="text-xs text-atlas-text-muted mb-4">
                 Reply opportunity — {alert.time}
               </p>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <GradientButton variant="outline-teal">
                   Reply now
                 </GradientButton>
@@ -208,7 +208,7 @@ export default function AlertsPage() {
           ))}
 
           {/* Bottom Controls */}
-          <div className="flex items-center justify-between pt-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 gap-3 sm:gap-0">
             <select className="bg-atlas-surface border border-glass-border rounded-lg px-3 py-2 text-sm text-atlas-text focus:outline-none">
               <option>Showing: All alerts</option>
               <option>Big accounts only</option>

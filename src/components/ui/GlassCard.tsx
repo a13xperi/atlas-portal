@@ -15,7 +15,7 @@ export default function GlassCard({
 
   return (
     <div
-      className={`glass-card px-6 sm:px-12 py-8 sm:py-10 w-full ${widthClass} ${className}`}
+      className={`glass-card px-6 sm:px-[49px] py-8 sm:py-[41px] w-full ${widthClass} ${className}`}
       style={widthStyle}
     >
       {children}

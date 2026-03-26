@@ -39,10 +39,10 @@ export default function LoginPage() {
   return (
     <OnboardingShell maxWidth="480px">
       <div className="text-center">
-        <h1 className="font-heading text-4xl font-bold tracking-widest text-atlas-text">
+        <h1 className="font-heading text-[48px] font-bold tracking-[-1.2px] text-atlas-text">
           ATLAS
         </h1>
-        <p className="font-heading text-sm italic text-atlas-text-secondary mt-2">
+        <p className="font-heading text-lg italic text-[#bcc9c7] mt-2">
           If you are here, you&apos;re already in the right place
         </p>
 
@@ -68,7 +68,7 @@ export default function LoginPage() {
 
         <div className="h-4" />
 
-        <GradientButton fullWidth onClick={handleGetStarted}>
+        <GradientButton fullWidth onClick={handleGetStarted} size="lg">
           {loading ? "Loading..." : "Get Started"}
         </GradientButton>
 

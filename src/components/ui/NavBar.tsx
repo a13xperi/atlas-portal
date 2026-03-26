@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, Bell } from "lucide-react";
+import { useState } from "react";
+import { Search, Bell, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
@@ -59,10 +60,11 @@ export default function NavBar({ variant }: NavBarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
   const initial = user?.handle?.[0]?.toUpperCase() || user?.displayName?.[0]?.toUpperCase() || "A";
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-atlas-nav border-b border-glass-border">
-      <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/dashboard" className="flex items-center gap-2">
             <DelphiLogo />
@@ -119,8 +121,45 @@ export default function NavBar({ variant }: NavBarProps) {
           >
             {initial}
           </Link>
+          {variant === "app" && (
+            <button
+              type="button"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="md:hidden text-atlas-text-secondary hover:text-atlas-text transition-colors p-1"
+              aria-label="Toggle menu"
+            >
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Mobile menu */}
+      {variant === "app" && mobileOpen && (
+        <div className="md:hidden bg-atlas-nav border-t border-glass-border px-4 py-3 space-y-1">
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              onClick={() => setMobileOpen(false)}
+              className={`block py-2.5 px-3 rounded-lg text-sm transition-colors ${
+                pathname === link.href
+                  ? "text-atlas-text bg-atlas-surface font-medium"
+                  : "text-atlas-text-secondary hover:text-atlas-text hover:bg-atlas-surface"
+              }`}
+            >
+              {link.label}
+            </Link>
+          ))}
+          <Link
+            href="/search"
+            onClick={() => setMobileOpen(false)}
+            className="block py-2.5 px-3 rounded-lg text-sm text-atlas-text-secondary hover:text-atlas-text hover:bg-atlas-surface sm:hidden"
+          >
+            Search
+          </Link>
+        </div>
+      )}
     </nav>
   );
 }

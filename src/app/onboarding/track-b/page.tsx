@@ -53,7 +53,7 @@ export default function TrackBPage() {
           <h3 className="font-heading text-lg text-atlas-text mb-3">
             What type of style do you like?
           </h3>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {styleOptions.map((style) => (
               <button
                 key={style}

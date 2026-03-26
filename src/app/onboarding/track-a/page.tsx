@@ -117,7 +117,7 @@ export default function TrackAPage() {
           <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
             Add reference accounts for voice blending.
           </label>
-          <div className="mt-3 flex items-center gap-3">
+          <div className="mt-3 flex flex-wrap items-center gap-3">
             {referenceAccounts.map((name) => (
               <div
                 key={name}

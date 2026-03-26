@@ -76,8 +76,8 @@ export default function TelegramPage() {
                 {item.desc}
               </p>
               {item.step === 2 && (
-                <div className="mt-3 flex items-center gap-4">
-                  <div className="w-[140px] h-[140px] bg-atlas-surface border-2 border-atlas-teal rounded-xl flex items-center justify-center text-atlas-text-muted text-xs">
+                <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="w-[140px] h-[140px] bg-atlas-surface border-2 border-atlas-teal rounded-xl flex items-center justify-center text-atlas-text-muted text-xs shrink-0">
                     QR Code
                   </div>
                   <span className="text-atlas-teal text-sm hover:underline cursor-pointer">

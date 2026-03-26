@@ -32,7 +32,7 @@ export default function HandoffPage() {
           <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
             Set up your feedback channels.
           </label>
-          <div className="mt-3 flex gap-3">
+          <div className="mt-3 flex flex-wrap gap-3">
             {feedbackChannels.map((channel) => (
               <label
                 key={channel}
@@ -55,8 +55,8 @@ export default function HandoffPage() {
             Meet your Atlas bot on Telegram — one bot, everything.
           </h3>
 
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-[200px] h-[200px] bg-atlas-surface border-2 border-atlas-teal rounded-xl flex items-center justify-center text-atlas-text-muted text-sm">
+          <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
+            <div className="w-[160px] h-[160px] sm:w-[200px] sm:h-[200px] bg-atlas-surface border-2 border-atlas-teal rounded-xl flex items-center justify-center text-atlas-text-muted text-sm shrink-0">
               QR Code
             </div>
             <span className="text-atlas-teal text-sm hover:underline cursor-pointer">

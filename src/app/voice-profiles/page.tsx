@@ -92,7 +92,7 @@ export default function VoiceProfilesPage() {
         <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
           Reference Voices
         </label>
-        <div className="mt-3 grid grid-cols-3 sm:grid-cols-6 gap-3">
+        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           {displayVoices.map((voice) => {
             const isSelected = selectedVoices.has(voice.id);
             return (
@@ -100,11 +100,11 @@ export default function VoiceProfilesPage() {
                 key={voice.id}
                 type="button"
                 onClick={() => toggleVoice(voice.id)}
-                className={`flex flex-col items-center gap-2 bg-atlas-surface rounded-2xl p-3 transition-all ${
+                className={`flex items-center gap-3 bg-atlas-surface rounded-2xl p-3 transition-all ${
                   isSelected ? "border border-atlas-teal" : "border border-glass-border"
                 }`}
               >
-                <div className="relative w-10 h-10 rounded-full bg-atlas-nav flex items-center justify-center text-atlas-text-secondary text-sm">
+                <div className="relative w-10 h-10 rounded-full bg-atlas-nav flex items-center justify-center text-atlas-text-secondary text-sm shrink-0">
                   {voice.name[0]}
                   {isSelected && (
                     <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-atlas-teal flex items-center justify-center">
@@ -112,7 +112,7 @@ export default function VoiceProfilesPage() {
                     </div>
                   )}
                 </div>
-                <span className="text-xs text-atlas-text-secondary">{voice.name}</span>
+                <span className="text-sm text-atlas-text-secondary">{voice.name}</span>
               </button>
             );
           })}
@@ -131,7 +131,7 @@ export default function VoiceProfilesPage() {
           {displayBlends.map((blend) => (
             <div
               key={blend.name}
-              className="bg-atlas-surface border border-glass-border rounded-2xl p-4 flex items-center justify-between"
+              className="bg-atlas-surface border border-glass-border border-l-2 border-l-atlas-teal rounded-2xl p-4 flex items-center justify-between"
             >
               <div>
                 <p className="text-sm text-atlas-text font-medium">{blend.name}</p>

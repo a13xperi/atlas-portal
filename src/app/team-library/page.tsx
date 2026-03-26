@@ -119,7 +119,7 @@ export default function TeamLibraryPage() {
       </p>
 
       {/* Management Bar */}
-      <div className="mt-8 bg-atlas-surface border border-glass-border rounded-2xl px-8 py-4 flex items-center justify-between">
+      <div className="mt-8 bg-atlas-surface border border-glass-border rounded-2xl px-4 sm:px-8 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
         <button
           type="button"
           className="text-sm font-bold text-atlas-text hover:text-atlas-teal transition-colors"

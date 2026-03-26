@@ -58,7 +58,7 @@ export default function ManagementPage() {
       </div>
 
       {/* SECTION 1: Overview KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
         {kpiCards.map((kpi) => (
           <div
             key={kpi.label}
@@ -156,7 +156,7 @@ export default function ManagementPage() {
             View All Rankings
           </button>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {leaderboard.map((entry) => (
             <div
               key={entry.rank}
@@ -300,7 +300,7 @@ export default function ManagementPage() {
       </div>
 
       {/* SECTION 6: Bottom Action Strip */}
-      <div className="flex flex-col sm:flex-row flex-wrap gap-4 pt-4">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 pt-4">
         <GradientButton>Reload inactive with Top 5 profiles</GradientButton>
         <GradientButton variant="outline-warning">
           Send nudge to all inactive

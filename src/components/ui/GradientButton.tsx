@@ -6,6 +6,7 @@ export interface GradientButtonProps {
   fullWidth?: boolean;
   variant?: "primary" | "outline-success" | "outline-warning" | "outline-teal";
   type?: "button" | "submit";
+  size?: "default" | "lg";
 }
 
 const variantClasses: Record<
@@ -27,12 +28,15 @@ export default function GradientButton({
   fullWidth = false,
   variant = "primary",
   type = "button",
+  size = "default",
 }: GradientButtonProps) {
+  const sizeClasses = size === "lg" ? "px-6 py-4 text-lg font-bold" : "px-6 py-3 text-sm";
+
   return (
     <button
       type={type}
       onClick={onClick}
-      className={`${variantClasses[variant]} px-6 py-3 text-sm cursor-pointer ${
+      className={`${variantClasses[variant]} ${sizeClasses} cursor-pointer ${
         fullWidth ? "w-full" : ""
       }`}
     >

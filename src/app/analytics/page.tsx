@@ -225,7 +225,8 @@ export default function AnalyticsPage() {
 
       {/* SECTION 5: Top Tweets */}
       <div className="mb-6">
-        <h2 className="font-heading text-xl text-atlas-text mb-4">
+        <h2 className="font-heading text-xl text-atlas-text mb-4 flex items-center gap-3">
+          <span className="w-1 h-6 bg-atlas-teal rounded-full" />
           Top Performance Assets
         </h2>
         <div className="bg-atlas-surface border border-glass-border rounded-xl overflow-hidden">
@@ -327,7 +328,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* SECTION 8: Footer */}
-      <div className="flex items-center justify-between pt-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 pt-4">
         <span className="text-sm text-atlas-text-secondary">
           Page 10 of Atlas System
         </span>

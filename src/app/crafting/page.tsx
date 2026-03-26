@@ -16,9 +16,9 @@ export default function CraftingPage() {
   return (
     <AppShell>
       {/* Usage Strip */}
-      <div className="flex items-center justify-between bg-atlas-surface border border-glass-border rounded-3xl px-6 py-3">
-        <div className="flex items-center gap-6">
-          <svg className="w-10 h-10" viewBox="0 0 40 40">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-atlas-surface border border-glass-border rounded-2xl sm:rounded-3xl px-4 sm:px-6 py-3 gap-3 sm:gap-0">
+        <div className="flex items-center gap-4 sm:gap-6">
+          <svg className="w-10 h-10 shrink-0" viewBox="0 0 40 40">
             <circle
               cx="20"
               cy="20"
@@ -39,14 +39,14 @@ export default function CraftingPage() {
               transform="rotate(-90 20 20)"
             />
           </svg>
-          <div className="flex gap-6 text-sm text-atlas-text-secondary">
+          <div className="flex flex-wrap gap-3 sm:gap-6 text-sm text-atlas-text-secondary">
             <span>Feedback given: 12 this week</span>
             <span>Drafts refined: 8</span>
           </div>
         </div>
         <Link
           href="/analytics"
-          className="text-atlas-teal text-sm hover:underline"
+          className="text-atlas-teal text-sm hover:underline shrink-0"
         >
           View full analytics →
         </Link>
@@ -104,15 +104,15 @@ export default function CraftingPage() {
 
       {/* Indicators */}
       <div className="mt-4 grid grid-cols-2 gap-4">
-        <div className="bg-atlas-surface border border-glass-border rounded-2xl p-4">
-          <p className="text-atlas-text-secondary text-sm">Confidence</p>
-          <p className="text-atlas-success text-xl font-semibold">87%</p>
+        <div className="bg-atlas-surface border border-glass-border border-l-4 border-l-atlas-success rounded-2xl p-4">
+          <p className="text-atlas-text-secondary text-xs uppercase tracking-wider">Confidence</p>
+          <p className="text-atlas-success font-heading text-2xl font-bold">87%</p>
         </div>
-        <div className="bg-atlas-surface border border-glass-border rounded-2xl p-4">
-          <p className="text-atlas-text-secondary text-sm">
+        <div className="bg-atlas-surface border border-glass-border border-l-4 border-l-atlas-teal rounded-2xl p-4">
+          <p className="text-atlas-text-secondary text-xs uppercase tracking-wider">
             Predicted engagement
           </p>
-          <p className="text-atlas-teal text-xl font-semibold">~2.4K</p>
+          <p className="text-atlas-teal font-heading text-2xl font-bold">~2.4K</p>
         </div>
       </div>
 

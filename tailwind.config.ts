@@ -24,6 +24,7 @@ const config: Config = {
         "glass-border": "rgba(255,255,255,0.15)",
       },
       borderRadius: {
+        "3xl": "24px",
         "2xl": "16px",
         lg: "8px",
       },
