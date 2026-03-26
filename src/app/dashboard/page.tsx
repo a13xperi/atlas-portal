@@ -1,15 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import StatusPill from "@/components/ui/StatusPill";
-
-const stats = [
-  { label: "Tweets this week", value: "12" },
-  { label: "Engagement total", value: "8.4K" },
-  { label: "Confidence trend", value: "↑", color: "text-atlas-success" },
-  { label: "Streak", value: "5 days", color: "text-atlas-teal" },
-];
+import { useAuth } from "@/lib/auth";
+import { api, TweetDraft, AnalyticsSummary } from "@/lib/api";
 
 const navCards = [
   { label: "Crafting Station", href: "/crafting" },
@@ -21,19 +17,35 @@ const navCards = [
   { label: "Team Management", href: "/management" },
 ];
 
-const recentActivity = [
-  { text: "Draft: AI momentum thread — 2h ago", variant: "draft" as const },
-  { text: "Posted: ETH staking analysis — 5h ago", variant: "posted" as const },
-  { text: "Feedback: Voice calibration update — 8h ago", variant: "feedback" as const },
-  { text: "Draft: L2 comparison thread — 12h ago", variant: "draft" as const },
-  { text: "Posted: DeFi yield roundup — 1d ago", variant: "posted" as const },
-];
-
 export default function DashboardPage() {
+  const { user, token } = useAuth();
+  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [drafts, setDrafts] = useState<TweetDraft[]>([]);
+
+  useEffect(() => {
+    if (!token) return;
+    api.analytics.summary(token).then((r) => setSummary(r.summary)).catch(() => {});
+    api.drafts.list(token).then((r) => setDrafts(r.drafts.slice(0, 5))).catch(() => {});
+  }, [token]);
+
+  const stats = [
+    { label: "Drafts this week", value: String(summary?.draftsCreated ?? 0) },
+    { label: "Posts", value: String(summary?.draftsPosted ?? 0) },
+    { label: "Feedback given", value: String(summary?.feedbackGiven ?? 0), color: "text-atlas-success" },
+    { label: "Reports ingested", value: String(summary?.reportsIngested ?? 0), color: "text-atlas-teal" },
+  ];
+
+  const statusMap: Record<string, "draft" | "posted" | "feedback"> = {
+    DRAFT: "draft",
+    POSTED: "posted",
+    APPROVED: "feedback",
+    ARCHIVED: "draft",
+  };
+
   return (
     <AppShell>
       <h1 className="font-heading text-2xl text-atlas-text">
-        Welcome back, Analyst
+        Welcome back, {user?.handle || "Analyst"}
       </h1>
 
       <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -65,18 +77,26 @@ export default function DashboardPage() {
       <div className="mt-8">
         <p className="text-atlas-text-secondary text-sm mb-4">Recent activity</p>
         <div className="bg-atlas-surface border border-glass-border rounded-2xl divide-y divide-glass-border">
-          {recentActivity.map((item, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 gap-2"
-            >
-              <span className="text-xs sm:text-sm text-atlas-text truncate">{item.text}</span>
-              <StatusPill
-                label={item.variant.charAt(0).toUpperCase() + item.variant.slice(1)}
-                variant={item.variant}
-              />
+          {drafts.length > 0 ? (
+            drafts.map((draft) => (
+              <div
+                key={draft.id}
+                className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 gap-2"
+              >
+                <span className="text-xs sm:text-sm text-atlas-text truncate">
+                  {draft.content.slice(0, 60)}...
+                </span>
+                <StatusPill
+                  label={draft.status}
+                  variant={statusMap[draft.status] || "draft"}
+                />
+              </div>
+            ))
+          ) : (
+            <div className="px-6 py-8 text-center text-atlas-text-secondary text-sm">
+              No drafts yet. Head to the Crafting Station to create your first tweet.
             </div>
-          ))}
+          )}
         </div>
       </div>
     </AppShell>

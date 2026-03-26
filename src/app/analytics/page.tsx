@@ -1,12 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import AppShell from "@/components/layout/AppShell";
+import { useAuth } from "@/lib/auth";
+import { api, AnalyticsSummary, LearningLogEntry, TweetDraft } from "@/lib/api";
 
-const usageStats = [
-  { label: "Drafts", value: "34" },
-  { label: "Feedback", value: "18" },
-  { label: "Refinements", value: "7" },
-  { label: "Ingested", value: "12" },
+const fallbackStats = [
+  { label: "Drafts", value: "0" },
+  { label: "Feedback", value: "0" },
+  { label: "Refinements", value: "0" },
+  { label: "Ingested", value: "0" },
 ];
 
 const topTweets = [
@@ -68,7 +71,27 @@ const predictedData = [40, 55, 45, 70, 60, 50, 65];
 const actualData = [35, 60, 50, 80, 55, 65, 75];
 
 export default function AnalyticsPage() {
+  const { token } = useAuth();
+  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [logEntries, setLogEntries] = useState<LearningLogEntry[]>([]);
+  const [topDrafts, setTopDrafts] = useState<TweetDraft[]>([]);
   const chartMax = 100;
+
+  useEffect(() => {
+    if (!token) return;
+    api.analytics.summary(token).then((r) => setSummary(r.summary)).catch(() => {});
+    api.analytics.learningLog(token).then((r) => setLogEntries(r.entries)).catch(() => {});
+    api.drafts.list(token).then((r) => setTopDrafts(r.drafts.slice(0, 4))).catch(() => {});
+  }, [token]);
+
+  const usageStats = summary
+    ? [
+        { label: "Drafts", value: String(summary.draftsCreated) },
+        { label: "Feedback", value: String(summary.feedbackGiven) },
+        { label: "Refinements", value: String(summary.refinements) },
+        { label: "Ingested", value: String(summary.reportsIngested) },
+      ]
+    : fallbackStats;
 
   return (
     <AppShell>

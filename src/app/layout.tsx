@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { playfairDisplay, inter } from "@/lib/fonts";
+import Providers from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,7 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${playfairDisplay.variable} ${inter.variable}`}>
       <body className="font-body bg-atlas-bg text-atlas-text min-h-screen">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

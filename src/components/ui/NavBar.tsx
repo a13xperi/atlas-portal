@@ -3,6 +3,7 @@
 import { Search, Bell } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth";
 
 export interface NavBarProps {
   variant: "app" | "onboarding";
@@ -56,6 +57,8 @@ function DelphiLogo() {
 
 export default function NavBar({ variant }: NavBarProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const initial = user?.handle?.[0]?.toUpperCase() || user?.displayName?.[0]?.toUpperCase() || "A";
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-atlas-nav border-b border-glass-border">
@@ -114,7 +117,7 @@ export default function NavBar({ variant }: NavBarProps) {
                 : "border-glass-border text-atlas-text-secondary hover:border-atlas-text-secondary"
             }`}
           >
-            A
+            {initial}
           </Link>
         </div>
       </div>
