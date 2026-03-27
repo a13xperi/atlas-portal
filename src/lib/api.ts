@@ -98,6 +98,13 @@ export const api = {
       request<{ subscription: AlertSubscription }>("/api/alerts/subscriptions", { method: "POST", token, body: { type, value, delivery } }),
   },
 
+  research: {
+    conduct: (token: string, query: string) =>
+      request<{ result: ResearchResultData }>("/api/research", { method: "POST", token, body: { query } }),
+    history: (token: string) =>
+      request<{ results: ResearchResultData[] }>("/api/research/history", { token }),
+  },
+
   users: {
     profile: (token: string) =>
       request<{ user: User }>("/api/users/profile", { token }),
@@ -209,6 +216,18 @@ export interface TeamAnalyst {
   handle: string;
   voiceProfile?: VoiceProfile;
   _count: { tweetDrafts: number; analyticsEvents: number; sessions: number };
+}
+
+export interface ResearchResultData {
+  id: string;
+  query: string;
+  summary: string;
+  keyFacts: string[];
+  sentiment: "bullish" | "bearish" | "neutral" | "mixed";
+  relatedTopics: string[];
+  sources: string[];
+  confidence: number;
+  createdAt: string;
 }
 
 export interface TeamMember {
