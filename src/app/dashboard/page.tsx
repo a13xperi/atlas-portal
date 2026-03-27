@@ -31,8 +31,8 @@ export default function DashboardPage() {
   const stats = [
     { label: "Drafts this week", value: String(summary?.draftsCreated ?? 0) },
     { label: "Posts", value: String(summary?.draftsPosted ?? 0) },
-    { label: "Feedback given", value: String(summary?.feedbackGiven ?? 0), color: "text-atlas-success" },
-    { label: "Reports ingested", value: String(summary?.reportsIngested ?? 0), color: "text-atlas-teal" },
+    { label: "Feedback given", value: String(summary?.feedbackGiven ?? 0) },
+    { label: "Reports ingested", value: String(summary?.reportsIngested ?? 0) },
   ];
 
   const statusMap: Record<string, "draft" | "posted" | "feedback"> = {
@@ -55,14 +55,14 @@ export default function DashboardPage() {
             className="bg-atlas-surface border border-glass-border rounded-2xl p-6"
           >
             <p className="text-atlas-text-secondary text-sm">{stat.label}</p>
-            <p className={`text-[30px] font-semibold mt-1 ${stat.color || "text-atlas-text"}`}>
+            <p className="text-[30px] font-semibold mt-1 text-atlas-text">
               {stat.value}
             </p>
           </div>
         ))}
       </div>
 
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {navCards.map((card) => (
           <Link
             key={card.label}
