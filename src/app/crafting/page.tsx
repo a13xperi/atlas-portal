@@ -52,12 +52,14 @@ export default function CraftingPage() {
     if (!token || !text.trim()) return;
     setCreating(true);
     try {
-      const { draft } = await api.drafts.create(token, text.trim(), "MANUAL");
+      // Detect source type from content
+      const sourceType = text.trim().startsWith("http") ? "ARTICLE" : "MANUAL";
+      const { draft } = await api.drafts.generate(token, text.trim(), sourceType);
       setDrafts((prev) => [draft, ...prev]);
       setActiveDraft(draft);
       setActiveVersion(0);
     } catch (e) {
-      console.error("Failed to create draft:", e);
+      console.error("Failed to generate draft:", e);
     } finally {
       setCreating(false);
     }
@@ -79,16 +81,40 @@ export default function CraftingPage() {
 
   const handleFeedback = async () => {
     if (!token || !activeDraft || !feedback.trim()) return;
-    setLoading(true);
+    setCreating(true);
     try {
-      const { draft } = await api.drafts.update(token, activeDraft.id, { feedback: feedback.trim() });
+      const { draft } = await api.drafts.regenerate(token, activeDraft.id, feedback.trim());
+      setDrafts((prev) => [draft, ...prev]);
       setActiveDraft(draft);
-      setDrafts((prev) => prev.map((d) => (d.id === draft.id ? draft : d)));
+      setActiveVersion(0);
       setFeedback("");
     } catch (e) {
-      console.error("Failed to submit feedback:", e);
+      // Fallback: just save feedback if regenerate fails (e.g. no sourceContent)
+      try {
+        const { draft } = await api.drafts.update(token, activeDraft.id, { feedback: feedback.trim() });
+        setActiveDraft(draft);
+        setDrafts((prev) => prev.map((d) => (d.id === draft.id ? draft : d)));
+        setFeedback("");
+      } catch (e2) {
+        console.error("Failed to submit feedback:", e2);
+      }
     } finally {
-      setLoading(false);
+      setCreating(false);
+    }
+  };
+
+  const handleTryAgain = async () => {
+    if (!token || !activeDraft) return;
+    setCreating(true);
+    try {
+      const { draft } = await api.drafts.regenerate(token, activeDraft.id);
+      setDrafts((prev) => [draft, ...prev]);
+      setActiveDraft(draft);
+      setActiveVersion(0);
+    } catch (e) {
+      console.error("Failed to regenerate:", e);
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -144,9 +170,9 @@ export default function CraftingPage() {
         <div className="mt-3">
           <ContentInput onTextSubmit={handleCreateDraft} />
           {creating && (
-            <div className="flex items-center gap-2 mt-2 text-atlas-text-secondary text-sm">
+            <div className="flex items-center gap-2 mt-2 text-atlas-teal text-sm">
               <Loader2 className="w-4 h-4 animate-spin" />
-              Creating draft…
+              Crafting your tweet…
             </div>
           )}
         </div>
@@ -230,14 +256,14 @@ export default function CraftingPage() {
       {/* Actions */}
       {activeDraft && activeDraft.status !== "APPROVED" && (
         <div className="mt-6 flex flex-wrap gap-3">
-          <GradientButton variant="outline-success" onClick={handleShip} disabled={loading}>
+          <GradientButton variant="outline-success" onClick={handleShip} disabled={loading || creating}>
             {loading ? "Shipping…" : "Ship it"}
           </GradientButton>
           <GradientButton variant="outline-warning" onClick={() => document.getElementById("feedback-input")?.focus()}>
             Not quite — tell me what&apos;s off
           </GradientButton>
-          <GradientButton variant="outline-teal" onClick={handleDelete} disabled={loading}>
-            Discard
+          <GradientButton variant="outline-teal" onClick={handleTryAgain} disabled={creating}>
+            {creating ? "Regenerating…" : "Try again"}
           </GradientButton>
         </div>
       )}

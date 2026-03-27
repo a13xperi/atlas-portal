@@ -64,6 +64,14 @@ export const api = {
       request<{ draft: TweetDraft }>(`/api/drafts/${id}`, { token }),
     create: (token: string, content: string, sourceType?: string, sourceContent?: string) =>
       request<{ draft: TweetDraft }>("/api/drafts", { method: "POST", token, body: { content, sourceType, sourceContent } }),
+    generate: (token: string, sourceContent: string, sourceType: string, blendId?: string) =>
+      request<{ draft: TweetDraft }>("/api/drafts/generate", {
+        method: "POST", token, body: { sourceContent, sourceType, blendId },
+      }),
+    regenerate: (token: string, draftId: string, feedback?: string) =>
+      request<{ draft: TweetDraft }>(`/api/drafts/${draftId}/regenerate`, {
+        method: "POST", token, body: { feedback },
+      }),
     update: (token: string, id: string, data: { content?: string; status?: string; feedback?: string }) =>
       request<{ draft: TweetDraft }>(`/api/drafts/${id}`, { method: "PATCH", token, body: data }),
     delete: (token: string, id: string) =>
@@ -148,6 +156,8 @@ export interface TweetDraft {
   predictedEngagement?: number;
   actualEngagement?: number;
   sourceType?: string;
+  sourceContent?: string;
+  blendId?: string;
   feedback?: string;
   createdAt: string;
 }
