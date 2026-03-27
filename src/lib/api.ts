@@ -98,6 +98,13 @@ export const api = {
       request<{ subscription: AlertSubscription }>("/api/alerts/subscriptions", { method: "POST", token, body: { type, value, delivery } }),
   },
 
+  trending: {
+    scan: (token: string) =>
+      request<{ alerts: Alert[] }>("/api/trending/scan", { method: "POST", token }),
+    topics: (token: string) =>
+      request<{ topics: TrendingTopic[] }>("/api/trending/topics", { token }),
+  },
+
   research: {
     conduct: (token: string, query: string) =>
       request<{ result: ResearchResultData }>("/api/research", { method: "POST", token, body: { query } }),
@@ -216,6 +223,16 @@ export interface TeamAnalyst {
   handle: string;
   voiceProfile?: VoiceProfile;
   _count: { tweetDrafts: number; analyticsEvents: number; sessions: number };
+}
+
+export interface TrendingTopic {
+  id: string;
+  topic: string;
+  headline: string;
+  context?: string;
+  sourceUrl?: string;
+  sentiment?: string;
+  relevance?: number;
 }
 
 export interface ResearchResultData {

@@ -7,7 +7,7 @@ import GradientButton from "@/components/ui/GradientButton";
 import { Mic, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { api, TweetDraft, AnalyticsSummary } from "@/lib/api";
+import { api, TweetDraft, TrendingTopic, AnalyticsSummary } from "@/lib/api";
 
 export default function CraftingPage() {
   const { token } = useAuth();
@@ -19,6 +19,7 @@ export default function CraftingPage() {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
 
   const loadDrafts = useCallback(async () => {
     if (!token) return;
@@ -43,10 +44,21 @@ export default function CraftingPage() {
     }
   }, [token]);
 
+  const loadTrending = useCallback(async () => {
+    if (!token) return;
+    try {
+      const { topics } = await api.trending.topics(token);
+      setTrendingTopics(topics);
+    } catch (e) {
+      // Trending is optional — don't block the page
+    }
+  }, [token]);
+
   useEffect(() => {
     loadDrafts();
     loadSummary();
-  }, [loadDrafts, loadSummary]);
+    loadTrending();
+  }, [loadDrafts, loadSummary, loadTrending]);
 
   const handleCreateDraft = async (text: string) => {
     if (!token || !text.trim()) return;
@@ -161,6 +173,27 @@ export default function CraftingPage() {
           View full analytics →
         </Link>
       </div>
+
+      {/* Trending Topics */}
+      {trendingTopics.length > 0 && (
+        <div className="mt-6">
+          <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
+            Trending now — click to craft a tweet
+          </label>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {trendingTopics.slice(0, 6).map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => handleCreateDraft(`${t.headline}. ${t.context || ""}`)}
+                className="px-3 py-1.5 text-xs rounded-full bg-atlas-surface border border-glass-border text-atlas-text hover:border-atlas-teal hover:text-atlas-teal transition-colors"
+              >
+                {t.headline.length > 50 ? t.headline.slice(0, 50) + "…" : t.headline}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Content Input Zone */}
       <div className="mt-6">

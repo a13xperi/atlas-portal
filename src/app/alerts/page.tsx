@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import AppShell from "@/components/layout/AppShell";
 import StatusPill from "@/components/ui/StatusPill";
 import GradientButton from "@/components/ui/GradientButton";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, RefreshCw } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { api, Alert, AlertSubscription } from "@/lib/api";
 
@@ -27,6 +27,7 @@ export default function AlertsPage() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [subscriptions, setSubscriptions] = useState<AlertSubscription[]>([]);
   const [loading, setLoading] = useState(true);
+  const [scanning, setScanning] = useState(false);
   const [activeCategories, setActiveCategories] = useState<Set<string>>(
     new Set(["DeFi", "AI"])
   );
@@ -74,6 +75,19 @@ export default function AlertsPage() {
           console.error("Failed to subscribe:", e);
         }
       }
+    }
+  };
+
+  const handleScan = async () => {
+    if (!token) return;
+    setScanning(true);
+    try {
+      const { alerts: newAlerts } = await api.trending.scan(token);
+      setAlerts((prev) => [...newAlerts, ...prev]);
+    } catch (e) {
+      console.error("Scan failed:", e);
+    } finally {
+      setScanning(false);
     }
   };
 
@@ -183,6 +197,20 @@ export default function AlertsPage() {
 
         {/* Main Feed */}
         <div className="flex-1 space-y-4">
+          {/* Scan Button */}
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading text-lg text-atlas-text">Alert Feed</h2>
+            <button
+              type="button"
+              onClick={handleScan}
+              disabled={scanning}
+              className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-atlas-teal/10 text-atlas-teal border border-atlas-teal/30 hover:bg-atlas-teal/20 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${scanning ? "animate-spin" : ""}`} />
+              {scanning ? "Scanning Twitter…" : "Scan Twitter"}
+            </button>
+          </div>
+
           {loading ? (
             <div className="flex items-center justify-center py-12 text-atlas-text-secondary">
               <Loader2 className="w-5 h-5 animate-spin mr-2" />
@@ -192,7 +220,18 @@ export default function AlertsPage() {
             displayAlerts.map((alert) => (
               <div key={alert.id} className="bg-atlas-surface border border-glass-border rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-atlas-text">{alert.type}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-atlas-text">{alert.type}</span>
+                    {(alert as any).sentiment && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        (alert as any).sentiment === "bullish" ? "bg-atlas-success/15 text-atlas-success" :
+                        (alert as any).sentiment === "bearish" ? "bg-atlas-error/15 text-atlas-error" :
+                        "bg-atlas-warning/15 text-atlas-warning"
+                      }`}>
+                        {(alert as any).sentiment}
+                      </span>
+                    )}
+                  </div>
                   <StatusPill label={timeAgo(alert.createdAt).replace("~", "").replace(" ago", "")} variant="speed" />
                 </div>
                 <p className="text-sm text-atlas-text-secondary mb-2 pl-3 border-l-2 border-glass-border">
