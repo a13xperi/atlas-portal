@@ -15,10 +15,22 @@ Atlas by Delphi Digital — a content-to-tweet crafting platform with personaliz
 - Frontend: https://github.com/a13xperi/atlas-portal
 - Backend: https://github.com/a13xperi/atlas-backend
 
-## Deployed URLs
-- Frontend (Vercel): https://delphi-atlas.vercel.app
-- Backend (Railway): https://api-production-9bef.up.railway.app
-- Health check: https://api-production-9bef.up.railway.app/health
+## Environments
+
+| Tier | Frontend (Vercel) | Backend (Railway) |
+|------|------------------|-------------------|
+| Production | https://delphi-atlas.vercel.app | https://api-production-9bef.up.railway.app |
+| Staging | https://staging-delphi-atlas.vercel.app | TBD (Railway staging env) |
+| Preview | Auto per PR (`*.vercel.app`) | Hits staging backend |
+
+Health check: https://api-production-9bef.up.railway.app/health
+
+## Branching & Deploy Flow
+- `main` → Production (protected: PR + CI required)
+- `staging` → Staging (CI required)
+- `feat/*`, `fix/*` → PR to `staging` → merge → test → PR to `main` → merge to prod
+- **Never push directly to `main`.** All changes flow through `staging` first.
+- `NEXT_PUBLIC_API_URL` is set per environment in Vercel dashboard — no hardcoded fallback.
 
 ## Architecture
 ```
@@ -108,8 +120,12 @@ Auth: `useAuth()` from `src/lib/auth.tsx` provides `{ user, token, login, regist
 - Master build sheet page ID: 980892391d9f41e09433947186d58f27
 - Build Tracker database in Notion — update after completing tasks
 
+## CI
+- GitHub Actions runs on PRs to `staging` and `main`: TypeScript check + lint
+- Branch protection requires CI to pass before merge
+
 ## What's Next
-1. Fix Vercel deploy — builds fail with 0ms / "Error" status
-2. Wire remaining pages to backend (Crafting, Alerts, Management, Team Library)
-3. Telegram bot service
-4. AI integration — Claude API for tweet generation
+1. Wire remaining pages to backend (Alerts, Management, Team Library)
+2. Telegram bot service
+3. AI integration — Claude API for tweet generation
+4. Railway: set up staging environment with separate DB/Redis
