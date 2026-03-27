@@ -74,6 +74,30 @@ export default function CraftingPage() {
     loadBlends();
   }, [loadDrafts, loadSummary, loadTrending, loadBlends]);
 
+  const handleFileDrop = async (files: FileList) => {
+    if (!token || files.length === 0) return;
+    const file = files[0];
+    // Read text content from the file
+    try {
+      const text = await file.text();
+      if (!text.trim()) return;
+      setCreating(true);
+      const { draft } = await api.drafts.generate(
+        token,
+        text.trim().slice(0, 10000), // Cap at 10k chars
+        "REPORT",
+        selectedBlendId || undefined
+      );
+      setDrafts((prev) => [draft, ...prev]);
+      setActiveDraft(draft);
+      setActiveVersion(0);
+    } catch (e) {
+      console.error("Failed to process file:", e);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const handleCreateDraft = async (text: string) => {
     if (!token || !text.trim()) return;
     setCreating(true);
@@ -228,7 +252,14 @@ export default function CraftingPage() {
           Feed Atlas content — it crafts the tweet in your voice.
         </label>
         <div className="mt-3">
-          <ContentInput onTextSubmit={handleCreateDraft} />
+          <ContentInput
+            onTextSubmit={handleCreateDraft}
+            onDrop={handleFileDrop}
+            onTrendingClick={() => {
+              const el = document.getElementById("trending-section");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }}
+          />
           {creating && (
             <div className="flex items-center gap-2 mt-2 text-atlas-teal text-sm">
               <Loader2 className="w-4 h-4 animate-spin" />
