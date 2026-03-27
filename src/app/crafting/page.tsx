@@ -4,10 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import AppShell from "@/components/layout/AppShell";
 import ContentInput from "@/components/ui/ContentInput";
 import GradientButton from "@/components/ui/GradientButton";
-import { Mic, Loader2 } from "lucide-react";
+import { Mic, Loader2, Image as ImageIcon, Palette } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { api, TweetDraft, TrendingTopic, AnalyticsSummary } from "@/lib/api";
+import { api, TweetDraft, TrendingTopic, GeneratedImage, AnalyticsSummary } from "@/lib/api";
 
 export default function CraftingPage() {
   const { token } = useAuth();
@@ -20,6 +20,8 @@ export default function CraftingPage() {
   const [creating, setCreating] = useState(false);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
+  const [visualConcept, setVisualConcept] = useState<GeneratedImage | null>(null);
+  const [generatingImage, setGeneratingImage] = useState(false);
 
   const loadDrafts = useCallback(async () => {
     if (!token) return;
@@ -127,6 +129,19 @@ export default function CraftingPage() {
       console.error("Failed to regenerate:", e);
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleGenerateVisual = async (style: string = "quote_card") => {
+    if (!token || !activeDraft) return;
+    setGeneratingImage(true);
+    try {
+      const { image } = await api.images.generateForDraft(token, activeDraft.id, style);
+      setVisualConcept(image);
+    } catch (e) {
+      console.error("Image generation failed:", e);
+    } finally {
+      setGeneratingImage(false);
     }
   };
 
@@ -263,6 +278,51 @@ export default function CraftingPage() {
               {activeDraft.predictedEngagement ? `~${(activeDraft.predictedEngagement / 1000).toFixed(1)}K` : "—"}
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Generate Visual */}
+      {activeDraft && (
+        <div className="mt-4">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleGenerateVisual("quote_card")}
+              disabled={generatingImage}
+              className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-atlas-surface border border-glass-border text-atlas-text-secondary hover:text-atlas-teal hover:border-atlas-teal transition-colors disabled:opacity-50"
+            >
+              {generatingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Palette className="w-4 h-4" />}
+              {generatingImage ? "Generating…" : "Generate visual"}
+            </button>
+            <select
+              onChange={(e) => handleGenerateVisual(e.target.value)}
+              disabled={generatingImage}
+              className="bg-atlas-surface border border-glass-border rounded-lg px-2 py-2 text-xs text-atlas-text-secondary focus:outline-none focus:border-atlas-teal"
+            >
+              <option value="">Style…</option>
+              <option value="infographic">Infographic</option>
+              <option value="quote_card">Quote Card</option>
+              <option value="thumbnail">Thumbnail</option>
+            </select>
+          </div>
+
+          {/* Visual Concept Display */}
+          {visualConcept?.concept && (
+            <div className="mt-3 bg-atlas-nav border border-glass-border rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <ImageIcon className="w-4 h-4 text-atlas-teal" />
+                <span className="text-xs text-atlas-teal uppercase tracking-wide">Visual Concept</span>
+              </div>
+              <p className="text-sm text-atlas-text">{visualConcept.concept.concept}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-xs text-atlas-text-secondary">Colors:</span>
+                {visualConcept.concept.colorScheme?.map((color, i) => (
+                  <div key={i} className="w-5 h-5 rounded-full border border-glass-border" style={{ backgroundColor: color }} title={color} />
+                ))}
+              </div>
+              <p className="text-xs text-atlas-text-secondary mt-1">Layout: {visualConcept.concept.layout}</p>
+            </div>
+          )}
         </div>
       )}
 

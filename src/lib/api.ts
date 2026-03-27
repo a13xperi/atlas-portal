@@ -98,6 +98,15 @@ export const api = {
       request<{ subscription: AlertSubscription }>("/api/alerts/subscriptions", { method: "POST", token, body: { type, value, delivery } }),
   },
 
+  images: {
+    generate: (token: string, prompt: string, style?: string) =>
+      request<{ image: GeneratedImage }>("/api/images/generate", { method: "POST", token, body: { prompt, style } }),
+    generateForDraft: (token: string, draftId: string, style?: string) =>
+      request<{ image: GeneratedImage }>("/api/images/generate-for-draft", { method: "POST", token, body: { draftId, style } }),
+    forDraft: (token: string, draftId: string) =>
+      request<{ images: GeneratedImage[] }>(`/api/images/for-draft/${draftId}`, { token }),
+  },
+
   trending: {
     scan: (token: string) =>
       request<{ alerts: Alert[] }>("/api/trending/scan", { method: "POST", token }),
@@ -223,6 +232,22 @@ export interface TeamAnalyst {
   handle: string;
   voiceProfile?: VoiceProfile;
   _count: { tweetDrafts: number; analyticsEvents: number; sessions: number };
+}
+
+export interface GeneratedImage {
+  id: string;
+  draftId?: string;
+  prompt: string;
+  style: string;
+  imageUrl: string;
+  mimeType: string;
+  concept?: {
+    concept: string;
+    colorScheme: string[];
+    layout: string;
+    elements: string[];
+  };
+  createdAt: string;
 }
 
 export interface TrendingTopic {
