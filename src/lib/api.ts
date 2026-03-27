@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api-production-9bef.up.railway.app";
+const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 interface RequestOptions {
   method?: string;
