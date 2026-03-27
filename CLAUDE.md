@@ -16,7 +16,7 @@ Atlas by Delphi Digital — a content-to-tweet crafting platform with personaliz
 - Backend: https://github.com/a13xperi/atlas-backend
 
 ## Deployed URLs
-- Frontend (Vercel): https://atlas-portal-v3.vercel.app
+- Frontend (Vercel): https://delphi-atlas.vercel.app
 - Backend (Railway): https://api-production-9bef.up.railway.app
 - Health check: https://api-production-9bef.up.railway.app/health
 
