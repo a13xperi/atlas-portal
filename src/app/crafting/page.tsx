@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import AppShell from "@/components/layout/AppShell";
 import ContentInput from "@/components/ui/ContentInput";
 import GradientButton from "@/components/ui/GradientButton";
@@ -25,19 +25,22 @@ export default function CraftingPage() {
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
   const [visualConcept, setVisualConcept] = useState<GeneratedImage | null>(null);
   const [generatingImage, setGeneratingImage] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const activeDraftInitialized = useRef(false);
 
   const loadDrafts = useCallback(async () => {
     if (!token) return;
     try {
       const { drafts: d } = await api.drafts.list(token);
       setDrafts(d);
-      if (d.length > 0 && !activeDraft) {
+      if (d.length > 0 && !activeDraftInitialized.current) {
         setActiveDraft(d[0]);
+        activeDraftInitialized.current = true;
       }
     } catch (e) {
       console.error("Failed to load drafts:", e);
     }
-  }, [token, activeDraft]);
+  }, [token]);
 
   const loadSummary = useCallback(async () => {
     if (!token) return;
@@ -82,6 +85,7 @@ export default function CraftingPage() {
       const text = await file.text();
       if (!text.trim()) return;
       setCreating(true);
+      setError(null);
       const { draft } = await api.drafts.generate(
         token,
         text.trim().slice(0, 10000), // Cap at 10k chars
@@ -91,8 +95,10 @@ export default function CraftingPage() {
       setDrafts((prev) => [draft, ...prev]);
       setActiveDraft(draft);
       setActiveVersion(0);
-    } catch (e) {
+      activeDraftInitialized.current = true;
+    } catch (e: any) {
       console.error("Failed to process file:", e);
+      setError(e.message || "Failed to process file");
     } finally {
       setCreating(false);
     }
@@ -101,6 +107,7 @@ export default function CraftingPage() {
   const handleCreateDraft = async (text: string) => {
     if (!token || !text.trim()) return;
     setCreating(true);
+    setError(null);
     try {
       // Detect source type from content
       const sourceType = text.trim().startsWith("http") ? "ARTICLE" : "MANUAL";
@@ -108,8 +115,10 @@ export default function CraftingPage() {
       setDrafts((prev) => [draft, ...prev]);
       setActiveDraft(draft);
       setActiveVersion(0);
-    } catch (e) {
+      activeDraftInitialized.current = true;
+    } catch (e: any) {
       console.error("Failed to generate draft:", e);
+      setError(e.message || "Failed to generate draft");
     } finally {
       setCreating(false);
     }
@@ -118,12 +127,14 @@ export default function CraftingPage() {
   const handleShip = async () => {
     if (!token || !activeDraft) return;
     setLoading(true);
+    setError(null);
     try {
       const { draft } = await api.drafts.update(token, activeDraft.id, { status: "APPROVED" });
       setActiveDraft(draft);
       setDrafts((prev) => prev.map((d) => (d.id === draft.id ? draft : d)));
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to ship draft:", e);
+      setError(e.message || "Failed to ship draft");
     } finally {
       setLoading(false);
     }
@@ -132,6 +143,7 @@ export default function CraftingPage() {
   const handleFeedback = async () => {
     if (!token || !activeDraft || !feedback.trim()) return;
     setCreating(true);
+    setError(null);
     try {
       const { draft } = await api.drafts.regenerate(token, activeDraft.id, feedback.trim());
       setDrafts((prev) => [draft, ...prev]);
@@ -145,8 +157,9 @@ export default function CraftingPage() {
         setActiveDraft(draft);
         setDrafts((prev) => prev.map((d) => (d.id === draft.id ? draft : d)));
         setFeedback("");
-      } catch (e2) {
+      } catch (e2: any) {
         console.error("Failed to submit feedback:", e2);
+        setError(e2.message || "Failed to submit feedback");
       }
     } finally {
       setCreating(false);
@@ -156,13 +169,15 @@ export default function CraftingPage() {
   const handleTryAgain = async () => {
     if (!token || !activeDraft) return;
     setCreating(true);
+    setError(null);
     try {
       const { draft } = await api.drafts.regenerate(token, activeDraft.id);
       setDrafts((prev) => [draft, ...prev]);
       setActiveDraft(draft);
       setActiveVersion(0);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to regenerate:", e);
+      setError(e.message || "Failed to regenerate draft");
     } finally {
       setCreating(false);
     }
@@ -171,11 +186,13 @@ export default function CraftingPage() {
   const handleGenerateVisual = async (style: string = "quote_card") => {
     if (!token || !activeDraft) return;
     setGeneratingImage(true);
+    setError(null);
     try {
       const { image } = await api.images.generateForDraft(token, activeDraft.id, style);
       setVisualConcept(image);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Image generation failed:", e);
+      setError(e.message || "Image generation failed");
     } finally {
       setGeneratingImage(false);
     }
@@ -264,6 +281,12 @@ export default function CraftingPage() {
             <div className="flex items-center gap-2 mt-2 text-atlas-teal text-sm">
               <Loader2 className="w-4 h-4 animate-spin" />
               Crafting your tweet…
+            </div>
+          )}
+          {error && (
+            <div className="flex items-center justify-between mt-2 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+              <span>{error}</span>
+              <button type="button" onClick={() => setError(null)} className="ml-2 hover:text-red-300">✕</button>
             </div>
           )}
         </div>
@@ -395,7 +418,7 @@ export default function CraftingPage() {
             <button
               key={draft.id}
               type="button"
-              onClick={() => { setActiveVersion(i); setActiveDraft(draft); }}
+              onClick={() => { setActiveVersion(i); setActiveDraft(draft); setVisualConcept(null); }}
               className={`px-4 py-2 text-sm rounded-lg transition-colors ${
                 activeVersion === i
                   ? "text-atlas-teal border-b-2 border-atlas-teal"
@@ -423,29 +446,31 @@ export default function CraftingPage() {
         </div>
       )}
 
-      {/* Feedback */}
-      <div className="mt-6">
-        <div className="flex items-center gap-2">
-          <input
-            id="feedback-input"
-            type="text"
-            value={feedback}
-            onChange={(e) => setFeedback(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleFeedback(); }}
-            placeholder="Tell me what's off — type or drop a voice note."
-            className="flex-1 bg-atlas-surface rounded-lg px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary border border-glass-border focus:outline-none focus:border-atlas-teal"
-          />
-          <button
-            type="button"
-            className="p-3 bg-atlas-surface rounded-lg border border-glass-border text-atlas-text-secondary hover:text-atlas-teal transition-colors"
-          >
-            <Mic className="w-4 h-4" />
-          </button>
+      {/* Feedback — hide after shipping */}
+      {activeDraft && activeDraft.status !== "APPROVED" && (
+        <div className="mt-6">
+          <div className="flex items-center gap-2">
+            <input
+              id="feedback-input"
+              type="text"
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleFeedback(); }}
+              placeholder="Tell me what's off — type or drop a voice note."
+              className="flex-1 bg-atlas-surface rounded-lg px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary border border-glass-border focus:outline-none focus:border-atlas-teal"
+            />
+            <button
+              type="button"
+              className="p-3 bg-atlas-surface rounded-lg border border-glass-border text-atlas-text-secondary hover:text-atlas-teal transition-colors"
+            >
+              <Mic className="w-4 h-4" />
+            </button>
+          </div>
+          <p className="text-atlas-text-muted text-sm italic mt-2">
+            Don&apos;t worry about hurting my feelings.
+          </p>
         </div>
-        <p className="text-atlas-text-muted text-sm italic mt-2">
-          Don&apos;t worry about hurting my feelings.
-        </p>
-      </div>
+      )}
     </AppShell>
   );
 }
