@@ -7,13 +7,16 @@ import GradientButton from "@/components/ui/GradientButton";
 import { Mic, Loader2, Image as ImageIcon, Palette } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { api, TweetDraft, TrendingTopic, GeneratedImage, AnalyticsSummary } from "@/lib/api";
+import { api, TweetDraft, TrendingTopic, GeneratedImage, SavedBlend, AnalyticsSummary } from "@/lib/api";
 
 export default function CraftingPage() {
   const { token } = useAuth();
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [activeDraft, setActiveDraft] = useState<TweetDraft | null>(null);
   const [activeVersion, setActiveVersion] = useState(0);
+  const [voiceMode, setVoiceMode] = useState<"my_voice" | "blended" | "specific">("my_voice");
+  const [blends, setBlends] = useState<SavedBlend[]>([]);
+  const [selectedBlendId, setSelectedBlendId] = useState<string | null>(null);
   const [blendValue, setBlendValue] = useState(30);
   const [feedback, setFeedback] = useState("");
   const [loading, setLoading] = useState(false);
@@ -46,6 +49,14 @@ export default function CraftingPage() {
     }
   }, [token]);
 
+  const loadBlends = useCallback(async () => {
+    if (!token) return;
+    try {
+      const { blends: b } = await api.voice.getBlends(token);
+      setBlends(b);
+    } catch { /* blends optional */ }
+  }, [token]);
+
   const loadTrending = useCallback(async () => {
     if (!token) return;
     try {
@@ -60,7 +71,8 @@ export default function CraftingPage() {
     loadDrafts();
     loadSummary();
     loadTrending();
-  }, [loadDrafts, loadSummary, loadTrending]);
+    loadBlends();
+  }, [loadDrafts, loadSummary, loadTrending, loadBlends]);
 
   const handleCreateDraft = async (text: string) => {
     if (!token || !text.trim()) return;
@@ -68,7 +80,7 @@ export default function CraftingPage() {
     try {
       // Detect source type from content
       const sourceType = text.trim().startsWith("http") ? "ARTICLE" : "MANUAL";
-      const { draft } = await api.drafts.generate(token, text.trim(), sourceType);
+      const { draft } = await api.drafts.generate(token, text.trim(), sourceType, selectedBlendId || undefined);
       setDrafts((prev) => [draft, ...prev]);
       setActiveDraft(draft);
       setActiveVersion(0);
@@ -228,13 +240,35 @@ export default function CraftingPage() {
 
       {/* Voice Controls */}
       <div className="mt-6 flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4 bg-atlas-surface border border-glass-border rounded-2xl px-4 sm:px-6 py-3">
-        <select className="bg-atlas-nav border border-glass-border rounded-lg px-3 py-2 text-sm text-atlas-text focus:outline-none focus:border-atlas-teal">
-          <option>My voice</option>
-          <option>Blended</option>
-          <option>Specific person</option>
+        <select
+          value={voiceMode}
+          onChange={(e) => {
+            const mode = e.target.value as "my_voice" | "blended" | "specific";
+            setVoiceMode(mode);
+            if (mode === "my_voice") setSelectedBlendId(null);
+          }}
+          className="bg-atlas-nav border border-glass-border rounded-lg px-3 py-2 text-sm text-atlas-text focus:outline-none focus:border-atlas-teal"
+        >
+          <option value="my_voice">My voice</option>
+          <option value="blended">Blended</option>
+          <option value="specific">Specific person</option>
         </select>
+        {voiceMode === "blended" && blends.length > 0 && (
+          <select
+            value={selectedBlendId || ""}
+            onChange={(e) => setSelectedBlendId(e.target.value || null)}
+            className="bg-atlas-nav border border-glass-border rounded-lg px-3 py-2 text-sm text-atlas-text focus:outline-none focus:border-atlas-teal"
+          >
+            <option value="">Pick a blend…</option>
+            {blends.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        )}
         <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-          <span className="text-sm text-atlas-text-secondary shrink-0">Blend:</span>
+          <span className="text-sm text-atlas-text-secondary shrink-0">
+            {selectedBlendId ? `My Voice ↔ ${blends.find((b) => b.id === selectedBlendId)?.name || "Blend"}` : "Blend:"}
+          </span>
           <input
             type="range" min={0} max={100} value={blendValue}
             onChange={(e) => setBlendValue(Number(e.target.value))}
@@ -242,9 +276,6 @@ export default function CraftingPage() {
           />
           <span className="text-sm text-atlas-text w-10 text-right">{blendValue}%</span>
         </div>
-        <button type="button" className="text-atlas-teal text-sm hover:underline shrink-0">
-          Share this style with team
-        </button>
       </div>
 
       {/* Draft Preview */}
