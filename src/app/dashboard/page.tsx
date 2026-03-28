@@ -6,15 +6,16 @@ import AppShell from "@/components/layout/AppShell";
 import StatusPill from "@/components/ui/StatusPill";
 import { useAuth } from "@/lib/auth";
 import { api, TweetDraft, AnalyticsSummary } from "@/lib/api";
+import { PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users } from "lucide-react";
 
 const navCards = [
-  { label: "Crafting Station", href: "/crafting" },
-  { label: "Alerts + Momentum", href: "/alerts" },
-  { label: "Analytics + Predictions", href: "/analytics" },
-  { label: "Voice Profiles", href: "/voice-profiles" },
-  { label: "Team Style Library", href: "/team-library" },
-  { label: "Telegram Guide", href: "/telegram" },
-  { label: "Team Management", href: "/management" },
+  { label: "Crafting Station", href: "/crafting", icon: PenTool },
+  { label: "Alerts + Momentum", href: "/alerts", icon: Bell },
+  { label: "Analytics + Predictions", href: "/analytics", icon: BarChart3 },
+  { label: "Voice Profiles", href: "/voice-profiles", icon: Mic2 },
+  { label: "Team Style Library", href: "/team-library", icon: BookOpen },
+  { label: "Telegram Guide", href: "/telegram", icon: Send },
+  { label: "Team Management", href: "/management", icon: Users },
 ];
 
 export default function DashboardPage() {
@@ -67,8 +68,9 @@ export default function DashboardPage() {
           <Link
             key={card.label}
             href={card.href}
-            className="bg-atlas-surface border border-glass-border rounded-2xl p-6 text-center text-atlas-text hover:-translate-y-0.5 hover:shadow-lg transition-all"
+            className="bg-atlas-surface border border-glass-border rounded-2xl p-6 text-center text-atlas-text hover:-translate-y-0.5 hover:shadow-lg transition-all flex flex-col items-center gap-3"
           >
+            <card.icon className="w-5 h-5 text-atlas-teal" />
             {card.label}
           </Link>
         ))}
