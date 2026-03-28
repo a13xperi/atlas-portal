@@ -17,6 +17,22 @@
     @apply bg-glass backdrop-blur-xl border border-glass-border rounded-2xl;
   }
 
+  input[type="range"] {
+    @apply appearance-none h-2 rounded-full bg-atlas-nav cursor-pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    @apply appearance-none w-4 h-4 rounded-full bg-atlas-teal;
+  }
+  input[type="range"]::-moz-range-thumb {
+    @apply w-4 h-4 rounded-full bg-atlas-teal border-0;
+  }
+  input[type="range"]::-moz-range-track {
+    @apply h-2 rounded-full bg-atlas-nav;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    @apply h-2 rounded-full bg-atlas-nav;
+  }
+
   .gradient-cta {
     @apply bg-gradient-to-r from-atlas-teal via-atlas-teal/80 to-atlas-teal/60 rounded-lg font-body font-semibold text-white transition-all duration-200;
   }

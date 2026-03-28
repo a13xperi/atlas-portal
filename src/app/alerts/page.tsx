@@ -109,6 +109,13 @@ export default function AlertsPage() {
             Your Subscriptions
           </h3>
 
+          {/* Active filter indicator */}
+          {activeCategories.size > 0 && (
+            <p className="text-xs text-atlas-teal">
+              {activeCategories.size} active filter{activeCategories.size !== 1 ? "s" : ""}
+            </p>
+          )}
+
           {/* Categories */}
           <div>
             <p className="text-xs text-atlas-text-secondary uppercase tracking-wide mb-2">

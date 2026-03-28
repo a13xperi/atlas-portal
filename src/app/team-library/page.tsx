@@ -94,15 +94,15 @@ export default function TeamLibraryPage() {
         </div>
       )}
 
-      {/* Masonry Grid */}
-      <div className="columns-1 md:columns-2 gap-6 space-y-6">
+      {/* Style Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {styleCards.map((card, i) => (
-          <div key={i} className="break-inside-avoid bg-atlas-surface border border-glass-border rounded-2xl p-8">
+          <div key={i} className="bg-atlas-surface border border-glass-border rounded-2xl p-8 flex flex-col">
             <p className="text-lg text-atlas-text leading-relaxed">{card.tweet}</p>
             {card.subtext && (
               <p className="text-sm text-atlas-text-secondary mt-3 italic">{card.subtext}</p>
             )}
-            <div className="mt-4 pt-4 border-t border-glass-border">
+            <div className="mt-auto pt-4 border-t border-glass-border">
               <p className="text-sm text-atlas-text-secondary font-medium">{card.blend}</p>
               <p className="text-xs text-atlas-teal font-bold mt-1">{card.engagement} Engagement</p>
             </div>

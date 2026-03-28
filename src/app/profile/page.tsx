@@ -82,8 +82,8 @@ export default function ProfilePage() {
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Your display name"
-              className="w-full mt-1 bg-atlas-nav border border-glass-border rounded-lg px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:outline-none focus:border-atlas-teal"
+              placeholder={currentUser?.displayName || currentUser?.handle || "Your display name"}
+              className="w-full mt-1 bg-atlas-nav border border-glass-border rounded-lg px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-muted focus:outline-none focus:border-atlas-teal"
             />
           </div>
           <div>
