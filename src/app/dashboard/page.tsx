@@ -6,15 +6,16 @@ import AppShell from "@/components/layout/AppShell";
 import StatusPill from "@/components/ui/StatusPill";
 import { useAuth } from "@/lib/auth";
 import { api, TweetDraft, AnalyticsSummary } from "@/lib/api";
+import { PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users } from "lucide-react";
 
 const navCards = [
-  { label: "Crafting Station", href: "/crafting" },
-  { label: "Alerts + Momentum", href: "/alerts" },
-  { label: "Analytics + Predictions", href: "/analytics" },
-  { label: "Voice Profiles", href: "/voice-profiles" },
-  { label: "Team Style Library", href: "/team-library" },
-  { label: "Telegram Guide", href: "/telegram" },
-  { label: "Team Management", href: "/management" },
+  { label: "Crafting Station", href: "/crafting", icon: PenTool },
+  { label: "Alerts + Momentum", href: "/alerts", icon: Bell },
+  { label: "Analytics + Predictions", href: "/analytics", icon: BarChart3 },
+  { label: "Voice Profiles", href: "/voice-profiles", icon: Mic2 },
+  { label: "Team Style Library", href: "/team-library", icon: BookOpen },
+  { label: "Telegram Guide", href: "/telegram", icon: Send },
+  { label: "Team Management", href: "/management", icon: Users },
 ];
 
 export default function DashboardPage() {
@@ -31,8 +32,8 @@ export default function DashboardPage() {
   const stats = [
     { label: "Drafts this week", value: String(summary?.draftsCreated ?? 0) },
     { label: "Posts", value: String(summary?.draftsPosted ?? 0) },
-    { label: "Feedback given", value: String(summary?.feedbackGiven ?? 0), color: "text-atlas-success" },
-    { label: "Reports ingested", value: String(summary?.reportsIngested ?? 0), color: "text-atlas-teal" },
+    { label: "Feedback given", value: String(summary?.feedbackGiven ?? 0) },
+    { label: "Reports ingested", value: String(summary?.reportsIngested ?? 0) },
   ];
 
   const statusMap: Record<string, "draft" | "posted" | "feedback"> = {
@@ -55,20 +56,21 @@ export default function DashboardPage() {
             className="bg-atlas-surface border border-glass-border rounded-2xl p-6"
           >
             <p className="text-atlas-text-secondary text-sm">{stat.label}</p>
-            <p className={`text-[30px] font-semibold mt-1 ${stat.color || "text-atlas-text"}`}>
+            <p className="text-[30px] font-semibold mt-1 text-atlas-text">
               {stat.value}
             </p>
           </div>
         ))}
       </div>
 
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {navCards.map((card) => (
           <Link
             key={card.label}
             href={card.href}
-            className="bg-atlas-surface border border-glass-border rounded-2xl p-6 text-center text-atlas-text hover:-translate-y-0.5 hover:shadow-lg transition-all"
+            className="bg-atlas-surface border border-glass-border rounded-2xl p-6 text-center text-atlas-text hover:-translate-y-0.5 hover:shadow-lg transition-all flex flex-col items-center gap-3"
           >
+            <card.icon className="w-5 h-5 text-atlas-teal" />
             {card.label}
           </Link>
         ))}
