@@ -6,7 +6,11 @@ export default defineConfig({
   timeout: 30_000,
   retries: 1,
   fullyParallel: false,
-  reporter: [["html", { open: "never" }], ["list"]],
+  reporter: [
+    ["html", { open: "never" }],
+    ["list"],
+    ["./e2e/reporters/supabase-reporter.ts"],
+  ],
   use: {
     baseURL: process.env.E2E_BASE_URL || "https://delphi-atlas.vercel.app",
     screenshot: "on",
