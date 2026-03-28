@@ -62,12 +62,14 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {navCards.map((card) => (
+      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {navCards.map((card, i) => (
           <Link
             key={card.label}
             href={card.href}
-            className="bg-atlas-surface border border-glass-border rounded-2xl p-6 text-center text-atlas-text hover:-translate-y-0.5 hover:shadow-lg transition-all"
+            className={`bg-atlas-surface border border-glass-border rounded-2xl p-6 text-center text-atlas-text hover:-translate-y-0.5 hover:shadow-lg transition-all ${
+              navCards.length % 3 === 1 && i === navCards.length - 1 ? "sm:col-span-2 lg:col-span-1 lg:col-start-2" : ""
+            }`}
           >
             {card.label}
           </Link>

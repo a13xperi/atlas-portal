@@ -16,9 +16,11 @@ export default function ProfilePage() {
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const loadProfile = useCallback(async () => {
     if (!token) return;
+    setLoadError(false);
     try {
       const { user } = await api.users.profile(token);
       setProfile(user);
@@ -26,6 +28,7 @@ export default function ProfilePage() {
       setEmail(user.email || "");
     } catch (e) {
       console.error("Failed to load profile:", e);
+      setLoadError(true);
     }
   }, [token]);
 
@@ -73,6 +76,12 @@ export default function ProfilePage() {
             </span>
           )}
         </div>
+
+        {loadError && (
+          <div className="mb-4 bg-atlas-warning/10 border border-atlas-warning/30 rounded-xl px-4 py-3 text-sm text-atlas-warning">
+            Unable to load your profile data. Your changes will create new values.
+          </div>
+        )}
 
         {/* Edit Form */}
         <div className="bg-atlas-surface border border-glass-border rounded-2xl p-6 space-y-4">
