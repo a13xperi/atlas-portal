@@ -8,7 +8,7 @@ export default function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen bg-atlas-bg">
       <NavBar variant="app" />
-      <main className="pt-14">
+      <main className="relative z-0 pt-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">{children}</div>
       </main>
     </div>

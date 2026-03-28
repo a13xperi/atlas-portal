@@ -22,10 +22,12 @@ export default function ManagementPage() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [analysts, setAnalysts] = useState<TeamAnalyst[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!token) { setLoading(false); return; }
     setLoading(true);
+    setError(false);
     try {
       const [teamRes, analyticsRes] = await Promise.all([
         api.users.team(token),
@@ -35,6 +37,7 @@ export default function ManagementPage() {
       setAnalysts(analyticsRes.analysts);
     } catch (e) {
       console.error("Failed to load team data:", e);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -102,9 +105,15 @@ export default function ManagementPage() {
         </h1>
         <p className="text-atlas-text-secondary mt-1">
           Executive overview <span className="text-atlas-text-muted">·</span>{" "}
-          {loading ? "Loading…" : "Live data"}
+          {loading ? "Loading…" : error ? "Sample data" : "Live data"}
         </p>
       </div>
+
+      {error && (
+        <div className="mb-6 bg-atlas-warning/10 border border-atlas-warning/30 rounded-xl px-4 py-3 text-sm text-atlas-warning">
+          Unable to load live team data — showing sample data. Check your permissions or try again later.
+        </div>
+      )}
 
       {loading && (
         <div className="flex items-center gap-2 mb-6 text-atlas-text-secondary text-sm">

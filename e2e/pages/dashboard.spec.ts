@@ -41,10 +41,11 @@ test.describe("Dashboard", () => {
   });
 
   test("nav cards link to correct pages", async ({ authedPage: page }) => {
-    const craftingLink = page.locator('a[href="/crafting"]');
-    await expect(craftingLink).toBeVisible();
+    // Use getByRole with exact name to avoid matching nav bar links
+    const craftingCard = page.getByRole("link", { name: "Crafting Station" });
+    await expect(craftingCard).toBeVisible();
 
-    const alertsLink = page.locator('a[href="/alerts"]');
-    await expect(alertsLink).toBeVisible();
+    const alertsCard = page.getByRole("link", { name: "Alerts + Momentum" });
+    await expect(alertsCard).toBeVisible();
   });
 });

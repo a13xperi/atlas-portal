@@ -197,9 +197,17 @@ export default function AlertsPage() {
 
         {/* Main Feed */}
         <div className="flex-1 space-y-4">
-          {/* Scan Button */}
-          <div className="flex items-center justify-between">
-            <h2 className="font-heading text-lg text-atlas-text">Alert Feed</h2>
+          {/* Header + Filter */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-4">
+              <h2 className="font-heading text-lg text-atlas-text">Alert Feed</h2>
+              <select className="bg-atlas-surface border border-glass-border rounded-lg px-3 py-1.5 text-sm text-atlas-text focus:outline-none">
+                <option>All alerts</option>
+                <option>Big accounts only</option>
+                <option>Trending topics</option>
+                <option>Reports</option>
+              </select>
+            </div>
             <button
               type="button"
               onClick={handleScan}
@@ -259,21 +267,13 @@ export default function AlertsPage() {
           )}
 
           {/* Bottom Controls */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 gap-3 sm:gap-0">
-            <select className="bg-atlas-surface border border-glass-border rounded-lg px-3 py-2 text-sm text-atlas-text focus:outline-none">
-              <option>Showing: All alerts</option>
-              <option>Big accounts only</option>
-              <option>Trending topics</option>
-              <option>Reports</option>
-            </select>
-            <div className="flex gap-4">
-              <button type="button" className="text-atlas-teal text-sm hover:underline">
-                Mark all as read
-              </button>
-              <button type="button" className="text-atlas-text-secondary text-sm hover:text-atlas-text">
-                Pause alerts for 1 hour
-              </button>
-            </div>
+          <div className="flex items-center justify-end pt-4 gap-4">
+            <button type="button" className="text-atlas-teal text-sm hover:underline">
+              Mark all as read
+            </button>
+            <button type="button" className="text-atlas-text-secondary text-sm hover:text-atlas-text">
+              Pause alerts for 1 hour
+            </button>
           </div>
         </div>
       </div>

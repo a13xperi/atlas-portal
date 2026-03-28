@@ -5,13 +5,6 @@ import AppShell from "@/components/layout/AppShell";
 import { useAuth } from "@/lib/auth";
 import { api, AnalyticsSummary, LearningLogEntry, TweetDraft } from "@/lib/api";
 
-const fallbackStats = [
-  { label: "Drafts", value: "0" },
-  { label: "Feedback", value: "0" },
-  { label: "Refinements", value: "0" },
-  { label: "Ingested", value: "0" },
-];
-
 const topTweets = [
   {
     snippet:
@@ -84,14 +77,12 @@ export default function AnalyticsPage() {
     api.drafts.list(token).then((r) => setTopDrafts(r.drafts.slice(0, 4))).catch(() => {});
   }, [token]);
 
-  const usageStats = summary
-    ? [
-        { label: "Drafts", value: String(summary.draftsCreated) },
-        { label: "Feedback", value: String(summary.feedbackGiven) },
-        { label: "Refinements", value: String(summary.refinements) },
-        { label: "Ingested", value: String(summary.reportsIngested) },
-      ]
-    : fallbackStats;
+  const usageStats = [
+    { label: "Drafts", value: String(summary?.draftsCreated ?? 0) },
+    { label: "Feedback", value: String(summary?.feedbackGiven ?? 0) },
+    { label: "Refinements", value: String(summary?.refinements ?? 0) },
+    { label: "Ingested", value: String(summary?.reportsIngested ?? 0) },
+  ];
 
   return (
     <AppShell>
