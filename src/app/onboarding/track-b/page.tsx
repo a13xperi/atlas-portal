@@ -173,7 +173,7 @@ export default function TrackBPage() {
                       : "border border-glass-border"
                   }`}
                 >
-                  <div className="relative w-10 h-10 rounded-full bg-atlas-nav flex items-center justify-center text-atlas-text-secondary text-sm">
+                  <div className="relative w-10 h-10 rounded-full bg-atlas-teal/20 flex items-center justify-center text-atlas-teal text-sm font-medium">
                     {voice[0]}
                     {isSelected && (
                       <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-atlas-teal flex items-center justify-center">

@@ -76,6 +76,25 @@ export default function SearchPage() {
           </button>
         </div>
 
+        {/* Empty state — before any search */}
+        {!results && !searching && (
+          <div className="mt-10 text-center space-y-4">
+            <p className="text-sm text-atlas-text-secondary">Try searching for:</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {["DeFi", "thread ideas", "ZK rollups", "market analysis", "engagement tips"].map((term) => (
+                <button
+                  key={term}
+                  type="button"
+                  onClick={() => { setQuery(term); }}
+                  className="px-3 py-1.5 text-xs rounded-full bg-atlas-surface border border-glass-border text-atlas-text-secondary hover:border-atlas-teal hover:text-atlas-teal transition-colors"
+                >
+                  {term}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {!token && query && (
           <p className="text-atlas-text-muted text-sm mt-6 text-center">
             Sign in to search your drafts and alerts.

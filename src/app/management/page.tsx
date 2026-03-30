@@ -84,7 +84,7 @@ export default function ManagementPage() {
   const inactiveAnalysts = tableData
     .filter((m) => m.stale)
     .slice(0, 3)
-    .map((m) => ({ name: m.name, days: "Inactive" }));
+    .map((m) => ({ name: m.name, days: `${m.sessions} sessions · ${m.drafts} drafts` }));
 
   // Time-to-peak (synthetic from real data or static)
   const timeToPeak = tableData.slice(0, 4).map((m) => ({

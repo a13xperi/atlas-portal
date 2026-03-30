@@ -93,6 +93,8 @@ export default function AnalyticsPage() {
       ]
     : fallbackStats;
 
+  const allZero = usageStats.every((s) => s.value === "0");
+
   return (
     <AppShell>
       {/* SECTION 1: Header */}
@@ -132,7 +134,9 @@ export default function AnalyticsPage() {
           )}
         </div>
         <p className="text-atlas-text-muted text-sm italic mt-3">
-          The more you use Atlas, the better it gets.
+          {allZero
+            ? "Head to the Crafting Station to create your first draft — your analytics will populate as you go."
+            : "The more you use Atlas, the better it gets."}
         </p>
       </div>
 
@@ -142,9 +146,9 @@ export default function AnalyticsPage() {
           <h2 className="font-heading text-xl text-atlas-text">
             Engagement Velocity
           </h2>
-          <p className="text-xs text-atlas-text-secondary font-medium">
+          <span className="text-xs text-atlas-success bg-atlas-success/10 px-2 py-1 rounded-full font-medium">
             62% Accuracy
-          </p>
+          </span>
         </div>
         <p className="text-sm text-atlas-text-secondary mb-6">
           Actual performance against neural prediction models.
