@@ -128,4 +128,3 @@ Auth: `useAuth()` from `src/lib/auth.tsx` provides `{ user, token, login, regist
 1. Wire remaining pages to backend (Alerts, Management, Team Library)
 2. Telegram bot service
 3. AI integration — Claude API for tweet generation
-4. Railway: set up staging environment with separate DB/Redis
