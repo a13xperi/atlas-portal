@@ -245,7 +245,16 @@ export default function AnalyticsPage() {
               Status
             </span>
           </div>
-          {topTweets.map((tweet, i) => (
+          {(topDrafts.length > 0
+            ? topDrafts.map((d) => ({
+                snippet: d.content.slice(0, 80) + (d.content.length > 80 ? "..." : ""),
+                engagement: d.predictedEngagement
+                  ? `${(d.predictedEngagement / 1000).toFixed(1)}k`
+                  : "—",
+                status: d.status.toLowerCase(),
+              }))
+            : topTweets
+          ).map((tweet, i) => (
             <div
               key={i}
               className="flex flex-col sm:grid sm:grid-cols-[1fr_100px_80px] px-4 sm:px-6 py-4 border-b border-glass-border last:border-0 hover:bg-glass transition-colors gap-1 sm:gap-0"
@@ -276,7 +285,20 @@ export default function AnalyticsPage() {
           Model Learning Log
         </h2>
         <div className="space-y-4">
-          {learningLog.map((entry, i) => (
+          {(logEntries.length > 0
+            ? logEntries.map((e) => ({
+                date: new Date(e.createdAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                }),
+                event: e.event,
+                impact: e.impact,
+                positive: e.positive,
+              }))
+            : learningLog
+          ).map((entry, i) => (
             <div
               key={i}
               className="flex items-center justify-between py-3 border-b border-glass-border last:border-0"

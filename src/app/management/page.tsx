@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { api, TeamAnalyst, TeamMember } from "@/lib/api";
 
 const days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+// TODO: wire to analytics API when available
 const modelTarget = [50, 55, 60, 58, 65, 62, 70];
 const teamActual = [45, 58, 55, 65, 60, 68, 75];
 
@@ -42,12 +43,11 @@ export default function ManagementPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Derive KPIs from real data, fall back to static
-  const totalAnalysts = team.length || 25;
-  const activeThisWeek = team.filter((m) => m._count.sessions > 0).length || 18;
+  const totalAnalysts = team.length;
+  const activeThisWeek = team.filter((m) => m._count.sessions > 0).length;
   const avgEngagement = analysts.length > 0
     ? Math.round(analysts.reduce((sum, a) => sum + a._count.tweetDrafts, 0) / analysts.length)
-    : 2100;
+    : 0;
 
   const kpiCards = [
     { label: "Total Analysts", value: String(totalAnalysts), change: null as string | null },
@@ -55,24 +55,15 @@ export default function ManagementPage() {
     { label: "Avg Drafts/Analyst", value: String(avgEngagement), change: null },
   ];
 
-  // Build table from real team data or use static fallback
-  const tableData = team.length > 0
-    ? team.map((m) => ({
-        name: m.displayName || m.handle,
-        sessions: m._count.sessions,
-        drafts: m._count.tweetDrafts,
-        posts: 0,
-        maturity: m.voiceProfile?.maturity || "BEGINNER",
-        maturityColor: maturityColor(m.voiceProfile?.maturity),
-        stale: m._count.sessions === 0,
-      }))
-    : [
-        { name: "Alex M.", sessions: 142, drafts: 86, posts: 42, maturity: "ADVANCED", maturityColor: "text-atlas-success", stale: false },
-        { name: "Priya K.", sessions: 204, drafts: 112, posts: 98, maturity: "INTERMEDIATE", maturityColor: "text-atlas-teal", stale: false },
-        { name: "Julian R.", sessions: 88, drafts: 24, posts: 12, maturity: "BEGINNER", maturityColor: "text-atlas-warning", stale: true },
-        { name: "Sarah W.", sessions: 156, drafts: 78, posts: 64, maturity: "ADVANCED", maturityColor: "text-atlas-success", stale: false },
-        { name: "Chen L.", sessions: 42, drafts: 12, posts: 4, maturity: "BEGINNER", maturityColor: "text-atlas-warning", stale: true },
-      ];
+  const tableData = team.map((m) => ({
+    name: m.displayName || m.handle,
+    sessions: m._count.sessions,
+    drafts: m._count.tweetDrafts,
+    posts: 0,
+    maturity: m.voiceProfile?.maturity || "BEGINNER",
+    maturityColor: maturityColor(m.voiceProfile?.maturity),
+    stale: m._count.sessions === 0,
+  }));
 
   // Top performers sorted by drafts
   const leaderboard = [...tableData]
@@ -138,17 +129,25 @@ export default function ManagementPage() {
               </tr>
             </thead>
             <tbody>
-              {tableData.map((row) => (
-                <tr key={row.name} className="border-b border-glass-border last:border-0 hover:bg-glass transition-colors">
-                  <td className="px-6 py-4 text-sm text-atlas-text font-medium">{row.name}</td>
-                  <td className="px-6 py-4 text-sm text-atlas-text-secondary">{row.sessions}</td>
-                  <td className="px-6 py-4 text-sm text-atlas-text-secondary">{row.drafts}</td>
-                  <td className="px-6 py-4 text-sm text-atlas-text-secondary">{row.posts}</td>
-                  <td className="px-6 py-4">
-                    <span className={`text-[10px] font-bold uppercase tracking-wide ${row.maturityColor}`}>{row.maturity}</span>
+              {tableData.length === 0 && !loading ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-sm text-atlas-text-secondary">
+                    No team members found. Invite analysts to get started.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                tableData.map((row) => (
+                  <tr key={row.name} className="border-b border-glass-border last:border-0 hover:bg-glass transition-colors">
+                    <td className="px-6 py-4 text-sm text-atlas-text font-medium">{row.name}</td>
+                    <td className="px-6 py-4 text-sm text-atlas-text-secondary">{row.sessions}</td>
+                    <td className="px-6 py-4 text-sm text-atlas-text-secondary">{row.drafts}</td>
+                    <td className="px-6 py-4 text-sm text-atlas-text-secondary">{row.posts}</td>
+                    <td className="px-6 py-4">
+                      <span className={`text-[10px] font-bold uppercase tracking-wide ${row.maturityColor}`}>{row.maturity}</span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
