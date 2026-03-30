@@ -114,8 +114,8 @@ export default function ManagementPage() {
 
       {/* SECTION 1: Overview KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
-        {kpiCards.map((kpi) => (
-          <div key={kpi.label} className="bg-atlas-surface border border-glass-border rounded-2xl p-8 text-center">
+        {kpiCards.map((kpi, i) => (
+          <div key={kpi.label} className={`bg-atlas-surface border border-glass-border rounded-2xl p-8 text-center ${i === kpiCards.length - 1 && kpiCards.length % 2 !== 0 ? "col-span-2 md:col-span-1" : ""}`}>
             <p className="text-xs text-atlas-text-secondary uppercase tracking-wide">{kpi.label}</p>
             <p className="font-heading text-5xl text-atlas-text mt-2">{kpi.value}</p>
             {kpi.change && <p className="text-sm font-bold text-atlas-success mt-1">{kpi.change}</p>}
