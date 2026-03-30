@@ -93,6 +93,8 @@ export default function AnalyticsPage() {
       ]
     : fallbackStats;
 
+  const allZero = usageStats.every((s) => s.value === "0");
+
   return (
     <AppShell>
       {/* SECTION 1: Header */}
@@ -132,7 +134,9 @@ export default function AnalyticsPage() {
           )}
         </div>
         <p className="text-atlas-text-muted text-sm italic mt-3">
-          The more you use Atlas, the better it gets.
+          {allZero
+            ? "Head to the Crafting Station to create your first draft — your analytics will populate as you go."
+            : "The more you use Atlas, the better it gets."}
         </p>
       </div>
 
