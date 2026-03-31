@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import AppShell from "@/components/layout/AppShell";
 import GradientButton from "@/components/ui/GradientButton";
-import { Loader2 } from "lucide-react";
+import { SkeletonStatCard } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
 import { api, TeamAnalyst, TeamMember } from "@/lib/api";
 
@@ -97,21 +97,17 @@ export default function ManagementPage() {
         </p>
       </div>
 
-      {loading && (
-        <div className="flex items-center gap-2 mb-6 text-atlas-text-secondary text-sm">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading team data…
-        </div>
-      )}
-
       {/* SECTION 1: Overview KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
-        {kpiCards.map((kpi, i) => (
-          <div key={kpi.label} className={`bg-atlas-surface border border-glass-border rounded-2xl p-8 text-center ${i === kpiCards.length - 1 && kpiCards.length % 2 !== 0 ? "col-span-2 md:col-span-1" : ""}`}>
-            <p className="text-xs text-atlas-text-secondary uppercase tracking-wide">{kpi.label}</p>
-            <p className="font-heading text-5xl text-atlas-text mt-2">{kpi.value}</p>
-            {kpi.change && <p className="text-sm font-bold text-atlas-success mt-1">{kpi.change}</p>}
-          </div>
-        ))}
+        {loading
+          ? Array.from({ length: 3 }).map((_, i) => <SkeletonStatCard key={i} />)
+          : kpiCards.map((kpi, i) => (
+              <div key={kpi.label} className={`bg-atlas-surface border border-glass-border rounded-2xl p-8 text-center ${i === kpiCards.length - 1 && kpiCards.length % 2 !== 0 ? "col-span-2 md:col-span-1" : ""}`}>
+                <p className="text-xs text-atlas-text-secondary uppercase tracking-wide">{kpi.label}</p>
+                <p className="font-heading text-5xl text-atlas-text mt-2">{kpi.value}</p>
+                {kpi.change && <p className="text-sm font-bold text-atlas-success mt-1">{kpi.change}</p>}
+              </div>
+            ))}
       </div>
 
       {/* SECTION 2: Usage Table */}

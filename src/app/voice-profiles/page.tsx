@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import AppShell from "@/components/layout/AppShell";
+import { Skeleton } from "@/components/ui/Skeleton";
 import DimensionBar from "@/components/ui/DimensionBar";
 import GradientButton from "@/components/ui/GradientButton";
 import { Check, Plus } from "lucide-react";
@@ -15,12 +16,18 @@ export default function VoiceProfilesPage() {
   const [blends, setBlends] = useState<SavedBlend[]>([]);
   const [selectedVoices, setSelectedVoices] = useState<Set<string>>(new Set());
   const [blendValues, setBlendValues] = useState([40, 30, 20, 10]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!token) return;
-    api.voice.getProfile(token).then((r) => setProfile(r.profile)).catch(() => {});
-    api.voice.getReferences(token).then((r) => setReferences(r.voices)).catch(() => {});
-    api.voice.getBlends(token).then((r) => setBlends(r.blends)).catch(() => {});
+    setLoading(true);
+    Promise.all([
+      api.voice.getProfile(token).then((r) => setProfile(r.profile)),
+      api.voice.getReferences(token).then((r) => setReferences(r.voices)),
+      api.voice.getBlends(token).then((r) => setBlends(r.blends)),
+    ])
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [token]);
 
   const updateDimension = async (field: string, value: number) => {
@@ -73,10 +80,21 @@ export default function VoiceProfilesPage() {
           Your Voice — Detailed Breakdown
         </h3>
         <div className="space-y-3">
-          <DimensionBar label="Humor" percentage={profile?.humor ?? 50} interactive onChange={(v) => updateDimension("humor", v)} />
-          <DimensionBar label="Formality" percentage={profile?.formality ?? 50} interactive onChange={(v) => updateDimension("formality", v)} />
-          <DimensionBar label="Brevity" percentage={profile?.brevity ?? 50} interactive onChange={(v) => updateDimension("brevity", v)} />
-          <DimensionBar label="Contrarian tone" percentage={profile?.contrarianTone ?? 50} interactive onChange={(v) => updateDimension("contrarianTone", v)} />
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-3 flex-1 rounded-full" />
+              </div>
+            ))
+          ) : (
+            <>
+              <DimensionBar label="Humor" percentage={profile?.humor ?? 50} interactive onChange={(v) => updateDimension("humor", v)} />
+              <DimensionBar label="Formality" percentage={profile?.formality ?? 50} interactive onChange={(v) => updateDimension("formality", v)} />
+              <DimensionBar label="Brevity" percentage={profile?.brevity ?? 50} interactive onChange={(v) => updateDimension("brevity", v)} />
+              <DimensionBar label="Contrarian tone" percentage={profile?.contrarianTone ?? 50} interactive onChange={(v) => updateDimension("contrarianTone", v)} />
+            </>
+          )}
         </div>
         <div className="mt-4 flex gap-4 text-sm text-atlas-text-secondary">
           <span>Maturity: {profile?.maturity ?? "Beginner"}</span>
