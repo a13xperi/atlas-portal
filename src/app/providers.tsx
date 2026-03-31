@@ -2,11 +2,14 @@
 
 import { AuthProvider } from "@/lib/auth";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { CommandPaletteProvider } from "@/components/ui/CommandPalette";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary>
-      <AuthProvider>{children}</AuthProvider>
+      <CommandPaletteProvider>
+        <AuthProvider>{children}</AuthProvider>
+      </CommandPaletteProvider>
     </ErrorBoundary>
   );
 }
