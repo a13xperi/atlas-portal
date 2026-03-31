@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AppShell from "@/components/layout/AppShell";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
 import { api, AnalyticsSummary, LearningLogEntry, TweetDraft } from "@/lib/api";
 
@@ -75,13 +76,19 @@ export default function AnalyticsPage() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [logEntries, setLogEntries] = useState<LearningLogEntry[]>([]);
   const [topDrafts, setTopDrafts] = useState<TweetDraft[]>([]);
+  const [loading, setLoading] = useState(true);
   const chartMax = 100;
 
   useEffect(() => {
     if (!token) return;
-    api.analytics.summary(token).then((r) => setSummary(r.summary)).catch(() => {});
-    api.analytics.learningLog(token).then((r) => setLogEntries(r.entries)).catch(() => {});
-    api.drafts.list(token).then((r) => setTopDrafts(r.drafts.slice(0, 4))).catch(() => {});
+    setLoading(true);
+    Promise.all([
+      api.analytics.summary(token).then((r) => setSummary(r.summary)),
+      api.analytics.learningLog(token).then((r) => setLogEntries(r.entries)),
+      api.drafts.list(token).then((r) => setTopDrafts(r.drafts.slice(0, 4))),
+    ])
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [token]);
 
   const usageStats = summary
@@ -110,16 +117,23 @@ export default function AnalyticsPage() {
       {/* SECTION 2: Usage Insight */}
       <div className="bg-atlas-surface border border-glass-border rounded-xl p-8 mb-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {usageStats.map((stat) => (
-            <div key={stat.label} className="text-center">
-              <p className="text-xs text-atlas-text-secondary uppercase tracking-wide">
-                {stat.label}
-              </p>
-              <p className="font-heading text-3xl text-atlas-text mt-1">
-                {stat.value}
-              </p>
-            </div>
-          ))}
+          {loading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="text-center space-y-2">
+                  <Skeleton className="h-3 w-16 mx-auto" />
+                  <Skeleton className="h-8 w-10 mx-auto" />
+                </div>
+              ))
+            : usageStats.map((stat) => (
+                <div key={stat.label} className="text-center">
+                  <p className="text-xs text-atlas-text-secondary uppercase tracking-wide">
+                    {stat.label}
+                  </p>
+                  <p className="font-heading text-3xl text-atlas-text mt-1">
+                    {stat.value}
+                  </p>
+                </div>
+              ))}
         </div>
         {/* Sparkline placeholder */}
         <div className="mt-6 h-8 flex items-end gap-1">
