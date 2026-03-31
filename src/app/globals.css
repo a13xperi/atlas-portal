@@ -26,6 +26,9 @@
   input[type="range"]::-moz-range-thumb {
     @apply w-4 h-4 rounded-full bg-atlas-teal border-0;
   }
+  input[type="range"]::-moz-range-track {
+    @apply h-2 rounded-full bg-atlas-nav;
+  }
   input[type="range"]::-webkit-slider-runnable-track {
     @apply h-2 rounded-full bg-atlas-nav;
   }

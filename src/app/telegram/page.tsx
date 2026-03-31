@@ -77,12 +77,19 @@ export default function TelegramPage() {
               </p>
               {item.step === 2 && (
                 <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                  <div className="w-[140px] h-[140px] bg-atlas-surface border-2 border-atlas-teal rounded-xl flex items-center justify-center text-atlas-text-muted text-xs shrink-0">
-                    QR Code
+                  <div className="w-[140px] h-[140px] bg-atlas-surface border-2 border-atlas-teal rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
+                    <div className="text-center space-y-2">
+                      <div className="grid grid-cols-5 gap-1 mx-auto w-20 h-20">
+                        {Array.from({ length: 25 }).map((_, i) => (
+                          <div key={i} className={`rounded-sm ${[0,1,3,4,5,9,10,14,15,19,20,21,23,24].includes(i) ? 'bg-atlas-teal' : 'bg-atlas-surface'}`} />
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-atlas-text-muted">Scan to connect</p>
+                    </div>
                   </div>
-                  <span className="text-atlas-teal text-sm hover:underline cursor-pointer">
-                    or tap this link to connect
-                  </span>
+                  <a href="https://t.me/AtlasDelphiBot" target="_blank" rel="noopener noreferrer" className="text-atlas-teal text-sm hover:underline cursor-pointer">
+                    or tap this link to connect →
+                  </a>
                 </div>
               )}
               {item.step === 3 && (

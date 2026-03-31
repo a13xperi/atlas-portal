@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import AppShell from "@/components/layout/AppShell";
 import StatusPill from "@/components/ui/StatusPill";
 import GradientButton from "@/components/ui/GradientButton";
-import { Plus, Loader2, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
 import { api, Alert, AlertSubscription } from "@/lib/api";
 
@@ -109,6 +110,13 @@ export default function AlertsPage() {
             Your Subscriptions
           </h3>
 
+          {/* Active filter indicator */}
+          {activeCategories.size > 0 && (
+            <p className="text-xs text-atlas-teal">
+              {activeCategories.size} active filter{activeCategories.size !== 1 ? "s" : ""}
+            </p>
+          )}
+
           {/* Categories */}
           <div>
             <p className="text-xs text-atlas-text-secondary uppercase tracking-wide mb-2">
@@ -212,9 +220,15 @@ export default function AlertsPage() {
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-12 text-atlas-text-secondary">
-              <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              Loading alerts…
+            <div className="space-y-4" aria-label="Loading alerts">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="bg-atlas-surface border border-glass-border rounded-2xl p-6 space-y-3">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-8 w-28 mt-2" />
+                </div>
+              ))}
             </div>
           ) : (
             displayAlerts.map((alert) => (

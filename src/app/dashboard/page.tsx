@@ -6,6 +6,7 @@ import AppShell from "@/components/layout/AppShell";
 import StatusPill from "@/components/ui/StatusPill";
 import { useAuth } from "@/lib/auth";
 import { api, TweetDraft, AnalyticsSummary } from "@/lib/api";
+import { SkeletonStatCard, SkeletonRow } from "@/components/ui/Skeleton";
 import { PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users } from "lucide-react";
 
 const navCards = [
@@ -22,11 +23,19 @@ export default function DashboardPage() {
   const { user, token } = useAuth();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
-    api.analytics.summary(token).then((r) => setSummary(r.summary)).catch(() => {});
-    api.drafts.list(token).then((r) => setDrafts(r.drafts.slice(0, 5))).catch(() => {});
+    setLoading(true);
+    setError(null);
+    Promise.all([
+      api.analytics.summary(token).then((r) => setSummary(r.summary)),
+      api.drafts.list(token).then((r) => setDrafts(r.drafts.slice(0, 5))),
+    ])
+      .catch((err: Error) => setError(err.message))
+      .finally(() => setLoading(false));
   }, [token]);
 
   const stats = [
@@ -49,18 +58,26 @@ export default function DashboardPage() {
         Welcome back, {user?.handle || "Analyst"}
       </h1>
 
+      {error && (
+        <div role="alert" className="mt-4 px-4 py-3 bg-atlas-error/10 border border-atlas-error/30 rounded-xl text-atlas-error text-sm">
+          Failed to load data: {error}
+        </div>
+      )}
+
       <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className="bg-atlas-surface border border-glass-border rounded-2xl p-6"
-          >
-            <p className="text-atlas-text-secondary text-sm">{stat.label}</p>
-            <p className="text-[30px] font-semibold mt-1 text-atlas-text">
-              {stat.value}
-            </p>
-          </div>
-        ))}
+        {loading
+          ? Array.from({ length: 4 }).map((_, i) => <SkeletonStatCard key={i} />)
+          : stats.map((stat) => (
+              <div
+                key={stat.label}
+                className="bg-atlas-surface border border-glass-border rounded-2xl p-6"
+              >
+                <p className="text-atlas-text-secondary text-sm">{stat.label}</p>
+                <p className="text-[30px] font-semibold mt-1 text-atlas-text">
+                  {stat.value}
+                </p>
+              </div>
+            ))}
       </div>
 
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -79,7 +96,9 @@ export default function DashboardPage() {
       <div className="mt-8">
         <p className="text-atlas-text-secondary text-sm mb-4">Recent activity</p>
         <div className="bg-atlas-surface border border-glass-border rounded-2xl divide-y divide-glass-border">
-          {drafts.length > 0 ? (
+          {loading ? (
+            Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i} />)
+          ) : drafts.length > 0 ? (
             drafts.map((draft) => (
               <div
                 key={draft.id}
@@ -98,7 +117,7 @@ export default function DashboardPage() {
             <div className="px-6 py-8 text-center text-atlas-text-secondary text-sm">
               No drafts yet. Head to the Crafting Station to create your first tweet.
             </div>
-          )}
+          ) }
         </div>
       </div>
     </AppShell>

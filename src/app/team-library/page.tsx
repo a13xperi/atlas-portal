@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import AppShell from "@/components/layout/AppShell";
 import GradientButton from "@/components/ui/GradientButton";
-import { Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
 import { api, TweetDraft } from "@/lib/api";
 
@@ -72,13 +72,22 @@ export default function TeamLibraryPage() {
         ))}
       </div>
 
+      {/* Masonry Grid */}
       {loading && (
-        <div className="flex items-center gap-2 mb-6 text-atlas-text-secondary text-sm">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading library…
+        <div className="columns-1 md:columns-2 gap-6 space-y-6 mb-8">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="break-inside-avoid bg-atlas-surface border border-glass-border rounded-2xl p-8 space-y-3">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-3/4" />
+              <div className="pt-4 border-t border-glass-border space-y-2">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+          ))}
         </div>
       )}
-
-      {/* Masonry Grid */}
       {styleCards.length === 0 && !loading && (
         <div className="bg-atlas-surface border border-glass-border rounded-2xl p-12 text-center mb-8">
           <p className="text-atlas-text-secondary">No approved styles yet. Approve drafts in Crafting to build the library.</p>
@@ -86,12 +95,12 @@ export default function TeamLibraryPage() {
       )}
       <div className="columns-1 md:columns-2 gap-6 space-y-6">
         {styleCards.map((card, i) => (
-          <div key={i} className="break-inside-avoid bg-atlas-surface border border-glass-border rounded-2xl p-8">
+          <div key={i} className="bg-atlas-surface border border-glass-border rounded-2xl p-8 flex flex-col">
             <p className="text-lg text-atlas-text leading-relaxed">{card.tweet}</p>
             {card.subtext && (
               <p className="text-sm text-atlas-text-secondary mt-3 italic">{card.subtext}</p>
             )}
-            <div className="mt-4 pt-4 border-t border-glass-border">
+            <div className="mt-auto pt-4 border-t border-glass-border">
               <p className="text-sm text-atlas-text-secondary font-medium">{card.blend}</p>
               <p className="text-xs text-atlas-teal font-bold mt-1">{card.engagement} Engagement</p>
             </div>

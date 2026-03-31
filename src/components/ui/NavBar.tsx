@@ -5,6 +5,7 @@ import { Search, Bell, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { useCommandPalette } from "@/components/ui/CommandPalette";
 
 export interface NavBarProps {
   variant: "app" | "onboarding";
@@ -59,6 +60,7 @@ function DelphiLogo() {
 export default function NavBar({ variant }: NavBarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { open: openPalette } = useCommandPalette();
   const initial = user?.handle?.[0]?.toUpperCase() || user?.displayName?.[0]?.toUpperCase() || "A";
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -90,16 +92,17 @@ export default function NavBar({ variant }: NavBarProps) {
         </div>
         <div className="flex items-center gap-3 sm:gap-4">
           {variant === "app" && (
-            <Link
-              href="/search"
-              className={`hidden sm:block transition-colors ${
-                pathname === "/search"
-                  ? "text-atlas-teal"
-                  : "text-atlas-text-secondary hover:text-atlas-text"
-              }`}
+            <button
+              type="button"
+              onClick={openPalette}
+              aria-label="Open command palette (⌘K)"
+              className="hidden sm:flex items-center gap-1.5 text-atlas-text-secondary hover:text-atlas-text transition-colors group"
             >
               <Search className="w-5 h-5" />
-            </Link>
+              <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 rounded border border-glass-border text-[10px] font-mono text-atlas-text-muted group-hover:border-atlas-text-secondary transition-colors">
+                ⌘K
+              </kbd>
+            </button>
           )}
           <Link
             href="/alerts"
@@ -151,13 +154,13 @@ export default function NavBar({ variant }: NavBarProps) {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/search"
-            onClick={() => setMobileOpen(false)}
-            className="block py-2.5 px-3 rounded-lg text-sm text-atlas-text-secondary hover:text-atlas-text hover:bg-atlas-surface sm:hidden"
+          <button
+            type="button"
+            onClick={() => { setMobileOpen(false); openPalette(); }}
+            className="block w-full text-left py-2.5 px-3 rounded-lg text-sm text-atlas-text-secondary hover:text-atlas-text hover:bg-atlas-surface sm:hidden"
           >
-            Search
-          </Link>
+            Search (⌘K)
+          </button>
         </div>
       )}
     </nav>
