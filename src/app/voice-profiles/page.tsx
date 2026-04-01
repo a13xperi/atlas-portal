@@ -17,23 +17,29 @@ export default function VoiceProfilesPage() {
   const [selectedVoices, setSelectedVoices] = useState<Set<string>>(new Set());
   const [blendValues, setBlendValues] = useState([40, 30, 20, 10]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
     setLoading(true);
+    setError(null);
     Promise.all([
       api.voice.getProfile(token).then((r) => setProfile(r.profile)),
       api.voice.getReferences(token).then((r) => setReferences(r.voices)),
       api.voice.getBlends(token).then((r) => setBlends(r.blends)),
     ])
-      .catch(() => {})
+      .catch((err: Error) => setError(err.message || "Failed to load voice profiles"))
       .finally(() => setLoading(false));
   }, [token]);
 
   const updateDimension = async (field: string, value: number) => {
     if (!token || !profile) return;
-    const updated = await api.voice.updateProfile(token, { [field]: value });
-    setProfile(updated.profile);
+    try {
+      const updated = await api.voice.updateProfile(token, { [field]: value });
+      setProfile(updated.profile);
+    } catch (e: any) {
+      setError(e.message || "Failed to update dimension");
+    }
   };
 
   const toggleVoice = (id: string) => {
@@ -70,6 +76,12 @@ export default function VoiceProfilesPage() {
 
   return (
     <AppShell>
+      {error && (
+        <div role="alert" className="mb-6 px-4 py-3 bg-atlas-error/10 border border-atlas-error/30 rounded-xl text-atlas-error text-sm">
+          {error}
+        </div>
+      )}
+
       <h1 className="font-heading text-2xl text-atlas-text">
         Your Voice Profiles
       </h1>

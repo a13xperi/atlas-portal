@@ -77,17 +77,19 @@ export default function AnalyticsPage() {
   const [logEntries, setLogEntries] = useState<LearningLogEntry[]>([]);
   const [topDrafts, setTopDrafts] = useState<TweetDraft[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const chartMax = 100;
 
   useEffect(() => {
     if (!token) return;
     setLoading(true);
+    setError(null);
     Promise.all([
       api.analytics.summary(token).then((r) => setSummary(r.summary)),
       api.analytics.learningLog(token).then((r) => setLogEntries(r.entries)),
       api.drafts.list(token).then((r) => setTopDrafts(r.drafts.slice(0, 4))),
     ])
-      .catch(() => {})
+      .catch((err: Error) => setError(err.message || "Failed to load analytics"))
       .finally(() => setLoading(false));
   }, [token]);
 
@@ -104,6 +106,12 @@ export default function AnalyticsPage() {
 
   return (
     <AppShell>
+      {error && (
+        <div role="alert" className="mb-6 px-4 py-3 bg-atlas-error/10 border border-atlas-error/30 rounded-xl text-atlas-error text-sm">
+          {error}
+        </div>
+      )}
+
       {/* SECTION 1: Header */}
       <div className="mb-6">
         <h1 className="font-heading text-3xl text-atlas-text">

@@ -29,6 +29,7 @@ export default function AlertsPage() {
   const [subscriptions, setSubscriptions] = useState<AlertSubscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [activeCategories, setActiveCategories] = useState<Set<string>>(
     new Set(["DeFi", "AI"])
   );
@@ -36,6 +37,7 @@ export default function AlertsPage() {
   const loadData = useCallback(async () => {
     if (!token) { setLoading(false); return; }
     setLoading(true);
+    setError(null);
     try {
       const [alertRes, subRes] = await Promise.all([
         api.alerts.feed(token),
@@ -49,8 +51,8 @@ export default function AlertsPage() {
         .filter((s) => s.type === "CATEGORY" && s.isActive)
         .map((s) => s.value);
       if (catSubs.length > 0) setActiveCategories(new Set(catSubs));
-    } catch (e) {
-      console.error("Failed to load alerts:", e);
+    } catch (e: any) {
+      setError(e.message || "Failed to load alerts");
     } finally {
       setLoading(false);
     }
@@ -72,8 +74,8 @@ export default function AlertsPage() {
         try {
           const { subscription } = await api.alerts.subscribe(token, "CATEGORY", cat);
           setSubscriptions((prev) => [...prev, subscription]);
-        } catch (e) {
-          console.error("Failed to subscribe:", e);
+        } catch (e: any) {
+          setError(e.message || "Failed to subscribe");
         }
       }
     }
@@ -85,8 +87,8 @@ export default function AlertsPage() {
     try {
       const { alerts: newAlerts } = await api.trending.scan(token);
       setAlerts((prev) => [...newAlerts, ...prev]);
-    } catch (e) {
-      console.error("Scan failed:", e);
+    } catch (e: any) {
+      setError(e.message || "Failed to scan");
     } finally {
       setScanning(false);
     }
@@ -207,7 +209,12 @@ export default function AlertsPage() {
         <div className="flex-1 space-y-4">
           {/* Scan Button */}
           <div className="flex items-center justify-between">
-            <h2 className="font-heading text-lg text-atlas-text">Alert Feed</h2>
+            {error && (
+            <div role="alert" className="mb-4 px-4 py-3 bg-atlas-error/10 border border-atlas-error/30 rounded-xl text-atlas-error text-sm">
+              {error}
+            </div>
+          )}
+          <h2 className="font-heading text-lg text-atlas-text">Alert Feed</h2>
             <button
               type="button"
               onClick={handleScan}

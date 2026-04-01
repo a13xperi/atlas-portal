@@ -23,10 +23,12 @@ export default function ManagementPage() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [analysts, setAnalysts] = useState<TeamAnalyst[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!token) { setLoading(false); return; }
     setLoading(true);
+    setError(null);
     try {
       const [teamRes, analyticsRes] = await Promise.all([
         api.users.team(token),
@@ -34,8 +36,8 @@ export default function ManagementPage() {
       ]);
       setTeam(teamRes.team);
       setAnalysts(analyticsRes.analysts);
-    } catch (e) {
-      console.error("Failed to load team data:", e);
+    } catch (e: any) {
+      setError(e.message || "Failed to load team data");
     } finally {
       setLoading(false);
     }
@@ -86,6 +88,12 @@ export default function ManagementPage() {
 
   return (
     <AppShell>
+      {error && (
+        <div role="alert" className="mb-6 px-4 py-3 bg-atlas-error/10 border border-atlas-error/30 rounded-xl text-atlas-error text-sm">
+          {error}
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <h1 className="font-heading text-3xl text-atlas-text">

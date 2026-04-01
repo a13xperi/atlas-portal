@@ -7,8 +7,8 @@ interface AuthState {
   user: (User & { voiceProfile?: VoiceProfile }) | null;
   token: string | null;
   loading: boolean;
-  login: (handle: string) => Promise<void>;
-  register: (handle: string, onboardingTrack?: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (handle: string, email: string, password: string, onboardingTrack?: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -26,6 +26,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const saveTokens = (accessToken: string, refreshToken?: string) => {
+    localStorage.setItem("atlas_token", accessToken);
+    if (refreshToken) localStorage.setItem("atlas_refresh_token", refreshToken);
+    setToken(accessToken);
+  };
+
+  const clearTokens = () => {
+    localStorage.removeItem("atlas_token");
+    localStorage.removeItem("atlas_refresh_token");
+    setToken(null);
+    setUser(null);
+  };
+
   // Load from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem("atlas_token");
@@ -33,9 +46,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(saved);
       api.auth.me(saved)
         .then((res) => setUser(res.user))
-        .catch(() => {
-          localStorage.removeItem("atlas_token");
-          setToken(null);
+        .catch(async () => {
+          // Token expired — try refresh
+          const refreshToken = localStorage.getItem("atlas_refresh_token");
+          if (refreshToken) {
+            try {
+              const refreshed = await api.auth.refresh(refreshToken);
+              saveTokens(refreshed.token, refreshed.refresh_token);
+              const me = await api.auth.me(refreshed.token);
+              setUser(me.user);
+              return;
+            } catch {
+              // Refresh also failed
+            }
+          }
+          clearTokens();
         })
         .finally(() => setLoading(false));
     } else {
@@ -43,26 +68,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = useCallback(async (handle: string) => {
-    const res = await api.auth.login(handle);
-    localStorage.setItem("atlas_token", res.token);
-    setToken(res.token);
+  const login = useCallback(async (email: string, password: string) => {
+    const res = await api.auth.login(email, password);
+    saveTokens(res.token, res.refresh_token);
     const me = await api.auth.me(res.token);
     setUser(me.user);
   }, []);
 
-  const register = useCallback(async (handle: string, onboardingTrack?: string) => {
-    const res = await api.auth.register(handle, onboardingTrack);
-    localStorage.setItem("atlas_token", res.token);
-    setToken(res.token);
-    const me = await api.auth.me(res.token);
-    setUser(me.user);
+  const register = useCallback(async (handle: string, email: string, password: string, onboardingTrack?: string) => {
+    const res = await api.auth.register(handle, email, password, onboardingTrack);
+    if (res.token) {
+      saveTokens(res.token, res.refresh_token);
+      const me = await api.auth.me(res.token);
+      setUser(me.user);
+    }
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem("atlas_token");
-    setToken(null);
-    setUser(null);
+    clearTokens();
   }, []);
 
   return (
