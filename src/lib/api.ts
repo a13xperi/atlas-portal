@@ -97,6 +97,10 @@ export const api = {
       request<{ blends: SavedBlend[] }>("/api/voice/blends", { token }),
     createBlend: (token: string, name: string, voices: BlendVoiceInput[]) =>
       request<{ blend: SavedBlend }>("/api/voice/blends", { method: "POST", token, body: { name, voices } }),
+    calibrate: (token: string, handle: string) =>
+      request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/calibrate", {
+        method: "POST", token, body: { handle },
+      }),
   },
 
   drafts: {
@@ -118,6 +122,8 @@ export const api = {
       request<{ draft: TweetDraft }>(`/api/drafts/${id}`, { method: "PATCH", token, body: data }),
     delete: (token: string, id: string) =>
       request<{ success: boolean }>(`/api/drafts/${id}`, { method: "DELETE", token }),
+    team: (token: string, limit = 50) =>
+      request<{ drafts: TeamDraft[]; total: number }>(`/api/drafts/team?limit=${limit}`, { token }),
   },
 
   analytics: {
@@ -127,6 +133,12 @@ export const api = {
       request<{ entries: LearningLogEntry[] }>("/api/analytics/learning-log", { token }),
     engagement: (token: string) =>
       request<{ events: AnalyticsEvent[] }>("/api/analytics/engagement", { token }),
+    engagementDaily: (token: string) =>
+      request<{ days: DailyEngagement[] }>("/api/analytics/engagement-daily", { token }),
+    activityDaily: (token: string) =>
+      request<{ days: DailyActivity[] }>("/api/analytics/activity-daily", { token }),
+    teamEngagementDaily: (token: string) =>
+      request<{ days: DailyTeamEngagement[] }>("/api/analytics/team-engagement-daily", { token }),
     team: (token: string) =>
       request<{ analysts: TeamAnalyst[] }>("/api/analytics/team", { token }),
   },
@@ -193,6 +205,13 @@ export interface VoiceProfile {
   tweetsAnalyzed: number;
 }
 
+export interface CalibrationResult {
+  confidence: number;
+  analysis: string;
+  tweetsAnalyzed: number;
+  twitterUser: { username: string; name: string };
+}
+
 export interface ReferenceVoice {
   id: string;
   name: string;
@@ -225,6 +244,15 @@ export interface TweetDraft {
   blendId?: string;
   feedback?: string;
   createdAt: string;
+}
+
+export interface TeamDraft extends TweetDraft {
+  blendName: string | null;
+  user: {
+    handle: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+  };
 }
 
 export interface AnalyticsSummary {
@@ -321,4 +349,23 @@ export interface TeamMember {
   role: string;
   voiceProfile?: VoiceProfile;
   _count: { tweetDrafts: number; sessions: number };
+}
+
+export interface DailyEngagement {
+  date: string;
+  dayLabel: string;
+  predicted: number;
+  actual: number;
+}
+
+export interface DailyActivity {
+  date: string;
+  count: number;
+}
+
+export interface DailyTeamEngagement {
+  date: string;
+  dayLabel: string;
+  modelTarget: number;
+  teamActual: number;
 }
