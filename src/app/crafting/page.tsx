@@ -96,9 +96,9 @@ export default function CraftingPage() {
       setActiveDraft(draft);
       setActiveVersion(0);
       activeDraftInitialized.current = true;
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Failed to process file:", e);
-      setError(e.message || "Failed to process file");
+      setError(e instanceof Error ? e.message : "Failed to process file");
     } finally {
       setCreating(false);
     }
@@ -116,9 +116,9 @@ export default function CraftingPage() {
       setActiveDraft(draft);
       setActiveVersion(0);
       activeDraftInitialized.current = true;
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Failed to generate draft:", e);
-      setError(e.message || "Failed to generate draft");
+      setError(e instanceof Error ? e.message : "Failed to generate draft");
     } finally {
       setCreating(false);
     }
@@ -132,9 +132,9 @@ export default function CraftingPage() {
       const { draft } = await api.drafts.update(token, activeDraft.id, { status: "APPROVED" });
       setActiveDraft(draft);
       setDrafts((prev) => prev.map((d) => (d.id === draft.id ? draft : d)));
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Failed to ship draft:", e);
-      setError(e.message || "Failed to ship draft");
+      setError(e instanceof Error ? e.message : "Failed to ship draft");
     } finally {
       setLoading(false);
     }
@@ -157,9 +157,9 @@ export default function CraftingPage() {
         setActiveDraft(draft);
         setDrafts((prev) => prev.map((d) => (d.id === draft.id ? draft : d)));
         setFeedback("");
-      } catch (e2: any) {
+      } catch (e2: unknown) {
         console.error("Failed to submit feedback:", e2);
-        setError(e2.message || "Failed to submit feedback");
+        setError(e2 instanceof Error ? e2.message : "Failed to submit feedback");
       }
     } finally {
       setCreating(false);
@@ -175,9 +175,9 @@ export default function CraftingPage() {
       setDrafts((prev) => [draft, ...prev]);
       setActiveDraft(draft);
       setActiveVersion(0);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Failed to regenerate:", e);
-      setError(e.message || "Failed to regenerate draft");
+      setError(e instanceof Error ? e.message : "Failed to regenerate draft");
     } finally {
       setCreating(false);
     }
@@ -190,9 +190,9 @@ export default function CraftingPage() {
     try {
       const { image } = await api.images.generateForDraft(token, activeDraft.id, style);
       setVisualConcept(image);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Image generation failed:", e);
-      setError(e.message || "Image generation failed");
+      setError(e instanceof Error ? e.message : "Image generation failed");
     } finally {
       setGeneratingImage(false);
     }

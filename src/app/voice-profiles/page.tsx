@@ -37,8 +37,8 @@ export default function VoiceProfilesPage() {
     try {
       const updated = await api.voice.updateProfile(token, { [field]: value });
       setProfile(updated.profile);
-    } catch (e: any) {
-      setError(e.message || "Failed to update dimension");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to update dimension");
     }
   };
 

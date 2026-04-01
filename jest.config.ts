@@ -13,6 +13,7 @@ const config: Config = {
   },
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
+    "^@sentry/nextjs$": "<rootDir>/src/test-support/sentry-nextjs.ts",
   },
   setupFiles: ["<rootDir>/jest.setup.ts"],
 };

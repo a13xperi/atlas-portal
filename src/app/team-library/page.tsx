@@ -41,8 +41,8 @@ export default function TeamLibraryPage() {
       }));
       setStyleCards(cards);
       setTotalCount(drafts.length);
-    } catch (e: any) {
-      setError(e.message || "Failed to load team library");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to load team library");
     } finally {
       setLoading(false);
     }
