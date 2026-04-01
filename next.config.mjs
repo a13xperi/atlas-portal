@@ -22,6 +22,7 @@ export default withSentryConfig(withBundleAnalyzer(nextConfig), {
   project: process.env.SENTRY_PROJECT,
   silent: !process.env.CI,
   widenClientFileUpload: true,
+  tunnelRoute: "/monitoring",
   disableLogger: true,
   automaticVercelMonitors: true,
 });
