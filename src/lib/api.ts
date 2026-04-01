@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/nextjs";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
@@ -41,6 +43,9 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
         const apiErr = new ApiError(message, res.status);
 
         if (!RETRYABLE_STATUSES.has(res.status) || attempt === MAX_RETRIES - 1) {
+          Sentry.captureException(apiErr, {
+            extra: { path, method, statusCode: res.status },
+          });
           throw apiErr;
         }
         // Fall through to retry

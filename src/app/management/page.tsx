@@ -34,8 +34,8 @@ export default function ManagementPage() {
       setTeam(teamRes.team);
       setAnalysts(analyticsRes.analysts);
       setTeamEngagement(engagementRes.days);
-    } catch (e: any) {
-      setError(e.message || "Failed to load team data");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to load team data");
     } finally {
       setLoading(false);
     }

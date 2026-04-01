@@ -51,8 +51,8 @@ export default function AlertsPage() {
         .filter((s) => s.type === "CATEGORY" && s.isActive)
         .map((s) => s.value);
       if (catSubs.length > 0) setActiveCategories(new Set(catSubs));
-    } catch (e: any) {
-      setError(e.message || "Failed to load alerts");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to load alerts");
     } finally {
       setLoading(false);
     }
@@ -74,8 +74,8 @@ export default function AlertsPage() {
         try {
           const { subscription } = await api.alerts.subscribe(token, "CATEGORY", cat);
           setSubscriptions((prev) => [...prev, subscription]);
-        } catch (e: any) {
-          setError(e.message || "Failed to subscribe");
+        } catch (e: unknown) {
+          setError(e instanceof Error ? e.message : "Failed to subscribe");
         }
       }
     }
@@ -87,8 +87,8 @@ export default function AlertsPage() {
     try {
       const { alerts: newAlerts } = await api.trending.scan(token);
       setAlerts((prev) => [...newAlerts, ...prev]);
-    } catch (e: any) {
-      setError(e.message || "Failed to scan");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to scan");
     } finally {
       setScanning(false);
     }
