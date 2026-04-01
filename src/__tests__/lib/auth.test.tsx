@@ -15,7 +15,8 @@ jest.mock("@/lib/api", () => ({
   },
 }));
 
-const mockApi = api as jest.Mocked<typeof api>;
+const mockMe = api.auth.me as jest.Mock;
+const mockLogin = api.auth.login as jest.Mock;
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <AuthProvider>{children}</AuthProvider>
@@ -41,20 +42,20 @@ describe("useAuth restores session", () => {
   it("loads user from localStorage token on mount", async () => {
     localStorage.setItem("atlas_token", "saved_tok");
     const mockUser = { id: "1", handle: "alice", role: "ANALYST" as const, voiceProfile: null };
-    mockApi.auth.me.mockResolvedValue({ user: mockUser as any });
+    mockMe.mockResolvedValue({ user: mockUser as any });
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(mockApi.auth.me).toHaveBeenCalledWith("saved_tok");
+    expect(mockMe).toHaveBeenCalledWith("saved_tok");
     expect(result.current.user).toEqual(mockUser);
     expect(result.current.token).toBe("saved_tok");
   });
 
   it("clears invalid token on mount", async () => {
     localStorage.setItem("atlas_token", "bad_tok");
-    mockApi.auth.me.mockRejectedValue(new Error("Unauthorized"));
+    mockMe.mockRejectedValue(new Error("Unauthorized"));
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -70,8 +71,8 @@ describe("login", () => {
   it("stores token and fetches user", async () => {
     const loginRes = { user: { id: "1", handle: "alice", role: "ANALYST" as const }, token: "new_tok", refresh_token: "new_refresh" };
     const meRes = { user: { id: "1", handle: "alice", role: "ANALYST" as const, voiceProfile: null } };
-    mockApi.auth.login.mockResolvedValue(loginRes);
-    mockApi.auth.me.mockResolvedValue(meRes as any);
+    mockLogin.mockResolvedValue(loginRes);
+    mockMe.mockResolvedValue(meRes as any);
 
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -91,7 +92,7 @@ describe("logout", () => {
   it("clears token and user", async () => {
     localStorage.setItem("atlas_token", "tok");
     const mockUser = { id: "1", handle: "alice", role: "ANALYST" as const, voiceProfile: null };
-    mockApi.auth.me.mockResolvedValue({ user: mockUser as any });
+    mockMe.mockResolvedValue({ user: mockUser as any });
 
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.user).not.toBeNull());
