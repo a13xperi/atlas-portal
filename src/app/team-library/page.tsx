@@ -20,10 +20,12 @@ export default function TeamLibraryPage() {
   const [styleCards, setStyleCards] = useState<StyleCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!token) { setLoading(false); return; }
     setLoading(true);
+    setError(null);
     try {
       const draftsRes = await api.drafts.list(token, "APPROVED");
       const drafts = draftsRes.drafts;
@@ -39,8 +41,8 @@ export default function TeamLibraryPage() {
       }));
       setStyleCards(cards);
       setTotalCount(drafts.length);
-    } catch (e) {
-      console.error("Failed to load team library:", e);
+    } catch (e: any) {
+      setError(e.message || "Failed to load team library");
     } finally {
       setLoading(false);
     }
@@ -50,6 +52,12 @@ export default function TeamLibraryPage() {
 
   return (
     <AppShell>
+      {error && (
+        <div role="alert" className="mb-6 px-4 py-3 bg-atlas-error/10 border border-atlas-error/30 rounded-xl text-atlas-error text-sm">
+          {error}
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <h1 className="font-heading text-2xl sm:text-4xl text-atlas-text">

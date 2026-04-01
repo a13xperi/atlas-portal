@@ -1,9 +1,21 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
+const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 200;
+
 interface RequestOptions {
   method?: string;
   body?: unknown;
   token?: string | null;
+}
+
+class ApiError extends Error {
+  statusCode: number;
+  constructor(message: string, statusCode: number) {
+    super(message);
+    this.statusCode = statusCode;
+  }
 }
 
 async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
@@ -11,40 +23,62 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10_000);
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
 
-  try {
-    const res = await fetch(`${API_URL}${path}`, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-      signal: controller.signal,
-    });
+    try {
+      const res = await fetch(`${API_URL}${path}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+      });
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(err.error || err.message || "Request failed");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        const message = err.error || err.message || "Request failed";
+        const apiErr = new ApiError(message, res.status);
+
+        if (!RETRYABLE_STATUSES.has(res.status) || attempt === MAX_RETRIES - 1) {
+          throw apiErr;
+        }
+        // Fall through to retry
+      } else {
+        return res.json();
+      }
+    } catch (e) {
+      clearTimeout(timeout);
+      if (e instanceof ApiError && !RETRYABLE_STATUSES.has(e.statusCode)) throw e;
+      if (attempt === MAX_RETRIES - 1) throw e;
+      // Network errors and retryable status codes fall through to retry
+    } finally {
+      clearTimeout(timeout);
     }
 
-    return res.json();
-  } finally {
-    clearTimeout(timeout);
+    await new Promise((r) => setTimeout(r, BASE_DELAY_MS * Math.pow(2, attempt)));
   }
+
+  throw new Error("Request failed after retries");
 }
 
 // Auth
 export const api = {
   auth: {
-    register: (handle: string, onboardingTrack?: string) =>
-      request<{ user: User; token: string }>("/api/auth/register", {
+    register: (handle: string, email: string, password: string, onboardingTrack?: string) =>
+      request<{ user: User; token: string; refresh_token: string }>("/api/auth/register", {
         method: "POST",
-        body: { handle, onboardingTrack },
+        body: { handle, email, password, onboardingTrack },
       }),
-    login: (handle: string) =>
-      request<{ user: User; token: string }>("/api/auth/login", {
+    login: (email: string, password: string) =>
+      request<{ user: User; token: string; refresh_token: string }>("/api/auth/login", {
         method: "POST",
-        body: { handle },
+        body: { email, password },
+      }),
+    refresh: (refreshToken: string) =>
+      request<{ token: string; refresh_token: string }>("/api/auth/refresh", {
+        method: "POST",
+        body: { refresh_token: refreshToken },
       }),
     me: (token: string) =>
       request<{ user: User & { voiceProfile: VoiceProfile } }>("/api/auth/me", { token }),
@@ -63,6 +97,10 @@ export const api = {
       request<{ blends: SavedBlend[] }>("/api/voice/blends", { token }),
     createBlend: (token: string, name: string, voices: BlendVoiceInput[]) =>
       request<{ blend: SavedBlend }>("/api/voice/blends", { method: "POST", token, body: { name, voices } }),
+    calibrate: (token: string, handle: string) =>
+      request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/calibrate", {
+        method: "POST", token, body: { handle },
+      }),
   },
 
   drafts: {
@@ -84,6 +122,8 @@ export const api = {
       request<{ draft: TweetDraft }>(`/api/drafts/${id}`, { method: "PATCH", token, body: data }),
     delete: (token: string, id: string) =>
       request<{ success: boolean }>(`/api/drafts/${id}`, { method: "DELETE", token }),
+    team: (token: string, limit = 50) =>
+      request<{ drafts: TeamDraft[]; total: number }>(`/api/drafts/team?limit=${limit}`, { token }),
   },
 
   analytics: {
@@ -93,6 +133,12 @@ export const api = {
       request<{ entries: LearningLogEntry[] }>("/api/analytics/learning-log", { token }),
     engagement: (token: string) =>
       request<{ events: AnalyticsEvent[] }>("/api/analytics/engagement", { token }),
+    engagementDaily: (token: string) =>
+      request<{ days: DailyEngagement[] }>("/api/analytics/engagement-daily", { token }),
+    activityDaily: (token: string) =>
+      request<{ days: DailyActivity[] }>("/api/analytics/activity-daily", { token }),
+    teamEngagementDaily: (token: string) =>
+      request<{ days: DailyTeamEngagement[] }>("/api/analytics/team-engagement-daily", { token }),
     team: (token: string) =>
       request<{ analysts: TeamAnalyst[] }>("/api/analytics/team", { token }),
   },
@@ -159,6 +205,13 @@ export interface VoiceProfile {
   tweetsAnalyzed: number;
 }
 
+export interface CalibrationResult {
+  confidence: number;
+  analysis: string;
+  tweetsAnalyzed: number;
+  twitterUser: { username: string; name: string };
+}
+
 export interface ReferenceVoice {
   id: string;
   name: string;
@@ -191,6 +244,15 @@ export interface TweetDraft {
   blendId?: string;
   feedback?: string;
   createdAt: string;
+}
+
+export interface TeamDraft extends TweetDraft {
+  blendName: string | null;
+  user: {
+    handle: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+  };
 }
 
 export interface AnalyticsSummary {
@@ -287,4 +349,23 @@ export interface TeamMember {
   role: string;
   voiceProfile?: VoiceProfile;
   _count: { tweetDrafts: number; sessions: number };
+}
+
+export interface DailyEngagement {
+  date: string;
+  dayLabel: string;
+  predicted: number;
+  actual: number;
+}
+
+export interface DailyActivity {
+  date: string;
+  count: number;
+}
+
+export interface DailyTeamEngagement {
+  date: string;
+  dayLabel: string;
+  modelTarget: number;
+  teamActual: number;
 }

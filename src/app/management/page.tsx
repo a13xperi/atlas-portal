@@ -5,12 +5,7 @@ import AppShell from "@/components/layout/AppShell";
 import GradientButton from "@/components/ui/GradientButton";
 import { SkeletonStatCard } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
-import { api, TeamAnalyst, TeamMember } from "@/lib/api";
-
-const days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-// TODO: wire to analytics API when available
-const modelTarget = [50, 55, 60, 58, 65, 62, 70];
-const teamActual = [45, 58, 55, 65, 60, 68, 75];
+import { api, TeamAnalyst, TeamMember, DailyTeamEngagement } from "@/lib/api";
 
 function maturityColor(m?: string) {
   if (m === "ADVANCED") return "text-atlas-success";
@@ -22,20 +17,25 @@ export default function ManagementPage() {
   const { token } = useAuth();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [analysts, setAnalysts] = useState<TeamAnalyst[]>([]);
+  const [teamEngagement, setTeamEngagement] = useState<DailyTeamEngagement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!token) { setLoading(false); return; }
     setLoading(true);
+    setError(null);
     try {
-      const [teamRes, analyticsRes] = await Promise.all([
+      const [teamRes, analyticsRes, engagementRes] = await Promise.all([
         api.users.team(token),
         api.analytics.team(token),
+        api.analytics.teamEngagementDaily(token),
       ]);
       setTeam(teamRes.team);
       setAnalysts(analyticsRes.analysts);
-    } catch (e) {
-      console.error("Failed to load team data:", e);
+      setTeamEngagement(engagementRes.days);
+    } catch (e: any) {
+      setError(e.message || "Failed to load team data");
     } finally {
       setLoading(false);
     }
@@ -86,6 +86,12 @@ export default function ManagementPage() {
 
   return (
     <AppShell>
+      {error && (
+        <div role="alert" className="mb-6 px-4 py-3 bg-atlas-error/10 border border-atlas-error/30 rounded-xl text-atlas-error text-sm">
+          {error}
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <h1 className="font-heading text-3xl text-atlas-text">
@@ -173,15 +179,21 @@ export default function ManagementPage() {
         <div className="bg-atlas-surface border border-glass-border rounded-2xl p-6">
           <h3 className="font-heading text-xl text-atlas-text mb-4">Team Prediction Accuracy</h3>
           <div className="h-40 flex items-end gap-0">
-            {days.map((day, i) => (
-              <div key={day} className="flex-1 flex flex-col items-center gap-1">
-                <div className="w-full flex items-end justify-center gap-1 h-32">
-                  <div className="w-2.5 bg-atlas-teal/50 rounded-t" style={{ height: `${(modelTarget[i] / 80) * 100}%` }} />
-                  <div className="w-2.5 bg-atlas-success rounded-t" style={{ height: `${(teamActual[i] / 80) * 100}%` }} />
+            {(() => {
+              if (teamEngagement.length === 0) {
+                return <p className="text-sm text-atlas-text-muted italic px-2 self-center">No team engagement data yet.</p>;
+              }
+              const max = Math.max(...teamEngagement.flatMap((d) => [d.modelTarget, d.teamActual]), 1);
+              return teamEngagement.map((day) => (
+                <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="w-full flex items-end justify-center gap-1 h-32">
+                    <div className="w-2.5 bg-atlas-teal/50 rounded-t" style={{ height: `${(day.modelTarget / max) * 100}%` }} />
+                    <div className="w-2.5 bg-atlas-success rounded-t" style={{ height: `${(day.teamActual / max) * 100}%` }} />
+                  </div>
+                  <span className="text-[10px] text-atlas-text-muted">{day.dayLabel.toUpperCase()}</span>
                 </div>
-                <span className="text-[10px] text-atlas-text-muted">{day}</span>
-              </div>
-            ))}
+              ));
+            })()}
           </div>
           <div className="flex gap-4 mt-3">
             <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-atlas-teal/50" /><span className="text-[10px] text-atlas-text-secondary">Model Target</span></div>
