@@ -187,6 +187,12 @@ export const api = {
       request<{ user: User }>("/api/users/profile", { method: "PATCH", token, body: data }),
     team: (token: string) =>
       request<{ team: TeamMember[] }>("/api/users/team", { token }),
+    pushTopProfiles: (token: string) =>
+      request<{ message: string; affected: number }>("/api/users/push-top-profiles", { method: "POST", token }),
+    sendNudge: (token: string) =>
+      request<{ message: string; affected: number }>("/api/users/send-nudge", { method: "POST", token }),
+    pushStyle: (token: string, blendId?: string) =>
+      request<{ message: string; affected: number }>("/api/users/push-style", { method: "POST", token, body: { blendId } }),
   },
 };
 
