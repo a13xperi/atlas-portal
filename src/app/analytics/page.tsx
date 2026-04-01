@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import AppShell from "@/components/layout/AppShell";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
-import { api, AnalyticsSummary, LearningLogEntry, TweetDraft } from "@/lib/api";
+import { api, AnalyticsSummary, LearningLogEntry, TweetDraft, DailyEngagement, DailyActivity } from "@/lib/api";
 
 const fallbackStats = [
   { label: "Drafts", value: "0" },
@@ -67,18 +67,15 @@ const learningLog = [
   },
 ];
 
-const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const predictedData = [40, 55, 45, 70, 60, 50, 65];
-const actualData = [35, 60, 50, 80, 55, 65, 75];
-
 export default function AnalyticsPage() {
   const { token } = useAuth();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [logEntries, setLogEntries] = useState<LearningLogEntry[]>([]);
   const [topDrafts, setTopDrafts] = useState<TweetDraft[]>([]);
+  const [engagementDays, setEngagementDays] = useState<DailyEngagement[]>([]);
+  const [activityDays, setActivityDays] = useState<DailyActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const chartMax = 100;
 
   useEffect(() => {
     if (!token) return;
@@ -88,10 +85,28 @@ export default function AnalyticsPage() {
       api.analytics.summary(token).then((r) => setSummary(r.summary)),
       api.analytics.learningLog(token).then((r) => setLogEntries(r.entries)),
       api.drafts.list(token).then((r) => setTopDrafts(r.drafts.slice(0, 4))),
+      api.analytics.engagementDaily(token).then((r) => setEngagementDays(r.days)),
+      api.analytics.activityDaily(token).then((r) => setActivityDays(r.days)),
     ])
       .catch((err: Error) => setError(err.message || "Failed to load analytics"))
       .finally(() => setLoading(false));
   }, [token]);
+
+  const chartMax = engagementDays.length > 0
+    ? Math.max(...engagementDays.flatMap((d) => [d.predicted, d.actual]), 1)
+    : 100;
+
+  const accuracyPct = engagementDays.length > 0
+    ? Math.round(
+        (1 -
+          engagementDays.reduce((sum, d) => {
+            const maxVal = Math.max(d.predicted, d.actual, 1);
+            return sum + Math.abs(d.predicted - d.actual) / maxVal;
+          }, 0) /
+            engagementDays.length) *
+          100
+      )
+    : null;
 
   const usageStats = summary
     ? [
@@ -143,18 +158,24 @@ export default function AnalyticsPage() {
                 </div>
               ))}
         </div>
-        {/* Sparkline placeholder */}
-        <div className="mt-6 h-8 flex items-end gap-1">
-          {[20, 25, 22, 30, 28, 35, 32, 40, 38, 42, 45, 50, 48, 55, 52, 58, 60, 56, 62, 65, 60, 68, 70, 72, 75, 78, 80, 82, 85, 88].map(
-            (v, i) => (
-              <div
-                key={i}
-                className="flex-1 bg-atlas-teal/40 rounded-sm"
-                style={{ height: `${(v / 100) * 100}%` }}
-              />
-            )
-          )}
-        </div>
+        {/* Sparkline */}
+        {(() => {
+          const sparkData = activityDays.length > 0
+            ? activityDays
+            : Array.from({ length: 30 }, (_, i) => ({ date: "", count: i + 1 }));
+          const maxCount = Math.max(...sparkData.map((a) => a.count), 1);
+          return (
+            <div className="mt-6 h-8 flex items-end gap-1">
+              {sparkData.map((d, i) => (
+                <div
+                  key={i}
+                  className="flex-1 bg-atlas-teal/40 rounded-sm"
+                  style={{ height: `${(d.count / maxCount) * 100}%` }}
+                />
+              ))}
+            </div>
+          );
+        })()}
         <p className="text-atlas-text-muted text-sm italic mt-3">
           {allZero
             ? "Head to the Crafting Station to create your first draft — your analytics will populate as you go."
@@ -168,9 +189,11 @@ export default function AnalyticsPage() {
           <h2 className="font-heading text-xl text-atlas-text">
             Engagement Velocity
           </h2>
-          <span className="text-xs text-atlas-success bg-atlas-success/10 px-2 py-1 rounded-full font-medium">
-            62% Accuracy
-          </span>
+          {accuracyPct !== null && (
+            <span className="text-xs text-atlas-success bg-atlas-success/10 px-2 py-1 rounded-full font-medium">
+              {accuracyPct}% Accuracy
+            </span>
+          )}
         </div>
         <p className="text-sm text-atlas-text-secondary mb-6">
           Actual performance against neural prediction models.
@@ -186,23 +209,27 @@ export default function AnalyticsPage() {
           </div>
           {/* Chart body */}
           <div className="ml-10 h-full flex items-end gap-0">
-            {days.map((day, i) => (
-              <div key={day} className="flex-1 flex flex-col items-center gap-1">
-                <div className="w-full flex items-end justify-center gap-1 h-40">
-                  <div
-                    className="w-3 bg-atlas-teal/60 rounded-t"
-                    style={{ height: `${(predictedData[i] / chartMax) * 100}%` }}
-                    title={`Predicted: ${predictedData[i]}`}
-                  />
-                  <div
-                    className="w-3 bg-atlas-success rounded-t"
-                    style={{ height: `${(actualData[i] / chartMax) * 100}%` }}
-                    title={`Actual: ${actualData[i]}`}
-                  />
+            {engagementDays.length > 0 ? (
+              engagementDays.map((day) => (
+                <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="w-full flex items-end justify-center gap-1 h-40">
+                    <div
+                      className="w-3 bg-atlas-teal/60 rounded-t"
+                      style={{ height: `${(day.predicted / chartMax) * 100}%` }}
+                      title={`Predicted: ${day.predicted}`}
+                    />
+                    <div
+                      className="w-3 bg-atlas-success rounded-t"
+                      style={{ height: `${(day.actual / chartMax) * 100}%` }}
+                      title={`Actual: ${day.actual}`}
+                    />
+                  </div>
+                  <span className="text-[10px] text-atlas-text-muted">{day.dayLabel}</span>
                 </div>
-                <span className="text-[10px] text-atlas-text-muted">{day}</span>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm text-atlas-text-muted italic ml-2">No engagement data yet. Create and post drafts to see predictions vs actuals.</p>
+            )}
           </div>
         </div>
 
