@@ -22,9 +22,9 @@ export default function AnalyticsPage() {
     setError(null);
     const errors: string[] = [];
     Promise.all([
-      api.analytics.summary().then((r) => setSummary(r.summary)).catch((e: Error) => { errors.push(e.message); }),
-      api.analytics.learningLog().then((r) => setLogEntries(r.entries)).catch(() => {}),
-      api.drafts.list().then((r) => setTopDrafts(r.drafts.slice(0, 4))).catch(() => {}),
+      api.analytics.summary().then((r) => setSummary(r.summary ?? null)).catch((e: Error) => { errors.push(e.message); }),
+      api.analytics.learningLog().then((r) => setLogEntries(r.entries ?? [])).catch(() => {}),
+      api.drafts.list().then((r) => setTopDrafts((r.drafts ?? []).slice(0, 4))).catch(() => {}),
       api.analytics.engagementDaily().then((r) => setEngagementDays(r.days ?? [])).catch(() => {}),
       api.analytics.activityDaily().then((r) => setActivityDays(r.days ?? [])).catch(() => {}),
     ])

@@ -125,9 +125,28 @@ export default function ManagementPage() {
         max: 40,
       })));
 
+  const isManager = user?.role === "MANAGER" || user?.role === "ADMIN";
+
+  if (!loading && !isManager) {
+    return (
+      <AppShell>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+          <div className="w-16 h-16 rounded-full bg-atlas-surface border border-glass-border flex items-center justify-center mb-4">
+            <span className="text-2xl">🔒</span>
+          </div>
+          <h1 className="font-heading text-2xl text-atlas-text mb-2">Manager Access Required</h1>
+          <p className="text-atlas-text-secondary max-w-md">
+            The Team Management dashboard is available to managers and admins only.
+            Contact your team lead for access.
+          </p>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
-      {error && (
+      {error && !error.includes("Manager access") && (
         <div role="alert" className="mb-6 px-4 py-3 bg-atlas-error/10 border border-atlas-error/30 rounded-xl text-atlas-error text-sm">
           {error}
         </div>
