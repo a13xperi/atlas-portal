@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import AppShell from "@/components/layout/AppShell";
 import StatusPill from "@/components/ui/StatusPill";
 import GradientButton from "@/components/ui/GradientButton";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, Wifi, WifiOff } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
 import { api, Alert, AlertSubscription } from "@/lib/api";
+import { useWebSocket, WSEvent } from "@/lib/useWebSocket";
 
 const categories = ["DeFi", "AI", "Macro", "L2s", "Stablecoins"];
 const accounts = ["Vitalik", "CZ", "Cobie", "Hasu"];
@@ -33,6 +34,21 @@ export default function AlertsPage() {
   const [activeCategories, setActiveCategories] = useState<Set<string>>(
     new Set(["DeFi", "AI"])
   );
+
+  const handleWSMessage = useCallback((event: WSEvent) => {
+    if (event.type === "alert:new" || event.type === "trending:update") {
+      const newAlert = event.data as Alert;
+      setAlerts((prev) => {
+        if (prev.some((a) => a.id === newAlert.id)) return prev;
+        return [newAlert, ...prev];
+      });
+    }
+  }, []);
+
+  const { status: wsStatus } = useWebSocket({
+    token,
+    onMessage: handleWSMessage,
+  });
 
   const loadData = useCallback(async () => {
     if (!token) { setLoading(false); return; }
@@ -207,7 +223,26 @@ export default function AlertsPage() {
               {error}
             </div>
           )}
-          <h2 className="font-heading text-lg text-atlas-text">Alert Feed</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="font-heading text-lg text-atlas-text">Alert Feed</h2>
+            {wsStatus === "connected" ? (
+              <span className="flex items-center gap-1 text-xs text-atlas-success">
+                <span className="w-2 h-2 rounded-full bg-atlas-success animate-pulse" />
+                <Wifi className="w-3 h-3" />
+                Live
+              </span>
+            ) : wsStatus === "connecting" ? (
+              <span className="flex items-center gap-1 text-xs text-atlas-warning">
+                <span className="w-2 h-2 rounded-full bg-atlas-warning animate-pulse" />
+                Connecting…
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-xs text-atlas-text-muted">
+                <WifiOff className="w-3 h-3" />
+                Polling
+              </span>
+            )}
+          </div>
             <button
               type="button"
               onClick={handleScan}
