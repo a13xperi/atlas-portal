@@ -94,14 +94,7 @@ export default function AlertsPage() {
     }
   };
 
-  // Use real alerts if available, fall back to static samples
-  const staticAlerts = [
-    { id: "s1", type: "Big account posted", title: "@VitalikButerin just dropped a thread on enshrined PBS.", context: "@VitalikButerin just dropped a thread on enshrined PBS.", draftReply: "Vitalik's PBS take is interesting but misses the centralizing force of builder auctions. The real question is whether inclusion lists can fix it.", createdAt: new Date(Date.now() - 4 * 60000).toISOString() },
-    { id: "s2", type: "Trending topic", title: "#EigenLayer restaking TVL just crossed $10B.", context: "#EigenLayer restaking TVL just crossed $10B.", draftReply: "EigenLayer at $10B TVL but nobody's stress-testing the slashing conditions. This is 2021 yield farming energy all over again.", createdAt: new Date(Date.now() - 12 * 60000).toISOString() },
-    { id: "s3", type: "New report dropped", title: "Delphi Research: 'State of L2 Sequencing' published.", context: "Delphi Research: 'State of L2 Sequencing' published.", draftReply: "New Delphi report on L2 sequencing is a must-read. 3-thread summary incoming.", createdAt: new Date(Date.now() - 25 * 60000).toISOString() },
-  ];
-
-  const displayAlerts = alerts.length > 0 ? alerts : staticAlerts;
+  const displayAlerts = alerts;
 
   return (
     <AppShell>
@@ -238,7 +231,11 @@ export default function AlertsPage() {
               ))}
             </div>
           ) : (
-            displayAlerts.map((alert) => (
+            displayAlerts.length === 0 ? (
+              <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-atlas-text-secondary text-sm">No alerts yet. Enable subscriptions to start receiving alerts about your tracked topics.</p>
+              </div>
+            ) : displayAlerts.map((alert) => (
               <div key={alert.id} className="bg-atlas-surface border border-glass-border rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">

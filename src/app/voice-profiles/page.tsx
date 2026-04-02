@@ -68,11 +68,7 @@ export default function VoiceProfilesPage() {
 
   const displayBlends = blends.length > 0
     ? blends.map((b) => ({ name: b.name, mix: b.voices.map((v) => `${v.percentage}% ${v.label}`).join(" + ") }))
-    : [
-        { name: "Default Blend", mix: "40% Me + 30% Cobie + 30% Naval" },
-        { name: "Research Mode", mix: "70% Me + 20% Hasu + 10% Hsaka" },
-        { name: "Hot Take Mode", mix: "30% Me + 40% DegenSpartan + 30% Cobie" },
-      ];
+    : [];
 
   return (
     <AppShell>
@@ -123,7 +119,11 @@ export default function VoiceProfilesPage() {
           Reference Voices
         </label>
         <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-          {displayVoices.map((voice) => {
+          {displayVoices.length === 0 ? (
+            <div className="col-span-full text-center py-8">
+              <p className="text-sm text-atlas-text-muted">No reference voices yet. Add voices to start building your style.</p>
+            </div>
+          ) : displayVoices.map((voice) => {
             const isSelected = selectedVoices.has(voice.id);
             return (
               <button
@@ -158,7 +158,11 @@ export default function VoiceProfilesPage() {
           Your Saved Blends
         </label>
         <div className="mt-3 space-y-3">
-          {displayBlends.map((blend) => (
+          {displayBlends.length === 0 ? (
+            <div className="col-span-full text-center py-8">
+              <p className="text-sm text-atlas-text-muted">No saved blends yet. Create your first blend using the editor below.</p>
+            </div>
+          ) : displayBlends.map((blend) => (
             <div
               key={blend.name}
               className="bg-atlas-surface border border-glass-border border-l-2 border-l-atlas-teal rounded-2xl p-4 flex items-center justify-between"

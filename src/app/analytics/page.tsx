@@ -6,67 +6,6 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
 import { api, AnalyticsSummary, LearningLogEntry, TweetDraft, DailyEngagement, DailyActivity } from "@/lib/api";
 
-const fallbackStats = [
-  { label: "Drafts", value: "0" },
-  { label: "Feedback", value: "0" },
-  { label: "Refinements", value: "0" },
-  { label: "Ingested", value: "0" },
-];
-
-const topTweets = [
-  {
-    snippet:
-      "Protocol-market fit is the only metric that matters. TVL is vanity...",
-    engagement: "22.9k",
-    status: "posted",
-  },
-  {
-    snippet:
-      "ZK-rollup endgame is closer than you think. Prover efficiency...",
-    engagement: "15.5k",
-    status: "posted",
-  },
-  {
-    snippet:
-      "DeFi isn't rebuilding finance — it's architecting a new social...",
-    engagement: "12.4k",
-    status: "posted",
-  },
-  {
-    snippet:
-      "The 10-year yield is screaming. Crypto is whisper-quiet...",
-    engagement: "8.2k",
-    status: "draft",
-  },
-];
-
-const learningLog = [
-  {
-    date: "Mar 14, 12:04 PM",
-    event: "Tone adaptation: Adjusted for editorial authority.",
-    impact: "+8% Clarity",
-    positive: true,
-  },
-  {
-    date: "Mar 11, 09:45 AM",
-    event: "Vocabulary purge: Removed excessive jargon.",
-    impact: "+3% Reach",
-    positive: true,
-  },
-  {
-    date: "Mar 08, 04:22 PM",
-    event: "Hook refinement: Shortened first sentence structure.",
-    impact: "-5% Novelty",
-    positive: false,
-  },
-  {
-    date: "Mar 02, 11:15 PM",
-    event: "Sentiment Calibration: Warmth increased by 15%.",
-    impact: "+12% Feedback",
-    positive: true,
-  },
-];
-
 export default function AnalyticsPage() {
   const { token } = useAuth();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
@@ -115,7 +54,12 @@ export default function AnalyticsPage() {
         { label: "Refinements", value: String(summary.refinements) },
         { label: "Ingested", value: String(summary.reportsIngested) },
       ]
-    : fallbackStats;
+    : [
+        { label: "Drafts", value: "0" },
+        { label: "Feedback", value: "0" },
+        { label: "Refinements", value: "0" },
+        { label: "Ingested", value: "0" },
+      ];
 
   const allZero = usageStats.every((s) => s.value === "0");
 
@@ -159,10 +103,8 @@ export default function AnalyticsPage() {
               ))}
         </div>
         {/* Sparkline */}
-        {(() => {
-          const sparkData = activityDays.length > 0
-            ? activityDays
-            : Array.from({ length: 30 }, (_, i) => ({ date: "", count: i + 1 }));
+        {activityDays.length > 0 ? (() => {
+          const sparkData = activityDays;
           const maxCount = Math.max(...sparkData.map((a) => a.count), 1);
           return (
             <div className="mt-6 h-8 flex items-end gap-1">
@@ -175,7 +117,11 @@ export default function AnalyticsPage() {
               ))}
             </div>
           );
-        })()}
+        })() : (
+          <div className="mt-6 h-8 flex items-center justify-center">
+            <p className="text-xs text-atlas-text-muted">Activity data will appear as you create drafts</p>
+          </div>
+        )}
         <p className="text-atlas-text-muted text-sm italic mt-3">
           {allZero
             ? "Head to the Crafting Station to create your first draft — your analytics will populate as you go."
@@ -302,8 +248,18 @@ export default function AnalyticsPage() {
                   : "—",
                 status: d.status.toLowerCase(),
               }))
-            : topTweets
-          ).map((tweet, i) => (
+            : []
+          ).length === 0 ? (
+            <div className="px-6 py-8 text-center">
+              <p className="text-sm text-atlas-text-muted">No top drafts yet. Create and post drafts to see your best performers here.</p>
+            </div>
+          ) : (topDrafts.map((d) => ({
+                snippet: d.content.slice(0, 80) + (d.content.length > 80 ? "..." : ""),
+                engagement: d.predictedEngagement
+                  ? `${(d.predictedEngagement / 1000).toFixed(1)}k`
+                  : "—",
+                status: d.status.toLowerCase(),
+              }))).map((tweet, i) => (
             <div
               key={i}
               className="flex flex-col sm:grid sm:grid-cols-[1fr_100px_80px] px-4 sm:px-6 py-4 border-b border-glass-border last:border-0 hover:bg-glass transition-colors gap-1 sm:gap-0"
@@ -346,7 +302,7 @@ export default function AnalyticsPage() {
                 impact: e.impact,
                 positive: e.positive,
               }))
-            : learningLog
+            : []
           ).map((entry, i) => (
             <div
               key={i}

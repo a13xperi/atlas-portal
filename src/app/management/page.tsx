@@ -101,7 +101,15 @@ export default function ManagementPage() {
     }
   };
 
-  }));
+  // Time-to-peak (real data from backend, synthetic fallback)
+  const maxPeakDays = peaks.length > 0 ? Math.max(...peaks.map((p) => p.days), 30) : 40;
+  const timeToPeak = (peaks.length > 0
+    ? peaks.slice(0, 6).map((p) => ({ name: p.name, days: p.days, max: maxPeakDays }))
+    : tableData.slice(0, 4).map((m) => ({
+        name: m.name,
+        days: Math.max(5, Math.round(40 - (m.drafts / 4))),
+        max: 40,
+      })));
 
   return (
     <AppShell>
