@@ -19,9 +19,18 @@ class ApiError extends Error {
   }
 }
 
-// In-memory token store — fallback when HttpOnly cookies don't reach cross-origin
-let _accessToken: string | null = null;
-export function setAccessToken(token: string | null) { _accessToken = token; }
+// Token store — fallback when HttpOnly cookies don't reach cross-origin
+// Uses sessionStorage for persistence across client-side navigations
+const TOKEN_KEY = "atlas_access_token";
+let _accessToken: string | null = typeof window !== "undefined" ? sessionStorage.getItem(TOKEN_KEY) : null;
+
+export function setAccessToken(token: string | null) {
+  _accessToken = token;
+  if (typeof window !== "undefined") {
+    if (token) sessionStorage.setItem(TOKEN_KEY, token);
+    else sessionStorage.removeItem(TOKEN_KEY);
+  }
+}
 export function getAccessToken() { return _accessToken; }
 
 async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
