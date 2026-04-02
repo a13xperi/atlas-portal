@@ -133,6 +133,13 @@ export default function ManagementPage() {
         </div>
       )}
 
+      {/* Action Feedback — visible at top */}
+      {actionFeedback && (
+        <div className={`mb-6 px-4 py-3 rounded-xl text-sm transition-all ${actionFeedback.type === "success" ? "bg-atlas-success/10 border border-atlas-success/30 text-atlas-success" : "bg-atlas-error/10 border border-atlas-error/30 text-atlas-error"}`}>
+          {actionFeedback.message}
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <h1 className="font-heading text-3xl text-atlas-text">
@@ -245,7 +252,7 @@ export default function ManagementPage() {
         <div className="bg-atlas-surface border border-glass-border rounded-2xl p-6">
           <h3 className="font-heading text-xl text-atlas-text mb-4">Days to Best Engagement</h3>
           <div className="space-y-4">
-            {timeToPeak.map((entry) => (
+            {timeToPeak.length > 0 ? timeToPeak.map((entry) => (
               <div key={entry.name} className="flex items-center gap-3">
                 <span className="text-xs text-atlas-text-secondary w-20 shrink-0">{entry.name}</span>
                 <div className="flex-1 h-4 bg-atlas-nav rounded-full overflow-hidden relative">
@@ -254,9 +261,13 @@ export default function ManagementPage() {
                 </div>
                 <span className="text-xs text-atlas-text w-8 text-right">{entry.days}d</span>
               </div>
-            ))}
+            )) : (
+              <p className="text-sm text-atlas-text-muted italic py-4">Engagement data will populate as team members create drafts and receive feedback.</p>
+            )}
           </div>
-          <p className="text-[10px] text-atlas-text-muted mt-3">* 30-day team target indicated by vertical marker</p>
+          {timeToPeak.length > 0 && (
+            <p className="text-[10px] text-atlas-text-muted mt-3">* 30-day team target indicated by vertical marker</p>
+          )}
         </div>
       </div>
 
@@ -285,13 +296,6 @@ export default function ManagementPage() {
               ))}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Action Feedback */}
-      {actionFeedback && (
-        <div className={`mb-4 px-4 py-3 rounded-xl text-sm ${actionFeedback.type === "success" ? "bg-atlas-success/10 border border-atlas-success/30 text-atlas-success" : "bg-atlas-error/10 border border-atlas-error/30 text-atlas-error"}`}>
-          {actionFeedback.message}
         </div>
       )}
 
