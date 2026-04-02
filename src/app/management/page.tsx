@@ -5,7 +5,7 @@ import AppShell from "@/components/layout/AppShell";
 import GradientButton from "@/components/ui/GradientButton";
 import { SkeletonStatCard } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
-import { api, TeamAnalyst, TeamMember, DailyTeamEngagement } from "@/lib/api";
+import { api, TeamAnalyst, TeamMember, DailyTeamEngagement, AnalystPeak } from "@/lib/api";
 
 function maturityColor(m?: string) {
   if (m === "ADVANCED") return "text-atlas-success";
@@ -18,6 +18,7 @@ export default function ManagementPage() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [analysts, setAnalysts] = useState<TeamAnalyst[]>([]);
   const [teamEngagement, setTeamEngagement] = useState<DailyTeamEngagement[]>([]);
+  const [peaks, setPeaks] = useState<AnalystPeak[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionFeedback, setActionFeedback] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -28,14 +29,16 @@ export default function ManagementPage() {
     setLoading(true);
     setError(null);
     try {
-      const [teamRes, analyticsRes, engagementRes] = await Promise.all([
+      const [teamRes, analyticsRes, engagementRes, peaksRes] = await Promise.all([
         api.users.team(token),
         api.analytics.team(token),
         api.analytics.teamEngagementDaily(token),
+        api.analytics.daysToPeak(token),
       ]);
       setTeam(teamRes.team);
       setAnalysts(analyticsRes.analysts);
       setTeamEngagement(engagementRes.days);
+      setPeaks(peaksRes.peaks);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load team data");
     } finally {
@@ -98,11 +101,6 @@ export default function ManagementPage() {
     }
   };
 
-  // Time-to-peak (synthetic from real data or static)
-  const timeToPeak = tableData.slice(0, 4).map((m) => ({
-    name: m.name,
-    days: Math.max(5, Math.round(40 - (m.drafts / 4))),
-    max: 40,
   }));
 
   return (

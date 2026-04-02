@@ -146,6 +146,8 @@ export const api = {
       request<{ days: DailyTeamEngagement[] }>("/api/analytics/team-engagement-daily", { token }),
     team: (token: string) =>
       request<{ analysts: TeamAnalyst[] }>("/api/analytics/team", { token }),
+    daysToPeak: (token: string) =>
+      request<{ peaks: AnalystPeak[] }>("/api/analytics/days-to-peak", { token }),
   },
 
   alerts: {
@@ -379,4 +381,10 @@ export interface DailyTeamEngagement {
   dayLabel: string;
   modelTarget: number;
   teamActual: number;
+}
+
+export interface AnalystPeak {
+  name: string;
+  days: number;
+  hasDrafts: boolean;
 }
