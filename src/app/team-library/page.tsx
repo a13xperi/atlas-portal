@@ -16,18 +16,18 @@ interface StyleCard {
 }
 
 export default function TeamLibraryPage() {
-  const { token } = useAuth();
+  const { user } = useAuth();
   const [styleCards, setStyleCards] = useState<StyleCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    if (!token) { setLoading(false); return; }
+    if (!user) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {
-      const draftsRes = await api.drafts.list(token, "APPROVED");
+      const draftsRes = await api.drafts.list("APPROVED");
       const drafts = draftsRes.drafts;
 
       const cards: StyleCard[] = drafts.slice(0, 6).map((d: TweetDraft) => ({
@@ -46,7 +46,7 @@ export default function TeamLibraryPage() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 

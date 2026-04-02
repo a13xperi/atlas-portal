@@ -1,6 +1,6 @@
 export interface StatusPillProps {
   label: string;
-  variant: "posted" | "draft" | "feedback" | "speed";
+  variant: "posted" | "draft" | "feedback" | "speed" | "error";
 }
 
 const variantClasses: Record<StatusPillProps["variant"], string> = {
@@ -8,6 +8,7 @@ const variantClasses: Record<StatusPillProps["variant"], string> = {
   draft: "bg-atlas-teal/20 text-atlas-teal",
   feedback: "bg-atlas-warning/20 text-atlas-warning",
   speed: "bg-atlas-warning/20 text-atlas-warning",
+  error: "bg-atlas-error/20 text-atlas-error",
 };
 
 export default function StatusPill({ label, variant }: StatusPillProps) {

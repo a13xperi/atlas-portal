@@ -10,6 +10,7 @@ jest.mock("@/lib/api", () => ({
       login: jest.fn(),
       register: jest.fn(),
       refresh: jest.fn(),
+      logout: jest.fn(),
       me: jest.fn(),
     },
   },
@@ -17,6 +18,8 @@ jest.mock("@/lib/api", () => ({
 
 const mockMe = api.auth.me as jest.Mock;
 const mockLogin = api.auth.login as jest.Mock;
+const mockLogout = api.auth.logout as jest.Mock;
+const mockRefresh = api.auth.refresh as jest.Mock;
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <AuthProvider>{children}</AuthProvider>
@@ -24,23 +27,23 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 
 beforeEach(() => {
   jest.resetAllMocks();
-  localStorage.clear();
 });
 
 describe("useAuth initial state", () => {
-  it("settles to loading=false with no user when no token saved", async () => {
+  it("settles to loading=false with no user when cookie session fails", async () => {
+    mockMe.mockRejectedValue(new Error("Unauthorized"));
+    mockRefresh.mockRejectedValue(new Error("No refresh token"));
+
     const { result } = renderHook(() => useAuth(), { wrapper });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.user).toBeNull();
-    expect(result.current.token).toBeNull();
   });
 });
 
 describe("useAuth restores session", () => {
-  it("loads user from localStorage token on mount", async () => {
-    localStorage.setItem("atlas_token", "saved_tok");
+  it("loads user from cookie session on mount", async () => {
     const mockUser = { id: "1", handle: "alice", role: "ANALYST" as const, voiceProfile: null };
     mockMe.mockResolvedValue({ user: mockUser as any });
 
@@ -48,30 +51,45 @@ describe("useAuth restores session", () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(mockMe).toHaveBeenCalledWith("saved_tok");
+    expect(mockMe).toHaveBeenCalled();
     expect(result.current.user).toEqual(mockUser);
-    expect(result.current.token).toBe("saved_tok");
   });
 
-  it("clears invalid token on mount", async () => {
-    localStorage.setItem("atlas_token", "bad_tok");
+  it("tries refresh when initial me fails, then retries me", async () => {
+    const mockUser = { id: "1", handle: "alice", role: "ANALYST" as const, voiceProfile: null };
+    mockMe
+      .mockRejectedValueOnce(new Error("Unauthorized"))
+      .mockResolvedValueOnce({ user: mockUser as any });
+    mockRefresh.mockResolvedValue({ token: "new", refresh_token: "new_r" });
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(mockRefresh).toHaveBeenCalled();
+    expect(result.current.user).toEqual(mockUser);
+  });
+
+  it("clears user when both me and refresh fail", async () => {
     mockMe.mockRejectedValue(new Error("Unauthorized"));
+    mockRefresh.mockRejectedValue(new Error("Invalid refresh"));
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.user).toBeNull();
-    expect(result.current.token).toBeNull();
-    expect(localStorage.getItem("atlas_token")).toBeNull();
   });
 });
 
 describe("login", () => {
-  it("stores token and fetches user", async () => {
-    const loginRes = { user: { id: "1", handle: "alice", role: "ANALYST" as const }, token: "new_tok", refresh_token: "new_refresh" };
+  it("calls login API then fetches user via me", async () => {
+    // Initial mount — no session
+    mockMe.mockRejectedValueOnce(new Error("Unauthorized"));
+    mockRefresh.mockRejectedValueOnce(new Error("No refresh"));
+
     const meRes = { user: { id: "1", handle: "alice", role: "ANALYST" as const, voiceProfile: null } };
-    mockLogin.mockResolvedValue(loginRes);
+    mockLogin.mockResolvedValue({ user: meRes.user, token: "t", refresh_token: "r" });
     mockMe.mockResolvedValue(meRes as any);
 
     const { result } = renderHook(() => useAuth(), { wrapper });
@@ -81,28 +99,24 @@ describe("login", () => {
       await result.current.login("alice@example.com", "password123");
     });
 
-    expect(localStorage.getItem("atlas_token")).toBe("new_tok");
-    expect(localStorage.getItem("atlas_refresh_token")).toBe("new_refresh");
-    expect(result.current.token).toBe("new_tok");
+    expect(mockLogin).toHaveBeenCalledWith("alice@example.com", "password123");
     expect(result.current.user).toEqual(meRes.user);
   });
 });
 
 describe("logout", () => {
-  it("clears token and user", async () => {
-    localStorage.setItem("atlas_token", "tok");
+  it("calls logout API and clears user", async () => {
     const mockUser = { id: "1", handle: "alice", role: "ANALYST" as const, voiceProfile: null };
     mockMe.mockResolvedValue({ user: mockUser as any });
+    mockLogout.mockResolvedValue({ success: true });
 
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.user).not.toBeNull());
 
-    act(() => {
+    await act(async () => {
       result.current.logout();
     });
 
-    expect(result.current.user).toBeNull();
-    expect(result.current.token).toBeNull();
-    expect(localStorage.getItem("atlas_token")).toBeNull();
+    await waitFor(() => expect(result.current.user).toBeNull());
   });
 });

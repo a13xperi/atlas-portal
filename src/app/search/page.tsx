@@ -13,7 +13,7 @@ interface SearchResults {
 }
 
 export default function SearchPage() {
-  const { token } = useAuth();
+  const { user } = useAuth();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults | null>(null);
   const [searching, setSearching] = useState(false);
@@ -25,23 +25,22 @@ export default function SearchPage() {
 
   // Load trending topics on mount
   useEffect(() => {
-    if (!token) return;
     setLoadingTrending(true);
-    api.trending.topics(token)
+    api.trending.topics()
       .then(({ topics }) => setTrending(topics))
       .catch(() => { /* trending is optional */ })
       .finally(() => setLoadingTrending(false));
-  }, [token]);
+  }, []);
 
   const handleSearch = useCallback(async () => {
-    if (!token || !query.trim()) return;
+    if (!user || !query.trim()) return;
     setSearching(true);
     setResearch(null);
     setError(null);
     try {
       const [draftsRes, alertsRes] = await Promise.all([
-        api.drafts.list(token),
-        api.alerts.feed(token),
+        api.drafts.list(),
+        api.alerts.feed(),
       ]);
 
       const q = query.toLowerCase();
@@ -59,16 +58,15 @@ export default function SearchPage() {
     } finally {
       setSearching(false);
     }
-  }, [token, query]);
+  }, [query]);
 
   const handleResearch = useCallback(async (topic?: string) => {
-    if (!token) return;
     const q = topic || query;
     if (!q.trim()) return;
     setResearching(true);
     setError(null);
     try {
-      const { result } = await api.research.conduct(token, q.trim());
+      const { result } = await api.research.conduct(q.trim());
       setResearch(result);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Research failed";
@@ -76,7 +74,7 @@ export default function SearchPage() {
     } finally {
       setResearching(false);
     }
-  }, [token, query]);
+  }, [query]);
 
   const sentimentColor = (s?: string) => {
     switch (s?.toLowerCase()) {
@@ -259,7 +257,7 @@ export default function SearchPage() {
           </div>
         )}
 
-        {!token && query && (
+        {!user && query && (
           <p className="text-atlas-text-muted text-sm mt-6 text-center">
             Sign in to search your drafts and alerts.
           </p>

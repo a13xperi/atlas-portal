@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import AppShell from "@/components/layout/AppShell";
 import StatusPill from "@/components/ui/StatusPill";
 import GradientButton from "@/components/ui/GradientButton";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, Wifi, WifiOff } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
 import { api, Alert, AlertSubscription } from "@/lib/api";
+import { useAlertSocket } from "@/lib/alertSocket";
 
 const categories = ["DeFi", "AI", "Macro", "L2s", "Stablecoins"];
 const accounts = ["Vitalik", "CZ", "Cobie", "Hasu"];
@@ -24,7 +25,7 @@ function timeAgo(dateStr: string): string {
 }
 
 export default function AlertsPage() {
-  const { token } = useAuth();
+  const { user } = useAuth();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [subscriptions, setSubscriptions] = useState<AlertSubscription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,14 +35,29 @@ export default function AlertsPage() {
     new Set(["DeFi", "AI"])
   );
 
+  const { connected, clearUnread, onNewAlert } = useAlertSocket();
+
+  // Clear unread count when alerts page is visible
+  useEffect(() => { clearUnread(); }, [clearUnread]);
+
+  // Listen for live alerts via socket.io
+  useEffect(() => {
+    return onNewAlert((alert) => {
+      setAlerts((prev) => {
+        if (prev.some((a) => a.id === alert.id)) return prev;
+        return [alert as Alert, ...prev];
+      });
+    });
+  }, [onNewAlert]);
+
   const loadData = useCallback(async () => {
-    if (!token) { setLoading(false); return; }
+    if (!user) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {
       const [alertRes, subRes] = await Promise.all([
-        api.alerts.feed(token),
-        api.alerts.subscriptions(token),
+        api.alerts.feed(),
+        api.alerts.subscriptions(),
       ]);
       setAlerts(alertRes.alerts);
       setSubscriptions(subRes.subscriptions);
@@ -56,7 +72,7 @@ export default function AlertsPage() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -68,11 +84,11 @@ export default function AlertsPage() {
       return next;
     });
     // Subscribe if not already subscribed
-    if (!activeCategories.has(cat) && token) {
+    if (!activeCategories.has(cat) && user) {
       const existing = subscriptions.find((s) => s.type === "CATEGORY" && s.value === cat);
       if (!existing) {
         try {
-          const { subscription } = await api.alerts.subscribe(token, "CATEGORY", cat);
+          const { subscription } = await api.alerts.subscribe("CATEGORY", cat);
           setSubscriptions((prev) => [...prev, subscription]);
         } catch (e: unknown) {
           setError(e instanceof Error ? e.message : "Failed to subscribe");
@@ -82,10 +98,9 @@ export default function AlertsPage() {
   };
 
   const handleScan = async () => {
-    if (!token) return;
     setScanning(true);
     try {
-      const { alerts: newAlerts } = await api.trending.scan(token);
+      const { alerts: newAlerts } = await api.trending.scan();
       setAlerts((prev) => [...newAlerts, ...prev]);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to scan");
@@ -207,7 +222,21 @@ export default function AlertsPage() {
               {error}
             </div>
           )}
-          <h2 className="font-heading text-lg text-atlas-text">Alert Feed</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="font-heading text-lg text-atlas-text">Alert Feed</h2>
+            {connected ? (
+              <span className="flex items-center gap-1 text-xs text-atlas-success">
+                <span className="w-2 h-2 rounded-full bg-atlas-success animate-pulse" />
+                <Wifi className="w-3 h-3" />
+                Live
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-xs text-atlas-text-muted">
+                <WifiOff className="w-3 h-3" />
+                Polling
+              </span>
+            )}
+          </div>
             <button
               type="button"
               onClick={handleScan}

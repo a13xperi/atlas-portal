@@ -30,6 +30,7 @@ describe("api.auth.login", () => {
         method: "POST",
         headers: expect.objectContaining({ "Content-Type": "application/json" }),
         body: JSON.stringify({ email: "alice@example.com", password: "password123" }),
+        credentials: "include",
       })
     );
     expect(result).toEqual(data);
@@ -37,17 +38,17 @@ describe("api.auth.login", () => {
 });
 
 describe("api.auth.me", () => {
-  it("sends GET with Authorization header", async () => {
+  it("sends GET with credentials: include (cookie-based auth)", async () => {
     const data = { user: { id: "1", handle: "alice", role: "ANALYST", voiceProfile: null } };
     mockFetch(data);
 
-    await api.auth.me("tok_123");
+    await api.auth.me();
 
     expect(fetch).toHaveBeenCalledWith(
       `${API_URL}/api/auth/me`,
       expect.objectContaining({
         method: "GET",
-        headers: expect.objectContaining({ Authorization: "Bearer tok_123" }),
+        credentials: "include",
       })
     );
   });
@@ -64,6 +65,7 @@ describe("api.auth.register", () => {
       `${API_URL}/api/auth/register`,
       expect.objectContaining({
         body: JSON.stringify({ handle: "bob", email: "bob@example.com", password: "pass123", onboardingTrack: "crypto" }),
+        credentials: "include",
       })
     );
   });
@@ -135,7 +137,7 @@ describe("api.drafts.list", () => {
   it("appends status query param when provided", async () => {
     mockFetch({ drafts: [] });
 
-    await api.drafts.list("tok", "DRAFT");
+    await api.drafts.list("DRAFT");
 
     expect(fetch).toHaveBeenCalledWith(
       `${API_URL}/api/drafts?status=DRAFT`,
@@ -146,7 +148,7 @@ describe("api.drafts.list", () => {
   it("omits query param when status is undefined", async () => {
     mockFetch({ drafts: [] });
 
-    await api.drafts.list("tok");
+    await api.drafts.list();
 
     expect(fetch).toHaveBeenCalledWith(
       `${API_URL}/api/drafts`,
