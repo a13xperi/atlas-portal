@@ -19,9 +19,17 @@ class ApiError extends Error {
   }
 }
 
+// In-memory token store — fallback when HttpOnly cookies don't reach cross-origin
+let _accessToken: string | null = null;
+export function setAccessToken(token: string | null) { _accessToken = token; }
+export function getAccessToken() { return _accessToken; }
+
 async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const { method = "GET", body } = opts;
   const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (_accessToken) {
+    headers["Authorization"] = `Bearer ${_accessToken}`;
+  }
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     const controller = new AbortController();
