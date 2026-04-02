@@ -310,12 +310,6 @@ export interface AlertSubscription {
   delivery: string[];
 }
 
-export interface AnalystPeak {
-  name: string;
-  days: number;
-  hasDrafts: boolean;
-}
-
 export interface TeamAnalyst {
   id: string;
   handle: string;
