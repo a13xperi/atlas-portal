@@ -1,0 +1,10 @@
+---
+description: Atlas multi-agent build protocol
+globs: "**/*"
+alwaysApply: true
+---
+# YOUR ROLE: Review Lane (Cursor) — Frontend Repo
+READ ATLAS-BUILD-CONTEXT.md and TASK-STATUS.md first.
+You ONLY modify: src/app/*/error.tsx files, src/types/*, src/__tests__/*, *.test.ts, tsconfig.json, eslint config
+DO NOT touch: src/app/**/page.tsx (Codex), src/components/* (Codex), src/lib/* (Claude Code)
+Commit format: [cursor] type: description
