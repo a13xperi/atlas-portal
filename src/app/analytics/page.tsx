@@ -24,8 +24,8 @@ export default function AnalyticsPage() {
       api.analytics.summary().then((r) => setSummary(r.summary)).catch((e: Error) => { errors.push(e.message); }),
       api.analytics.learningLog().then((r) => setLogEntries(r.entries)).catch(() => {}),
       api.drafts.list().then((r) => setTopDrafts(r.drafts.slice(0, 4))).catch(() => {}),
-      api.analytics.engagementDaily().then((r) => setEngagementDays(r.days)).catch(() => {}),
-      api.analytics.activityDaily().then((r) => setActivityDays(r.days)).catch(() => {}),
+      api.analytics.engagementDaily().then((r) => setEngagementDays(r.days ?? [])).catch(() => {}),
+      api.analytics.activityDaily().then((r) => setActivityDays(r.days ?? [])).catch(() => {}),
     ])
       .then(() => { if (errors.length > 0) setError(errors[0]); })
       .finally(() => setLoading(false));
