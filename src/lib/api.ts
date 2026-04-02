@@ -9,7 +9,6 @@ const BASE_DELAY_MS = 200;
 interface RequestOptions {
   method?: string;
   body?: unknown;
-  token?: string | null;
 }
 
 class ApiError extends Error {
@@ -21,9 +20,8 @@ class ApiError extends Error {
 }
 
 async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, token } = opts;
+  const { method = "GET", body } = opts;
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     const controller = new AbortController();
@@ -35,6 +33,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
         headers,
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
+        credentials: "include",
       });
 
       if (!res.ok) {
@@ -67,7 +66,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   throw new Error("Request failed after retries");
 }
 
-// Auth
+// Auth — all requests use HttpOnly cookies (credentials: 'include')
 export const api = {
   auth: {
     register: (handle: string, email: string, password: string, onboardingTrack?: string) =>
@@ -80,121 +79,131 @@ export const api = {
         method: "POST",
         body: { email, password },
       }),
-    refresh: (refreshToken: string) =>
+    refresh: () =>
       request<{ token: string; refresh_token: string }>("/api/auth/refresh", {
         method: "POST",
-        body: { refresh_token: refreshToken },
       }),
-    me: (token: string) =>
-      request<{ user: User & { voiceProfile: VoiceProfile } }>("/api/auth/me", { token }),
+    logout: () =>
+      request<{ success: boolean }>("/api/auth/logout", { method: "POST" }),
+    me: () =>
+      request<{ user: User & { voiceProfile: VoiceProfile } }>("/api/auth/me"),
   },
 
   voice: {
-    getProfile: (token: string) =>
-      request<{ profile: VoiceProfile }>("/api/voice/profile", { token }),
-    updateProfile: (token: string, data: Partial<VoiceProfile>) =>
-      request<{ profile: VoiceProfile }>("/api/voice/profile", { method: "PATCH", token, body: data }),
-    getReferences: (token: string) =>
-      request<{ voices: ReferenceVoice[] }>("/api/voice/references", { token }),
-    addReference: (token: string, name: string, handle?: string) =>
-      request<{ voice: ReferenceVoice }>("/api/voice/references", { method: "POST", token, body: { name, handle } }),
-    getBlends: (token: string) =>
-      request<{ blends: SavedBlend[] }>("/api/voice/blends", { token }),
-    createBlend: (token: string, name: string, voices: BlendVoiceInput[]) =>
-      request<{ blend: SavedBlend }>("/api/voice/blends", { method: "POST", token, body: { name, voices } }),
-    calibrate: (token: string, handle: string) =>
+    getProfile: () =>
+      request<{ profile: VoiceProfile }>("/api/voice/profile"),
+    updateProfile: (data: Partial<VoiceProfile>) =>
+      request<{ profile: VoiceProfile }>("/api/voice/profile", { method: "PATCH", body: data }),
+    getReferences: () =>
+      request<{ voices: ReferenceVoice[] }>("/api/voice/references"),
+    addReference: (name: string, handle?: string) =>
+      request<{ voice: ReferenceVoice }>("/api/voice/references", { method: "POST", body: { name, handle } }),
+    getBlends: () =>
+      request<{ blends: SavedBlend[] }>("/api/voice/blends"),
+    createBlend: (name: string, voices: BlendVoiceInput[]) =>
+      request<{ blend: SavedBlend }>("/api/voice/blends", { method: "POST", body: { name, voices } }),
+    calibrate: (handle: string) =>
       request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/calibrate", {
-        method: "POST", token, body: { handle },
+        method: "POST", body: { handle },
       }),
   },
 
   drafts: {
-    list: (token: string, status?: string) =>
-      request<{ drafts: TweetDraft[] }>(`/api/drafts${status ? `?status=${status}` : ""}`, { token }),
-    get: (token: string, id: string) =>
-      request<{ draft: TweetDraft }>(`/api/drafts/${id}`, { token }),
-    create: (token: string, content: string, sourceType?: string, sourceContent?: string) =>
-      request<{ draft: TweetDraft }>("/api/drafts", { method: "POST", token, body: { content, sourceType, sourceContent } }),
-    generate: (token: string, sourceContent: string, sourceType: string, blendId?: string) =>
+    list: (status?: string) =>
+      request<{ drafts: TweetDraft[] }>(`/api/drafts${status ? `?status=${status}` : ""}`),
+    get: (id: string) =>
+      request<{ draft: TweetDraft }>(`/api/drafts/${id}`),
+    create: (content: string, sourceType?: string, sourceContent?: string) =>
+      request<{ draft: TweetDraft }>("/api/drafts", { method: "POST", body: { content, sourceType, sourceContent } }),
+    generate: (sourceContent: string, sourceType: string, blendId?: string) =>
       request<{ draft: TweetDraft }>("/api/drafts/generate", {
-        method: "POST", token, body: { sourceContent, sourceType, blendId },
+        method: "POST", body: { sourceContent, sourceType, blendId },
       }),
-    regenerate: (token: string, draftId: string, feedback?: string) =>
+    regenerate: (draftId: string, feedback?: string) =>
       request<{ draft: TweetDraft }>(`/api/drafts/${draftId}/regenerate`, {
-        method: "POST", token, body: { feedback },
+        method: "POST", body: { feedback },
       }),
-    update: (token: string, id: string, data: { content?: string; status?: string; feedback?: string }) =>
-      request<{ draft: TweetDraft }>(`/api/drafts/${id}`, { method: "PATCH", token, body: data }),
-    delete: (token: string, id: string) =>
-      request<{ success: boolean }>(`/api/drafts/${id}`, { method: "DELETE", token }),
-    team: (token: string, limit = 50) =>
-      request<{ drafts: TeamDraft[]; total: number }>(`/api/drafts/team?limit=${limit}`, { token }),
+    update: (id: string, data: { content?: string; status?: string; feedback?: string }) =>
+      request<{ draft: TweetDraft }>(`/api/drafts/${id}`, { method: "PATCH", body: data }),
+    delete: (id: string) =>
+      request<{ success: boolean }>(`/api/drafts/${id}`, { method: "DELETE" }),
+    team: (limit = 50) =>
+      request<{ drafts: TeamDraft[]; total: number }>(`/api/drafts/team?limit=${limit}`),
   },
 
   analytics: {
-    summary: (token: string) =>
-      request<{ summary: AnalyticsSummary }>("/api/analytics/summary", { token }),
-    learningLog: (token: string) =>
-      request<{ entries: LearningLogEntry[] }>("/api/analytics/learning-log", { token }),
-    engagement: (token: string) =>
-      request<{ events: AnalyticsEvent[] }>("/api/analytics/engagement", { token }),
-    engagementDaily: (token: string) =>
-      request<{ days: DailyEngagement[] }>("/api/analytics/engagement-daily", { token }),
-    activityDaily: (token: string) =>
-      request<{ days: DailyActivity[] }>("/api/analytics/activity-daily", { token }),
-    teamEngagementDaily: (token: string) =>
-      request<{ days: DailyTeamEngagement[] }>("/api/analytics/team-engagement-daily", { token }),
-    team: (token: string) =>
-      request<{ analysts: TeamAnalyst[] }>("/api/analytics/team", { token }),
-    daysToPeak: (token: string) =>
-      request<{ peaks: AnalystPeak[] }>("/api/analytics/days-to-peak", { token }),
+    summary: () =>
+      request<{ summary: AnalyticsSummary }>("/api/analytics/summary"),
+    learningLog: () =>
+      request<{ entries: LearningLogEntry[] }>("/api/analytics/learning-log"),
+    engagement: () =>
+      request<{ events: AnalyticsEvent[] }>("/api/analytics/engagement"),
+    engagementDaily: () =>
+      request<{ days: DailyEngagement[] }>("/api/analytics/engagement-daily"),
+    activityDaily: () =>
+      request<{ days: DailyActivity[] }>("/api/analytics/activity-daily"),
+    teamEngagementDaily: () =>
+      request<{ days: DailyTeamEngagement[] }>("/api/analytics/team-engagement-daily"),
+    team: () =>
+      request<{ analysts: TeamAnalyst[] }>("/api/analytics/team"),
+    daysToPeak: () =>
+      request<{ peaks: AnalystPeak[] }>("/api/analytics/days-to-peak"),
   },
 
   alerts: {
-    feed: (token: string) =>
-      request<{ alerts: Alert[] }>("/api/alerts/feed", { token }),
-    subscriptions: (token: string) =>
-      request<{ subscriptions: AlertSubscription[] }>("/api/alerts/subscriptions", { token }),
-    subscribe: (token: string, type: string, value: string, delivery?: string[]) =>
-      request<{ subscription: AlertSubscription }>("/api/alerts/subscriptions", { method: "POST", token, body: { type, value, delivery } }),
+    feed: () =>
+      request<{ alerts: Alert[] }>("/api/alerts/feed"),
+    subscriptions: () =>
+      request<{ subscriptions: AlertSubscription[] }>("/api/alerts/subscriptions"),
+    subscribe: (type: string, value: string, delivery?: string[]) =>
+      request<{ subscription: AlertSubscription }>("/api/alerts/subscriptions", { method: "POST", body: { type, value, delivery } }),
   },
 
   images: {
-    generate: (token: string, prompt: string, style?: string) =>
-      request<{ image: GeneratedImage }>("/api/images/generate", { method: "POST", token, body: { prompt, style } }),
-    generateForDraft: (token: string, draftId: string, style?: string) =>
-      request<{ image: GeneratedImage }>("/api/images/generate-for-draft", { method: "POST", token, body: { draftId, style } }),
-    forDraft: (token: string, draftId: string) =>
-      request<{ images: GeneratedImage[] }>(`/api/images/for-draft/${draftId}`, { token }),
+    generate: (prompt: string, style?: string) =>
+      request<{ image: GeneratedImage }>("/api/images/generate", { method: "POST", body: { prompt, style } }),
+    generateForDraft: (draftId: string, style?: string) =>
+      request<{ image: GeneratedImage }>("/api/images/generate-for-draft", { method: "POST", body: { draftId, style } }),
+    forDraft: (draftId: string) =>
+      request<{ images: GeneratedImage[] }>(`/api/images/for-draft/${draftId}`),
   },
 
   trending: {
-    scan: (token: string) =>
-      request<{ alerts: Alert[] }>("/api/trending/scan", { method: "POST", token }),
-    topics: (token: string) =>
-      request<{ topics: TrendingTopic[] }>("/api/trending/topics", { token }),
+    scan: () =>
+      request<{ alerts: Alert[] }>("/api/trending/scan", { method: "POST" }),
+    topics: () =>
+      request<{ topics: TrendingTopic[] }>("/api/trending/topics"),
   },
 
   research: {
-    conduct: (token: string, query: string) =>
-      request<{ result: ResearchResultData }>("/api/research", { method: "POST", token, body: { query } }),
-    history: (token: string) =>
-      request<{ results: ResearchResultData[] }>("/api/research/history", { token }),
+    conduct: (query: string) =>
+      request<{ result: ResearchResultData }>("/api/research", { method: "POST", body: { query } }),
+    history: () =>
+      request<{ results: ResearchResultData[] }>("/api/research/history"),
+  },
+
+  loop: {
+    state: () =>
+      request<{ loop: LoopState }>("/api/loop/state"),
+    createPR: (branch: string, taskId: string) =>
+      request<{ prUrl: string }>("/api/loop/create-pr", {
+        method: "POST", body: { branch, taskId },
+      }),
   },
 
   users: {
-    profile: (token: string) =>
-      request<{ user: User }>("/api/users/profile", { token }),
-    updateProfile: (token: string, data: { displayName?: string; email?: string }) =>
-      request<{ user: User }>("/api/users/profile", { method: "PATCH", token, body: data }),
-    team: (token: string) =>
-      request<{ team: TeamMember[] }>("/api/users/team", { token }),
-    pushTopProfiles: (token: string) =>
-      request<{ message: string; affected: number }>("/api/users/push-top-profiles", { method: "POST", token }),
-    sendNudge: (token: string) =>
-      request<{ message: string; affected: number }>("/api/users/send-nudge", { method: "POST", token }),
-    pushStyle: (token: string, blendId?: string) =>
-      request<{ message: string; affected: number }>("/api/users/push-style", { method: "POST", token, body: { blendId } }),
+    profile: () =>
+      request<{ user: User }>("/api/users/profile"),
+    updateProfile: (data: { displayName?: string; email?: string }) =>
+      request<{ user: User }>("/api/users/profile", { method: "PATCH", body: data }),
+    team: () =>
+      request<{ team: TeamMember[] }>("/api/users/team"),
+    pushTopProfiles: () =>
+      request<{ message: string; affected: number }>("/api/users/push-top-profiles", { method: "POST" }),
+    sendNudge: () =>
+      request<{ message: string; affected: number }>("/api/users/send-nudge", { method: "POST" }),
+    pushStyle: (blendId?: string) =>
+      request<{ message: string; affected: number }>("/api/users/push-style", { method: "POST", body: { blendId } }),
   },
 };
 
@@ -387,4 +396,23 @@ export interface AnalystPeak {
   name: string;
   days: number;
   hasDrafts: boolean;
+}
+
+export interface LoopIteration {
+  iteration: number;
+  score: number;
+  branch: string;
+  timestamp: string;
+}
+
+export interface LoopState {
+  taskId: string;
+  status: "running" | "completed" | "failed" | "idle";
+  currentIteration: number;
+  maxIterations: number;
+  iterations: LoopIteration[];
+  bestIteration: LoopIteration | null;
+  evalType: string;
+  startedAt: string | null;
+  completedAt: string | null;
 }

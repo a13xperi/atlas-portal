@@ -5,6 +5,7 @@ import { Search, Bell, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { useAlertSocket } from "@/lib/alertSocket";
 import { useCommandPalette } from "@/components/ui/CommandPalette";
 
 export interface NavBarProps {
@@ -60,6 +61,7 @@ function DelphiLogo() {
 export default function NavBar({ variant }: NavBarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { unreadCount } = useAlertSocket();
   const { open: openPalette } = useCommandPalette();
   const initial = user?.handle?.[0]?.toUpperCase() || user?.displayName?.[0]?.toUpperCase() || "A";
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -106,13 +108,18 @@ export default function NavBar({ variant }: NavBarProps) {
           )}
           <Link
             href="/alerts"
-            className={`transition-colors ${
+            className={`relative transition-colors ${
               pathname === "/alerts"
                 ? "text-atlas-teal"
                 : "text-atlas-text-secondary hover:text-atlas-text"
             }`}
           >
             <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
           </Link>
           <Link
             href="/profile"

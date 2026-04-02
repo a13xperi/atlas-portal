@@ -10,7 +10,7 @@ import { Loader2 } from "lucide-react";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user: authUser, token, logout } = useAuth();
+  const { user: authUser, logout } = useAuth();
   const [profile, setProfile] = useState<User | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -18,25 +18,23 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
 
   const loadProfile = useCallback(async () => {
-    if (!token) return;
     try {
-      const { user } = await api.users.profile(token);
+      const { user } = await api.users.profile();
       setProfile(user);
       setDisplayName(user.displayName || "");
       setEmail(user.email || "");
     } catch (e) {
       console.error("Failed to load profile:", e);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => { loadProfile(); }, [loadProfile]);
 
   const handleSave = async () => {
-    if (!token) return;
     setSaving(true);
     setSaved(false);
     try {
-      const { user } = await api.users.updateProfile(token, {
+      const { user } = await api.users.updateProfile({
         displayName: displayName || undefined,
         email: email || undefined,
       });
@@ -115,7 +113,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Logout */}
-        {token && (
+        {authUser && (
           <button
             type="button"
             onClick={() => { logout(); router.push("/"); }}

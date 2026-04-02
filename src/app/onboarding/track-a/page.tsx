@@ -21,7 +21,7 @@ const referenceAccounts = ["Cobie", "Hsaka", "Ansem", "Hasu"];
 
 export default function TrackAPage() {
   const router = useRouter();
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const [dimensions, setDimensions] = useState({
     humor: 35, formality: 20, brevity: 60, contrarianTone: 45,
   });
@@ -69,16 +69,15 @@ export default function TrackAPage() {
   };
 
   const handleSaveAndContinue = async () => {
-    if (!token) return;
     setSaving(true);
     try {
       // Save voice dimensions
-      await api.voice.updateProfile(token, dimensions);
+      await api.voice.updateProfile(dimensions);
 
       // Save selected reference voices
       for (const ref of Array.from(selectedRefs)) {
         try {
-          await api.voice.addReference(token, ref, ref);
+          await api.voice.addReference(ref, ref);
         } catch { /* may already exist */ }
       }
 
@@ -86,7 +85,7 @@ export default function TrackAPage() {
       const refs = Array.from(selectedRefs);
       if (refs.length > 0) {
         try {
-          await api.voice.createBlend(token, "Onboarding blend", [
+          await api.voice.createBlend("Onboarding blend", [
             { label: "My voice", percentage: blendValues[0] },
             ...refs.slice(0, 2).map((r, i) => ({
               label: r,
