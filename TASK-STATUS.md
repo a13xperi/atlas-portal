@@ -53,20 +53,25 @@
 | atlas-backend | #23 | Release: Staging to Main — Apr 2026 Pre-Production | 2026-04-02 |
 | atlas-portal | #29 | Release: Staging to Main — Apr 3 Empty States, Error Boundaries, Nav IA | 2026-04-02 |
 
-## QA PASS — 2026-04-03 (TESTING Lane)
+## QA RESULTS — 2026-04-02 22:45 UTC (QA Lane, Run 2)
 
 | Check | Result | Details |
 |-------|--------|---------|
-| Backend build (`npm run build`) | ✅ PASS | Prisma v6.19.2 generated, tsc compiled, 0 errors |
-| Backend tests (`npm test`) | ⚠️ 258/260 PASS | 2 failures in `auth.test.ts`: login/register return 401 instead of expected 503 when Supabase unconfigured. Not a regression — test expectation mismatch. |
-| Frontend build (`next build`) | ❌ FAIL | Compiled OK, 3 ESLint warnings (useCallback deps). Crashed: `ENOENT pages-manifest.json` during page data collection. Likely stale `.next` cache — recommend `rm -rf .next && next build`. |
-| Backend health (Railway prod) | ✅ PASS | `status: ok`, DB ok, Redis ok |
-| Frontend health (Vercel prod) | ✅ PASS | HTTP 200 |
+| Backend build (`npm run build`) | PASS | Prisma v6.19.2, tsc 0 errors |
+| Backend tests (`npm test`) | PARTIAL (257/260) | 3-4 flaky timeout failures per run (not deterministic) |
+| Frontend build (`next build`) | PASS | 0 errors, 14 routes, 18 static pages. Previous ENOENT was stale cache — clean build passes. |
+| Backend health (Railway prod) | PASS | `status: ok`, DB ok, Redis ok |
+| Frontend health (Vercel prod) | PASS | HTTP 200 |
+
+### Frontend Build Detail
+- 14 app routes + middleware compiled successfully
+- 18/18 static pages generated
+- 1 ESLint warning: `team-library/page.tsx:49` — missing `user` dep in useCallback
+- Previous run's `pages-manifest.json` ENOENT was a stale `.next` cache issue — now resolved
 
 ### Action Items (do NOT fix in TESTING lane)
-- [ ] Clean `.next` cache and rebuild to confirm build passes
-- [ ] Fix 3 ESLint warnings: missing `user` dep in useCallback (management, search, team-library pages)
-- [ ] Fix auth.test.ts: 503 vs 401 expectation mismatch (2 tests) — backend repo
+- [ ] Backend: Increase test timeouts or fix slow supertest setup (flaky timeouts)
+- [ ] Frontend: Fix ESLint warning in team-library/page.tsx
 
 ## CROSS-TOOL REQUESTS
 | From | To | Request | Status |
