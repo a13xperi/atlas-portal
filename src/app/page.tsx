@@ -39,8 +39,8 @@ export default function LoginPage() {
         await register(handle.trim(), email.trim(), password, "A");
         router.push("/onboarding/track-a");
       }
-    } catch (err: any) {
-      setError(err.message || "Something went wrong");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setSubmitting(false);
     }
