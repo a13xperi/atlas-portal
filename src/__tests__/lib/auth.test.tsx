@@ -14,6 +14,8 @@ jest.mock("@/lib/api", () => ({
       me: jest.fn(),
     },
   },
+  setAccessToken: jest.fn(),
+  getAccessToken: jest.fn(),
 }));
 
 const mockMe = api.auth.me as jest.Mock;
