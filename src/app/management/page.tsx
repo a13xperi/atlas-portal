@@ -30,10 +30,10 @@ export default function ManagementPage() {
     setError(null);
     const errors: string[] = [];
     await Promise.all([
-      api.users.team().then((r) => setTeam(r.team)).catch((e: Error) => { errors.push(e.message); }),
-      api.analytics.team().then((r) => setAnalysts(r.analysts)).catch(() => {}),
-      api.analytics.teamEngagementDaily().then((r) => setTeamEngagement(r.days)).catch(() => {}),
-      api.analytics.daysToPeak().then((r) => setPeaks(r.peaks)).catch(() => {}),
+      api.users.team().then((r) => setTeam(r.team ?? [])).catch((e: Error) => { errors.push(e.message); }),
+      api.analytics.team().then((r) => setAnalysts(r.analysts ?? [])).catch(() => {}),
+      api.analytics.teamEngagementDaily().then((r) => setTeamEngagement(r.days ?? [])).catch(() => {}),
+      api.analytics.daysToPeak().then((r) => setPeaks(r.peaks ?? [])).catch(() => {}),
     ]);
     if (errors.length > 0) setError(errors[0]);
     setLoading(false);
