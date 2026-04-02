@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Atlas Portal
 
-## Getting Started
+Content-to-tweet crafting platform for crypto analysts. Personalized voice/tonality calibration, analytics, team management, and publishing workflow.
 
-First, run the development server:
+Built by [Delphi Digital](https://delphidigital.io).
+
+## Stack
+
+- **Framework:** Next.js 14 (App Router, TypeScript)
+- **Styling:** Tailwind CSS + design tokens (`src/lib/tokens.ts`)
+- **Auth:** Supabase Auth via `useAuth()` (`src/lib/auth.tsx`)
+- **API:** Typed client at `src/lib/api.ts` → backend at `api-production-9bef.up.railway.app`
+- **Fonts:** Playfair Display (headings), Inter (body)
+- **Monitoring:** Sentry
+
+## Routes
+
+| Route | Description |
+|-------|-------------|
+| `/` | Landing / auth redirect |
+| `/dashboard` | Overview — KPIs, recent activity |
+| `/crafting` | Tweet drafting with voice calibration |
+| `/analytics` | Performance metrics and insights |
+| `/voice-profiles` | Manage analyst voice/tonality settings |
+| `/team-library` | Shared content and templates |
+| `/management` | Team and subscription management |
+| `/alerts` | Notification center |
+| `/profile` | User settings |
+| `/onboarding` | New user setup flow |
+| `/telegram` | Telegram bot integration |
+| `/search` | Content and user search |
+
+## Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
+npm run build      # production build (must pass 0 errors)
+npm run lint
+npm run test
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environments
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Env | Frontend | Backend |
+|-----|----------|---------|
+| Production | https://delphi-atlas.vercel.app | https://api-production-9bef.up.railway.app |
+| Staging | https://staging-delphi-atlas.vercel.app | https://api-staging-287d.up.railway.app |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Branching
 
-## Learn More
+- `main` → Production (protected, PR + CI required)
+- `staging` → Staging (CI required)
+- Never push directly to `main`. All changes flow through `staging` first.
+- Branch naming: `lane/portal-{description}`
 
-To learn more about Next.js, take a look at the following resources:
+## Coding Standards
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- All colors from `src/lib/tokens.ts` — never hardcode hex values
+- One component per file
+- Use `src/lib/api.ts` typed client — don't create new fetch calls
+- Auth via `useAuth()` from `src/lib/auth.tsx`
+- Glass cards: `bg-glass backdrop-blur-xl border border-glass-border rounded-2xl`
+- CTAs: `bg-gradient-to-r from-atlas-teal to-atlas-steel`
+- Server components by default; `'use client'` only when needed
+- Run `next build` after every change to verify zero errors
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Related
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Backend:** [atlas-backend](https://github.com/a13xperi/atlas-backend) — Express + Prisma + PostgreSQL
+- **Figma:** File key `XYp41bfZdl8O00QCJqAdaK`
+- **CLAUDE.md:** Full workspace rules, auto-behaviors, skills, and lane protocol

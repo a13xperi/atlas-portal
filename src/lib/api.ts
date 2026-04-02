@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/nextjs";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
@@ -41,6 +43,9 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
         const apiErr = new ApiError(message, res.status);
 
         if (!RETRYABLE_STATUSES.has(res.status) || attempt === MAX_RETRIES - 1) {
+          Sentry.captureException(apiErr, {
+            extra: { path, method, statusCode: res.status },
+          });
           throw apiErr;
         }
         // Fall through to retry
@@ -141,6 +146,8 @@ export const api = {
       request<{ days: DailyTeamEngagement[] }>("/api/analytics/team-engagement-daily", { token }),
     team: (token: string) =>
       request<{ analysts: TeamAnalyst[] }>("/api/analytics/team", { token }),
+    daysToPeak: (token: string) =>
+      request<{ peaks: AnalystPeak[] }>("/api/analytics/days-to-peak", { token }),
   },
 
   alerts: {
@@ -182,6 +189,12 @@ export const api = {
       request<{ user: User }>("/api/users/profile", { method: "PATCH", token, body: data }),
     team: (token: string) =>
       request<{ team: TeamMember[] }>("/api/users/team", { token }),
+    pushTopProfiles: (token: string) =>
+      request<{ message: string; affected: number }>("/api/users/push-top-profiles", { method: "POST", token }),
+    sendNudge: (token: string) =>
+      request<{ message: string; affected: number }>("/api/users/send-nudge", { method: "POST", token }),
+    pushStyle: (token: string, blendId?: string) =>
+      request<{ message: string; affected: number }>("/api/users/push-style", { method: "POST", token, body: { blendId } }),
   },
 };
 
@@ -368,4 +381,10 @@ export interface DailyTeamEngagement {
   dayLabel: string;
   modelTarget: number;
   teamActual: number;
+}
+
+export interface AnalystPeak {
+  name: string;
+  days: number;
+  hasDrafts: boolean;
 }

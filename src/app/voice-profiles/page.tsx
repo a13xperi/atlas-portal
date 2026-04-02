@@ -37,8 +37,8 @@ export default function VoiceProfilesPage() {
     try {
       const updated = await api.voice.updateProfile(token, { [field]: value });
       setProfile(updated.profile);
-    } catch (e: any) {
-      setError(e.message || "Failed to update dimension");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to update dimension");
     }
   };
 
@@ -57,22 +57,11 @@ export default function VoiceProfilesPage() {
     setBlendValues(newValues);
   };
 
-  // Fallback display voices if none from API yet
-  const displayVoices = references.length > 0
-    ? references
-    : ["Cobie", "Hsaka", "Ansem", "Hasu", "DegenSpartan", "Mando"].map((name, i) => ({
-        id: `placeholder-${i}`,
-        name,
-        isActive: true,
-      }));
+  const displayVoices = references;
 
   const displayBlends = blends.length > 0
     ? blends.map((b) => ({ name: b.name, mix: b.voices.map((v) => `${v.percentage}% ${v.label}`).join(" + ") }))
-    : [
-        { name: "Default Blend", mix: "40% Me + 30% Cobie + 30% Naval" },
-        { name: "Research Mode", mix: "70% Me + 20% Hasu + 10% Hsaka" },
-        { name: "Hot Take Mode", mix: "30% Me + 40% DegenSpartan + 30% Cobie" },
-      ];
+    : [];
 
   return (
     <AppShell>
@@ -123,7 +112,11 @@ export default function VoiceProfilesPage() {
           Reference Voices
         </label>
         <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-          {displayVoices.map((voice) => {
+          {displayVoices.length === 0 ? (
+            <div className="col-span-full text-center py-8">
+              <p className="text-sm text-atlas-text-muted">No reference voices yet. Add voices to start building your style.</p>
+            </div>
+          ) : displayVoices.map((voice) => {
             const isSelected = selectedVoices.has(voice.id);
             return (
               <button
@@ -158,7 +151,11 @@ export default function VoiceProfilesPage() {
           Your Saved Blends
         </label>
         <div className="mt-3 space-y-3">
-          {displayBlends.map((blend) => (
+          {displayBlends.length === 0 ? (
+            <div className="col-span-full text-center py-8">
+              <p className="text-sm text-atlas-text-muted">No saved blends yet. Create your first blend using the editor below.</p>
+            </div>
+          ) : displayBlends.map((blend) => (
             <div
               key={blend.name}
               className="bg-atlas-surface border border-glass-border border-l-2 border-l-atlas-teal rounded-2xl p-4 flex items-center justify-between"
@@ -182,9 +179,14 @@ export default function VoiceProfilesPage() {
           Create or Edit a Blend
         </h3>
         <div className="space-y-4">
-          {["My voice", "Reference A", "Reference B", "Reference C"].map((label, i) => (
+          {[
+            "My voice",
+            ...(references.length > 0
+              ? references.slice(0, 3).map((r) => r.name)
+              : ["Reference A", "Reference B", "Reference C"]),
+          ].map((label, i) => (
             <div key={label} className="flex items-center gap-4">
-              <span className="text-sm text-atlas-text-secondary w-28 shrink-0">{label}</span>
+              <span className="text-sm text-atlas-text-secondary w-28 shrink-0 truncate">{label}</span>
               <input
                 type="range"
                 min={0}
@@ -199,7 +201,7 @@ export default function VoiceProfilesPage() {
         </div>
         <div className="mt-4 bg-atlas-nav rounded-2xl p-4">
           <p className="text-sm text-atlas-text-secondary italic">
-            Preview: &quot;The merge was 18 months ago and we&apos;re still arguing about MEV. Builders are the new miners — and they&apos;re playing a completely different game.&quot;
+            Preview will generate once you save a blend and craft your first draft with it.
           </p>
         </div>
         <p className="text-atlas-text-muted text-xs mt-2">

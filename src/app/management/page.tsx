@@ -5,7 +5,7 @@ import AppShell from "@/components/layout/AppShell";
 import GradientButton from "@/components/ui/GradientButton";
 import { SkeletonStatCard } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
-import { api, TeamAnalyst, TeamMember, DailyTeamEngagement } from "@/lib/api";
+import { api, TeamAnalyst, TeamMember, DailyTeamEngagement, AnalystPeak } from "@/lib/api";
 
 function maturityColor(m?: string) {
   if (m === "ADVANCED") return "text-atlas-success";
@@ -18,24 +18,29 @@ export default function ManagementPage() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [analysts, setAnalysts] = useState<TeamAnalyst[]>([]);
   const [teamEngagement, setTeamEngagement] = useState<DailyTeamEngagement[]>([]);
+  const [peaks, setPeaks] = useState<AnalystPeak[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!token) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {
-      const [teamRes, analyticsRes, engagementRes] = await Promise.all([
+      const [teamRes, analyticsRes, engagementRes, peaksRes] = await Promise.all([
         api.users.team(token),
         api.analytics.team(token),
         api.analytics.teamEngagementDaily(token),
+        api.analytics.daysToPeak(token),
       ]);
       setTeam(teamRes.team);
       setAnalysts(analyticsRes.analysts);
       setTeamEngagement(engagementRes.days);
-    } catch (e: any) {
-      setError(e.message || "Failed to load team data");
+      setPeaks(peaksRes.peaks);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to load team data");
     } finally {
       setLoading(false);
     }
@@ -77,12 +82,34 @@ export default function ManagementPage() {
     .slice(0, 3)
     .map((m) => ({ name: m.name, days: `${m.sessions} sessions · ${m.drafts} drafts` }));
 
-  // Time-to-peak (synthetic from real data or static)
-  const timeToPeak = tableData.slice(0, 4).map((m) => ({
-    name: m.name,
-    days: Math.max(5, Math.round(40 - (m.drafts / 4))),
-    max: 40,
-  }));
+  const handleAction = async (action: "pushTopProfiles" | "sendNudge" | "pushStyle") => {
+    if (!token || actionLoading) return;
+    setActionLoading(action);
+    setActionFeedback(null);
+    try {
+      const res = action === "pushTopProfiles"
+        ? await api.users.pushTopProfiles(token)
+        : action === "sendNudge"
+        ? await api.users.sendNudge(token)
+        : await api.users.pushStyle(token);
+      setActionFeedback({ message: res.message || `Action completed (${res.affected} affected)`, type: "success" });
+      if (action === "pushTopProfiles" || action === "sendNudge") loadData();
+    } catch (e: unknown) {
+      setActionFeedback({ message: e instanceof Error ? e.message : "Action failed", type: "error" });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Time-to-peak (real data from backend, synthetic fallback)
+  const maxPeakDays = peaks.length > 0 ? Math.max(...peaks.map((p) => p.days), 30) : 40;
+  const timeToPeak = (peaks.length > 0
+    ? peaks.slice(0, 6).map((p) => ({ name: p.name, days: p.days, max: maxPeakDays }))
+    : tableData.slice(0, 4).map((m) => ({
+        name: m.name,
+        days: Math.max(5, Math.round(40 - (m.drafts / 4))),
+        max: 40,
+      })));
 
   return (
     <AppShell>
@@ -237,7 +264,9 @@ export default function ManagementPage() {
                   </div>
                   <p className="text-lg text-atlas-text font-medium mt-3">{analyst.name}</p>
                   <p className="text-xs text-atlas-text-secondary mt-1">{analyst.days}</p>
-                  <button type="button" className="mt-3 text-xs font-bold text-atlas-teal hover:underline">Send Nudge</button>
+                  <button type="button" onClick={() => handleAction("sendNudge")} className="mt-3 text-xs font-bold text-atlas-teal hover:underline disabled:opacity-50" disabled={!!actionLoading}>
+                    {actionLoading === "sendNudge" ? "Sending…" : "Send Nudge"}
+                  </button>
                 </div>
               ))}
             </div>
@@ -245,11 +274,24 @@ export default function ManagementPage() {
         </div>
       )}
 
+      {/* Action Feedback */}
+      {actionFeedback && (
+        <div className={`mb-4 px-4 py-3 rounded-xl text-sm ${actionFeedback.type === "success" ? "bg-atlas-success/10 border border-atlas-success/30 text-atlas-success" : "bg-atlas-error/10 border border-atlas-error/30 text-atlas-error"}`}>
+          {actionFeedback.message}
+        </div>
+      )}
+
       {/* SECTION 6: Bottom Action Strip */}
       <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 pt-4">
-        <GradientButton>Reload inactive with Top 5 profiles</GradientButton>
-        <GradientButton variant="outline-warning">Send nudge to all inactive</GradientButton>
-        <GradientButton variant="outline-teal">Push a style to all</GradientButton>
+        <GradientButton onClick={() => handleAction("pushTopProfiles")} disabled={!!actionLoading}>
+          {actionLoading === "pushTopProfiles" ? "Pushing profiles…" : "Reload inactive with Top 5 profiles"}
+        </GradientButton>
+        <GradientButton variant="outline-warning" onClick={() => handleAction("sendNudge")} disabled={!!actionLoading}>
+          {actionLoading === "sendNudge" ? "Sending nudges…" : "Send nudge to all inactive"}
+        </GradientButton>
+        <GradientButton variant="outline-teal" onClick={() => handleAction("pushStyle")} disabled={!!actionLoading}>
+          {actionLoading === "pushStyle" ? "Pushing style…" : "Push a style to all"}
+        </GradientButton>
       </div>
     </AppShell>
   );
