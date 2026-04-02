@@ -23,6 +23,7 @@ export default withSentryConfig(withBundleAnalyzer(nextConfig), {
   silent: !process.env.CI,
   widenClientFileUpload: true,
   tunnelRoute: "/monitoring",
-  disableLogger: true,
-  automaticVercelMonitors: true,
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
+  },
 });
