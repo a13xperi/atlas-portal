@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import AppShell from "@/components/layout/AppShell";
 import { Skeleton } from "@/components/ui/Skeleton";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { api, AnalyticsSummary, LearningLogEntry, TweetDraft, DailyEngagement, DailyActivity } from "@/lib/api";
 
@@ -251,46 +252,34 @@ export default function AnalyticsPage() {
               Status
             </span>
           </div>
-          {(topDrafts.length > 0
-            ? topDrafts.map((d) => ({
-                snippet: d.content.slice(0, 80) + (d.content.length > 80 ? "..." : ""),
-                engagement: d.predictedEngagement
-                  ? `${(d.predictedEngagement / 1000).toFixed(1)}k`
-                  : "—",
-                status: d.status.toLowerCase(),
-              }))
-            : []
-          ).length === 0 ? (
+          {topDrafts.length === 0 ? (
             <div className="px-6 py-8 text-center">
               <p className="text-sm text-atlas-text-muted">No top drafts yet. Create and post drafts to see your best performers here.</p>
             </div>
-          ) : (topDrafts.map((d) => ({
-                snippet: d.content.slice(0, 80) + (d.content.length > 80 ? "..." : ""),
-                engagement: d.predictedEngagement
-                  ? `${(d.predictedEngagement / 1000).toFixed(1)}k`
-                  : "—",
-                status: d.status.toLowerCase(),
-              }))).map((tweet, i) => (
-            <div
-              key={i}
-              className="flex flex-col sm:grid sm:grid-cols-[1fr_100px_80px] px-4 sm:px-6 py-4 border-b border-glass-border last:border-0 hover:bg-glass transition-colors gap-1 sm:gap-0"
+          ) : topDrafts.map((d) => (
+            <Link
+              key={d.id}
+              href={`/crafting?draft=${d.id}`}
+              className="flex flex-col sm:grid sm:grid-cols-[1fr_100px_80px] px-4 sm:px-6 py-4 border-b border-glass-border last:border-0 hover:bg-glass cursor-pointer transition-colors gap-1 sm:gap-0"
             >
               <span className="text-sm text-atlas-text truncate pr-4">
-                {tweet.snippet}
+                {d.content.slice(0, 80)}{d.content.length > 80 ? "..." : ""}
               </span>
               <span className="text-sm text-atlas-teal font-medium">
-                {tweet.engagement}
+                {d.predictedEngagement
+                  ? `${(d.predictedEngagement / 1000).toFixed(1)}k`
+                  : "—"}
               </span>
               <span
                 className={`text-xs font-medium ${
-                  tweet.status === "posted"
+                  d.status.toLowerCase() === "posted"
                     ? "text-atlas-success"
                     : "text-atlas-teal"
                 }`}
               >
-                {tweet.status}
+                {d.status.toLowerCase()}
               </span>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
