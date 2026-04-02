@@ -19,9 +19,26 @@ class ApiError extends Error {
   }
 }
 
+// Token store — fallback when HttpOnly cookies don't reach cross-origin
+// Uses sessionStorage for persistence across client-side navigations
+const TOKEN_KEY = "atlas_access_token";
+let _accessToken: string | null = typeof window !== "undefined" ? sessionStorage.getItem(TOKEN_KEY) : null;
+
+export function setAccessToken(token: string | null) {
+  _accessToken = token;
+  if (typeof window !== "undefined") {
+    if (token) sessionStorage.setItem(TOKEN_KEY, token);
+    else sessionStorage.removeItem(TOKEN_KEY);
+  }
+}
+export function getAccessToken() { return _accessToken; }
+
 async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const { method = "GET", body } = opts;
   const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (_accessToken) {
+    headers["Authorization"] = `Bearer ${_accessToken}`;
+  }
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     const controller = new AbortController();

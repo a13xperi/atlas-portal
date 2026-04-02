@@ -28,22 +28,15 @@ export default function ManagementPage() {
     if (!user) { setLoading(false); return; }
     setLoading(true);
     setError(null);
-    try {
-      const [teamRes, analyticsRes, engagementRes, peaksRes] = await Promise.all([
-        api.users.team(),
-        api.analytics.team(),
-        api.analytics.teamEngagementDaily(),
-        api.analytics.daysToPeak(),
-      ]);
-      setTeam(teamRes.team);
-      setAnalysts(analyticsRes.analysts);
-      setTeamEngagement(engagementRes.days);
-      setPeaks(peaksRes.peaks);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to load team data");
-    } finally {
-      setLoading(false);
-    }
+    const errors: string[] = [];
+    await Promise.all([
+      api.users.team().then((r) => setTeam(r.team)).catch((e: Error) => { errors.push(e.message); }),
+      api.analytics.team().then((r) => setAnalysts(r.analysts)).catch(() => {}),
+      api.analytics.teamEngagementDaily().then((r) => setTeamEngagement(r.days)).catch(() => {}),
+      api.analytics.daysToPeak().then((r) => setPeaks(r.peaks)).catch(() => {}),
+    ]);
+    if (errors.length > 0) setError(errors[0]);
+    setLoading(false);
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);

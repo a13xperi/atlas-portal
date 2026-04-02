@@ -19,14 +19,15 @@ export default function AnalyticsPage() {
   useEffect(() => {
     setLoading(true);
     setError(null);
+    const errors: string[] = [];
     Promise.all([
-      api.analytics.summary().then((r) => setSummary(r.summary)),
-      api.analytics.learningLog().then((r) => setLogEntries(r.entries)),
-      api.drafts.list().then((r) => setTopDrafts(r.drafts.slice(0, 4))),
-      api.analytics.engagementDaily().then((r) => setEngagementDays(r.days)),
-      api.analytics.activityDaily().then((r) => setActivityDays(r.days)),
+      api.analytics.summary().then((r) => setSummary(r.summary)).catch((e: Error) => { errors.push(e.message); }),
+      api.analytics.learningLog().then((r) => setLogEntries(r.entries)).catch(() => {}),
+      api.drafts.list().then((r) => setTopDrafts(r.drafts.slice(0, 4))).catch(() => {}),
+      api.analytics.engagementDaily().then((r) => setEngagementDays(r.days)).catch(() => {}),
+      api.analytics.activityDaily().then((r) => setActivityDays(r.days)).catch(() => {}),
     ])
-      .catch((err: Error) => setError(err.message || "Failed to load analytics"))
+      .then(() => { if (errors.length > 0) setError(errors[0]); })
       .finally(() => setLoading(false));
   }, []);
 

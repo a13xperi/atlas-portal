@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
-import { api, User, VoiceProfile } from "./api";
+import { api, User, VoiceProfile, setAccessToken } from "./api";
 
 interface AuthState {
   user: (User & { voiceProfile?: VoiceProfile }) | null;
@@ -28,9 +28,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     api.auth.me()
       .then((res) => setUser(res.user))
       .catch(async () => {
-        // Token may be expired — try refresh (cookie-based)
+        // Token may be expired — try refresh
         try {
-          await api.auth.refresh();
+          const refreshRes = await api.auth.refresh();
+          if (refreshRes.token) setAccessToken(refreshRes.token);
           const me = await api.auth.me();
           setUser(me.user);
           return;
@@ -43,7 +44,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    await api.auth.login(email, password);
+    const res = await api.auth.login(email, password);
+    if (res.token) setAccessToken(res.token);
     const me = await api.auth.me();
     setUser(me.user);
   }, []);
@@ -51,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (handle: string, email: string, password: string, onboardingTrack?: string) => {
     const res = await api.auth.register(handle, email, password, onboardingTrack);
     if (res.token) {
+      setAccessToken(res.token);
       const me = await api.auth.me();
       setUser(me.user);
     }
@@ -62,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // Best-effort — clear local state regardless
     }
+    setAccessToken(null);
     setUser(null);
   }, []);
 
