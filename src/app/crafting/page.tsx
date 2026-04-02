@@ -336,6 +336,15 @@ export default function CraftingPage() {
               Shipped
             </span>
           )}
+          <p className={`text-xs text-right mt-2 ${
+            activeDraft.content.length >= 280
+              ? "text-red-400"
+              : activeDraft.content.length >= 260
+                ? "text-yellow-400"
+                : "text-atlas-text-secondary"
+          }`}>
+            {activeDraft.content.length} / 280
+          </p>
         </div>
       ) : (
         <div className="mt-6 bg-atlas-surface border border-glass-border rounded-2xl p-6 text-center text-atlas-text-secondary">
