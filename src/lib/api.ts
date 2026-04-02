@@ -213,7 +213,7 @@ export const api = {
   users: {
     profile: () =>
       request<{ user: User }>("/api/users/profile"),
-    updateProfile: (data: { displayName?: string; email?: string }) =>
+    updateProfile: (data: { displayName?: string; email?: string; bio?: string; avatarUrl?: string }) =>
       request<{ user: User }>("/api/users/profile", { method: "PATCH", body: data }),
     team: () =>
       request<{ team: TeamMember[] }>("/api/users/team"),
