@@ -201,24 +201,35 @@ export default function AnalyticsPage() {
           <h3 className="font-heading text-lg text-atlas-text">
             Model Reliability
           </h3>
-          {/* Trend line placeholder */}
           <div className="mt-4 h-20 flex items-end gap-0.5">
-            {[30, 35, 32, 40, 45, 50, 48, 55, 58, 62, 60, 65, 70, 72, 78, 80, 82, 85, 88, 90].map(
-              (v, i) => (
-                <div
-                  key={i}
-                  className="flex-1 bg-atlas-teal rounded-t"
-                  style={{ height: `${v}%` }}
-                />
-              )
+            {(logEntries ?? []).length > 0 ? (logEntries ?? []).slice(-20).map(
+              (entry, i) => {
+                const score = entry.positive ? 70 + (i * 1.5) : 30 + (i * 1.5);
+                return (
+                  <div
+                    key={i}
+                    className={`flex-1 rounded-t ${entry.positive ? "bg-atlas-teal" : "bg-atlas-warning"}`}
+                    style={{ height: `${Math.min(score, 100)}%` }}
+                  />
+                );
+              }
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-xs text-atlas-text-muted italic">Confidence data builds as you create and refine drafts</p>
+              </div>
             )}
           </div>
         </div>
         <div className="bg-atlas-surface border border-glass-border rounded-xl p-6 flex items-center">
-          <p className="font-heading text-base text-atlas-text italic leading-relaxed">
-            &ldquo;Your editorial flow has reached the 90th percentile of
-            efficient creators.&rdquo;
-          </p>
+          {(logEntries ?? []).length > 0 ? (
+            <p className="font-heading text-base text-atlas-text italic leading-relaxed">
+              {(logEntries ?? []).filter((e) => e.positive).length} positive signals detected across your recent activity.
+            </p>
+          ) : (
+            <p className="font-heading text-base text-atlas-text-muted italic leading-relaxed">
+              Model insights will appear here as your usage history grows.
+            </p>
+          )}
         </div>
       </div>
 
@@ -290,8 +301,13 @@ export default function AnalyticsPage() {
           Model Learning Log
         </h2>
         <div className="space-y-4">
-          {(logEntries.length > 0
-            ? logEntries.map((e) => ({
+          {(logEntries ?? []).length === 0 ? (
+            <div className="py-6 text-center">
+              <p className="text-sm text-atlas-text-muted">No learning events yet. The model logs adjustments as you provide feedback on drafts.</p>
+            </div>
+          ) : null}
+          {((logEntries ?? []).length > 0
+            ? (logEntries ?? []).map((e) => ({
                 date: new Date(e.createdAt).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
@@ -333,29 +349,40 @@ export default function AnalyticsPage() {
         <h2 className="font-heading text-xl text-atlas-text mb-6">
           Growth Velocity
         </h2>
-        <div className="flex items-center gap-2">
-          {/* Timeline bar */}
-          <div className="flex-1 relative h-3 bg-atlas-surface rounded-full overflow-hidden">
-            <div
-              className="h-full bg-atlas-teal rounded-full"
-              style={{ width: "75%" }}
-            />
-          </div>
-        </div>
-        <div className="flex justify-between mt-3">
-          <div className="text-center">
-            <p className="text-[10px] text-atlas-text-muted">Onboarded</p>
-            <p className="text-[10px] text-atlas-text font-bold">Jan 15</p>
-          </div>
-          <div className="text-center">
-            <p className="text-[10px] text-atlas-text-muted">Peak Engagement</p>
-            <p className="text-[10px] text-atlas-text font-bold">Feb 22</p>
-          </div>
-          <div className="text-center">
-            <p className="text-[10px] text-atlas-text-muted">Efficiency Goal</p>
-            <p className="text-[10px] text-atlas-text font-bold">&lt; 30 Days</p>
-          </div>
-        </div>
+        {(() => {
+          const totalDrafts = summary?.draftsCreated ?? 0;
+          const totalFeedback = summary?.feedbackGiven ?? 0;
+          const totalRefinements = summary?.refinements ?? 0;
+          const totalActivity = totalDrafts + totalFeedback + totalRefinements;
+          const progressPct = totalActivity > 0 ? Math.min(Math.round((totalActivity / 50) * 100), 100) : 0;
+
+          return (
+            <>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 relative h-3 bg-atlas-surface rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-atlas-teal rounded-full transition-all duration-500"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-between mt-3">
+                <div className="text-center">
+                  <p className="text-[10px] text-atlas-text-muted">Drafts</p>
+                  <p className="text-[10px] text-atlas-text font-bold">{totalDrafts}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] text-atlas-text-muted">Refinements</p>
+                  <p className="text-[10px] text-atlas-text font-bold">{totalRefinements}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] text-atlas-text-muted">Total Activity</p>
+                  <p className="text-[10px] text-atlas-text font-bold">{totalActivity}</p>
+                </div>
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       {/* SECTION 8: Footer */}
