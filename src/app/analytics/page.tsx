@@ -7,7 +7,6 @@ import { useAuth } from "@/lib/auth";
 import { api, AnalyticsSummary, LearningLogEntry, TweetDraft, DailyEngagement, DailyActivity } from "@/lib/api";
 
 export default function AnalyticsPage() {
-  const { token } = useAuth();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [logEntries, setLogEntries] = useState<LearningLogEntry[]>([]);
   const [topDrafts, setTopDrafts] = useState<TweetDraft[]>([]);
@@ -17,19 +16,18 @@ export default function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) return;
     setLoading(true);
     setError(null);
     Promise.all([
-      api.analytics.summary(token).then((r) => setSummary(r.summary)),
-      api.analytics.learningLog(token).then((r) => setLogEntries(r.entries)),
-      api.drafts.list(token).then((r) => setTopDrafts(r.drafts.slice(0, 4))),
-      api.analytics.engagementDaily(token).then((r) => setEngagementDays(r.days)),
-      api.analytics.activityDaily(token).then((r) => setActivityDays(r.days)),
+      api.analytics.summary().then((r) => setSummary(r.summary)),
+      api.analytics.learningLog().then((r) => setLogEntries(r.entries)),
+      api.drafts.list().then((r) => setTopDrafts(r.drafts.slice(0, 4))),
+      api.analytics.engagementDaily().then((r) => setEngagementDays(r.days)),
+      api.analytics.activityDaily().then((r) => setActivityDays(r.days)),
     ])
       .catch((err: Error) => setError(err.message || "Failed to load analytics"))
       .finally(() => setLoading(false));
-  }, [token]);
+  }, []);
 
   const chartMax = engagementDays.length > 0
     ? Math.max(...engagementDays.flatMap((d) => [d.predicted, d.actual]), 1)

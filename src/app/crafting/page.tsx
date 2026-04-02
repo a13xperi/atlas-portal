@@ -10,7 +10,6 @@ import { useAuth } from "@/lib/auth";
 import { api, TweetDraft, TrendingTopic, GeneratedImage, SavedBlend, AnalyticsSummary } from "@/lib/api";
 
 export default function CraftingPage() {
-  const { token } = useAuth();
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [activeDraft, setActiveDraft] = useState<TweetDraft | null>(null);
   const [activeVersion, setActiveVersion] = useState(0);
@@ -29,9 +28,8 @@ export default function CraftingPage() {
   const activeDraftInitialized = useRef(false);
 
   const loadDrafts = useCallback(async () => {
-    if (!token) return;
     try {
-      const { drafts: d } = await api.drafts.list(token);
+      const { drafts: d } = await api.drafts.list();
       setDrafts(d);
       if (d.length > 0 && !activeDraftInitialized.current) {
         setActiveDraft(d[0]);
@@ -40,35 +38,32 @@ export default function CraftingPage() {
     } catch (e) {
       console.error("Failed to load drafts:", e);
     }
-  }, [token]);
+  }, []);
 
   const loadSummary = useCallback(async () => {
-    if (!token) return;
     try {
-      const { summary: s } = await api.analytics.summary(token);
+      const { summary: s } = await api.analytics.summary();
       setSummary(s);
     } catch (e) {
       console.error("Failed to load summary:", e);
     }
-  }, [token]);
+  }, []);
 
   const loadBlends = useCallback(async () => {
-    if (!token) return;
     try {
-      const { blends: b } = await api.voice.getBlends(token);
+      const { blends: b } = await api.voice.getBlends();
       setBlends(b);
     } catch { /* blends optional */ }
-  }, [token]);
+  }, []);
 
   const loadTrending = useCallback(async () => {
-    if (!token) return;
     try {
-      const { topics } = await api.trending.topics(token);
+      const { topics } = await api.trending.topics();
       setTrendingTopics(topics);
     } catch (e) {
       // Trending is optional — don't block the page
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     loadDrafts();
@@ -78,7 +73,7 @@ export default function CraftingPage() {
   }, [loadDrafts, loadSummary, loadTrending, loadBlends]);
 
   const handleFileDrop = async (files: FileList) => {
-    if (!token || files.length === 0) return;
+    if (!user || files.length === 0) return;
     const file = files[0];
     // Read text content from the file
     try {
@@ -87,7 +82,6 @@ export default function CraftingPage() {
       setCreating(true);
       setError(null);
       const { draft } = await api.drafts.generate(
-        token,
         text.trim().slice(0, 10000), // Cap at 10k chars
         "REPORT",
         selectedBlendId || undefined
@@ -105,13 +99,13 @@ export default function CraftingPage() {
   };
 
   const handleCreateDraft = async (text: string) => {
-    if (!token || !text.trim()) return;
+    if (!user || !text.trim()) return;
     setCreating(true);
     setError(null);
     try {
       // Detect source type from content
       const sourceType = text.trim().startsWith("http") ? "ARTICLE" : "MANUAL";
-      const { draft } = await api.drafts.generate(token, text.trim(), sourceType, selectedBlendId || undefined);
+      const { draft } = await api.drafts.generate(text.trim(), sourceType, selectedBlendId || undefined);
       setDrafts((prev) => [draft, ...prev]);
       setActiveDraft(draft);
       setActiveVersion(0);
@@ -125,11 +119,11 @@ export default function CraftingPage() {
   };
 
   const handleShip = async () => {
-    if (!token || !activeDraft) return;
+    if (!user || !activeDraft) return;
     setLoading(true);
     setError(null);
     try {
-      const { draft } = await api.drafts.update(token, activeDraft.id, { status: "APPROVED" });
+      const { draft } = await api.drafts.update(activeDraft.id, { status: "APPROVED" });
       setActiveDraft(draft);
       setDrafts((prev) => prev.map((d) => (d.id === draft.id ? draft : d)));
     } catch (e: unknown) {
@@ -141,11 +135,11 @@ export default function CraftingPage() {
   };
 
   const handleFeedback = async () => {
-    if (!token || !activeDraft || !feedback.trim()) return;
+    if (!user || !activeDraft || !feedback.trim()) return;
     setCreating(true);
     setError(null);
     try {
-      const { draft } = await api.drafts.regenerate(token, activeDraft.id, feedback.trim());
+      const { draft } = await api.drafts.regenerate(activeDraft.id, feedback.trim());
       setDrafts((prev) => [draft, ...prev]);
       setActiveDraft(draft);
       setActiveVersion(0);
@@ -153,7 +147,7 @@ export default function CraftingPage() {
     } catch (e) {
       // Fallback: just save feedback if regenerate fails (e.g. no sourceContent)
       try {
-        const { draft } = await api.drafts.update(token, activeDraft.id, { feedback: feedback.trim() });
+        const { draft } = await api.drafts.update(activeDraft.id, { feedback: feedback.trim() });
         setActiveDraft(draft);
         setDrafts((prev) => prev.map((d) => (d.id === draft.id ? draft : d)));
         setFeedback("");
@@ -167,11 +161,11 @@ export default function CraftingPage() {
   };
 
   const handleTryAgain = async () => {
-    if (!token || !activeDraft) return;
+    if (!user || !activeDraft) return;
     setCreating(true);
     setError(null);
     try {
-      const { draft } = await api.drafts.regenerate(token, activeDraft.id);
+      const { draft } = await api.drafts.regenerate(activeDraft.id);
       setDrafts((prev) => [draft, ...prev]);
       setActiveDraft(draft);
       setActiveVersion(0);
@@ -184,11 +178,11 @@ export default function CraftingPage() {
   };
 
   const handleGenerateVisual = async (style: string = "quote_card") => {
-    if (!token || !activeDraft) return;
+    if (!user || !activeDraft) return;
     setGeneratingImage(true);
     setError(null);
     try {
-      const { image } = await api.images.generateForDraft(token, activeDraft.id, style);
+      const { image } = await api.images.generateForDraft(activeDraft.id, style);
       setVisualConcept(image);
     } catch (e: unknown) {
       console.error("Image generation failed:", e);
@@ -199,10 +193,10 @@ export default function CraftingPage() {
   };
 
   const handleDelete = async () => {
-    if (!token || !activeDraft) return;
+    if (!user || !activeDraft) return;
     setLoading(true);
     try {
-      await api.drafts.delete(token, activeDraft.id);
+      await api.drafts.delete(activeDraft.id);
       const remaining = drafts.filter((d) => d.id !== activeDraft.id);
       setDrafts(remaining);
       setActiveDraft(remaining[0] || null);

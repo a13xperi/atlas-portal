@@ -39,7 +39,7 @@ function styleToDimensions(style: string | null) {
 
 export default function TrackBPage() {
   const router = useRouter();
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const [selectedStyle, setSelectedStyle] = useState<string | null>("Custom mix");
   const [selectedVoices, setSelectedVoices] = useState<Set<string>>(new Set());
   const [blendValues, setBlendValues] = useState([40, 35, 25]);
@@ -72,18 +72,17 @@ export default function TrackBPage() {
   };
 
   const handleSaveAndContinue = async () => {
-    if (!token) return;
     setSaving(true);
     try {
       // 1. Save voice dimensions based on style selection
       const dims = styleToDimensions(selectedStyle);
-      await api.voice.updateProfile(token, dims);
+      await api.voice.updateProfile(dims);
 
       // 2. Save selected reference voices
       const voices = Array.from(selectedVoices);
       for (const voice of voices) {
         try {
-          await api.voice.addReference(token, voice, voice);
+          await api.voice.addReference(voice, voice);
         } catch {
           // Voice may already exist — skip
         }
@@ -96,7 +95,7 @@ export default function TrackBPage() {
           percentage: blendValues[i] || Math.round(100 / voices.length),
         }));
         try {
-          await api.voice.createBlend(token, "My starting blend", blendVoices);
+          await api.voice.createBlend("My starting blend", blendVoices);
         } catch {
           // Blend creation optional
         }

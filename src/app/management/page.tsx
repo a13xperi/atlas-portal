@@ -14,7 +14,6 @@ function maturityColor(m?: string) {
 }
 
 export default function ManagementPage() {
-  const { token } = useAuth();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [analysts, setAnalysts] = useState<TeamAnalyst[]>([]);
   const [teamEngagement, setTeamEngagement] = useState<DailyTeamEngagement[]>([]);
@@ -25,15 +24,15 @@ export default function ManagementPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    if (!token) { setLoading(false); return; }
+    if (!user) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     try {
       const [teamRes, analyticsRes, engagementRes, peaksRes] = await Promise.all([
-        api.users.team(token),
-        api.analytics.team(token),
-        api.analytics.teamEngagementDaily(token),
-        api.analytics.daysToPeak(token),
+        api.users.team(),
+        api.analytics.team(),
+        api.analytics.teamEngagementDaily(),
+        api.analytics.daysToPeak(),
       ]);
       setTeam(teamRes.team);
       setAnalysts(analyticsRes.analysts);
@@ -44,7 +43,7 @@ export default function ManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -83,15 +82,15 @@ export default function ManagementPage() {
     .map((m) => ({ name: m.name, days: `${m.sessions} sessions · ${m.drafts} drafts` }));
 
   const handleAction = async (action: "pushTopProfiles" | "sendNudge" | "pushStyle") => {
-    if (!token || actionLoading) return;
+    if (!user || actionLoading) return;
     setActionLoading(action);
     setActionFeedback(null);
     try {
       const res = action === "pushTopProfiles"
-        ? await api.users.pushTopProfiles(token)
+        ? await api.users.pushTopProfiles()
         : action === "sendNudge"
-        ? await api.users.sendNudge(token)
-        : await api.users.pushStyle(token);
+        ? await api.users.sendNudge()
+        : await api.users.pushStyle();
       setActionFeedback({ message: res.message || `Action completed (${res.affected} affected)`, type: "success" });
       if (action === "pushTopProfiles" || action === "sendNudge") loadData();
     } catch (e: unknown) {

@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { api, TweetDraft, AnalyticsSummary } from "@/lib/api";
 import { SkeletonStatCard, SkeletonRow } from "@/components/ui/Skeleton";
 import { PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users } from "lucide-react";
+import LoopPanel from "@/components/ui/LoopPanel";
 
 const navCards = [
   { label: "Crafting Station", href: "/crafting", icon: PenTool },
@@ -20,23 +21,22 @@ const navCards = [
 ];
 
 export default function DashboardPage() {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) return;
     setLoading(true);
     setError(null);
     Promise.all([
-      api.analytics.summary(token).then((r) => setSummary(r.summary)),
-      api.drafts.list(token).then((r) => setDrafts(r.drafts.slice(0, 5))),
+      api.analytics.summary().then((r) => setSummary(r.summary)),
+      api.drafts.list().then((r) => setDrafts(r.drafts.slice(0, 5))),
     ])
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [token]);
+  }, []);
 
   const stats = [
     { label: "Drafts this week", value: String(summary?.draftsCreated ?? 0) },
@@ -78,6 +78,10 @@ export default function DashboardPage() {
                 </p>
               </div>
             ))}
+      </div>
+
+      <div className="mt-6">
+        <LoopPanel />
       </div>
 
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

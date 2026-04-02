@@ -10,7 +10,6 @@ import { useAuth } from "@/lib/auth";
 import { api, VoiceProfile, ReferenceVoice, SavedBlend } from "@/lib/api";
 
 export default function VoiceProfilesPage() {
-  const { token } = useAuth();
   const [profile, setProfile] = useState<VoiceProfile | null>(null);
   const [references, setReferences] = useState<ReferenceVoice[]>([]);
   const [blends, setBlends] = useState<SavedBlend[]>([]);
@@ -20,22 +19,21 @@ export default function VoiceProfilesPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) return;
     setLoading(true);
     setError(null);
     Promise.all([
-      api.voice.getProfile(token).then((r) => setProfile(r.profile)),
-      api.voice.getReferences(token).then((r) => setReferences(r.voices)),
-      api.voice.getBlends(token).then((r) => setBlends(r.blends)),
+      api.voice.getProfile().then((r) => setProfile(r.profile)),
+      api.voice.getReferences().then((r) => setReferences(r.voices)),
+      api.voice.getBlends().then((r) => setBlends(r.blends)),
     ])
       .catch((err: Error) => setError(err.message || "Failed to load voice profiles"))
       .finally(() => setLoading(false));
-  }, [token]);
+  }, []);
 
   const updateDimension = async (field: string, value: number) => {
-    if (!token || !profile) return;
+    if (!user || !profile) return;
     try {
-      const updated = await api.voice.updateProfile(token, { [field]: value });
+      const updated = await api.voice.updateProfile({ [field]: value });
       setProfile(updated.profile);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to update dimension");
