@@ -28,7 +28,7 @@ export default function DimensionBar({
         />
         {/* Thumb */}
         <div
-          className="absolute w-4 h-4 rounded-full bg-atlas-teal border-2 border-atlas-bg shadow-md transition-all duration-300 pointer-events-none"
+          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-atlas-teal border-2 border-atlas-bg shadow-md transition-all duration-300 pointer-events-none"
           style={{ left: `calc(${percentage}% - 8px)` }}
         />
         {interactive ? (
