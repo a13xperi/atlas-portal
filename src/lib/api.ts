@@ -144,6 +144,8 @@ export const api = {
       request<{ draft: TweetDraft }>(`/api/drafts/${id}`, { method: "PATCH", body: data }),
     delete: (id: string) =>
       request<{ success: boolean }>(`/api/drafts/${id}`, { method: "DELETE" }),
+    refine: (draftId: string, instruction: string) =>
+      request<{ draft: TweetDraft }>(`/api/drafts/${draftId}/refine`, { method: "POST", body: { instruction } }),
     team: (limit = 50) =>
       request<{ drafts: TeamDraft[]; total: number }>(`/api/drafts/team?limit=${limit}`),
   },
