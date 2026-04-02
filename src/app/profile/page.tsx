@@ -113,7 +113,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Logout */}
-        {user && (
+        {authUser && (
           <button
             type="button"
             onClick={() => { logout(); router.push("/"); }}

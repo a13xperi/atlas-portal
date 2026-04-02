@@ -31,7 +31,7 @@ const AlertSocketContext = createContext<AlertSocketState>({
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export function AlertSocketProvider({ children }: { children: React.ReactNode }) {
-  const { token } = useAuth();
+  const { user } = useAuth();
   const socketRef = useRef<Socket | null>(null);
   const listenersRef = useRef<Set<(alert: Alert) => void>>(new Set());
   const [connected, setConnected] = useState(false);
@@ -39,7 +39,7 @@ export function AlertSocketProvider({ children }: { children: React.ReactNode })
   const [latestAlert, setLatestAlert] = useState<Alert | null>(null);
 
   useEffect(() => {
-    if (!token) {
+    if (!user) {
       socketRef.current?.disconnect();
       socketRef.current = null;
       setConnected(false);
@@ -47,7 +47,7 @@ export function AlertSocketProvider({ children }: { children: React.ReactNode })
     }
 
     const socket = io(`${API_URL}/alerts`, {
-      auth: { token },
+      withCredentials: true,
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionDelay: 2000,
@@ -70,7 +70,7 @@ export function AlertSocketProvider({ children }: { children: React.ReactNode })
       socketRef.current = null;
       setConnected(false);
     };
-  }, [token]);
+  }, [user]);
 
   const clearUnread = useCallback(() => setUnreadCount(0), []);
 

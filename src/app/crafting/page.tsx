@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { api, TweetDraft, TrendingTopic, GeneratedImage, SavedBlend, AnalyticsSummary } from "@/lib/api";
 
 export default function CraftingPage() {
+  const { user } = useAuth();
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [activeDraft, setActiveDraft] = useState<TweetDraft | null>(null);
   const [activeVersion, setActiveVersion] = useState(0);

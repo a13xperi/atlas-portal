@@ -25,6 +25,7 @@ function timeAgo(dateStr: string): string {
 }
 
 export default function AlertsPage() {
+  const { user } = useAuth();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [subscriptions, setSubscriptions] = useState<AlertSubscription[]>([]);
   const [loading, setLoading] = useState(true);

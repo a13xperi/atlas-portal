@@ -16,6 +16,7 @@ interface StyleCard {
 }
 
 export default function TeamLibraryPage() {
+  const { user } = useAuth();
   const [styleCards, setStyleCards] = useState<StyleCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);

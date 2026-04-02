@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { api, AnalyticsSummary, LearningLogEntry, TweetDraft, DailyEngagement, DailyActivity } from "@/lib/api";
 
 export default function AnalyticsPage() {
+  const { user } = useAuth();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [logEntries, setLogEntries] = useState<LearningLogEntry[]>([]);
   const [topDrafts, setTopDrafts] = useState<TweetDraft[]>([]);

@@ -55,7 +55,7 @@ export function LoopPanelSkeleton() {
 }
 
 export default function LoopPanel() {
-  const { token } = useAuth();
+  const { user } = useAuth();
   const [loopState, setLoopState] = useState<LoopState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +64,7 @@ export default function LoopPanel() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchState = useCallback(async () => {
-    if (!token) return;
+    if (!user) return;
     try {
       const res = await api.loop.state();
       setLoopState(res.loop);
@@ -75,21 +75,22 @@ export default function LoopPanel() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [user]);
 
   useEffect(() => {
     fetchState();
   }, [fetchState]);
 
+  const loopStatus = loopState?.status;
   useEffect(() => {
-    if (!loopState) return;
+    if (!loopStatus) return;
 
     if (intervalRef.current) clearInterval(intervalRef.current);
 
     let interval: number;
-    if (loopState.status === "running") {
+    if (loopStatus === "running") {
       interval = 5_000;
-    } else if (loopState.status === "idle" || loopState.status === "completed") {
+    } else if (loopStatus === "idle" || loopStatus === "completed") {
       interval = 30_000;
     } else {
       return; // no polling for failed
@@ -99,10 +100,10 @@ export default function LoopPanel() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [loopState?.status, fetchState]);
+  }, [loopStatus, fetchState]);
 
   const handleCreatePR = async () => {
-    if (!token || !loopState?.bestIteration) return;
+    if (!user || !loopState?.bestIteration) return;
     setPrCreating(true);
     try {
       const res = await api.loop.createPR(loopState.bestIteration.branch, loopState.taskId);

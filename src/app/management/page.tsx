@@ -14,6 +14,7 @@ function maturityColor(m?: string) {
 }
 
 export default function ManagementPage() {
+  const { user } = useAuth();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [analysts, setAnalysts] = useState<TeamAnalyst[]>([]);
   const [teamEngagement, setTeamEngagement] = useState<DailyTeamEngagement[]>([]);

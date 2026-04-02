@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { api, VoiceProfile, ReferenceVoice, SavedBlend } from "@/lib/api";
 
 export default function VoiceProfilesPage() {
+  const { user } = useAuth();
   const [profile, setProfile] = useState<VoiceProfile | null>(null);
   const [references, setReferences] = useState<ReferenceVoice[]>([]);
   const [blends, setBlends] = useState<SavedBlend[]>([]);
