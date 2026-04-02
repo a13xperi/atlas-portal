@@ -10,9 +10,8 @@ import { useAuth } from "@/lib/auth";
 import { api, Alert, AlertSubscription } from "@/lib/api";
 import { useAlertSocket } from "@/lib/alertSocket";
 
-const categories = ["DeFi", "AI", "Macro", "L2s", "Stablecoins"];
-const accounts = ["Vitalik", "CZ", "Cobie", "Hasu"];
-const reportTypes = ["Research", "Earnings", "On-chain analysis"];
+const DEFAULT_CATEGORIES = ["DeFi", "AI", "Macro", "L2s", "Stablecoins"];
+const DEFAULT_REPORT_TYPES = ["Research", "Earnings", "On-chain analysis"];
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -109,6 +108,27 @@ export default function AlertsPage() {
     }
   };
 
+  // Derive filter lists from subscriptions (fall back to defaults for categories)
+  const categories = (() => {
+    const catSubs = subscriptions
+      .filter((s) => s.type === "CATEGORY")
+      .map((s) => s.value);
+    if (catSubs.length === 0) return DEFAULT_CATEGORIES;
+    const merged = Array.from(new Set(catSubs.concat(DEFAULT_CATEGORIES)));
+    return merged;
+  })();
+
+  const accounts = subscriptions
+    .filter((s) => s.type === "ACCOUNT")
+    .map((s) => s.value);
+
+  const reportTypes = (() => {
+    const rtSubs = subscriptions
+      .filter((s) => s.type === "REPORT_TYPE")
+      .map((s) => s.value);
+    return rtSubs.length > 0 ? rtSubs : DEFAULT_REPORT_TYPES;
+  })();
+
   const displayAlerts = alerts;
 
   return (
@@ -162,7 +182,7 @@ export default function AlertsPage() {
               Accounts
             </p>
             <div className="space-y-2">
-              {accounts.map((name) => (
+              {accounts.length > 0 ? accounts.map((name) => (
                 <div key={name} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full bg-atlas-surface flex items-center justify-center text-xs text-atlas-text-secondary">
@@ -172,7 +192,9 @@ export default function AlertsPage() {
                   </div>
                   <input type="checkbox" defaultChecked className="accent-atlas-teal" />
                 </div>
-              ))}
+              )) : (
+                <p className="text-xs text-atlas-text-muted italic">No accounts tracked yet</p>
+              )}
               <p className="text-atlas-teal text-xs cursor-pointer hover:underline">
                 + Add account
               </p>

@@ -7,6 +7,15 @@ import { SkeletonStatCard } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
 import { api, TeamAnalyst, TeamMember, DailyTeamEngagement, AnalystPeak } from "@/lib/api";
 
+function Spinner() {
+  return (
+    <svg className="animate-spin -ml-0.5 mr-1.5 h-3.5 w-3.5 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
+
 function maturityColor(m?: string) {
   if (m === "ADVANCED") return "text-atlas-success";
   if (m === "INTERMEDIATE") return "text-atlas-teal";
@@ -75,6 +84,13 @@ export default function ManagementPage() {
     .slice(0, 3)
     .map((m) => ({ name: m.name, days: `${m.sessions} sessions · ${m.drafts} drafts` }));
 
+  // Auto-dismiss feedback toast after 5 seconds
+  useEffect(() => {
+    if (!actionFeedback) return;
+    const timer = setTimeout(() => setActionFeedback(null), 5000);
+    return () => clearTimeout(timer);
+  }, [actionFeedback]);
+
   const handleAction = async (action: "pushTopProfiles" | "sendNudge" | "pushStyle") => {
     if (!user || actionLoading) return;
     setActionLoading(action);
@@ -88,7 +104,12 @@ export default function ManagementPage() {
       setActionFeedback({ message: res.message || `Action completed (${res.affected} affected)`, type: "success" });
       if (action === "pushTopProfiles" || action === "sendNudge") loadData();
     } catch (e: unknown) {
-      setActionFeedback({ message: e instanceof Error ? e.message : "Action failed", type: "error" });
+      const msg = e instanceof TypeError && e.message === "Failed to fetch"
+        ? "Network error — check your connection"
+        : e instanceof Error && "statusCode" in e && (e as { statusCode: number }).statusCode === 403
+        ? "Manager access required"
+        : e instanceof Error ? e.message : "Action failed";
+      setActionFeedback({ message: msg, type: "error" });
     } finally {
       setActionLoading(null);
     }
@@ -109,6 +130,13 @@ export default function ManagementPage() {
       {error && (
         <div role="alert" className="mb-6 px-4 py-3 bg-atlas-error/10 border border-atlas-error/30 rounded-xl text-atlas-error text-sm">
           {error}
+        </div>
+      )}
+
+      {/* Action Feedback — visible at top */}
+      {actionFeedback && (
+        <div className={`mb-6 px-4 py-3 rounded-xl text-sm transition-all ${actionFeedback.type === "success" ? "bg-atlas-success/10 border border-atlas-success/30 text-atlas-success" : "bg-atlas-error/10 border border-atlas-error/30 text-atlas-error"}`}>
+          {actionFeedback.message}
         </div>
       )}
 
@@ -224,7 +252,7 @@ export default function ManagementPage() {
         <div className="bg-atlas-surface border border-glass-border rounded-2xl p-6">
           <h3 className="font-heading text-xl text-atlas-text mb-4">Days to Best Engagement</h3>
           <div className="space-y-4">
-            {timeToPeak.map((entry) => (
+            {timeToPeak.length > 0 ? timeToPeak.map((entry) => (
               <div key={entry.name} className="flex items-center gap-3">
                 <span className="text-xs text-atlas-text-secondary w-20 shrink-0">{entry.name}</span>
                 <div className="flex-1 h-4 bg-atlas-nav rounded-full overflow-hidden relative">
@@ -233,9 +261,13 @@ export default function ManagementPage() {
                 </div>
                 <span className="text-xs text-atlas-text w-8 text-right">{entry.days}d</span>
               </div>
-            ))}
+            )) : (
+              <p className="text-sm text-atlas-text-muted italic py-4">Engagement data will populate as team members create drafts and receive feedback.</p>
+            )}
           </div>
-          <p className="text-[10px] text-atlas-text-muted mt-3">* 30-day team target indicated by vertical marker</p>
+          {timeToPeak.length > 0 && (
+            <p className="text-[10px] text-atlas-text-muted mt-3">* 30-day team target indicated by vertical marker</p>
+          )}
         </div>
       </div>
 
@@ -258,7 +290,7 @@ export default function ManagementPage() {
                   <p className="text-lg text-atlas-text font-medium mt-3">{analyst.name}</p>
                   <p className="text-xs text-atlas-text-secondary mt-1">{analyst.days}</p>
                   <button type="button" onClick={() => handleAction("sendNudge")} className="mt-3 text-xs font-bold text-atlas-teal hover:underline disabled:opacity-50" disabled={!!actionLoading}>
-                    {actionLoading === "sendNudge" ? "Sending…" : "Send Nudge"}
+                    {actionLoading === "sendNudge" ? <><Spinner />Sending…</> : "Send Nudge"}
                   </button>
                 </div>
               ))}
@@ -267,23 +299,16 @@ export default function ManagementPage() {
         </div>
       )}
 
-      {/* Action Feedback */}
-      {actionFeedback && (
-        <div className={`mb-4 px-4 py-3 rounded-xl text-sm ${actionFeedback.type === "success" ? "bg-atlas-success/10 border border-atlas-success/30 text-atlas-success" : "bg-atlas-error/10 border border-atlas-error/30 text-atlas-error"}`}>
-          {actionFeedback.message}
-        </div>
-      )}
-
       {/* SECTION 6: Bottom Action Strip */}
       <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 pt-4">
         <GradientButton onClick={() => handleAction("pushTopProfiles")} disabled={!!actionLoading}>
-          {actionLoading === "pushTopProfiles" ? "Pushing profiles…" : "Reload inactive with Top 5 profiles"}
+          {actionLoading === "pushTopProfiles" ? <><Spinner />Pushing profiles…</> : "Reload inactive with Top 5 profiles"}
         </GradientButton>
         <GradientButton variant="outline-warning" onClick={() => handleAction("sendNudge")} disabled={!!actionLoading}>
-          {actionLoading === "sendNudge" ? "Sending nudges…" : "Send nudge to all inactive"}
+          {actionLoading === "sendNudge" ? <><Spinner />Sending nudges…</> : "Send nudge to all inactive"}
         </GradientButton>
         <GradientButton variant="outline-teal" onClick={() => handleAction("pushStyle")} disabled={!!actionLoading}>
-          {actionLoading === "pushStyle" ? "Pushing style…" : "Push a style to all"}
+          {actionLoading === "pushStyle" ? <><Spinner />Pushing style…</> : "Push a style to all"}
         </GradientButton>
       </div>
     </AppShell>

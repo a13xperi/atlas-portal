@@ -15,8 +15,9 @@ export interface NavBarProps {
 const navLinks = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Crafting", href: "/crafting" },
-  { label: "Library", href: "/team-library" },
+  { label: "Voice", href: "/voice-profiles" },
   { label: "Analytics", href: "/analytics" },
+  { label: "Library", href: "/team-library" },
   { label: "Team", href: "/management" },
 ];
 

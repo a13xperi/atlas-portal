@@ -1,3 +1,20 @@
+## MULTI-AGENT BUILD PROTOCOL
+This project uses multiple AI coding tools in parallel.
+READ ATLAS-BUILD-CONTEXT.md for full project context and architecture.
+READ TASK-STATUS.md for current task assignments and status.
+
+## YOUR ROLE: Frontend Support (Claude Code)
+Codex owns: src/app/**/page.tsx, src/components/*, src/styles/*
+Cursor owns: src/app/*/error.tsx, src/types/*, *.test.ts
+You (Claude Code) may modify: src/lib/*, src/app/layout.tsx, src/app/providers.tsx
+DO NOT touch files owned by Codex or Cursor without coordination.
+
+## AFTER EVERY COMMIT
+1. Update TASK-STATUS.md with your task status
+2. git add -A && git commit -m "[claude-code] type: description" && git push
+
+---
+
 # CLAUDE.md — Atlas Employee Portal (Frontend)
 
 ## Project
