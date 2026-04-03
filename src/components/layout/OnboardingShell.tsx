@@ -11,7 +11,7 @@ export default function OnboardingShell({
   maxWidth = "480px",
 }: OnboardingShellProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a1a0a] via-[#1a2e1a] to-[#0d1f0d]">
+    <div className="min-h-screen bg-gradient-to-b from-[#1a1a2e] via-[#16213e] to-[#1a1a2e]">
       <NavBar variant="onboarding" />
       <main className="flex items-center justify-center min-h-screen pt-14 px-3 sm:px-4">
         <GlassCard maxWidth={maxWidth}>{children}</GlassCard>
