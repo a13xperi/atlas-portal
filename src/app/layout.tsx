@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { playfairDisplay, inter } from "@/lib/fonts";
 import { colors } from "@/lib/tokens";
+import RouteProgress from "@/components/ui/RouteProgress";
 import Providers from "./providers";
 import "./globals.css";
 
@@ -49,6 +50,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${playfairDisplay.variable} ${inter.variable}`}>
       <body className="font-body bg-atlas-bg text-atlas-text min-h-screen">
+        <RouteProgress />
         <Providers>{children}</Providers>
       </body>
     </html>

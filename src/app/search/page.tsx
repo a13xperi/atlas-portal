@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useState } from "react";
+import { FormEvent, useDeferredValue, useEffect, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
@@ -25,6 +25,7 @@ const SEARCH_SUGGESTIONS = [
 const SEARCHABLE_VOICE_DIMENSIONS = VOICE_DIMENSION_SECTIONS.flatMap(
   (section) => section.dimensions
 );
+const RECENT_SEARCHES_STORAGE_KEY = "atlas_recent_searches";
 
 const DRAFT_STATUS_VARIANTS: Record<
   TweetDraft["status"],
@@ -84,11 +85,34 @@ function tokenizeSearch(query: string) {
 export default function SearchPage() {
   const { user } = useAuth();
   const [query, setQuery] = useState("");
+  const [recentQueries, setRecentQueries] = useState<string[]>([]);
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [voiceProfile, setVoiceProfile] = useState<VoiceProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const deferredQuery = useDeferredValue(query.trim().toLowerCase());
+
+  useEffect(() => {
+    const savedQueries = localStorage.getItem(RECENT_SEARCHES_STORAGE_KEY);
+
+    if (!savedQueries) {
+      return;
+    }
+
+    try {
+      const parsedQueries = JSON.parse(savedQueries);
+
+      if (Array.isArray(parsedQueries)) {
+        setRecentQueries(
+          parsedQueries
+            .filter((savedQuery): savedQuery is string => typeof savedQuery === "string")
+            .slice(0, 5)
+        );
+      }
+    } catch {
+      localStorage.removeItem(RECENT_SEARCHES_STORAGE_KEY);
+    }
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -143,6 +167,38 @@ export default function SearchPage() {
       cancelled = true;
     };
   }, [user]);
+
+  const saveQuery = (nextQuery: string) => {
+    setRecentQueries((currentRecentQueries) => {
+      const updatedQueries = [
+        nextQuery,
+        ...currentRecentQueries.filter((recentQuery) => recentQuery !== nextQuery),
+      ].slice(0, 5);
+
+      localStorage.setItem(
+        RECENT_SEARCHES_STORAGE_KEY,
+        JSON.stringify(updatedQueries)
+      );
+
+      return updatedQueries;
+    });
+  };
+
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const trimmedQuery = query.trim();
+    setQuery(trimmedQuery);
+
+    if (trimmedQuery) {
+      saveQuery(trimmedQuery);
+    }
+  };
+
+  const handleQuickSearch = (nextQuery: string) => {
+    setQuery(nextQuery);
+    saveQuery(nextQuery);
+  };
 
   const filteredDrafts = deferredQuery
     ? drafts.filter((draft) =>
@@ -211,7 +267,7 @@ export default function SearchPage() {
           aria-label="Search controls"
           className="space-y-4 px-4 py-4 sm:px-6 sm:py-6"
         >
-          <div className="relative">
+          <form className="relative" onSubmit={handleSearchSubmit}>
             <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-atlas-text-secondary" />
             <input
               type="search"
@@ -221,7 +277,7 @@ export default function SearchPage() {
               spellCheck={false}
               className="w-full bg-atlas-surface rounded-lg border border-glass-border text-atlas-text px-4 py-3 pl-11 placeholder-atlas-text-secondary focus:outline-none focus:border-atlas-teal"
             />
-          </div>
+          </form>
 
           <div className="flex flex-wrap items-center gap-2 text-xs text-atlas-text-secondary">
             <span>Popular searches:</span>
@@ -229,13 +285,31 @@ export default function SearchPage() {
               <button
                 key={suggestion}
                 type="button"
-                onClick={() => setQuery(suggestion)}
+                onClick={() => handleQuickSearch(suggestion)}
                 className="rounded-full border border-glass-border bg-atlas-surface px-3 py-1 transition-colors hover:border-atlas-teal hover:text-atlas-text"
               >
                 {suggestion}
               </button>
             ))}
           </div>
+
+          {!query.trim() && recentQueries.length > 0 ? (
+            <div className="mt-4">
+              <p className="mb-2 text-xs text-atlas-text-muted">Recent searches</p>
+              <div className="flex flex-wrap gap-2">
+                {recentQueries.map((recentQuery) => (
+                  <button
+                    key={recentQuery}
+                    type="button"
+                    onClick={() => handleQuickSearch(recentQuery)}
+                    className="rounded-full border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs text-atlas-text-secondary transition-colors hover:border-atlas-teal/50 hover:text-atlas-text"
+                  >
+                    {recentQuery}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </GlassCard>
 
         {error ? (
