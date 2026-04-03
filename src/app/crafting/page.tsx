@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Clipboard, Loader2, Mic } from "lucide-react";
+import { Check, Clipboard, Link2, Loader2, Mic, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
@@ -9,6 +9,7 @@ import DraftHistorySidebar, {
   DraftHistoryItem,
 } from "@/components/crafting/DraftHistorySidebar";
 import NewsMode from "@/components/crafting/NewsMode";
+import CraftingSkeleton from "@/components/skeletons/CraftingSkeleton";
 import ContentInput from "@/components/ui/ContentInput";
 import GradientButton from "@/components/ui/GradientButton";
 import ReplyAngleSelector from "@/components/ui/ReplyAngleSelector";
@@ -141,6 +142,10 @@ export default function CraftingPage() {
   const [sourceError, setSourceError] = useState("");
   const [compareMode, setCompareMode] = useState(false);
   const [compareVersion, setCompareVersion] = useState<number | null>(null);
+  const [urlPreview, setUrlPreview] = useState<{
+    title?: string;
+    url: string;
+  } | null>(null);
   const activeDraftInitialized = useRef(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
 
@@ -201,11 +206,46 @@ export default function CraftingPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!compareMode) {
+      return;
+    }
+
+    if (!activeDraft || draftVersions.length < 2) {
+      setCompareMode(false);
+      setCompareVersion(null);
+      return;
+    }
+
+    const hasValidCompareTarget =
+      compareVersion !== null &&
+      draftVersions.some(
+        (draft) =>
+          draft.version === compareVersion &&
+          draft.version !== activeDraft.version
+      );
+
+    if (!hasValidCompareTarget) {
+      setCompareVersion(
+        getDefaultCompareVersion(draftVersions, activeDraft.version)
+      );
+    }
+  }, [activeDraft, compareMode, compareVersion, draftVersions]);
+
+  if (loading) {
+    return (
+      <AppShell>
+        <CraftingSkeleton />
+      </AppShell>
+    );
+  }
+
   const handleModeChange = (mode: CraftingMode) => {
     setActiveMode(mode);
     setError(null);
     setContentError("");
     setSourceError("");
+    setUrlPreview(null);
   };
 
   const prependDraftHistory = (draft: TweetDraft, sourceUrl?: string) => {
@@ -273,7 +313,10 @@ export default function CraftingPage() {
 
   const handleSelectDraft = (draft: TweetDraft) => {
     const draftInVersionHistory = draftVersions.some(
-      (versionDraft) => versionDraft.version === draft.version
+      (versionDraft) =>
+        versionDraft.id === draft.id &&
+        versionDraft.version === draft.version &&
+        versionDraft.content === draft.content
     );
 
     setActiveDraft(draft);
@@ -484,6 +527,22 @@ export default function CraftingPage() {
     }
   };
 
+  const handleNewsUrlChange = (value: string) => {
+    const trimmedValue = value.trim();
+
+    if (activeMode === "news_to_post" && /^https?:\/\//.test(trimmedValue)) {
+      try {
+        const parsedUrl = new URL(trimmedValue);
+        setUrlPreview({ url: parsedUrl.toString() });
+        return;
+      } catch {
+        // Clear the preview when the input is not a valid URL yet.
+      }
+    }
+
+    setUrlPreview(null);
+  };
+
   const handleShip = async () => {
     if (!user || !activeDraft) return;
 
@@ -636,6 +695,43 @@ export default function CraftingPage() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this draft? This can't be undone.")) {
+      return;
+    }
+
+    try {
+      await api.drafts.delete(id);
+      setDrafts((previousDrafts) =>
+        previousDrafts.filter((draft) => draft.id !== id)
+      );
+      setDraftHistory((previousHistory) =>
+        previousHistory.filter((historyItem) => historyItem.draft.id !== id)
+      );
+      setDraftVersions((previousVersions) =>
+        previousVersions.filter((draft) => draft.id !== id)
+      );
+      setCopiedDraftId((currentDraftId) =>
+        currentDraftId === id ? null : currentDraftId
+      );
+
+      if (activeDraft?.id === id) {
+        setActiveDraft(null);
+        setCompareMode(false);
+        setCompareVersion(null);
+        setVisualConcept(null);
+        setFeedback("");
+      }
+    } catch (deleteDraftError: unknown) {
+      console.error("Failed to delete draft:", deleteDraftError);
+      setError(
+        deleteDraftError instanceof Error
+          ? deleteDraftError.message
+          : "Failed to delete draft"
+      );
+    }
+  };
+
   const draftHistoryById = new Map(
     draftHistory.map((historyItem) => [historyItem.draft.id, historyItem])
   );
@@ -650,7 +746,10 @@ export default function CraftingPage() {
   });
   const versionDrafts = draftVersions;
   const activeVersion = versionDrafts.findIndex(
-    (draft) => draft.id === activeDraft?.id
+    (draft) =>
+      draft.id === activeDraft?.id &&
+      draft.version === activeDraft?.version &&
+      draft.content === activeDraft?.content
   );
   const compareDraft =
     compareVersion === null
@@ -664,32 +763,6 @@ export default function CraftingPage() {
         100
       )
     : 0;
-
-  useEffect(() => {
-    if (!compareMode) {
-      return;
-    }
-
-    if (!activeDraft || versionDrafts.length < 2) {
-      setCompareMode(false);
-      setCompareVersion(null);
-      return;
-    }
-
-    const hasValidCompareTarget =
-      compareVersion !== null &&
-      versionDrafts.some(
-        (draft) =>
-          draft.version === compareVersion &&
-          draft.version !== activeDraft.version
-      );
-
-    if (!hasValidCompareTarget) {
-      setCompareVersion(
-        getDefaultCompareVersion(versionDrafts, activeDraft.version)
-      );
-    }
-  }, [activeDraft, compareMode, compareVersion, versionDrafts]);
 
   const handleToggleCompareMode = () => {
     if (compareMode) {
@@ -815,6 +888,32 @@ export default function CraftingPage() {
                 error={error}
                 onDismissError={() => setError(null)}
                 onGenerateNews={handleGenerateNews}
+                onArticleUrlChange={handleNewsUrlChange}
+                urlPreviewCard={
+                  activeMode === "news_to_post" && urlPreview ? (
+                    <div className="mt-3 flex items-center gap-3 rounded-xl border border-glass-border bg-atlas-surface p-3">
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-atlas-teal/10">
+                        <Link2 className="h-5 w-5 text-atlas-teal" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm text-atlas-text">
+                          {urlPreview.title || "News Article"}
+                        </p>
+                        <p className="truncate text-xs text-atlas-text-muted">
+                          {urlPreview.url}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setUrlPreview(null)}
+                        className="text-atlas-text-muted hover:text-atlas-text"
+                        aria-label="Dismiss URL preview"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : null
+                }
               />
             ) : (
               <div className="mt-6">
@@ -961,44 +1060,57 @@ export default function CraftingPage() {
                   Shipped
                 </span>
               ) : null}
-              <div className="mt-3 flex items-center justify-end gap-3">
-                <p
-                  className={`text-xs ${
-                    activeDraft.content.length >= 280
-                      ? "text-atlas-error"
-                      : activeDraft.content.length >= 260
-                        ? "text-atlas-warning"
-                        : "text-atlas-text-secondary"
-                  }`}
-                >
-                  {activeDraft.content.length} / 280
-                </p>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                 <button
                   type="button"
-                  onClick={handleCopyDraft}
-                  title={copiedDraftId === activeDraft.id ? "Copied!" : "Copy to clipboard"}
-                  className={`inline-flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-1.5 text-sm transition-colors hover:border-atlas-teal focus:outline-none focus:border-atlas-teal ${
-                    copiedDraftId === activeDraft.id
-                      ? "text-atlas-success"
-                      : "text-atlas-text-secondary hover:text-atlas-teal"
-                  }`}
+                  onClick={() => void handleDelete(activeDraft.id)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-atlas-error/30 bg-atlas-error/10 px-3 py-1.5 text-sm text-atlas-error transition-colors hover:border-atlas-error hover:bg-atlas-error/15 focus:outline-none focus:border-atlas-error"
                 >
-                  {copiedDraftId === activeDraft.id ? (
-                    <>
-                      <Check className="h-4 w-4" />
-                      <span className="text-xs" aria-live="polite">
-                        Copied!
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Clipboard className="h-4 w-4" />
-                      <span className="text-xs" aria-live="polite">
-                        Copy
-                      </span>
-                    </>
-                  )}
+                  <span className="text-xs">Delete draft</span>
                 </button>
+                <div className="flex items-center gap-3">
+                  <p
+                    className={`text-xs ${
+                      activeDraft.content.length >= 280
+                        ? "text-atlas-error"
+                        : activeDraft.content.length >= 260
+                          ? "text-atlas-warning"
+                          : "text-atlas-text-secondary"
+                    }`}
+                  >
+                    {activeDraft.content.length} / 280
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleCopyDraft}
+                    title={
+                      copiedDraftId === activeDraft.id
+                        ? "Copied!"
+                        : "Copy to clipboard"
+                    }
+                    className={`inline-flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-1.5 text-sm transition-colors hover:border-atlas-teal focus:outline-none focus:border-atlas-teal ${
+                      copiedDraftId === activeDraft.id
+                        ? "text-atlas-success"
+                        : "text-atlas-text-secondary hover:text-atlas-teal"
+                    }`}
+                  >
+                    {copiedDraftId === activeDraft.id ? (
+                      <>
+                        <Check className="h-4 w-4" />
+                        <span className="text-xs" aria-live="polite">
+                          Copied!
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Clipboard className="h-4 w-4" />
+                        <span className="text-xs" aria-live="polite">
+                          Copy
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
