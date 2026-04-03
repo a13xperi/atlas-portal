@@ -3,6 +3,14 @@ import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { DEFAULT_VOICE_DIMENSIONS } from "@/lib/voice-profile-dimensions";
 
+const ctDegenPreset = {
+  ...DEFAULT_VOICE_DIMENSIONS,
+  humor: 80,
+  formality: 20,
+  brevity: 90,
+  contrarianTone: 70,
+};
+
 const mockProfile = {
   id: "vp1",
   userId: "u1",
@@ -202,5 +210,26 @@ describe("VoiceProfilesPage", () => {
     });
 
     confirmSpy.mockRestore();
+  });
+
+  it("applies the CT Degen preset through updateProfile", async () => {
+    mockApi.voice.updateProfile.mockResolvedValueOnce({
+      profile: {
+        ...mockProfile,
+        ...ctDegenPreset,
+      },
+    });
+
+    render(<VoiceProfilesPage />);
+
+    expect(
+      await screen.findByRole("button", { name: "CT Degen" })
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "CT Degen" }));
+
+    await waitFor(() => {
+      expect(mockApi.voice.updateProfile).toHaveBeenCalledWith(ctDegenPreset);
+    });
   });
 });
