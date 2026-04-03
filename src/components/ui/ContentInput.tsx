@@ -16,7 +16,6 @@ export interface ContentInputProps {
   acceptFileTypes?: string;
   sourceError?: string;
   contentError?: string;
-  value?: string;
   contentDropActive?: boolean;
   onContentDragOver?: DragEventHandler<HTMLDivElement>;
   onContentDragLeave?: DragEventHandler<HTMLDivElement>;
