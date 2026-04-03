@@ -83,4 +83,10 @@ describe("ContentInput", () => {
     expect(handleTextSubmit).not.toHaveBeenCalled();
     expect(input).toHaveValue(text);
   });
+
+  it("shows the drop hint when the content area is in drag state", () => {
+    render(<ContentInput contentDropActive />);
+
+    expect(screen.getByText("Drop file here")).toBeInTheDocument();
+  });
 });
