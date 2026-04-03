@@ -34,7 +34,6 @@ export default function ContentInput({
   acceptFileTypes = ".pdf,.doc,.docx,.txt,.md",
   sourceError,
   contentError,
-  value,
   contentDropActive = false,
   onContentDragOver,
   onContentDragLeave,
