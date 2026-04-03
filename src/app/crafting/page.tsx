@@ -209,14 +209,29 @@ export default function CraftingPage() {
     return normalizedDraft;
   };
 
-  const markDraftAsCopied = (draftId: string) => {
-    setDraftHistory((previousHistory) =>
-      previousHistory.map((historyItem) =>
-        historyItem.draft.id === draftId
+  const markDraftAsCopied = (draft: TweetDraft) => {
+    setDraftHistory((previousHistory) => {
+      const existingItem = previousHistory.find(
+        (historyItem) => historyItem.draft.id === draft.id
+      );
+
+      if (!existingItem) {
+        return [
+          ...previousHistory,
+          {
+            draft,
+            copiedToClipboard: true,
+            generatedAt: draft.createdAt,
+          },
+        ];
+      }
+
+      return previousHistory.map((historyItem) =>
+        historyItem.draft.id === draft.id
           ? { ...historyItem, copiedToClipboard: true }
           : historyItem
-      )
-    );
+      );
+    });
   };
 
   const handleSelectDraft = (draft: TweetDraft) => {
@@ -514,7 +529,7 @@ export default function CraftingPage() {
     try {
       await navigator.clipboard.writeText(activeDraft.content);
       setCopiedDraftId(activeDraft.id);
-      markDraftAsCopied(activeDraft.id);
+      markDraftAsCopied(activeDraft);
 
       if (copyResetTimeoutRef.current !== null) {
         window.clearTimeout(copyResetTimeoutRef.current);
@@ -534,10 +549,21 @@ export default function CraftingPage() {
     }
   };
 
-  const versionDrafts =
-    draftHistory.length > 0
-      ? draftHistory.slice(0, 3).map((historyItem) => historyItem.draft)
-      : drafts.slice(0, 3);
+  const draftHistoryById = new Map(
+    draftHistory.map((historyItem) => [historyItem.draft.id, historyItem])
+  );
+  const draftHistoryItems = drafts.map((draft) => {
+    const historyItem = draftHistoryById.get(draft.id);
+
+    return {
+      draft: historyItem?.draft ?? draft,
+      copiedToClipboard: historyItem?.copiedToClipboard ?? false,
+      generatedAt: historyItem?.generatedAt ?? draft.createdAt,
+    };
+  });
+  const versionDrafts = draftHistoryItems
+    .slice(0, 3)
+    .map((historyItem) => historyItem.draft);
   const activeVersion = versionDrafts.findIndex(
     (draft) => draft.id === activeDraft?.id
   );
@@ -589,7 +615,7 @@ export default function CraftingPage() {
 
       <div className="mt-6 flex flex-col gap-6 lg:flex-row">
         <DraftHistorySidebar
-          drafts={draftHistory}
+          drafts={draftHistoryItems}
           activeDraftId={activeDraft?.id ?? null}
           onSelectDraft={handleSelectDraft}
         />
