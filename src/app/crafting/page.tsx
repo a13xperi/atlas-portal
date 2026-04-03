@@ -58,8 +58,16 @@ const TWEET_TEMPLATES = [
 ] as const;
 
 const NEWS_SOURCE_PREFIX = "source:";
+const VOICE_COMPARISON_DELTA = { humor: 20 } as const;
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
+type DraftSourceType = "REPORT" | "ARTICLE" | "MANUAL";
+type VoiceComparisonOption = {
+  draft: TweetDraft;
+  label: string;
+  summary: string;
+  ctaLabel: string;
+};
 
 const DRAFT_STATUS_LABELS: Record<TweetDraft["status"], string> = {
   DRAFT: "Draft",
@@ -173,6 +181,37 @@ function isTextFile(file: File) {
   );
 }
 
+function clampVoiceValue(value?: number | null) {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return 50;
+  }
+
+  return Math.min(100, Math.max(0, Math.round(value)));
+}
+
+function formatVoiceScore(value: number) {
+  return `${Math.round(clampVoiceValue(value) / 10)}/10`;
+}
+
+function getWordCount(content: string) {
+  return content.split(/\s+/).filter(Boolean).length;
+}
+
+function buildVoiceVariationInstruction(
+  currentHumor: number,
+  variantHumor: number,
+  formality: number,
+  brevity: number,
+  contrarianTone: number
+) {
+  return [
+    "Keep the user's calibrated voice profile intact, but create a subtle A/B variation.",
+    `Increase humor from ${formatVoiceScore(currentHumor)} to ${formatVoiceScore(variantHumor)} while keeping the writing credible for crypto analysis.`,
+    `Hold formality near ${formatVoiceScore(formality)}, brevity near ${formatVoiceScore(brevity)}, and contrarian tone near ${formatVoiceScore(contrarianTone)}.`,
+    "The result should feel slightly more playful and witty without changing the core thesis or facts.",
+  ].join(" ");
+}
+
 export default function CraftingPage() {
   const { user } = useAuth();
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
@@ -203,6 +242,10 @@ export default function CraftingPage() {
   const [sourceError, setSourceError] = useState("");
   const [compareMode, setCompareMode] = useState(false);
   const [compareVersion, setCompareVersion] = useState<number | null>(null);
+  const [comparingVoices, setComparingVoices] = useState(false);
+  const [voiceComparison, setVoiceComparison] = useState<{
+    options: VoiceComparisonOption[];
+  } | null>(null);
   const [draftInputText, setDraftInputText] = useState("");
   const [isContentDragActive, setIsContentDragActive] = useState(false);
   const [urlPreview, setUrlPreview] = useState<{
@@ -217,11 +260,27 @@ export default function CraftingPage() {
   >(null);
   const canReviseActiveDraft = activeDraft?.status === "DRAFT";
   const activeDraftWordCount = activeDraft?.content
-    ? activeDraft.content.split(/\s+/).filter(Boolean).length
+    ? getWordCount(activeDraft.content)
     : 0;
   const activeDraftReadingTime = Math.max(
     1,
     Math.ceil(activeDraftWordCount / 200)
+  );
+  const currentHumor = clampVoiceValue(user?.voiceProfile?.humor);
+  const currentFormality = clampVoiceValue(user?.voiceProfile?.formality);
+  const currentBrevity = clampVoiceValue(user?.voiceProfile?.brevity);
+  const currentContrarianTone = clampVoiceValue(user?.voiceProfile?.contrarianTone);
+  const variantHumor = clampVoiceValue(currentHumor + VOICE_COMPARISON_DELTA.humor);
+  const currentVoiceSummary = `Humor ${formatVoiceScore(currentHumor)}`;
+  const variantVoiceSummary = `Humor ${formatVoiceScore(
+    variantHumor
+  )} (+${VOICE_COMPARISON_DELTA.humor})`;
+  const voiceVariationInstruction = buildVoiceVariationInstruction(
+    currentHumor,
+    variantHumor,
+    currentFormality,
+    currentBrevity,
+    currentContrarianTone
   );
 
   const loadDrafts = useCallback(async () => {
@@ -314,6 +373,9 @@ export default function CraftingPage() {
     setContentError("");
     setSourceError("");
     setUrlPreview(null);
+    setVoiceComparison(null);
+    setCompareMode(false);
+    setCompareVersion(null);
   };
 
   const prependDraftHistory = useCallback((draft: TweetDraft, sourceUrl?: string) => {
@@ -410,6 +472,7 @@ export default function CraftingPage() {
 
     setActiveDraft(draft);
     setVisualConcept(null);
+    setVoiceComparison(null);
 
     if (!draftInVersionHistory) {
       setDraftVersions([draft]);
@@ -506,8 +569,9 @@ export default function CraftingPage() {
 
   const createDraftFromSource = useCallback(async (
     content: string,
-    sourceType: "REPORT" | "ARTICLE" | "MANUAL",
-    hasSource: boolean
+    sourceType: DraftSourceType,
+    hasSource: boolean,
+    angle?: string | null
   ) => {
     if (!user) return false;
 
@@ -517,11 +581,16 @@ export default function CraftingPage() {
 
     setCreating(true);
     try {
-      const { draft } = await api.drafts.generate(
-        trimmedContent,
+      const { draft } = await api.drafts.generate({
+        sourceContent: trimmedContent,
         sourceType,
-        selectedBlendId || undefined
-      );
+        blendId: selectedBlendId || undefined,
+        replyAngle: angle || undefined,
+      });
+      setVoiceComparison(null);
+      setCompareMode(false);
+      setCompareVersion(null);
+      setVisualConcept(null);
       commitDraft(draft);
       return true;
     } catch (createDraftError: unknown) {
@@ -608,24 +677,27 @@ export default function CraftingPage() {
     await handleFileDrop(event.dataTransfer.files);
   }, [handleFileDrop]);
 
-  const handleCreateDraft = async (text = draftInputValueRef.current) => {
+  const getDraftGenerationInput = (
+    text: string
+  ): { content: string; hasSource: boolean; sourceType: DraftSourceType } => {
     const trimmedText = text.trim();
-    const sourceType =
-      activeMode === "reply_to_tweet"
-        ? "MANUAL"
-        : trimmedText.startsWith("http")
-          ? "ARTICLE"
-          : "MANUAL";
 
-    if (sourceType === "MANUAL" && activeMode === "reply_to_tweet") {
-      return createDraftFromSource(
-        replyAngle ? `[Reply angle: ${replyAngle}] ${text}` : text,
-        sourceType,
-        Boolean(trimmedText)
-      );
-    }
+    return {
+      content: text,
+      hasSource: Boolean(trimmedText),
+      sourceType:
+        activeMode === "reply_to_tweet"
+          ? "MANUAL"
+          : trimmedText.startsWith("http")
+            ? "ARTICLE"
+            : "MANUAL",
+    };
+  };
 
-    return createDraftFromSource(text, sourceType, Boolean(trimmedText));
+  const handleCreateDraft = async (text = draftInputValueRef.current) => {
+    const { content, hasSource, sourceType } = getDraftGenerationInput(text);
+    const angle = activeMode === "reply_to_tweet" ? replyAngle : null;
+    return createDraftFromSource(content, sourceType, hasSource, angle);
   };
 
   handleCreateDraftRef.current = handleCreateDraft;
@@ -660,6 +732,10 @@ export default function CraftingPage() {
         trimmedFallbackText ? "MANUAL" : "ARTICLE",
         selectedBlendId || undefined
       );
+      setVoiceComparison(null);
+      setCompareMode(false);
+      setCompareVersion(null);
+      setVisualConcept(null);
       commitDraft(draft, trimmedArticleUrl);
       return { showFallback: Boolean(trimmedFallbackText) };
     } catch (generateNewsError: unknown) {
@@ -909,6 +985,110 @@ export default function CraftingPage() {
       )
     : 0;
 
+  const handleCompareVoices = async (text = draftInputValueRef.current) => {
+    if (!user) {
+      return false;
+    }
+
+    const { content: sourceContent, hasSource, sourceType } =
+      getDraftGenerationInput(text);
+
+    setError(null);
+    const { isValid, trimmedContent } = validateDraftSubmission(
+      sourceContent,
+      hasSource
+    );
+
+    if (!isValid) {
+      return false;
+    }
+
+    setCreating(true);
+    setComparingVoices(true);
+    setVoiceComparison(null);
+
+    try {
+      const [currentVoiceResult, variantVoiceResult] = await Promise.all([
+        api.drafts.generate({
+          sourceContent: trimmedContent,
+          sourceType,
+          blendId: selectedBlendId || undefined,
+          replyAngle:
+            activeMode === "reply_to_tweet" ? replyAngle || undefined : undefined,
+        }),
+        api.drafts.generate({
+          sourceContent: trimmedContent,
+          sourceType,
+          blendId: selectedBlendId || undefined,
+          replyAngle:
+            activeMode === "reply_to_tweet" ? replyAngle || undefined : undefined,
+          angleInstruction: voiceVariationInstruction,
+        }),
+      ]);
+
+      const normalizedCurrentDraft = prependDraftHistory(currentVoiceResult.draft);
+      const normalizedVariantDraft = prependDraftHistory(variantVoiceResult.draft);
+
+      setDrafts((previousDrafts) => [
+        normalizedCurrentDraft,
+        normalizedVariantDraft,
+        ...previousDrafts.filter(
+          (draft) =>
+            draft.id !== normalizedCurrentDraft.id &&
+            draft.id !== normalizedVariantDraft.id
+        ),
+      ]);
+      setDraftVersions([normalizedCurrentDraft]);
+      setActiveDraft(normalizedCurrentDraft);
+      setCompareMode(false);
+      setCompareVersion(null);
+      setVisualConcept(null);
+      setVoiceComparison({
+        options: [
+          {
+            draft: normalizedCurrentDraft,
+            label: "Current profile",
+            summary: currentVoiceSummary,
+            ctaLabel: "Pick current voice",
+          },
+          {
+            draft: normalizedVariantDraft,
+            label: "Variation",
+            summary: variantVoiceSummary,
+            ctaLabel: "Pick funnier variation",
+          },
+        ],
+      });
+      activeDraftInitialized.current = true;
+
+      return true;
+    } catch (compareVoicesError: unknown) {
+      console.error("Failed to generate voice comparison:", compareVoicesError);
+      setError(
+        compareVoicesError instanceof Error
+          ? compareVoicesError.message
+          : "Failed to compare voices"
+      );
+      return false;
+    } finally {
+      setCreating(false);
+      setComparingVoices(false);
+    }
+  };
+
+  const handlePickVoiceWinner = (draft: TweetDraft) => {
+    setDrafts((previousDrafts) => [
+      draft,
+      ...previousDrafts.filter((existingDraft) => existingDraft.id !== draft.id),
+    ]);
+    setActiveDraft(draft);
+    setDraftVersions([draft]);
+    setCompareMode(false);
+    setCompareVersion(null);
+    setVoiceComparison(null);
+    setVisualConcept(null);
+    activeDraftInitialized.current = true;
+  };
 
   const handleToggleCompareMode = () => {
     if (compareMode) {
@@ -1120,13 +1300,13 @@ export default function CraftingPage() {
                       </div>
                     </div>
                   ) : null}
-                  <div className="mt-3">
+                  <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
                     <GradientButton
                       fullWidth
                       disabled={creating}
                       onClick={() => void handleCreateDraft()}
                     >
-                      {creating ? (
+                      {creating && !comparingVoices ? (
                         <span className="flex items-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           Crafting your tweet…
@@ -1137,7 +1317,22 @@ export default function CraftingPage() {
                         "Generate Draft"
                       )}
                     </GradientButton>
-                    <p className="mt-1 text-center text-[10px] text-atlas-text-muted">
+                    <button
+                      type="button"
+                      onClick={() => void handleCompareVoices()}
+                      disabled={creating}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-glass-border bg-glass px-4 py-3 text-sm font-medium text-atlas-text transition-colors hover:border-atlas-teal/50 hover:text-atlas-teal disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {comparingVoices ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Comparing voices…
+                        </>
+                      ) : (
+                        "Compare Voices"
+                      )}
+                    </button>
+                    <p className="mt-1 text-center text-[10px] text-atlas-text-muted sm:col-span-2">
                       ⌘↩ to generate
                     </p>
                   </div>
@@ -1219,7 +1414,62 @@ export default function CraftingPage() {
             </div>
           </div>
 
-          {activeDraft ? (
+          {voiceComparison ? (
+            <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.24em] text-atlas-text-muted">
+                    Voice A/B test
+                  </p>
+                  <h3 className="mt-2 font-heading text-2xl text-atlas-text">
+                    Compare both voice directions side by side
+                  </h3>
+                  <p className="mt-2 text-sm text-atlas-text-secondary">
+                    Pick the winner and Atlas will keep that draft active.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setVoiceComparison(null)}
+                  className="inline-flex items-center gap-2 self-start rounded-lg border border-glass-border px-3 py-1.5 text-xs font-medium text-atlas-text-secondary transition-colors hover:border-atlas-teal/50 hover:text-atlas-text"
+                >
+                  Keep current draft view
+                </button>
+              </div>
+              <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                {voiceComparison.options.map((option) => (
+                  <div
+                    key={option.label}
+                    className="rounded-2xl border border-glass-border bg-glass p-5"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-atlas-text-muted">
+                          {option.label}
+                        </p>
+                        <p className="mt-1 text-sm text-atlas-teal">{option.summary}</p>
+                      </div>
+                      <span className="rounded-full border border-glass-border px-2.5 py-1 text-[10px] text-atlas-text-muted">
+                        {getWordCount(option.draft.content)} words
+                      </span>
+                    </div>
+                    <div className="mt-4 rounded-xl border border-glass-border bg-atlas-bg/40 p-4">
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-atlas-text">
+                        {option.draft.content}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handlePickVoiceWinner(option.draft)}
+                      className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-atlas-teal to-atlas-steel px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                    >
+                      {option.ctaLabel}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : activeDraft ? (
             <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6">
               <textarea
                 value={activeDraft.content}
@@ -1531,7 +1781,7 @@ export default function CraftingPage() {
             </div>
           )}
 
-          {canReviseActiveDraft ? (
+          {!voiceComparison && canReviseActiveDraft ? (
             <div className="mt-4">
               <RefinementChips
                 onRefine={handleRefine}
@@ -1541,7 +1791,7 @@ export default function CraftingPage() {
             </div>
           ) : null}
 
-          {activeDraft ? (
+          {!voiceComparison && activeDraft ? (
             <VisualConceptSection
               generatingImage={generatingImage}
               onGenerateVisual={handleGenerateVisual}
@@ -1549,7 +1799,7 @@ export default function CraftingPage() {
             />
           ) : null}
 
-          {versionDrafts.length > 0 ? (
+          {!voiceComparison && versionDrafts.length > 0 ? (
             <div className="mt-6 space-y-4">
               <div className="flex flex-wrap items-center gap-2">
                 {versionDrafts.map((draft, index) => (
@@ -1635,7 +1885,7 @@ export default function CraftingPage() {
             </div>
           ) : null}
 
-          {canReviseActiveDraft ? (
+          {!voiceComparison && canReviseActiveDraft ? (
             <div className="mt-6 flex flex-wrap gap-3">
               <GradientButton
                 variant="outline-warning"
@@ -1686,7 +1936,7 @@ export default function CraftingPage() {
             </div>
           ) : null}
 
-          {canReviseActiveDraft ? (
+          {!voiceComparison && canReviseActiveDraft ? (
             <div className="mt-6">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
