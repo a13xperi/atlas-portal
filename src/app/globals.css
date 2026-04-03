@@ -71,3 +71,23 @@
     box-shadow: 0 0 20px rgba(78, 205, 196, 0.25);
   }
 }
+
+/* Dark theme scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #1a1a2e;
+}
+::-webkit-scrollbar-thumb {
+  background: #2d3748;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4a5568;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2d3748 #1a1a2e;
+}
