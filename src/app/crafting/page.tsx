@@ -161,6 +161,7 @@ export default function CraftingPage() {
   } | null>(null);
   const activeDraftInitialized = useRef(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
+  const canReviseActiveDraft = activeDraft?.status === "DRAFT";
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -287,6 +288,27 @@ export default function CraftingPage() {
           : historyItem
       )
     );
+
+    return normalizedDraft;
+  };
+
+  const syncDraftReferences = (draft: TweetDraft, sourceUrl?: string) => {
+    const normalizedDraft = updateDraftHistory(draft, sourceUrl);
+
+    setDrafts((previousDrafts) =>
+      previousDrafts.map((existingDraft) =>
+        existingDraft.id === normalizedDraft.id ? normalizedDraft : existingDraft
+      )
+    );
+    setDraftVersions((previousVersions) =>
+      previousVersions.map((versionDraft) =>
+        versionDraft.id === normalizedDraft.id &&
+        versionDraft.version === normalizedDraft.version
+          ? normalizedDraft
+          : versionDraft
+      )
+    );
+    setActiveDraft(normalizedDraft);
 
     return normalizedDraft;
   };
@@ -548,30 +570,25 @@ export default function CraftingPage() {
     setUrlPreview(null);
   };
 
-  const handleShip = async () => {
+  const handleUpdateDraftStatus = async (status: TweetDraft["status"]) => {
     if (!user || !activeDraft) return;
 
-    setLoading(true);
+    setStatusUpdating(true);
     setError(null);
 
     try {
       const sourceUrl = extractSourceUrl(activeDraft);
-      const { draft } = await api.drafts.update(activeDraft.id, { status: "APPROVED" });
-      const normalizedDraft = updateDraftHistory(draft, sourceUrl ?? undefined);
-
-      setActiveDraft(normalizedDraft);
-      setDrafts((previousDrafts) =>
-        previousDrafts.map((existingDraft) =>
-          existingDraft.id === normalizedDraft.id
-            ? normalizedDraft
-            : existingDraft
-        )
+      const { draft } = await api.drafts.update(activeDraft.id, { status });
+      syncDraftReferences(draft, sourceUrl ?? undefined);
+    } catch (statusError: unknown) {
+      console.error(`Failed to update draft status to ${status}:`, statusError);
+      setError(
+        statusError instanceof Error
+          ? statusError.message
+          : "Failed to update draft status"
       );
-    } catch (shipError: unknown) {
-      console.error("Failed to ship draft:", shipError);
-      setError(shipError instanceof Error ? shipError.message : "Failed to ship draft");
     } finally {
-      setLoading(false);
+      setStatusUpdating(false);
     }
   };
 
@@ -592,16 +609,7 @@ export default function CraftingPage() {
         const { draft } = await api.drafts.update(activeDraft.id, {
           feedback: feedback.trim(),
         });
-        const normalizedDraft = updateDraftHistory(draft, sourceUrl ?? undefined);
-
-        setActiveDraft(normalizedDraft);
-        setDrafts((previousDrafts) =>
-          previousDrafts.map((existingDraft) =>
-            existingDraft.id === normalizedDraft.id
-              ? normalizedDraft
-              : existingDraft
-          )
-        );
+        syncDraftReferences(draft, sourceUrl ?? undefined);
         setFeedback("");
       } catch (feedbackError: unknown) {
         console.error("Failed to submit feedback:", feedbackError);
@@ -1060,11 +1068,51 @@ export default function CraftingPage() {
                 aria-label="Generated draft"
                 className="w-full resize-none bg-transparent text-atlas-text leading-relaxed focus:outline-none"
               />
-              {activeDraft.status === "APPROVED" ? (
-                <span className="mt-3 inline-block rounded bg-atlas-success/10 px-2 py-1 text-xs text-atlas-success">
-                  Shipped
-                </span>
-              ) : null}
+              <div className="mt-4 flex flex-col gap-3 border-t border-glass-border pt-4 sm:flex-row sm:items-center">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${DRAFT_STATUS_PILL_STYLES[activeDraft.status]}`}
+                  >
+                    {DRAFT_STATUS_LABELS[activeDraft.status]}
+                  </span>
+                  <span className="text-xs text-atlas-text-muted">
+                    Draft workflow
+                  </span>
+                </div>
+                <div className="flex-1" />
+                <div className="flex flex-wrap items-center gap-2">
+                  {activeDraft.status === "DRAFT" ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => void handleUpdateDraftStatus("APPROVED")}
+                        disabled={statusUpdating}
+                        className="rounded-lg bg-atlas-teal/20 px-3 py-1.5 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/30 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {statusUpdating ? "Updating..." : "Approve"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleUpdateDraftStatus("ARCHIVED")}
+                        disabled={statusUpdating}
+                        className="rounded-lg px-3 py-1.5 text-xs font-medium text-atlas-text-muted transition-colors hover:text-atlas-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Archive
+                      </button>
+                    </>
+                  ) : null}
+                  {activeDraft.status === "APPROVED" ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleUpdateDraftStatus("POSTED")}
+                      disabled={statusUpdating}
+                      className="rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-steel px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {statusUpdating ? "Updating..." : "Mark as Posted"}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                 <button
                   type="button"

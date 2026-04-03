@@ -94,6 +94,6 @@ describe("BriefingPage", () => {
       sources: ["Delphi Research", "X/Twitter"],
       channel: "Portal + Email",
     });
-    expect(screen.getByText("Preferences saved.")).toBeInTheDocument();
+    expect(await screen.findByText("Preferences saved.")).toBeInTheDocument();
   });
 });

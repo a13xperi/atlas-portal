@@ -220,9 +220,9 @@ export const api = {
   briefing: {
     getPreferences: () =>
       request<{ preference: BriefingPreference | null }>("/api/briefing/preferences"),
-    updatePreferences: (data: BriefingPreferenceInput) =>
+    updatePreferences: (data: Partial<BriefingPreference>) =>
       request<{ preference: BriefingPreference }>("/api/briefing/preferences", {
-        method: "PUT",
+        method: "PATCH",
         body: data,
       }),
   },
@@ -400,6 +400,7 @@ export interface BriefingPreference {
   topics: string[];
   sources: string[];
   channel: string;
+  deliveryChannel?: string;
 }
 
 export interface TeamAnalyst {

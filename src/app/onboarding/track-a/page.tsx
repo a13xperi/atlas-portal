@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import OnboardingShell from "@/components/layout/OnboardingShell";
-import ProgressBar from "@/components/ui/ProgressBar";
 import GradientButton from "@/components/ui/GradientButton";
 import {
   AtSign,
@@ -77,6 +76,8 @@ const analysisSignals = ["Recent tweets", "Reply cadence", "Topic mix"];
 export default function TrackAPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const currentStep = 1;
+  const totalSteps = 3;
   const [dimensions, setDimensions] = useState<VoiceDimensions>(
     TRACK_A_INITIAL_DIMENSIONS
   );
@@ -198,9 +199,11 @@ export default function TrackAPage() {
   };
 
   return (
-    <OnboardingShell maxWidth="720px">
-      <ProgressBar currentStep={1} totalSteps={6} />
-
+    <OnboardingShell
+      maxWidth="720px"
+      step={currentStep}
+      totalSteps={totalSteps}
+    >
       <div className="mt-8 space-y-8">
         <section className="rounded-3xl border border-glass-border bg-glass p-6 backdrop-blur-xl sm:p-7">
           <div className="flex flex-wrap items-center justify-between gap-3">
