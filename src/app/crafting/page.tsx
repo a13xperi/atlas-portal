@@ -43,6 +43,14 @@ const CRAFTING_MODES = [
   { id: "news_to_post", label: "News to Post" },
 ] as const;
 
+const TWEET_TEMPLATES = [
+  { label: "Hot Take", template: "Unpopular opinion: " },
+  { label: "Thread Starter", template: "🧵 Here's what most people get wrong about " },
+  { label: "Data Insight", template: "The data shows something interesting: " },
+  { label: "Prediction", template: "Bold prediction: by end of Q4, " },
+  { label: "Question", template: "Genuine question for CT: " },
+] as const;
+
 const NEWS_SOURCE_PREFIX = "source:";
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
@@ -182,6 +190,7 @@ export default function CraftingPage() {
   const [sourceError, setSourceError] = useState("");
   const [compareMode, setCompareMode] = useState(false);
   const [compareVersion, setCompareVersion] = useState<number | null>(null);
+  const [draftInputText, setDraftInputText] = useState("");
   const [urlPreview, setUrlPreview] = useState<{
     title?: string;
     url: string;
@@ -466,6 +475,7 @@ export default function CraftingPage() {
 
   const handleDraftTextChange = (text: string) => {
     draftInputValueRef.current = text;
+    setDraftInputText(text);
     const trimmedText = text.trim();
 
     if (trimmedText.length > 2000) {
@@ -1009,6 +1019,7 @@ export default function CraftingPage() {
                         ? "Paste the tweet or quote you want to reply to…"
                         : "Paste a tweet idea or link…"
                     }
+                    value={draftInputText}
                     onTextSubmit={handleCreateDraft}
                     onTextChange={handleDraftTextChange}
                     onDrop={handleFileDrop}
@@ -1022,6 +1033,25 @@ export default function CraftingPage() {
                     sourceError={sourceError}
                     contentError={contentError}
                   />
+                  {activeMode === "new_post" && !draftInputText ? (
+                    <div className="mt-3">
+                      <p className="mb-2 text-[10px] text-atlas-text-muted">
+                        Start from a template
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {TWEET_TEMPLATES.map((templatePreset) => (
+                          <button
+                            key={templatePreset.label}
+                            type="button"
+                            onClick={() => handleDraftTextChange(templatePreset.template)}
+                            className="rounded-full border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs text-atlas-text-secondary transition-colors hover:border-atlas-teal/50 hover:text-atlas-text"
+                          >
+                            {templatePreset.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="mt-3">
                     <GradientButton
                       fullWidth
