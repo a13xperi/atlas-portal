@@ -909,6 +909,7 @@ export default function CraftingPage() {
       )
     : 0;
 
+
   const handleToggleCompareMode = () => {
     if (compareMode) {
       setCompareMode(false);
