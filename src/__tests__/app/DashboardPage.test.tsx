@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const mockPush = jest.fn();
 const mockUseAuth = jest.fn(() => ({
@@ -145,7 +145,7 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     expect(
-      screen.getByRole("heading", { name: "Welcome back, TestUser" })
+      await screen.findByRole("heading", { name: "Welcome back, TestUser" })
     ).toBeInTheDocument();
 
     await waitFor(() => expect(mockedApi.analytics.summary).toHaveBeenCalled());
@@ -178,5 +178,23 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Posts")).toBeInTheDocument();
     expect(screen.getByText("Feedback given")).toBeInTheDocument();
     expect(screen.getByText("Reports ingested")).toBeInTheDocument();
+  });
+
+  it("falls back gracefully and shows a dismissible warning when an API call fails", async () => {
+    mockedApi.analytics.summary.mockRejectedValueOnce(new Error("Summary request failed"));
+
+    render(<DashboardPage />);
+
+    expect(await screen.findByText("Drafts this week")).toBeInTheDocument();
+    expect(
+      screen.getByText("Some dashboard data is temporarily unavailable.")
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Summary request failed")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "✕" }));
+
+    expect(
+      screen.queryByText("Some dashboard data is temporarily unavailable.")
+    ).not.toBeInTheDocument();
   });
 });
