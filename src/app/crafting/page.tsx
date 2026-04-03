@@ -11,6 +11,7 @@ import {
   Loader2,
   Mic,
   RefreshCw,
+  TrendingUp,
   X,
 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -1188,6 +1189,58 @@ export default function CraftingPage() {
                     <span>&middot;</span>
                     <span>~{activeDraftReadingTime} min read</span>
                   </div>
+                  {activeDraft.confidence != null ||
+                  activeDraft.predictedEngagement != null ? (
+                    <div className="mt-3 flex items-center gap-4 border-t border-glass-border/50 pt-3">
+                      {activeDraft.confidence != null ? (
+                        <div className="flex items-center gap-1.5">
+                          <div className="relative h-4 w-4">
+                            <svg className="h-4 w-4 -rotate-90" viewBox="0 0 16 16">
+                              <circle
+                                cx="8"
+                                cy="8"
+                                r="6"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                className="text-atlas-surface"
+                              />
+                              <circle
+                                cx="8"
+                                cy="8"
+                                r="6"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeDasharray={`${
+                                  activeDraft.confidence * 37.7
+                                } 37.7`}
+                                className={
+                                  activeDraft.confidence > 0.8
+                                    ? "text-atlas-teal"
+                                    : activeDraft.confidence > 0.5
+                                      ? "text-atlas-warning"
+                                      : "text-atlas-error"
+                                }
+                              />
+                            </svg>
+                          </div>
+                          <span className="text-[10px] text-atlas-text-muted">
+                            {Math.round(activeDraft.confidence * 100)}% match
+                          </span>
+                        </div>
+                      ) : null}
+                      {activeDraft.predictedEngagement != null ? (
+                        <div className="flex items-center gap-1.5">
+                          <TrendingUp className="h-3.5 w-3.5 text-atlas-text-muted" />
+                          <span className="text-[10px] text-atlas-text-muted">
+                            ~{activeDraft.predictedEngagement.toLocaleString()} predicted
+                            reach
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </>
               ) : null}
               <div className="mt-4 border-t border-glass-border pt-4">
@@ -1298,16 +1351,30 @@ export default function CraftingPage() {
                   <span className="text-xs">Delete draft</span>
                 </button>
                 <div className="flex items-center gap-3">
-                  {activeDraft.status === "APPROVED" ? (
+                  {activeDraft.status === "APPROVED" || activeDraft.status === "DRAFT" ? (
                     <button
                       type="button"
-                      onClick={() => {
-                        const text = encodeURIComponent(activeDraft.content);
-                        window.open(
-                          `https://twitter.com/intent/tweet?text=${text}`,
-                          "_blank",
-                          "width=550,height=420"
-                        );
+                      onClick={async () => {
+                        try {
+                          setError(null);
+                          // Check if X account is linked
+                          const xStatus = await api.auth.x.status();
+                          if (!xStatus.linked || xStatus.tokenExpired) {
+                            // Start OAuth flow
+                            const { url } = await api.auth.x.authorize();
+                            window.location.href = url;
+                            return;
+                          }
+                          // Post to X via backend
+                          const result = await api.drafts.postToX(activeDraft.id);
+                          setActiveDraft(result.draft);
+                          syncDraftReferences(result.draft);
+                        } catch (postError: unknown) {
+                          console.error("Post to X failed:", postError);
+                          // Fallback to intent
+                          const text = encodeURIComponent(activeDraft.content);
+                          window.open(`https://twitter.com/intent/tweet?text=${text}`, "_blank", "width=550,height=420");
+                        }
                       }}
                       className="flex items-center gap-1.5 rounded-lg border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs font-medium text-atlas-text transition-colors hover:border-atlas-teal/50"
                     >
@@ -1373,31 +1440,6 @@ export default function CraftingPage() {
                 disabled={creating}
                 loading={refiningChip}
               />
-            </div>
-          ) : null}
-
-          {activeDraft ? (
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-glass-border border-l-4 border-l-atlas-success bg-atlas-surface p-4">
-                <p className="text-xs uppercase tracking-wider text-atlas-text-secondary">
-                  Confidence
-                </p>
-                <p className="font-heading text-2xl font-bold text-atlas-success">
-                  {activeDraft.confidence
-                    ? `${Math.round(activeDraft.confidence * 100)}%`
-                    : "—"}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-glass-border border-l-4 border-l-atlas-teal bg-atlas-surface p-4">
-                <p className="text-xs uppercase tracking-wider text-atlas-text-secondary">
-                  Predicted engagement
-                </p>
-                <p className="font-heading text-2xl font-bold text-atlas-teal">
-                  {activeDraft.predictedEngagement
-                    ? `~${(activeDraft.predictedEngagement / 1000).toFixed(1)}K`
-                    : "—"}
-                </p>
-              </div>
             </div>
           ) : null}
 
