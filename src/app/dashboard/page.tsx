@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import StatusPill from "@/components/ui/StatusPill";
+import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
 import { api, TweetDraft } from "@/lib/api";
 import { PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users } from "lucide-react";
@@ -28,6 +30,7 @@ const defaultStats = {
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { user } = useAuth();
   const [stats, setStats] = useState(defaultStats);
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
@@ -117,6 +120,7 @@ export default function DashboardPage() {
     APPROVED: "feedback",
     ARCHIVED: "draft",
   };
+  const showStatsEmptyState = stats.drafts === 0 && stats.posts === 0;
 
   if (loading) {
     return (
@@ -163,6 +167,11 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+      {showStatsEmptyState && (
+        <p className="text-xs text-atlas-text-muted mt-1">
+          Get started by crafting your first draft
+        </p>
+      )}
 
       <div className="mt-6">
         <LoopPanel />
@@ -183,9 +192,9 @@ export default function DashboardPage() {
 
       <div className="mt-8">
         <p className="text-atlas-text-secondary text-sm mb-4">Recent activity</p>
-        <div className="bg-atlas-surface border border-glass-border rounded-2xl divide-y divide-glass-border">
-          {drafts.length > 0 ? (
-            drafts.map((draft) => (
+        {drafts.length > 0 ? (
+          <div className="bg-atlas-surface border border-glass-border rounded-2xl divide-y divide-glass-border">
+            {drafts.map((draft) => (
               <div
                 key={draft.id}
                 className="flex flex-col items-start gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4"
@@ -198,13 +207,25 @@ export default function DashboardPage() {
                   variant={statusMap[draft.status] || "draft"}
                 />
               </div>
-            ))
-          ) : (
-            <div className="px-6 py-8 text-center text-atlas-text-secondary text-sm">
-              No drafts yet. Head to the Crafting Station to create your first tweet.
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-glass-border bg-atlas-surface-glass p-8 text-center backdrop-blur-sm">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-atlas-teal/20 to-atlas-steel/20">
+              <PenTool className="h-8 w-8 text-atlas-teal" />
             </div>
-          )}
-        </div>
+            <h3 className="mb-2 font-heading text-xl text-atlas-text">
+              Ready to craft your first draft?
+            </h3>
+            <p className="mx-auto mb-6 max-w-md text-sm text-atlas-text-secondary">
+              Atlas helps you write tweets that sound like you. Start by pasting an
+              article, entering a hot take, or replying to a trending topic.
+            </p>
+            <GradientButton onClick={() => router.push("/crafting")}>
+              Open Crafting Station
+            </GradientButton>
+          </div>
+        )}
       </div>
     </AppShell>
   );

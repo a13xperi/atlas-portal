@@ -136,7 +136,7 @@ export default function AnalyticsPage() {
 
         {/* SECTION 2: Usage Insight */}
         <div className="mb-6 rounded-xl border border-glass-border bg-atlas-surface p-6 sm:p-8">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {loading
               ? Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="text-center space-y-2">
@@ -182,10 +182,17 @@ export default function AnalyticsPage() {
         </div>
 
         {/* SECTION 3: Engagement Chart (Hero) */}
-        <EngagementVelocityChart engagementDays={engagementDays} />
+        <div className="relative">
+          <div className="w-full overflow-x-auto">
+            <div className="min-w-[22rem] sm:min-w-0">
+              <EngagementVelocityChart engagementDays={engagementDays} />
+            </div>
+          </div>
+          <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-atlas-bg to-transparent pointer-events-none sm:hidden" />
+        </div>
 
         {/* SECTION 4: Confidence Trend + Model Reliability */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 gap-6 mb-6 lg:grid-cols-2">
           <div className="bg-atlas-surface border border-glass-border rounded-xl p-6">
             <p className="text-[10px] text-atlas-text-secondary uppercase tracking-wide mb-1">
               Confidence Trend
@@ -201,7 +208,7 @@ export default function AnalyticsPage() {
                     <div
                       key={i}
                       className={`flex-1 rounded-t ${entry.positive ? "bg-atlas-teal" : "bg-atlas-warning"}`}
-                      style={{ height: `${Math.min(score, 100)}%` }}
+                      style={{ height: `${Math.min(score, 100)}%`, minHeight: "32px" }}
                     />
                   );
                 }
@@ -370,7 +377,7 @@ export default function AnalyticsPage() {
           <span className="text-sm text-atlas-text-secondary">
             Page 10 of Atlas System
           </span>
-          <div className="flex gap-4">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:gap-4">
             <button
               type="button"
               onClick={handleExportPDF}
