@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type DragEvent as ReactDragEvent,
+} from "react";
 import {
   Archive,
   Check,
@@ -160,6 +166,13 @@ function getDefaultCompareVersion(
   return comparableDrafts[comparableDrafts.length - 1].version;
 }
 
+function isTextFile(file: File) {
+  return (
+    file.type.startsWith("text/") ||
+    /\.(txt|md|csv|json|ya?ml|log)$/i.test(file.name)
+  );
+}
+
 export default function CraftingPage() {
   const { user } = useAuth();
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
@@ -191,6 +204,7 @@ export default function CraftingPage() {
   const [compareMode, setCompareMode] = useState(false);
   const [compareVersion, setCompareVersion] = useState<number | null>(null);
   const [draftInputText, setDraftInputText] = useState("");
+  const [isContentDragActive, setIsContentDragActive] = useState(false);
   const [urlPreview, setUrlPreview] = useState<{
     title?: string;
     url: string;
@@ -295,6 +309,7 @@ export default function CraftingPage() {
 
   const handleModeChange = (mode: CraftingMode) => {
     setActiveMode(mode);
+    setIsContentDragActive(false);
     setError(null);
     setContentError("");
     setSourceError("");
@@ -473,7 +488,7 @@ export default function CraftingPage() {
     return { isValid, trimmedContent };
   }, []);
 
-  const handleDraftTextChange = (text: string) => {
+  const handleDraftTextChange = useCallback((text: string) => {
     draftInputValueRef.current = text;
     setDraftInputText(text);
     const trimmedText = text.trim();
@@ -487,7 +502,7 @@ export default function CraftingPage() {
     if (sourceError && trimmedText) {
       setSourceError("");
     }
-  };
+  }, [contentError, sourceError]);
 
   const createDraftFromSource = useCallback(async (
     content: string,
@@ -522,19 +537,22 @@ export default function CraftingPage() {
     }
   }, [commitDraft, selectedBlendId, user, validateDraftSubmission]);
 
-  const handleFileDrop = async (files: FileList) => {
-    if (!user || files.length === 0) return;
-
-    const file = files[0];
+  const handleTextFileInput = useCallback(async (file: File) => {
+    if (!isTextFile(file)) {
+      setError("Only text files can be dropped into the content area.");
+      return;
+    }
 
     try {
       const text = await file.text();
 
       if (!text.trim()) {
+        setError("The dropped file is empty.");
         return;
       }
 
-      await createDraftFromSource(text.trim().slice(0, 10000), "REPORT", true);
+      setError(null);
+      handleDraftTextChange(text);
     } catch (fileDropError: unknown) {
       console.error("Failed to process file:", fileDropError);
       setError(
@@ -543,7 +561,52 @@ export default function CraftingPage() {
           : "Failed to process file"
       );
     }
-  };
+  }, [handleDraftTextChange]);
+
+  const handleFileDrop = useCallback(async (files: FileList) => {
+    if (files.length === 0) {
+      return;
+    }
+
+    await handleTextFileInput(files[0]);
+  }, [handleTextFileInput]);
+
+  const handleContentDragOver = useCallback((
+    event: ReactDragEvent<HTMLDivElement>
+  ) => {
+    if (!Array.from(event.dataTransfer.types).includes("Files")) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setIsContentDragActive(true);
+  }, []);
+
+  const handleContentDragLeave = useCallback((
+    event: ReactDragEvent<HTMLDivElement>
+  ) => {
+    const nextTarget = event.relatedTarget;
+
+    if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) {
+      return;
+    }
+
+    setIsContentDragActive(false);
+  }, []);
+
+  const handleContentDrop = useCallback(async (
+    event: ReactDragEvent<HTMLDivElement>
+  ) => {
+    event.preventDefault();
+    setIsContentDragActive(false);
+
+    if (event.dataTransfer.files.length === 0) {
+      return;
+    }
+
+    await handleFileDrop(event.dataTransfer.files);
+  }, [handleFileDrop]);
 
   const handleCreateDraft = async (text = draftInputValueRef.current) => {
     const trimmedText = text.trim();
@@ -1020,6 +1083,10 @@ export default function CraftingPage() {
                         : "Paste a tweet idea or link…"
                     }
                     value={draftInputText}
+                    contentDropActive={isContentDragActive}
+                    onContentDragOver={handleContentDragOver}
+                    onContentDragLeave={handleContentDragLeave}
+                    onContentDrop={handleContentDrop}
                     onTextSubmit={handleCreateDraft}
                     onTextChange={handleDraftTextChange}
                     onDrop={handleFileDrop}

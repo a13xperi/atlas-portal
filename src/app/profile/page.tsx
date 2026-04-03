@@ -203,39 +203,17 @@ export default function ProfilePage() {
           </p>
         </div>
 
-        {error ? (
-          <div
-            role="alert"
-            className="mb-6 rounded-xl border border-atlas-error/30 bg-atlas-error/10 px-4 py-3 text-sm text-atlas-error"
-          >
-            {error}
-          </div>
-        ) : null}
-
-        {successMessage ? (
-          <div
-            role="status"
-            className="mb-6 rounded-xl border border-atlas-success/30 bg-atlas-success/10 px-4 py-3 text-sm text-atlas-success"
-          >
-            {successMessage}
-          </div>
-        ) : null}
-
-        <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-          <GlassCard
-            aria-label="Profile overview"
-            maxWidth="full"
-            className="h-fit bg-atlas-surface/60"
-          >
-            <div className="flex flex-col items-center text-center">
-              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-glass-border bg-gradient-to-r from-atlas-teal to-atlas-steel text-3xl font-heading text-white shadow-lg shadow-atlas-teal/20">
-                {profile.avatarUrl ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={profile.avatarUrl}
-                    alt={`${displayName} avatar`}
-                    className="h-full w-full object-cover"
-                  />
+            <div className="mb-6 flex flex-col items-center">
+              <div className="mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-gradient-to-r from-atlas-teal to-atlas-steel text-3xl font-heading text-white shadow-lg shadow-atlas-teal/20">
+                {profileUser.avatarUrl ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={profileUser.avatarUrl}
+                      alt={`${profileTitle} avatar`}
+                      className="h-full w-full object-cover"
+                    />
+                  </>
                 ) : (
                   avatarInitials
                 )}

@@ -83,11 +83,8 @@ export default function NotificationDropdown({
 
   return (
     <div
-      id="notification-dropdown"
       ref={dropdownRef}
       role="dialog"
-      aria-live="polite"
-      aria-modal="true"
       aria-label="Notifications"
       className="absolute right-0 top-full z-50 mt-2 max-h-96 w-80 overflow-y-auto rounded-2xl border border-glass-border bg-atlas-nav backdrop-blur-xl shadow-lg"
     >
