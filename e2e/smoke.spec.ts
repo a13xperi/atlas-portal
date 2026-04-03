@@ -248,7 +248,7 @@ const smokeRoutes: SmokeRoute[] = [
   {
     name: "voice profiles",
     path: "/voice-profiles",
-    ready: (page) => page.getByRole("heading", { name: /your voice profiles/i }),
+    ready: (page) => page.getByRole("heading", { name: /your voice — detailed breakdown/i }),
   },
   {
     name: "analytics",
@@ -258,7 +258,7 @@ const smokeRoutes: SmokeRoute[] = [
   {
     name: "alerts",
     path: "/alerts",
-    ready: (page) => page.getByRole("heading", { name: /no alerts yet/i }),
+    ready: (page) => page.getByRole("heading", { name: /draft responses without leaving the feed/i }),
   },
   {
     name: "briefing",
@@ -270,7 +270,7 @@ const smokeRoutes: SmokeRoute[] = [
     name: "search",
     path: "/search",
     ready: (page) =>
-      page.getByPlaceholder(/search drafts, alerts, or enter a research topic/i),
+      page.getByPlaceholder(/search drafts or voice profiles/i),
   },
   {
     name: "team library",
@@ -281,7 +281,7 @@ const smokeRoutes: SmokeRoute[] = [
     name: "telegram",
     path: "/telegram",
     ready: (page) =>
-      page.getByRole("heading", { name: /connect atlas on telegram/i }),
+      page.getByRole("heading", { name: /connect telegram/i }),
   },
   {
     name: "management",
@@ -299,14 +299,14 @@ const smokeRoutes: SmokeRoute[] = [
     path: "/onboarding/track-a",
     ready: (page) =>
       page.getByRole("heading", {
-        name: /this is what i think your writing voice is/i,
+        name: /connect your x account/i,
       }),
   },
   {
     name: "onboarding track b",
     path: "/onboarding/track-b",
     ready: (page) =>
-      page.getByRole("heading", { name: /what type of style do you like/i }),
+      page.getByRole("heading", { name: /build your voice manually/i }),
   },
 ];
 
