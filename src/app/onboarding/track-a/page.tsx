@@ -92,6 +92,8 @@ export default function TrackAPage() {
   const [newHandle, setNewHandle] = useState("");
   const [xHandle, setXHandle] = useState("");
   const [isHandleConfirmed, setIsHandleConfirmed] = useState(false);
+  const [calibrating, setCalibrating] = useState(false);
+  const [calibrationResult, setCalibrationResult] = useState<{ analysis: string; tweetsAnalyzed: number } | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [displayNameError, setDisplayNameError] = useState("");
 
@@ -280,9 +282,57 @@ export default function TrackAPage() {
                 </button>
               </div>
 
+              {isHandleConfirmed && normalizedXHandle && !calibrationResult && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setCalibrating(true);
+                    try {
+                      const { profile, calibration } = await api.voice.calibrate(normalizedXHandle);
+                      setDimensions({
+                        humor: profile.humor,
+                        formality: profile.formality,
+                        brevity: profile.brevity,
+                        contrarianTone: profile.contrarianTone,
+                        directness: profile.directness ?? 5,
+                        warmth: profile.warmth ?? 5,
+                        technicalDepth: profile.technicalDepth ?? 5,
+                        confidence: profile.confidence ?? 5,
+                        evidenceOrientation: profile.evidenceOrientation ?? 5,
+                        solutionOrientation: profile.solutionOrientation ?? 5,
+                        socialPosture: profile.socialPosture ?? 5,
+                        selfPromotionalIntensity: profile.selfPromotionalIntensity ?? 5,
+                      });
+                      setCalibrationResult({ analysis: calibration.analysis, tweetsAnalyzed: calibration.tweetsAnalyzed });
+                    } catch (err) {
+                      console.error("Calibration failed:", err);
+                    } finally {
+                      setCalibrating(false);
+                    }
+                  }}
+                  disabled={calibrating}
+                  className="mt-3 w-full rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-steel px-4 py-3 text-sm font-medium text-white transition-all hover:scale-[1.01] disabled:opacity-50"
+                >
+                  {calibrating ? (
+                    <span className="flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Analyzing tweets...</span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2"><Sparkles className="h-4 w-4" /> Analyze @{normalizedXHandle}&apos;s Voice</span>
+                  )}
+                </button>
+              )}
+
+              {calibrationResult && (
+                <div className="mt-3 rounded-lg border border-atlas-teal/30 bg-atlas-teal/5 p-3">
+                  <p className="text-xs font-medium text-atlas-teal">Voice calibrated from {calibrationResult.tweetsAnalyzed} tweets</p>
+                  <p className="mt-1 text-xs text-atlas-text-secondary">{calibrationResult.analysis}</p>
+                </div>
+              )}
+
               <p className="mt-3 text-xs leading-5 text-atlas-text-muted">
-                {isHandleConfirmed && normalizedXHandle
-                  ? `Ready to analyze @${normalizedXHandle}. Atlas will use recent tweets to create your first draft voice profile.`
+                {calibrationResult
+                  ? "Your voice dimensions have been auto-calibrated. Adjust below if needed."
+                  : isHandleConfirmed && normalizedXHandle
+                  ? "Click above to analyze tweets and auto-calibrate your voice profile."
                   : "Use your current handle or paste a different one to kick off automated voice analysis."}
               </p>
             </div>
