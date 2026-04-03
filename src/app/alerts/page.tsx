@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Settings } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import InlineDraftCard from "@/components/alerts/InlineDraftCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import GradientButton from "@/components/ui/GradientButton";
-import { Alert, api } from "@/lib/api";
+import { Alert, AlertSubscription, api } from "@/lib/api";
 
 function formatAlertType(type: string) {
   return type.replace(/_/g, " ");
@@ -24,6 +25,8 @@ function formatAlertTimestamp(createdAt: string) {
 export default function AlertsPage() {
   const router = useRouter();
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [subscriptions, setSubscriptions] = useState<AlertSubscription[]>([]);
+  const [showSubscriptions, setShowSubscriptions] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,6 +65,23 @@ export default function AlertsPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let isActive = true;
+
+    api.alerts
+      .subscriptions()
+      .then((response) => {
+        if (isActive) {
+          setSubscriptions(response.subscriptions ?? []);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   return (
     <AppShell>
       <div className="mx-auto max-w-4xl py-8">
@@ -78,12 +98,55 @@ export default function AlertsPage() {
               you ship it.
             </p>
           </div>
-          {!loading && alerts.length > 0 && (
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-atlas-text-muted">
-              {alerts.length} live signals
-            </p>
-          )}
+          <div className="flex flex-col items-start gap-3 sm:items-end">
+            <button
+              onClick={() => setShowSubscriptions(!showSubscriptions)}
+              className="flex items-center gap-1.5 rounded-lg border border-glass-border px-3 py-1.5 text-xs font-medium text-atlas-text-secondary transition-colors hover:text-atlas-text"
+            >
+              <Settings className="h-3.5 w-3.5" />
+              Subscriptions ({subscriptions.filter((sub) => sub.isActive).length})
+            </button>
+            {!loading && alerts.length > 0 && (
+              <p className="text-xs font-medium uppercase tracking-[0.2em] text-atlas-text-muted">
+                {alerts.length} live signals
+              </p>
+            )}
+          </div>
         </div>
+
+        {showSubscriptions && (
+          <div className="mb-6 mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-4">
+            <h3 className="mb-3 text-sm font-medium text-atlas-text">
+              Your Signal Subscriptions
+            </h3>
+            {subscriptions.length === 0 ? (
+              <p className="text-xs text-atlas-text-secondary">
+                No subscriptions yet. Subscribe to topics to receive signals.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {subscriptions.map((sub) => (
+                  <div
+                    key={sub.id}
+                    className="flex items-center justify-between border-b border-glass-border/50 py-2 last:border-0"
+                  >
+                    <div>
+                      <span className="text-sm text-atlas-text">{sub.value}</span>
+                      <span className="ml-2 text-[10px] uppercase text-atlas-text-muted">
+                        {sub.type}
+                      </span>
+                    </div>
+                    <span
+                      className={`text-xs ${sub.isActive ? "text-atlas-teal" : "text-atlas-text-muted"}`}
+                    >
+                      {sub.isActive ? "Active" : "Paused"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {error && (
           <div
