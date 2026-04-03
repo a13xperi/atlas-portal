@@ -131,8 +131,8 @@ export default function AnalyticsPage() {
               {sparkData.map((d, i) => (
                 <div
                   key={i}
-                  className="flex-1 bg-atlas-teal/40 rounded-sm"
-                  style={{ height: `${activityMax === 0 ? 0 : (d.count / activityMax) * 100}%` }}
+                  className={`flex-1 rounded-sm ${d.count > 0 ? "bg-atlas-teal/40" : ""}`}
+                  style={{ height: d.count > 0 && activityMax > 0 ? `${(d.count / activityMax) * 100}%` : "0px" }}
                 />
               ))}
             </div>
@@ -179,16 +179,20 @@ export default function AnalyticsPage() {
               (engagementDays ?? []).map((day) => (
                 <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
                   <div className="w-full flex items-end justify-center gap-1 h-40">
-                    <div
-                      className="w-3 bg-atlas-teal/60 rounded-t"
-                      style={{ height: `${chartMax === 0 ? 0 : (day.predicted / chartMax) * 100}%` }}
-                      title={`Predicted: ${day.predicted}`}
-                    />
-                    <div
-                      className="w-3 bg-atlas-success rounded-t"
-                      style={{ height: `${chartMax === 0 ? 0 : (day.actual / chartMax) * 100}%` }}
-                      title={`Actual: ${day.actual}`}
-                    />
+                    {day.predicted > 0 && (
+                      <div
+                        className="w-3 bg-atlas-teal/60 rounded-t"
+                        style={{ height: `${(day.predicted / chartMax) * 100}%` }}
+                        title={`Predicted: ${day.predicted}`}
+                      />
+                    )}
+                    {day.actual > 0 && (
+                      <div
+                        className="w-3 bg-atlas-success rounded-t"
+                        style={{ height: `${(day.actual / chartMax) * 100}%` }}
+                        title={`Actual: ${day.actual}`}
+                      />
+                    )}
                   </div>
                   <span className="text-[10px] text-atlas-text-muted">{day.dayLabel}</span>
                 </div>
