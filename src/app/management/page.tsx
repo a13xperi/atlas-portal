@@ -174,7 +174,12 @@ export default function ManagementPage() {
 
       {/* Action Feedback — visible at top */}
       {actionFeedback && (
-        <div className={`mb-6 px-4 py-3 rounded-xl text-sm transition-all ${actionFeedback.type === "success" ? "bg-atlas-success/10 border border-atlas-success/30 text-atlas-success" : "bg-atlas-error/10 border border-atlas-error/30 text-atlas-error"}`}>
+        <div
+          aria-atomic="true"
+          aria-live="polite"
+          role={actionFeedback.type === "success" ? "status" : "alert"}
+          className={`mb-6 px-4 py-3 rounded-xl text-sm transition-all ${actionFeedback.type === "success" ? "bg-atlas-success/10 border border-atlas-success/30 text-atlas-success" : "bg-atlas-error/10 border border-atlas-error/30 text-atlas-error"}`}
+        >
           {actionFeedback.message}
         </div>
       )}

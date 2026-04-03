@@ -29,7 +29,7 @@ export default function ContentInput({
   contentError,
 }: ContentInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const textInputRef = useRef<HTMLInputElement>(null);
+  const textInputRef = useRef<HTMLTextAreaElement>(null);
   const [text, setText] = useState("");
 
   const handleDrop = (event: React.DragEvent) => {
@@ -80,6 +80,7 @@ export default function ContentInput({
     <div className="space-y-3">
       <input
         ref={fileInputRef}
+        aria-label="Upload report file"
         type="file"
         accept={acceptFileTypes}
         onChange={handleFileSelect}
@@ -93,24 +94,36 @@ export default function ContentInput({
       >
         <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-8">
           <div
+            role="button"
+            tabIndex={0}
+            aria-label="Upload a report file"
             onClick={() => fileInputRef.current?.click()}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click(); }}
             className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-glass-border bg-atlas-nav px-4 py-4 text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal"
           >
-            <FileText className="w-8 h-8" />
+            <FileText className="w-8 h-8" aria-hidden="true" />
             <span className="text-xs">Drop a report</span>
           </div>
           <div
+            role="button"
+            tabIndex={0}
+            aria-label="Paste a tweet idea"
             onClick={() => textInputRef.current?.focus()}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") textInputRef.current?.focus(); }}
             className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-glass-border bg-atlas-nav px-4 py-4 text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal"
           >
-            <MessageSquare className="w-8 h-8" />
+            <MessageSquare className="w-8 h-8" aria-hidden="true" />
             <span className="text-xs">Paste a tweet idea</span>
           </div>
           <div
+            role="button"
+            tabIndex={0}
+            aria-label="Pick a trending alert"
             onClick={() => onTrendingClick?.()}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onTrendingClick?.(); }}
             className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-glass-border bg-atlas-nav px-4 py-4 text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal"
           >
-            <TrendingUp className="w-8 h-8" />
+            <TrendingUp className="w-8 h-8" aria-hidden="true" />
             <span className="text-xs">Pick a trending alert</span>
           </div>
         </div>
@@ -120,21 +133,24 @@ export default function ContentInput({
       </div>
 
       {sourceError ? (
-        <p className="text-sm text-atlas-error">{sourceError}</p>
+        <p role="alert" className="text-sm text-atlas-error">
+          {sourceError}
+        </p>
       ) : null}
 
-      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-        <input
+      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-start">
+        <textarea
           ref={textInputRef}
-          type="text"
+          aria-label="Content input"
           placeholder={placeholder}
           value={text}
+          rows={3}
           onChange={(event) => {
             setText(event.currentTarget.value);
             onTextChange?.(event.currentTarget.value);
           }}
           onKeyDown={(event) => {
-            if (event.key === "Enter") {
+            if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
               handleSubmit();
             }
@@ -144,9 +160,10 @@ export default function ContentInput({
         {showMic ? (
           <button
             type="button"
-            className="flex w-full items-center justify-center rounded-lg border border-glass-border bg-atlas-surface p-3 text-atlas-text-secondary transition-colors hover:text-atlas-teal sm:w-auto"
+            aria-label="Record voice note"
+            className="flex w-full items-center justify-center rounded-lg border border-glass-border bg-atlas-surface p-3 text-atlas-text-secondary transition-colors hover:text-atlas-teal sm:w-auto sm:self-stretch"
           >
-            <Mic className="w-4 h-4" />
+            <Mic className="w-4 h-4" aria-hidden="true" />
           </button>
         ) : null}
       </div>
@@ -156,11 +173,13 @@ export default function ContentInput({
         <kbd className="rounded border border-glass-border px-1 py-0.5 text-[10px] font-mono">
           Enter
         </kbd>{" "}
-        to generate
+        to generate. Use Shift + Enter for a new line.
       </p>
 
       {contentError ? (
-        <p className="text-sm text-atlas-error">{contentError}</p>
+        <p role="alert" className="text-sm text-atlas-error">
+          {contentError}
+        </p>
       ) : null}
     </div>
   );

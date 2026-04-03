@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const mockProfile = {
   id: "vp1",
@@ -50,6 +50,7 @@ const VoiceProfilesPage = require("@/app/voice-profiles/page").default;
 describe("VoiceProfilesPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    localStorage.clear();
     mockApi.voice.getProfile.mockResolvedValue({ profile: mockProfile });
     mockApi.voice.getReferences.mockResolvedValue({
       voices: [{ id: "r1", name: "Hasu", handle: "hasufl", isActive: true }],
@@ -71,5 +72,36 @@ describe("VoiceProfilesPage", () => {
     render(<VoiceProfilesPage />);
 
     expect((await screen.findAllByText("Hasu")).length).toBeGreaterThan(0);
+  });
+
+  it("toggles a saved blend as active and persists it", async () => {
+    mockApi.voice.getBlends.mockResolvedValue({
+      blends: [
+        {
+          id: "blend-1",
+          name: "Research-heavy",
+          voices: [
+            { label: "Personal", percentage: 60 },
+            { label: "Hasu", percentage: 40 },
+          ],
+        },
+      ],
+    });
+
+    render(<VoiceProfilesPage />);
+
+    expect(await screen.findByText("Research-heavy")).toBeInTheDocument();
+
+    const useButton = screen.getByText("Use");
+    fireEvent.click(useButton);
+
+    expect(await screen.findByText("Active")).toBeInTheDocument();
+    expect(localStorage.getItem("atlas_active_blend")).toBe("blend-1");
+
+    fireEvent.click(screen.getByText("Active"));
+
+    await waitFor(() => {
+      expect(localStorage.getItem("atlas_active_blend")).toBeNull();
+    });
   });
 });

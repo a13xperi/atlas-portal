@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const push = jest.fn();
 const mockUseAuth = jest.fn();
+const mockOnboardingShell = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -16,7 +17,17 @@ jest.mock("@/lib/auth", () => ({
 
 jest.mock("@/components/layout/OnboardingShell", () => ({
   __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  default: ({
+    children,
+    ...props
+  }: {
+    children: React.ReactNode;
+    step?: number;
+    totalSteps?: number;
+  }) => {
+    mockOnboardingShell(props);
+    return <div>{children}</div>;
+  },
 }));
 
 jest.mock("@/components/voice-profiles/VoiceDimensionSections", () => ({
@@ -52,6 +63,7 @@ const mockedApi = api as unknown as {
 describe("TrackBPage", () => {
   beforeEach(() => {
     push.mockClear();
+    mockOnboardingShell.mockClear();
     mockUseAuth.mockReturnValue({
       user: { handle: "AtlasAnalyst", displayName: "" },
     });
@@ -67,6 +79,12 @@ describe("TrackBPage", () => {
 
   it("shows an inline display name validation error before saving", async () => {
     render(<TrackBPage />);
+
+    expect(mockOnboardingShell).toHaveBeenCalledWith({
+      maxWidth: "720px",
+      step: 1,
+      totalSteps: 3,
+    });
 
     fireEvent.change(screen.getByLabelText("Display name"), {
       target: { value: "A" },

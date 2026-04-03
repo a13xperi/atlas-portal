@@ -38,7 +38,7 @@ export default function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ background: gradients.appBg }}>
       <NavBar variant="app" />
-      <main className="overflow-x-hidden pt-14">
+      <main aria-label="Page content" className="overflow-x-hidden pt-14">
         <div className="mx-auto w-full max-w-7xl min-w-0 px-4 py-6 sm:px-6 sm:py-8">
           {children}
         </div>

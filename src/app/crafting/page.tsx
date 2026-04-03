@@ -9,7 +9,6 @@ import DraftHistorySidebar, {
   DraftHistoryItem,
 } from "@/components/crafting/DraftHistorySidebar";
 import NewsMode from "@/components/crafting/NewsMode";
-import CraftingSkeleton from "@/components/skeletons/CraftingSkeleton";
 import ContentInput from "@/components/ui/ContentInput";
 import GradientButton from "@/components/ui/GradientButton";
 import ReplyAngleSelector from "@/components/ui/ReplyAngleSelector";
@@ -35,6 +34,20 @@ const CRAFTING_MODES = [
 const NEWS_SOURCE_PREFIX = "source:";
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
+
+const DRAFT_STATUS_LABELS: Record<TweetDraft["status"], string> = {
+  DRAFT: "Draft",
+  APPROVED: "Approved",
+  POSTED: "Posted",
+  ARCHIVED: "Archived",
+};
+
+const DRAFT_STATUS_PILL_STYLES: Record<TweetDraft["status"], string> = {
+  DRAFT: "bg-atlas-surface text-atlas-text-secondary",
+  APPROVED: "bg-atlas-teal/20 text-atlas-teal",
+  POSTED: "bg-atlas-success/20 text-atlas-success",
+  ARCHIVED: "bg-atlas-text-muted/20 text-atlas-text-muted",
+};
 
 const VisualConceptSection = dynamic(
   () => import("@/components/crafting/VisualConceptSection"),
@@ -129,7 +142,7 @@ export default function CraftingPage() {
   const [selectedBlendId, setSelectedBlendId] = useState<string | null>(null);
   const [blendValue, setBlendValue] = useState(30);
   const [feedback, setFeedback] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState(false);
   const [creating, setCreating] = useState(false);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
@@ -148,6 +161,7 @@ export default function CraftingPage() {
   } | null>(null);
   const activeDraftInitialized = useRef(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
+  const canReviseActiveDraft = activeDraft?.status === "DRAFT";
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -232,14 +246,6 @@ export default function CraftingPage() {
     }
   }, [activeDraft, compareMode, compareVersion, draftVersions]);
 
-  if (loading) {
-    return (
-      <AppShell>
-        <CraftingSkeleton />
-      </AppShell>
-    );
-  }
-
   const handleModeChange = (mode: CraftingMode) => {
     setActiveMode(mode);
     setError(null);
@@ -282,6 +288,27 @@ export default function CraftingPage() {
           : historyItem
       )
     );
+
+    return normalizedDraft;
+  };
+
+  const syncDraftReferences = (draft: TweetDraft, sourceUrl?: string) => {
+    const normalizedDraft = updateDraftHistory(draft, sourceUrl);
+
+    setDrafts((previousDrafts) =>
+      previousDrafts.map((existingDraft) =>
+        existingDraft.id === normalizedDraft.id ? normalizedDraft : existingDraft
+      )
+    );
+    setDraftVersions((previousVersions) =>
+      previousVersions.map((versionDraft) =>
+        versionDraft.id === normalizedDraft.id &&
+        versionDraft.version === normalizedDraft.version
+          ? normalizedDraft
+          : versionDraft
+      )
+    );
+    setActiveDraft(normalizedDraft);
 
     return normalizedDraft;
   };
@@ -543,30 +570,25 @@ export default function CraftingPage() {
     setUrlPreview(null);
   };
 
-  const handleShip = async () => {
+  const handleUpdateDraftStatus = async (status: TweetDraft["status"]) => {
     if (!user || !activeDraft) return;
 
-    setLoading(true);
+    setStatusUpdating(true);
     setError(null);
 
     try {
       const sourceUrl = extractSourceUrl(activeDraft);
-      const { draft } = await api.drafts.update(activeDraft.id, { status: "APPROVED" });
-      const normalizedDraft = updateDraftHistory(draft, sourceUrl ?? undefined);
-
-      setActiveDraft(normalizedDraft);
-      setDrafts((previousDrafts) =>
-        previousDrafts.map((existingDraft) =>
-          existingDraft.id === normalizedDraft.id
-            ? normalizedDraft
-            : existingDraft
-        )
+      const { draft } = await api.drafts.update(activeDraft.id, { status });
+      syncDraftReferences(draft, sourceUrl ?? undefined);
+    } catch (statusError: unknown) {
+      console.error(`Failed to update draft status to ${status}:`, statusError);
+      setError(
+        statusError instanceof Error
+          ? statusError.message
+          : "Failed to update draft status"
       );
-    } catch (shipError: unknown) {
-      console.error("Failed to ship draft:", shipError);
-      setError(shipError instanceof Error ? shipError.message : "Failed to ship draft");
     } finally {
-      setLoading(false);
+      setStatusUpdating(false);
     }
   };
 
@@ -587,16 +609,7 @@ export default function CraftingPage() {
         const { draft } = await api.drafts.update(activeDraft.id, {
           feedback: feedback.trim(),
         });
-        const normalizedDraft = updateDraftHistory(draft, sourceUrl ?? undefined);
-
-        setActiveDraft(normalizedDraft);
-        setDrafts((previousDrafts) =>
-          previousDrafts.map((existingDraft) =>
-            existingDraft.id === normalizedDraft.id
-              ? normalizedDraft
-              : existingDraft
-          )
-        );
+        syncDraftReferences(draft, sourceUrl ?? undefined);
         setFeedback("");
       } catch (feedbackError: unknown) {
         console.error("Failed to submit feedback:", feedbackError);
@@ -827,9 +840,9 @@ export default function CraftingPage() {
         <div className="min-w-0 flex-1">
           {trendingTopics.length > 0 ? (
             <div id="trending-section">
-              <label className="text-xs uppercase tracking-wide text-atlas-text-secondary">
+              <p className="text-xs uppercase tracking-wide text-atlas-text-secondary">
                 Trending now — click to craft a tweet
-              </label>
+              </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {trendingTopics.slice(0, 6).map((topic) => (
                   <button
@@ -917,11 +930,11 @@ export default function CraftingPage() {
               />
             ) : (
               <div className="mt-6">
-                <label className="text-xs uppercase tracking-wide text-atlas-text-secondary">
+                <p className="text-xs uppercase tracking-wide text-atlas-text-secondary">
                   {activeMode === "reply_to_tweet"
                     ? "Paste the tweet or quote you want Atlas to respond to."
                     : "Feed Atlas content — it crafts the tweet in your voice."}
-                </label>
+                </p>
                 {activeMode === "reply_to_tweet" ? (
                   <div className="mb-2 mt-4">
                     <ReplyAngleSelector
@@ -976,11 +989,15 @@ export default function CraftingPage() {
                     </GradientButton>
                   </div>
                   {error ? (
-                    <div className="mt-2 flex items-center justify-between rounded-lg border border-atlas-error/30 bg-atlas-error/10 px-3 py-2 text-sm text-atlas-error">
+                    <div
+                      role="alert"
+                      className="mt-2 flex items-center justify-between rounded-lg border border-atlas-error/30 bg-atlas-error/10 px-3 py-2 text-sm text-atlas-error"
+                    >
                       <span>{error}</span>
                       <button
                         type="button"
                         onClick={() => setError(null)}
+                        aria-label="Dismiss error"
                         className="ml-2 transition-colors hover:text-atlas-text"
                       >
                         x
@@ -994,6 +1011,7 @@ export default function CraftingPage() {
 
           <div className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6">
             <select
+              aria-label="Voice mode"
               value={voiceMode}
               onChange={(event) => {
                 const nextMode = event.target.value as
@@ -1014,6 +1032,7 @@ export default function CraftingPage() {
             </select>
             {voiceMode === "blended" && blends.length > 0 ? (
               <select
+                aria-label="Saved blend"
                 value={selectedBlendId || ""}
                 onChange={(event) => setSelectedBlendId(event.target.value || null)}
                 className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
@@ -1035,6 +1054,7 @@ export default function CraftingPage() {
                   : "Blend:"}
               </span>
               <input
+                aria-label="Blend intensity"
                 type="range"
                 min={0}
                 max={100}
@@ -1055,11 +1075,105 @@ export default function CraftingPage() {
                 aria-label="Generated draft"
                 className="w-full resize-none bg-transparent text-atlas-text leading-relaxed focus:outline-none"
               />
-              {activeDraft.status === "APPROVED" ? (
-                <span className="mt-3 inline-block rounded bg-atlas-success/10 px-2 py-1 text-xs text-atlas-success">
-                  Shipped
-                </span>
+              {activeDraft.content ? (
+                <div className="mt-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="relative h-5 w-5">
+                      <svg className="h-5 w-5 -rotate-90" viewBox="0 0 20 20">
+                        <circle
+                          cx="10"
+                          cy="10"
+                          r="8"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className="text-atlas-surface"
+                        />
+                        <circle
+                          cx="10"
+                          cy="10"
+                          r="8"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeDasharray={`${Math.min(
+                            (activeDraft.content.length / 280) * 50.3,
+                            50.3
+                          )} 50.3`}
+                          className={
+                            activeDraft.content.length > 280
+                              ? "text-atlas-error"
+                              : activeDraft.content.length > 250
+                                ? "text-atlas-warning"
+                                : "text-atlas-teal"
+                          }
+                        />
+                      </svg>
+                    </div>
+                    <span
+                      className={`text-xs font-mono ${
+                        activeDraft.content.length > 280
+                          ? "text-atlas-error"
+                          : activeDraft.content.length > 250
+                            ? "text-atlas-warning"
+                            : "text-atlas-text-secondary"
+                      }`}
+                    >
+                      {activeDraft.content.length}/280
+                    </span>
+                  </div>
+                  {activeDraft.content.length > 280 ? (
+                    <span className="text-xs text-atlas-error">
+                      {activeDraft.content.length - 280} over limit
+                    </span>
+                  ) : null}
+                </div>
               ) : null}
+              <div className="mt-4 flex flex-col gap-3 border-t border-glass-border pt-4 sm:flex-row sm:items-center">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${DRAFT_STATUS_PILL_STYLES[activeDraft.status]}`}
+                  >
+                    {DRAFT_STATUS_LABELS[activeDraft.status]}
+                  </span>
+                  <span className="text-xs text-atlas-text-muted">
+                    Draft workflow
+                  </span>
+                </div>
+                <div className="flex-1" />
+                <div className="flex flex-wrap items-center gap-2">
+                  {activeDraft.status === "DRAFT" ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => void handleUpdateDraftStatus("APPROVED")}
+                        disabled={statusUpdating}
+                        className="rounded-lg bg-atlas-teal/20 px-3 py-1.5 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/30 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {statusUpdating ? "Updating..." : "Approve"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleUpdateDraftStatus("ARCHIVED")}
+                        disabled={statusUpdating}
+                        className="rounded-lg px-3 py-1.5 text-xs font-medium text-atlas-text-muted transition-colors hover:text-atlas-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Archive
+                      </button>
+                    </>
+                  ) : null}
+                  {activeDraft.status === "APPROVED" ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleUpdateDraftStatus("POSTED")}
+                      disabled={statusUpdating}
+                      className="rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-steel px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {statusUpdating ? "Updating..." : "Mark as Posted"}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                 <button
                   type="button"
@@ -1069,20 +1183,14 @@ export default function CraftingPage() {
                   <span className="text-xs">Delete draft</span>
                 </button>
                 <div className="flex items-center gap-3">
-                  <p
-                    className={`text-xs ${
-                      activeDraft.content.length >= 280
-                        ? "text-atlas-error"
-                        : activeDraft.content.length >= 260
-                          ? "text-atlas-warning"
-                          : "text-atlas-text-secondary"
-                    }`}
-                  >
-                    {activeDraft.content.length} / 280
-                  </p>
                   <button
                     type="button"
                     onClick={handleCopyDraft}
+                    aria-label={
+                      copiedDraftId === activeDraft.id
+                        ? "Draft copied to clipboard"
+                        : "Copy draft to clipboard"
+                    }
                     title={
                       copiedDraftId === activeDraft.id
                         ? "Copied!"
@@ -1119,11 +1227,11 @@ export default function CraftingPage() {
             </div>
           )}
 
-          {activeDraft ? (
+          {canReviseActiveDraft ? (
             <div className="mt-4">
               <RefinementChips
                 onRefine={handleRefine}
-                disabled={!activeDraft || creating}
+                disabled={creating}
                 loading={refiningChip}
               />
             </div>
@@ -1248,15 +1356,8 @@ export default function CraftingPage() {
             </div>
           ) : null}
 
-          {activeDraft && activeDraft.status !== "APPROVED" ? (
+          {canReviseActiveDraft ? (
             <div className="mt-6 flex flex-wrap gap-3">
-              <GradientButton
-                variant="outline-success"
-                onClick={handleShip}
-                disabled={loading || creating}
-              >
-                {loading ? "Shipping…" : "Ship it"}
-              </GradientButton>
               <GradientButton
                 variant="outline-warning"
                 onClick={() => document.getElementById("feedback-input")?.focus()}
@@ -1273,11 +1374,12 @@ export default function CraftingPage() {
             </div>
           ) : null}
 
-          {activeDraft && activeDraft.status !== "APPROVED" ? (
+          {canReviseActiveDraft ? (
             <div className="mt-6">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
                   id="feedback-input"
+                  aria-label="Feedback for the current draft"
                   type="text"
                   value={feedback}
                   onChange={(event) => setFeedback(event.target.value)}
@@ -1291,6 +1393,7 @@ export default function CraftingPage() {
                 />
                 <button
                   type="button"
+                  aria-label="Record voice feedback"
                   className="flex items-center justify-center rounded-lg border border-glass-border bg-atlas-surface p-3 text-atlas-text-secondary transition-colors hover:text-atlas-teal"
                 >
                   <Mic className="h-4 w-4" />

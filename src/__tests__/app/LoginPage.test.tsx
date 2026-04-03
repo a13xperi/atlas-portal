@@ -5,6 +5,7 @@ const push = jest.fn();
 const replace = jest.fn();
 const mockLogin = jest.fn();
 const mockRegister = jest.fn();
+const mockOnboardingShell = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace }),
@@ -24,7 +25,17 @@ jest.mock("@/lib/auth", () => ({
 
 jest.mock("@/components/layout/OnboardingShell", () => ({
   __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  default: ({
+    children,
+    ...props
+  }: {
+    children: React.ReactNode;
+    step?: number;
+    totalSteps?: number;
+  }) => {
+    mockOnboardingShell(props);
+    return <div>{children}</div>;
+  },
 }));
 
 const LoginPage = require("@/app/page").default;
@@ -37,6 +48,7 @@ describe("LoginPage", () => {
   it("renders login form by default", () => {
     render(<LoginPage />);
 
+    expect(mockOnboardingShell).toHaveBeenCalledWith({ maxWidth: "480px" });
     expect(screen.getByText("ATLAS")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("you@example.com")).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/min 6 characters/i)).toBeInTheDocument();

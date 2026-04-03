@@ -85,4 +85,29 @@ describe("OnboardingShell", () => {
     expect(container.firstElementChild).toHaveClass("bg-gradient-to-b");
     expect(screen.getByRole("main")).toBeInTheDocument();
   });
+
+  it("should render progress details when step props are provided", () => {
+    render(
+      <OnboardingShell step={2} totalSteps={3}>
+        <p>Choose your track</p>
+      </OnboardingShell>
+    );
+
+    expect(screen.getByText("Step 2 of 3")).toBeInTheDocument();
+    expect(screen.getByText("67%")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toHaveStyle({
+      width: "66.66666666666666%",
+    });
+  });
+
+  it("should omit progress details when step props are not provided", () => {
+    render(
+      <OnboardingShell>
+        <p>Choose your track</p>
+      </OnboardingShell>
+    );
+
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Step \d+ of \d+/)).not.toBeInTheDocument();
+  });
 });

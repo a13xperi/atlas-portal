@@ -187,3 +187,38 @@ describe("api.drafts.generate", () => {
     );
   });
 });
+
+describe("api.briefing.updatePreferences", () => {
+  it("sends PATCH with the briefing preferences payload", async () => {
+    const data = {
+      preference: {
+        deliveryTime: "08:00",
+        topics: ["Macro"],
+        sources: ["News"],
+        channel: "Portal Only",
+      },
+    };
+    mockFetch(data);
+
+    await api.briefing.updatePreferences({
+      deliveryTime: "08:00",
+      topics: ["Macro"],
+      sources: ["News"],
+      channel: "Portal Only",
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/api/briefing/preferences`,
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({
+          deliveryTime: "08:00",
+          topics: ["Macro"],
+          sources: ["News"],
+          channel: "Portal Only",
+        }),
+        credentials: "include",
+      })
+    );
+  });
+});

@@ -17,7 +17,12 @@ const nextConfig = {
   },
 };
 
-export default withSentryConfig(withBundleAnalyzer(nextConfig), {
+const config = withBundleAnalyzer(nextConfig);
+
+const shouldUseSentry =
+  Boolean(process.env.SENTRY_ORG) && Boolean(process.env.SENTRY_PROJECT);
+
+export default shouldUseSentry ? withSentryConfig(config, {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   silent: !process.env.CI,
@@ -26,4 +31,4 @@ export default withSentryConfig(withBundleAnalyzer(nextConfig), {
   bundleSizeOptimizations: {
     excludeDebugStatements: true,
   },
-});
+}) : config;

@@ -10,11 +10,40 @@
   body {
     @apply bg-atlas-bg text-atlas-text font-body;
   }
+
+  *:focus-visible {
+    @apply outline outline-2 outline-atlas-teal outline-offset-2 rounded;
+  }
+
+  *:focus:not(:focus-visible) {
+    @apply outline-none;
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    @apply outline-none ring-2 ring-atlas-teal/15;
+    border-color: theme('colors.atlas-teal') !important;
+  }
 }
 
 @layer components {
   .glass-card {
     @apply bg-glass backdrop-blur-xl border border-glass-border rounded-2xl;
+  }
+
+  .card-interactive {
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+
+  .card-interactive:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .card-interactive:active {
+    transform: translateY(0);
   }
 
   input[type="range"] {

@@ -43,36 +43,46 @@ export default function EngagementVelocityChart({
         Actual performance against neural prediction models.
       </p>
 
-      <div className="relative h-48">
-        <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[10px] text-atlas-text-muted pr-2">
-          <span>High</span>
-          <span>Med</span>
-          <span>Low</span>
-        </div>
-        <div className="ml-10 h-full flex items-end gap-0">
-          {engagementDays.length > 0 ? (
-            engagementDays.map((day) => (
-              <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
-                <div className="w-full flex items-end justify-center gap-1 h-40">
-                  <div
-                    className="w-3 bg-atlas-teal/60 rounded-t"
-                    style={{ height: `${(day.predicted / chartMax) * 100}%` }}
-                    title={`Predicted: ${day.predicted}`}
-                  />
-                  <div
-                    className="w-3 bg-atlas-success rounded-t"
-                    style={{ height: `${(day.actual / chartMax) * 100}%` }}
-                    title={`Actual: ${day.actual}`}
-                  />
-                </div>
-                <span className="text-[10px] text-atlas-text-muted">{day.dayLabel}</span>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-atlas-text-muted italic ml-2">
-              No engagement data yet. Create and post drafts to see predictions vs actuals.
-            </p>
-          )}
+      <div className="relative">
+        <div className="min-w-[20rem]">
+          <div className="relative h-48">
+            <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[10px] text-atlas-text-muted pr-2">
+              <span>High</span>
+              <span>Med</span>
+              <span>Low</span>
+            </div>
+            <div className="ml-10 h-full flex items-end gap-0">
+              {engagementDays.length > 0 ? (
+                engagementDays.map((day) => (
+                  <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
+                    <div className="w-full flex h-40 items-end justify-center gap-1">
+                      <div
+                        className="w-3 rounded-t bg-atlas-teal/60"
+                        style={{
+                          height: `${(day.predicted / chartMax) * 100}%`,
+                          minHeight: day.predicted > 0 ? "32px" : "0px",
+                        }}
+                        title={`Predicted: ${day.predicted}`}
+                      />
+                      <div
+                        className="w-3 rounded-t bg-atlas-success"
+                        style={{
+                          height: `${(day.actual / chartMax) * 100}%`,
+                          minHeight: day.actual > 0 ? "32px" : "0px",
+                        }}
+                        title={`Actual: ${day.actual}`}
+                      />
+                    </div>
+                    <span className="text-[10px] text-atlas-text-muted">{day.dayLabel}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="ml-2 text-sm italic text-atlas-text-muted">
+                  No engagement data yet. Create and post drafts to see predictions vs actuals.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

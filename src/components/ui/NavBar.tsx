@@ -143,6 +143,9 @@ export default function NavBar({ variant }: NavBarProps) {
                 <button
                   type="button"
                   onClick={() => setNotifOpen(!notifOpen)}
+                  aria-controls="notification-dropdown"
+                  aria-expanded={notifOpen}
+                  aria-haspopup="dialog"
                   className={`relative p-1 transition-colors ${
                     notifOpen ? "text-atlas-teal" : "text-atlas-text-secondary hover:text-atlas-text"
                   }`}

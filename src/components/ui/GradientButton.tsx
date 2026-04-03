@@ -6,7 +6,14 @@ export interface GradientButtonProps {
   children: ReactNode;
   onClick?: () => void;
   fullWidth?: boolean;
-  variant?: "primary" | "outline-success" | "outline-warning" | "outline-teal";
+  asChild?: boolean;
+  variant?:
+    | "primary"
+    | "solid"
+    | "outline"
+    | "outline-success"
+    | "outline-warning"
+    | "outline-teal";
   type?: "button" | "submit";
   size?: "sm" | "default" | "lg";
   disabled?: boolean;
@@ -18,6 +25,9 @@ const variantClasses: Record<
   string
 > = {
   primary: "gradient-cta",
+  solid: "gradient-cta",
+  outline:
+    "bg-transparent border border-atlas-teal text-atlas-teal hover:bg-atlas-teal/10 rounded-lg font-semibold transition-all duration-200",
   "outline-success":
     "bg-transparent border border-atlas-success text-atlas-success hover:bg-atlas-success/10 rounded-lg font-semibold transition-all duration-200",
   "outline-warning":
@@ -48,6 +58,7 @@ export default function GradientButton({
   children,
   onClick,
   fullWidth = false,
+  asChild = false,
   variant = "primary",
   type = "button",
   size = "default",
@@ -61,6 +72,21 @@ export default function GradientButton({
         ? "px-4 py-2 text-sm"
         : "px-6 py-3 text-sm";
   const accessibleLabel = ariaLabel ?? (getAccessibleText(children) || undefined);
+  const className = `inline-flex items-center justify-center ${variantClasses[variant]} ${sizeClasses} cursor-pointer ${
+    fullWidth ? "w-full" : ""
+  } ${disabled ? "cursor-not-allowed opacity-50" : ""}`;
+
+  if (asChild) {
+    return (
+      <span
+        aria-disabled={disabled || undefined}
+        aria-label={accessibleLabel}
+        className={className}
+      >
+        {children}
+      </span>
+    );
+  }
 
   return (
     <button
@@ -69,9 +95,7 @@ export default function GradientButton({
       disabled={disabled}
       aria-label={accessibleLabel}
       aria-disabled={disabled || undefined}
-      className={`${variantClasses[variant]} ${sizeClasses} cursor-pointer ${
-        fullWidth ? "w-full" : ""
-      } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+      className={className}
     >
       {children}
     </button>

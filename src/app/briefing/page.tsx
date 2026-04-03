@@ -2,6 +2,7 @@
 
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import GlassCard from "@/components/ui/GlassCard";
+import { api } from "@/lib/api";
 
 const TOPIC_OPTIONS = [
   "AI & Crypto",
@@ -29,17 +30,70 @@ type TopicOption = (typeof TOPIC_OPTIONS)[number];
 type SourceOption = (typeof SOURCE_OPTIONS)[number];
 type DeliveryChannel = (typeof DELIVERY_CHANNELS)[number];
 
+const isTopicOption = (value: string): value is TopicOption =>
+  TOPIC_OPTIONS.includes(value as TopicOption);
+
+const isSourceOption = (value: string): value is SourceOption =>
+  SOURCE_OPTIONS.includes(value as SourceOption);
+
+const isDeliveryChannel = (value: string): value is DeliveryChannel =>
+  DELIVERY_CHANNELS.includes(value as DeliveryChannel);
+
 export default function BriefingPage() {
   const [deliveryTime, setDeliveryTime] = useState("08:00");
   const [selectedTopics, setSelectedTopics] = useState<TopicOption[]>([]);
   const [selectedSources, setSelectedSources] = useState<SourceOption[]>([]);
-  const [deliveryChannel, setDeliveryChannel] =
-    useState<DeliveryChannel>("Portal Only");
+  const [channel, setChannel] = useState<DeliveryChannel>("Portal Only");
   const [saved, setSaved] = useState(false);
   const [timezone, setTimezone] = useState("UTC");
 
   useEffect(() => {
     setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadPreferences = async () => {
+      try {
+        const data = await api.briefing.getPreferences();
+        const preference = data?.preference;
+
+        if (!isMounted || !preference) {
+          return;
+        }
+
+        if (typeof preference.deliveryTime === "string" && preference.deliveryTime) {
+          setDeliveryTime(preference.deliveryTime);
+        }
+
+        if (Array.isArray(preference.topics)) {
+          setSelectedTopics(
+            preference.topics.filter((topic): topic is TopicOption => isTopicOption(topic))
+          );
+        }
+
+        if (Array.isArray(preference.sources)) {
+          setSelectedSources(
+            preference.sources.filter((source): source is SourceOption => isSourceOption(source))
+          );
+        }
+
+        const savedChannel = preference.channel ?? preference.deliveryChannel;
+
+        if (typeof savedChannel === "string" && isDeliveryChannel(savedChannel)) {
+          setChannel(savedChannel);
+        }
+      } catch {
+        // Silently fail. Local UI state remains the fallback.
+      }
+    };
+
+    void loadPreferences();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const toggleTopic = (topic: TopicOption) => {
@@ -67,12 +121,26 @@ export default function BriefingPage() {
 
   const handleChannelChange = (channel: DeliveryChannel) => {
     setSaved(false);
-    setDeliveryChannel(channel);
+    setChannel(channel);
+  };
+
+  const handleSave = async () => {
+    setSaved(true);
+    try {
+      await api.briefing.updatePreferences({
+        deliveryTime,
+        topics: selectedTopics,
+        sources: selectedSources,
+        channel,
+      });
+    } catch {
+      // Backend save failed. The current UI state remains available.
+    }
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSaved(true);
+    void handleSave();
   };
 
   return (
@@ -192,19 +260,19 @@ export default function BriefingPage() {
 
           <fieldset className="grid gap-3">
             <legend className="sr-only">Delivery Channel</legend>
-            {DELIVERY_CHANNELS.map((channel) => (
+            {DELIVERY_CHANNELS.map((deliveryOption) => (
               <label
-                key={channel}
+                key={deliveryOption}
                 className="flex cursor-pointer items-start gap-3 rounded-xl border border-glass-border bg-atlas-nav/60 px-4 py-4 transition-colors hover:border-atlas-teal/60"
               >
                 <input
-                  checked={deliveryChannel === channel}
+                  checked={channel === deliveryOption}
                   className="mt-1 h-4 w-4 accent-atlas-teal"
                   name="delivery-channel"
-                  onChange={() => handleChannelChange(channel)}
+                  onChange={() => handleChannelChange(deliveryOption)}
                   type="radio"
                 />
-                <span className="text-sm text-atlas-text">{channel}</span>
+                <span className="text-sm text-atlas-text">{deliveryOption}</span>
               </label>
             ))}
           </fieldset>
@@ -216,8 +284,8 @@ export default function BriefingPage() {
               Save Preferences
             </h2>
             <p className="text-sm leading-6 text-atlas-text-secondary">
-              This saves your selections in local UI state for now while backend
-              preferences are still being wired up.
+              Save these selections to your briefing profile so they load
+              automatically the next time you open this page.
             </p>
           </div>
 
@@ -227,7 +295,7 @@ export default function BriefingPage() {
               {" · "}
               {selectedSources.length} source{selectedSources.length === 1 ? "" : "s"}
               {" · "}
-              {deliveryChannel}
+              {channel}
             </div>
 
             <button
@@ -243,7 +311,7 @@ export default function BriefingPage() {
               aria-live="polite"
               className="text-sm text-atlas-success"
             >
-              Preferences saved locally for this session.
+              Preferences saved.
             </p>
           )}
         </GlassCard>

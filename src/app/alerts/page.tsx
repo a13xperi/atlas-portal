@@ -116,7 +116,7 @@ export default function AlertsPage() {
             {alerts.map((alert) => (
               <article
                 key={alert.id}
-                className="bg-glass rounded-2xl border border-glass-border p-6 backdrop-blur-xl transition-all duration-300 sm:p-7"
+                className="card-interactive rounded-2xl border border-glass-border bg-glass p-6 backdrop-blur-xl sm:p-7"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>

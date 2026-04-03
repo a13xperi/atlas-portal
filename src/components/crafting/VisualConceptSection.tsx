@@ -31,6 +31,7 @@ export default function VisualConceptSection({
           {generatingImage ? "Generating…" : "Generate visual"}
         </button>
         <select
+          aria-label="Visual style"
           onChange={(event) => void onGenerateVisual(event.target.value)}
           disabled={generatingImage}
           className="w-full rounded-lg border border-glass-border bg-atlas-surface px-2 py-2 text-xs text-atlas-text-secondary focus:border-atlas-teal focus:outline-none sm:w-auto"

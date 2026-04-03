@@ -93,7 +93,10 @@ export default function NewsMode({
       ) : null}
 
       {error ? (
-        <div className="flex items-center justify-between rounded-lg border border-atlas-error/30 bg-atlas-error/10 px-3 py-2 text-sm text-atlas-error">
+        <div
+          role="alert"
+          className="flex items-center justify-between rounded-lg border border-atlas-error/30 bg-atlas-error/10 px-3 py-2 text-sm text-atlas-error"
+        >
           <span>{error}</span>
           <button
             type="button"

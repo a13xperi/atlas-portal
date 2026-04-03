@@ -1,15 +1,14 @@
-import { Playfair_Display, Inter } from "next/font/google";
+import localFont from "next/font/local";
 
-export const playfairDisplay = Playfair_Display({
-  subsets: ["latin"],
-  weight: ["700"],
+// Offline-safe font loading for local builds.
+export const playfairDisplay = localFont({
+  src: "../app/fonts/GeorgiaBold.ttf",
   variable: "--font-heading",
   display: "swap",
 });
 
-export const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+export const inter = localFont({
+  src: "../app/fonts/GeistVF.woff",
   variable: "--font-body",
   display: "swap",
 });

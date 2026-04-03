@@ -180,6 +180,23 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Reports ingested")).toBeInTheDocument();
   });
 
+  it("shows the new-user empty states and routes to crafting", async () => {
+    render(<DashboardPage />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Ready to craft your first draft?" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Get started by crafting your first draft")
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open Crafting Station" })
+    );
+
+    expect(mockPush).toHaveBeenCalledWith("/crafting");
+  });
+
   it("falls back gracefully and shows a dismissible warning when an API call fails", async () => {
     mockedApi.analytics.summary.mockRejectedValueOnce(new Error("Summary request failed"));
 
@@ -191,7 +208,9 @@ describe("DashboardPage", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("Summary request failed")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "✕" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dismiss dashboard warning" })
+    );
 
     expect(
       screen.queryByText("Some dashboard data is temporarily unavailable.")

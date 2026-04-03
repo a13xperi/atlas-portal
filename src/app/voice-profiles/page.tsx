@@ -34,6 +34,7 @@ export default function VoiceProfilesPage() {
   );
   const [references, setReferences] = useState<ReferenceVoice[]>([]);
   const [blends, setBlends] = useState<SavedBlend[]>([]);
+  const [activeBlendId, setActiveBlendId] = useState<string | null>(null);
   const [selectedVoices, setSelectedVoices] = useState<Set<string>>(new Set());
   const [blendValues, setBlendValues] = useState([40, 30, 20, 10]);
   const [showAddVoice, setShowAddVoice] = useState(false);
@@ -49,6 +50,21 @@ export default function VoiceProfilesPage() {
   const [loading, setLoading] = useState(true);
   const [savingDimensions, setSavingDimensions] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("atlas_active_blend");
+    if (saved) {
+      setActiveBlendId(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeBlendId) {
+      localStorage.setItem("atlas_active_blend", activeBlendId);
+    } else {
+      localStorage.removeItem("atlas_active_blend");
+    }
+  }, [activeBlendId]);
 
   useEffect(() => {
     setLoading(true);
@@ -72,6 +88,50 @@ export default function VoiceProfilesPage() {
   const hasUnsavedChanges = VOICE_DIMENSION_FIELDS.some(
     (field) => draftDimensions[field] !== persistedDimensions[field]
   );
+
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-4xl animate-pulse space-y-8 px-4 py-8">
+          <div className="space-y-2">
+            <div className="h-4 w-24 rounded bg-atlas-surface" />
+            <div className="h-8 w-72 rounded bg-atlas-surface" />
+          </div>
+
+          <div className="space-y-4 rounded-2xl border border-glass-border bg-atlas-surface p-6">
+            <div className="h-5 w-32 rounded bg-atlas-bg" />
+            {[1, 2, 3, 4].map((item) => (
+              <div key={item} className="space-y-2">
+                <div className="flex justify-between">
+                  <div className="h-3 w-24 rounded bg-atlas-bg" />
+                  <div className="h-3 w-8 rounded bg-atlas-bg" />
+                </div>
+                <div className="h-2 w-full rounded-full bg-atlas-bg" />
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-glass-border bg-atlas-surface p-6">
+            <div className="h-5 w-40 rounded bg-atlas-bg" />
+            <div className="flex gap-3">
+              {[1, 2, 3].map((item) => (
+                <div key={item} className="h-10 w-28 rounded-lg bg-atlas-bg" />
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-glass-border bg-atlas-surface p-6">
+            <div className="h-5 w-32 rounded bg-atlas-bg" />
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2].map((item) => (
+                <div key={item} className="h-24 rounded-xl bg-atlas-bg" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
 
   const updateDimension = (field: VoiceDimensionField, value: number) => {
     setDraftDimensions((current) => ({
@@ -126,6 +186,7 @@ export default function VoiceProfilesPage() {
   };
 
   const displayBlends = blends.map((blend) => ({
+    id: blend.id,
     name: blend.name,
     mix: blend.voices.map((voice) => `${voice.percentage}% ${voice.label}`).join(" + "),
     isTemplate:
@@ -186,9 +247,9 @@ export default function VoiceProfilesPage() {
       </div>
 
       <div className="mt-8">
-        <label className="text-xs uppercase tracking-wide text-atlas-text-secondary">
+        <p className="text-xs uppercase tracking-wide text-atlas-text-secondary">
           Reference Voices
-        </label>
+        </p>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
           {references.length === 0 ? (
             <div className="col-span-full py-8 text-center">
@@ -206,6 +267,7 @@ export default function VoiceProfilesPage() {
                   key={voice.id}
                   type="button"
                   onClick={() => toggleVoice(voice.id)}
+                  aria-pressed={isSelected}
                   className={`flex items-center gap-3 rounded-2xl bg-atlas-surface p-3 transition-all ${
                     isSelected
                       ? "border border-atlas-teal"
@@ -238,6 +300,7 @@ export default function VoiceProfilesPage() {
         {showAddVoice ? (
           <div className="mt-3 space-y-3 rounded-xl border border-glass-border bg-atlas-surface p-4">
             <input
+              aria-label="Reference voice name"
               type="text"
               placeholder="Voice name (e.g. Hasu)"
               value={newVoiceName}
@@ -245,6 +308,7 @@ export default function VoiceProfilesPage() {
               className="w-full rounded-lg border border-glass-border bg-atlas-bg px-3 py-2 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
             />
             <input
+              aria-label="Reference voice handle"
               type="text"
               placeholder="X handle (optional)"
               value={newVoiceHandle}
@@ -295,9 +359,9 @@ export default function VoiceProfilesPage() {
       </div>
 
       <div className="mt-8">
-        <label className="text-xs uppercase tracking-wide text-atlas-text-secondary">
+        <p className="text-xs uppercase tracking-wide text-atlas-text-secondary">
           Your Saved Blends
-        </label>
+        </p>
         <div className="mt-3 space-y-3">
           {displayBlends.length === 0 ? (
             <div className="col-span-full py-8 text-center">
@@ -309,8 +373,12 @@ export default function VoiceProfilesPage() {
           ) : (
             displayBlends.map((blend) => (
               <div
-                key={blend.name}
-                className="flex items-center justify-between rounded-2xl border border-glass-border border-l-2 border-l-atlas-teal bg-atlas-surface p-4"
+                key={blend.id}
+                className={`flex items-center justify-between rounded-2xl border p-4 ${
+                  activeBlendId === blend.id
+                    ? "border-atlas-teal bg-atlas-teal/5"
+                    : "border-glass-border bg-atlas-surface"
+                }`}
               >
                 <div>
                   <div className="flex items-center gap-2">
@@ -327,20 +395,35 @@ export default function VoiceProfilesPage() {
                     {blend.mix}
                   </p>
                 </div>
-                <GradientButton variant="outline-teal">Use</GradientButton>
+                <GradientButton
+                  aria-label={
+                    activeBlendId === blend.id
+                      ? `Deactivate saved blend ${blend.name}`
+                      : `Use saved blend ${blend.name}`
+                  }
+                  size="sm"
+                  variant={activeBlendId === blend.id ? "solid" : "outline"}
+                  onClick={() => {
+                    setActiveBlendId(activeBlendId === blend.id ? null : blend.id);
+                  }}
+                >
+                  {activeBlendId === blend.id ? "Active" : "Use"}
+                </GradientButton>
               </div>
             ))
           )}
         </div>
-        <p
-          className="mt-3 cursor-pointer text-sm text-atlas-teal hover:underline"
+        <button
+          type="button"
+          className="mt-3 text-sm text-atlas-teal hover:underline"
           onClick={() => setShowNewBlend(true)}
         >
           + New blend
-        </p>
+        </button>
         {showNewBlend ? (
           <div className="mt-3 space-y-3 rounded-xl border border-glass-border bg-atlas-surface p-4">
             <input
+              aria-label="Blend name"
               type="text"
               placeholder="Blend name"
               value={blendName}
@@ -353,6 +436,7 @@ export default function VoiceProfilesPage() {
             {blendVoices.map((voice, index) => (
               <div key={`${voice.label}-${index}`} className="flex items-center gap-2">
                 <select
+                  aria-label={`Voice ${index + 1} in the blend`}
                   value={voice.label}
                   onChange={(event) => {
                     const referenceVoice = references.find(
@@ -379,6 +463,7 @@ export default function VoiceProfilesPage() {
                   ))}
                 </select>
                 <input
+                  aria-label={`Percentage for voice ${index + 1} in the blend`}
                   type="number"
                   min={0}
                   max={100}
@@ -468,6 +553,7 @@ export default function VoiceProfilesPage() {
                 {label}
               </span>
               <input
+                aria-label={`${label} blend percentage`}
                 type="range"
                 min={0}
                 max={100}

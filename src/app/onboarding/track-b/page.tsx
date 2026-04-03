@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import OnboardingShell from "@/components/layout/OnboardingShell";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
-import ProgressBar from "@/components/ui/ProgressBar";
 import GradientButton from "@/components/ui/GradientButton";
 import {
   Check,
@@ -58,6 +57,8 @@ const manualSetupSteps = [
 export default function TrackBPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const currentStep = 1;
+  const totalSteps = 3;
   const [selectedStyle, setSelectedStyle] = useState<string | null>("Custom mix");
   const [dimensions, setDimensions] = useState<VoiceDimensions>(() =>
     styleToDimensions("Custom mix")
@@ -159,9 +160,11 @@ export default function TrackBPage() {
   };
 
   return (
-    <OnboardingShell maxWidth="720px">
-      <ProgressBar currentStep={1} totalSteps={7} />
-
+    <OnboardingShell
+      maxWidth="720px"
+      step={currentStep}
+      totalSteps={totalSteps}
+    >
       <div className="mt-8 space-y-8">
         <section className="rounded-3xl border border-glass-border bg-atlas-surface/60 p-6 sm:p-7">
           <div className="flex flex-wrap items-center justify-between gap-3">
