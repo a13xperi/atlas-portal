@@ -309,7 +309,7 @@ export default function BriefingPage() {
               aria-live="polite"
               className="text-sm text-atlas-success"
             >
-              Preferences saved locally for this session.
+              Preferences saved.
             </p>
           )}
         </GlassCard>
