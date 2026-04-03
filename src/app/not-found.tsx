@@ -1,28 +1,17 @@
 import Link from "next/link";
-import GradientButton from "@/components/ui/GradientButton";
-import { gradients } from "@/lib/tokens";
 
 export default function NotFound() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center px-4"
-      style={{ background: gradients.appBg }}
-    >
-      <div className="text-center">
-        <p className="bg-gradient-to-r from-atlas-teal via-atlas-steel to-atlas-teal bg-clip-text font-heading text-[120px] font-bold leading-none text-transparent">
-          404
-        </p>
-        <h1 className="mt-4 font-heading text-2xl text-atlas-text">
-          Page not found
-        </h1>
-        <p className="mx-auto mt-2 max-w-md text-atlas-text-secondary">
-          The page you&apos;re looking for doesn&apos;t exist or has been moved.
-        </p>
-        <div className="mt-8">
-          <Link href="/dashboard" className="inline-block">
-            <GradientButton asChild>Back to Dashboard</GradientButton>
-          </Link>
-        </div>
+    <div className="min-h-screen bg-atlas-bg flex items-center justify-center">
+      <div className="bg-glass backdrop-blur-xl border border-glass-border rounded-2xl p-12 text-center max-w-md">
+        <p className="font-heading text-6xl text-atlas-teal font-bold">404</p>
+        <p className="text-atlas-text-secondary text-lg mt-4">Page not found</p>
+        <Link
+          href="/dashboard"
+          className="mt-8 inline-flex bg-gradient-to-r from-atlas-teal to-atlas-steel text-white rounded-lg px-6 py-3 font-medium"
+        >
+          Back to Dashboard
+        </Link>
       </div>
     </div>
   );

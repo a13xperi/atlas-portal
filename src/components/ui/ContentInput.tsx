@@ -5,7 +5,6 @@ import { Mic, FileText, MessageSquare, TrendingUp } from "lucide-react";
 
 export interface ContentInputProps {
   placeholder?: string;
-  value?: string;
   onDrop?: (files: FileList) => void;
   onTextChange?: (text: string) => void;
   onTextSubmit?: (
@@ -16,11 +15,11 @@ export interface ContentInputProps {
   acceptFileTypes?: string;
   sourceError?: string;
   contentError?: string;
+  value?: string;
 }
 
 export default function ContentInput({
   placeholder = "Paste a tweet idea or link…",
-  value,
   onDrop,
   onTextChange,
   onTextSubmit,
@@ -29,6 +28,7 @@ export default function ContentInput({
   acceptFileTypes = ".pdf,.doc,.docx,.txt,.md",
   sourceError,
   contentError,
+  value,
 }: ContentInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
@@ -49,11 +49,15 @@ export default function ContentInput({
     }
   };
 
-  const clearText = () => {
+  const updateText = (nextText: string) => {
     if (value === undefined) {
-      setInternalText("");
+      setInternalText(nextText);
     }
-    onTextChange?.("");
+    onTextChange?.(nextText);
+  };
+
+  const clearText = () => {
+    updateText("");
   };
 
   const handleSubmit = () => {
@@ -151,10 +155,7 @@ export default function ContentInput({
           value={text}
           rows={3}
           onChange={(event) => {
-            if (value === undefined) {
-              setInternalText(event.currentTarget.value);
-            }
-            onTextChange?.(event.currentTarget.value);
+            updateText(event.currentTarget.value);
           }}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
