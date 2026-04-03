@@ -396,6 +396,11 @@ export default function VoiceProfilesPage() {
                   </p>
                 </div>
                 <GradientButton
+                  aria-label={
+                    activeBlendId === blend.id
+                      ? `Deactivate saved blend ${blend.name}`
+                      : `Use saved blend ${blend.name}`
+                  }
                   size="sm"
                   variant={activeBlendId === blend.id ? "solid" : "outline"}
                   onClick={() => {

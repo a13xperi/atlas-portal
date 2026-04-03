@@ -90,23 +90,15 @@ describe("VoiceProfilesPage", () => {
 
     render(<VoiceProfilesPage />);
 
-    const useButton = await screen.findByRole("button", {
-      name: /use saved blend research-heavy/i,
-    });
+    expect(await screen.findByText("Research-heavy")).toBeInTheDocument();
+
+    const useButton = screen.getByRole("button", { name: "Use" });
     fireEvent.click(useButton);
 
-    expect(
-      await screen.findByRole("button", {
-        name: /deactivate saved blend research-heavy/i,
-      })
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Active" })).toBeInTheDocument();
     expect(localStorage.getItem("atlas_active_blend")).toBe("blend-1");
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: /deactivate saved blend research-heavy/i,
-      })
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Active" }));
 
     await waitFor(() => {
       expect(localStorage.getItem("atlas_active_blend")).toBeNull();
