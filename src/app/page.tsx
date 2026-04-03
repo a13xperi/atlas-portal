@@ -23,19 +23,43 @@ export default function LoginPage() {
     }
   }, [authLoading, user, router]);
 
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
   const handleSubmit = async () => {
     setError("");
+
+    if (!email.trim()) {
+      setError("Email is required");
+      return;
+    }
+
+    if (!isValidEmail(email.trim())) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    if (!password) {
+      setError("Password is required");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
+    if (mode === "register" && !handle.trim()) {
+      setError("Handle is required");
+      return;
+    }
+
     setSubmitting(true);
+
     try {
       if (mode === "login") {
         await login(email.trim(), password);
         router.push("/dashboard");
       } else {
-        if (!handle.trim()) {
-          setError("Handle is required");
-          setSubmitting(false);
-          return;
-        }
         await register(handle.trim(), email.trim(), password, "A");
         router.push("/onboarding/track-a");
       }
