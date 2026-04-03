@@ -30,7 +30,12 @@ describe("AlertsPage", () => {
     jest.clearAllMocks();
     mockUseRouter.mockReturnValue({
       push: mockPush,
-    } as ReturnType<typeof useRouter>);
+      back: jest.fn(),
+      forward: jest.fn(),
+      refresh: jest.fn(),
+      replace: jest.fn(),
+      prefetch: jest.fn(),
+    } as unknown as ReturnType<typeof useRouter>);
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       status: 200,
