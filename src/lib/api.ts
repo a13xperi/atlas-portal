@@ -15,6 +15,8 @@ interface GenerateDraftInput {
   sourceContent: string;
   sourceType: string;
   blendId?: string;
+  replyAngle?: string;
+  angleInstruction?: string;
 }
 
 class ApiError extends Error {

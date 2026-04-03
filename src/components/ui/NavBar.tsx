@@ -85,7 +85,7 @@ export default function NavBar({ variant }: NavBarProps) {
   }, [mobileOpen]);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-atlas-nav border-b border-glass-border">
+    <nav aria-label="Main navigation" className="fixed top-0 left-0 right-0 z-50 bg-atlas-nav border-b border-glass-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/dashboard" className="flex items-center gap-2">
@@ -98,6 +98,7 @@ export default function NavBar({ variant }: NavBarProps) {
                 <Link
                   key={link.href}
                   href={link.href}
+                  aria-current={pathname === link.href ? "page" : undefined}
                   className={`text-xs transition-colors ${
                     pathname === link.href
                       ? "text-atlas-text font-medium"
@@ -177,6 +178,9 @@ export default function NavBar({ variant }: NavBarProps) {
           />
           <aside
             id="mobile-sidebar"
+            role="navigation"
+            aria-label="Mobile navigation"
+            aria-hidden={!mobileOpen}
             className={`fixed inset-y-14 left-0 z-50 w-72 max-w-[calc(100vw-1rem)] overflow-y-auto border-r border-glass-border bg-atlas-nav px-4 py-4 transition-transform duration-200 ${
               mobileOpen ? "translate-x-0" : "-translate-x-full"
             }`}

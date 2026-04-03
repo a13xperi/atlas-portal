@@ -24,9 +24,9 @@ describe("DimensionBar", () => {
 
     const slider = screen.getByRole("slider", { name: "Formality" });
 
-    expect(slider).toHaveAttribute("aria-valuemin", "0");
-    expect(slider).toHaveAttribute("aria-valuemax", "100");
-    expect(slider).toHaveAttribute("aria-valuenow", "50");
+    expect(slider).toHaveAttribute("min", "0");
+    expect(slider).toHaveAttribute("max", "100");
+    expect(slider).toHaveValue("50");
 
     fireEvent.change(slider, { target: { value: "72" } });
 
