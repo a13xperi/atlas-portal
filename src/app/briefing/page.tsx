@@ -39,6 +39,16 @@ const isSourceOption = (value: string): value is SourceOption =>
 const isDeliveryChannel = (value: string): value is DeliveryChannel =>
   DELIVERY_CHANNELS.includes(value as DeliveryChannel);
 
+const selectionChipBaseClasses =
+  "inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition-all focus:outline-none focus:ring-2 focus:ring-atlas-teal/30";
+
+const getSelectionChipClasses = (isSelected: boolean) =>
+  `${selectionChipBaseClasses} ${
+    isSelected
+      ? "border-atlas-teal bg-atlas-teal text-atlas-text shadow-sm shadow-atlas-teal/30"
+      : "border-glass-border bg-atlas-surface text-atlas-text-secondary hover:border-atlas-teal/50 hover:bg-atlas-teal/10 hover:text-atlas-text"
+  }`;
+
 export default function BriefingPage() {
   const [deliveryTime, setDeliveryTime] = useState("08:00");
   const [selectedTopics, setSelectedTopics] = useState<TopicOption[]>([]);
@@ -202,22 +212,30 @@ export default function BriefingPage() {
             </p>
           </div>
 
-          <fieldset className="grid gap-3 md:grid-cols-2">
+          <fieldset className="space-y-3">
             <legend className="sr-only">Topics</legend>
-            {TOPIC_OPTIONS.map((topic) => (
-              <label
-                key={topic}
-                className="flex cursor-pointer items-start gap-3 rounded-xl border border-glass-border bg-atlas-nav/60 px-4 py-4 transition-colors hover:border-atlas-teal/60"
-              >
-                <input
-                  checked={selectedTopics.includes(topic)}
-                  className="mt-1 h-4 w-4 accent-atlas-teal"
-                  onChange={() => toggleTopic(topic)}
-                  type="checkbox"
-                />
-                <span className="text-sm text-atlas-text">{topic}</span>
-              </label>
-            ))}
+            <div className="flex flex-wrap gap-2">
+              {TOPIC_OPTIONS.map((topic) => {
+                const isSelected = selectedTopics.includes(topic);
+
+                return (
+                  <button
+                    key={topic}
+                    type="button"
+                    onClick={() => toggleTopic(topic)}
+                    aria-pressed={isSelected}
+                    className={getSelectionChipClasses(isSelected)}
+                  >
+                    {isSelected ? (
+                      <span aria-hidden="true" className="mr-1">
+                        ✓
+                      </span>
+                    ) : null}
+                    {topic}
+                  </button>
+                );
+              })}
+            </div>
           </fieldset>
         </GlassCard>
 
@@ -229,22 +247,30 @@ export default function BriefingPage() {
             </p>
           </div>
 
-          <fieldset className="grid gap-3 md:grid-cols-2">
+          <fieldset className="space-y-3">
             <legend className="sr-only">Sources</legend>
-            {SOURCE_OPTIONS.map((source) => (
-              <label
-                key={source}
-                className="flex cursor-pointer items-start gap-3 rounded-xl border border-glass-border bg-atlas-nav/60 px-4 py-4 transition-colors hover:border-atlas-teal/60"
-              >
-                <input
-                  checked={selectedSources.includes(source)}
-                  className="mt-1 h-4 w-4 accent-atlas-teal"
-                  onChange={() => toggleSource(source)}
-                  type="checkbox"
-                />
-                <span className="text-sm text-atlas-text">{source}</span>
-              </label>
-            ))}
+            <div className="flex flex-wrap gap-2">
+              {SOURCE_OPTIONS.map((source) => {
+                const isSelected = selectedSources.includes(source);
+
+                return (
+                  <button
+                    key={source}
+                    type="button"
+                    onClick={() => toggleSource(source)}
+                    aria-pressed={isSelected}
+                    className={getSelectionChipClasses(isSelected)}
+                  >
+                    {isSelected ? (
+                      <span aria-hidden="true" className="mr-1">
+                        ✓
+                      </span>
+                    ) : null}
+                    {source}
+                  </button>
+                );
+              })}
+            </div>
           </fieldset>
         </GlassCard>
 
@@ -258,23 +284,35 @@ export default function BriefingPage() {
             </p>
           </div>
 
-          <fieldset className="grid gap-3">
+          <fieldset className="space-y-3">
             <legend className="sr-only">Delivery Channel</legend>
-            {DELIVERY_CHANNELS.map((deliveryOption) => (
-              <label
-                key={deliveryOption}
-                className="flex cursor-pointer items-start gap-3 rounded-xl border border-glass-border bg-atlas-nav/60 px-4 py-4 transition-colors hover:border-atlas-teal/60"
-              >
-                <input
-                  checked={channel === deliveryOption}
-                  className="mt-1 h-4 w-4 accent-atlas-teal"
-                  name="delivery-channel"
-                  onChange={() => handleChannelChange(deliveryOption)}
-                  type="radio"
-                />
-                <span className="text-sm text-atlas-text">{deliveryOption}</span>
-              </label>
-            ))}
+            <div
+              aria-label="Delivery Channel"
+              className="flex flex-wrap gap-2"
+              role="radiogroup"
+            >
+              {DELIVERY_CHANNELS.map((deliveryOption) => {
+                const isSelected = channel === deliveryOption;
+
+                return (
+                  <button
+                    key={deliveryOption}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    onClick={() => handleChannelChange(deliveryOption)}
+                    className={getSelectionChipClasses(isSelected)}
+                  >
+                    {isSelected ? (
+                      <span aria-hidden="true" className="mr-1">
+                        ✓
+                      </span>
+                    ) : null}
+                    {deliveryOption}
+                  </button>
+                );
+              })}
+            </div>
           </fieldset>
         </GlassCard>
 

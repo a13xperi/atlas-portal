@@ -87,10 +87,12 @@ describe("TeamLibraryPage", () => {
   it("shows author info", async () => {
     render(<TeamLibraryPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Alice")).toBeInTheDocument();
-    });
+    const authorName = await screen.findByText("Alice");
+    const avatar = authorName.previousElementSibling;
 
-    expect(screen.getByText("@alice")).toBeInTheDocument();
+    expect(authorName).toBeInTheDocument();
+    expect(avatar).toHaveTextContent("A");
+    expect(avatar).toHaveClass("rounded-full");
+    expect(screen.getByText("via Research Mode")).toBeInTheDocument();
   });
 });

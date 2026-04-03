@@ -31,6 +31,15 @@ const mockApi = {
     }),
     getBlends: jest.fn().mockResolvedValue({ blends: [] }),
     updateProfile: jest.fn().mockResolvedValue({ profile: mockProfile }),
+    calibrate: jest.fn().mockResolvedValue({
+      profile: mockProfile,
+      calibration: {
+        confidence: 0.92,
+        analysis: "Aligned",
+        tweetsAnalyzed: 150,
+        twitterUser: { username: "hasufl", name: "Hasu" },
+      },
+    }),
     addReference: jest.fn().mockResolvedValue({}),
     createBlend: jest.fn().mockResolvedValue({}),
   },
@@ -57,6 +66,15 @@ describe("VoiceProfilesPage", () => {
     });
     mockApi.voice.getBlends.mockResolvedValue({ blends: [] });
     mockApi.voice.updateProfile.mockResolvedValue({ profile: mockProfile });
+    mockApi.voice.calibrate.mockResolvedValue({
+      profile: mockProfile,
+      calibration: {
+        confidence: 0.92,
+        analysis: "Aligned",
+        tweetsAnalyzed: 150,
+        twitterUser: { username: "hasufl", name: "Hasu" },
+      },
+    });
   });
 
   it("renders voice dimensions", async () => {
@@ -103,5 +121,50 @@ describe("VoiceProfilesPage", () => {
     await waitFor(() => {
       expect(localStorage.getItem("atlas_active_blend")).toBeNull();
     });
+  });
+
+  it("shows the calibration CTA for uncalibrated users and calibrates their handle", async () => {
+    const calibratedProfile = {
+      ...mockProfile,
+      tweetsAnalyzed: 42,
+      humor: 55,
+    };
+
+    mockApi.voice.getProfile.mockResolvedValue({
+      profile: { ...mockProfile, tweetsAnalyzed: 0 },
+    });
+    mockApi.voice.calibrate.mockResolvedValue({
+      profile: calibratedProfile,
+      calibration: {
+        confidence: 0.88,
+        analysis: "Aligned",
+        tweetsAnalyzed: 42,
+        twitterUser: { username: "vitalik", name: "Vitalik" },
+      },
+    });
+
+    render(<VoiceProfilesPage />);
+
+    expect(
+      await screen.findByText("Auto-calibrate your voice")
+    ).toBeInTheDocument();
+
+    fireEvent.change(
+      screen.getByPlaceholderText("Your X handle (e.g. @vitalik)"),
+      {
+        target: { value: "@vitalik" },
+      }
+    );
+
+    fireEvent.click(screen.getByText("Calibrate"));
+
+    await waitFor(() => {
+      expect(mockApi.voice.calibrate).toHaveBeenCalledWith("vitalik");
+      expect(
+        screen.queryByText("Auto-calibrate your voice")
+      ).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Based on 42 tweets analyzed.")).toBeInTheDocument();
   });
 });

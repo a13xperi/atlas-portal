@@ -122,6 +122,29 @@ describe("CraftingPage", () => {
     expect(mockedApi.drafts.generate).not.toHaveBeenCalled();
   });
 
+  it("shows the keyboard shortcut hint and generates on cmd-enter", async () => {
+    const generatedDraft = createDraft();
+
+    mockedApi.drafts.generate.mockResolvedValue({ draft: generatedDraft });
+
+    render(<CraftingPage />);
+
+    fireEvent.change(screen.getByPlaceholderText("Paste a tweet idea or link…"), {
+      target: { value: "Fresh BTC momentum read" },
+    });
+    fireEvent.keyDown(document, { key: "Enter", metaKey: true });
+
+    await waitFor(() =>
+      expect(mockedApi.drafts.generate).toHaveBeenCalledWith(
+        "Fresh BTC momentum read",
+        "MANUAL",
+        undefined
+      )
+    );
+
+    expect(screen.getByText("⌘↩ to generate")).toBeInTheDocument();
+  });
+
   it("blocks submissions over 10000 characters", async () => {
     render(<CraftingPage />);
 
@@ -299,5 +322,48 @@ describe("CraftingPage", () => {
         screen.getByRole("textbox", { name: "Generated draft" })
       ).toHaveValue(`${fallbackDraftText}\n\nsource: ${articleUrl}`)
     );
+  });
+
+  it("shows the X compose button only for approved drafts and opens the intent URL", async () => {
+    const approvedDraft = createDraft({
+      status: "APPROVED",
+      content: "BTC looks constructive above range highs.",
+    });
+    const openSpy = jest
+      .spyOn(window, "open")
+      .mockImplementation(() => null);
+
+    mockedApi.drafts.list.mockResolvedValue({ drafts: [approvedDraft] });
+
+    render(<CraftingPage />);
+
+    const postToXButton = await screen.findByRole("button", {
+      name: "Post to X",
+    });
+
+    expect(postToXButton).toBeInTheDocument();
+    fireEvent.click(postToXButton);
+
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://twitter.com/intent/tweet?text=BTC%20looks%20constructive%20above%20range%20highs.",
+      "_blank",
+      "width=550,height=420"
+    );
+
+    openSpy.mockRestore();
+  });
+
+  it("does not show the X compose button for non-approved drafts", async () => {
+    mockedApi.drafts.list.mockResolvedValue({
+      drafts: [createDraft({ status: "ARCHIVED" })],
+    });
+
+    render(<CraftingPage />);
+
+    await screen.findByRole("textbox", { name: "Generated draft" });
+
+    expect(
+      screen.queryByRole("button", { name: "Post to X" })
+    ).not.toBeInTheDocument();
   });
 });

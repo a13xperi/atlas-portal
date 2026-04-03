@@ -1,10 +1,18 @@
 import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useRouter } from "next/navigation";
 import AlertsPage from "@/app/alerts/page";
 
 const mockPush = jest.fn();
+
+function createMockResponse(body: unknown) {
+  return Promise.resolve({
+    ok: true,
+    status: 200,
+    json: jest.fn().mockResolvedValue(body),
+  });
+}
 
 jest.mock("next/navigation", () => ({
   useRouter: jest.fn(),
@@ -36,10 +44,18 @@ describe("AlertsPage", () => {
       replace: jest.fn(),
       prefetch: jest.fn(),
     } as unknown as ReturnType<typeof useRouter>);
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: jest.fn().mockResolvedValue({ alerts: [] }),
+    global.fetch = jest.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.includes("/api/alerts/subscriptions")) {
+        return createMockResponse({ subscriptions: [] });
+      }
+
+      if (url.includes("/api/alerts/feed?category=SIGNAL")) {
+        return createMockResponse({ alerts: [] });
+      }
+
+      return createMockResponse({});
     }) as jest.Mock;
   });
 
@@ -59,20 +75,28 @@ describe("AlertsPage", () => {
   });
 
   it("renders alerts from the feed with inline draft actions", async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: jest.fn().mockResolvedValue({
-        alerts: [
-          {
-            id: "alert-1",
-            type: "WHALE_ACTIVITY",
-            title: "Whale moved a large ETH position",
-            context: "Exchange-bound flows ticked higher over the last 15 minutes.",
-            createdAt: "2026-04-03T10:00:00.000Z",
-          },
-        ],
-      }),
+    (global.fetch as jest.Mock).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.includes("/api/alerts/subscriptions")) {
+        return createMockResponse({ subscriptions: [] });
+      }
+
+      if (url.includes("/api/alerts/feed?category=SIGNAL")) {
+        return createMockResponse({
+          alerts: [
+            {
+              id: "alert-1",
+              type: "WHALE_ACTIVITY",
+              title: "Whale moved a large ETH position",
+              context: "Exchange-bound flows ticked higher over the last 15 minutes.",
+              createdAt: "2026-04-03T10:00:00.000Z",
+            },
+          ],
+        });
+      }
+
+      return createMockResponse({});
     });
 
     render(<AlertsPage />);
@@ -81,9 +105,11 @@ describe("AlertsPage", () => {
       await screen.findByText("Whale moved a large ETH position")
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Draft Post" })).toBeInTheDocument();
-    expect((global.fetch as jest.Mock).mock.calls[0]?.[0]).toContain(
-      "/api/alerts/feed?category=SIGNAL"
-    );
+    expect(
+      (global.fetch as jest.Mock).mock.calls.some(([url]) =>
+        String(url).includes("/api/alerts/feed?category=SIGNAL")
+      )
+    ).toBe(true);
 
     await waitFor(() =>
       expect(screen.queryByText("No signals yet")).not.toBeInTheDocument()
@@ -94,9 +120,60 @@ describe("AlertsPage", () => {
     render(<AlertsPage />);
 
     await waitFor(() =>
-      expect((global.fetch as jest.Mock).mock.calls[0]?.[0]).toContain(
-        "/api/alerts/feed?category=SIGNAL"
-      )
+      expect(
+        (global.fetch as jest.Mock).mock.calls.some(([url]) =>
+          String(url).includes("/api/alerts/feed?category=SIGNAL")
+        )
+      ).toBe(true)
     );
+  });
+
+  it("shows subscription details when the subscriptions panel is expanded", async () => {
+    (global.fetch as jest.Mock).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.includes("/api/alerts/subscriptions")) {
+        return createMockResponse({
+          subscriptions: [
+            {
+              id: "sub-1",
+              type: "topic",
+              value: "Bitcoin ETF flows",
+              isActive: true,
+              delivery: ["IN_APP"],
+            },
+            {
+              id: "sub-2",
+              type: "token",
+              value: "ETH",
+              isActive: false,
+              delivery: ["IN_APP"],
+            },
+          ],
+        });
+      }
+
+      if (url.includes("/api/alerts/feed?category=SIGNAL")) {
+        return createMockResponse({ alerts: [] });
+      }
+
+      return createMockResponse({});
+    });
+
+    render(<AlertsPage />);
+
+    const subscriptionsButton = await screen.findByRole("button", {
+      name: /subscriptions \(1\)/i,
+    });
+
+    fireEvent.click(subscriptionsButton);
+
+    expect(
+      await screen.findByText("Your Signal Subscriptions")
+    ).toBeInTheDocument();
+    expect(screen.getByText("Bitcoin ETF flows")).toBeInTheDocument();
+    expect(screen.getByText("ETH")).toBeInTheDocument();
+    expect(screen.getByText("Active")).toBeInTheDocument();
+    expect(screen.getByText("Paused")).toBeInTheDocument();
   });
 });
