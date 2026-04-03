@@ -320,11 +320,11 @@ describe("CraftingPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Generate Post" }));
 
     await waitFor(() =>
-      expect(mockedApi.drafts.generate).toHaveBeenCalledWith(
-        articleUrl,
-        "ARTICLE",
-        undefined
-      )
+      expect(mockedApi.drafts.generate).toHaveBeenCalledWith({
+        sourceContent: articleUrl,
+        sourceType: "ARTICLE",
+        blendId: undefined,
+      })
     );
 
     const generatedDraft = `${initialDraftText}\n\nsource: ${articleUrl}`;
@@ -384,11 +384,11 @@ describe("CraftingPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Generate Post" }));
 
     await waitFor(() =>
-      expect(mockedApi.drafts.generate).toHaveBeenLastCalledWith(
-        fallbackText,
-        "MANUAL",
-        undefined
-      )
+      expect(mockedApi.drafts.generate).toHaveBeenLastCalledWith({
+        sourceContent: fallbackText,
+        sourceType: "MANUAL",
+        blendId: undefined,
+      })
     );
 
     await waitFor(() =>
