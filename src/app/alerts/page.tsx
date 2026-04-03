@@ -36,6 +36,7 @@ function isManagerNudge(alert: Alert) {
   );
 }
 
+<<<<<<< HEAD
 function renderAlertCard(alert: Alert) {
   return (
     <article
@@ -67,6 +68,8 @@ function renderAlertCard(alert: Alert) {
   );
 }
 
+=======
+>>>>>>> codex/fix-chart-rendering
 export default function AlertsPage() {
   const { user } = useAuth();
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -129,7 +132,11 @@ export default function AlertsPage() {
               they will show up here with a draft workflow attached.
             </p>
           </div>
+<<<<<<< HEAD
           {!loading && visibleAlerts.length > 0 ? (
+=======
+          {!loading && visibleAlerts.length > 0 && (
+>>>>>>> codex/fix-chart-rendering
             <p className="text-xs font-medium uppercase tracking-[0.2em] text-atlas-text-muted">
               {visibleAlerts.length} live signals
             </p>
@@ -173,18 +180,88 @@ export default function AlertsPage() {
           </div>
         ) : (
           <div className="mt-8 space-y-8">
+<<<<<<< HEAD
             {analystAlerts.length > 0 ? (
               <div className="space-y-4">{analystAlerts.map(renderAlertCard)}</div>
             ) : null}
 
             {isManager && nudges.length > 0 ? (
+=======
+            <div className="space-y-4">
+              {analystAlerts.map((alert) => (
+                <article
+                  key={alert.id}
+                  className="bg-glass rounded-2xl border border-glass-border p-6 backdrop-blur-xl transition-all duration-300 sm:p-7"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-teal">
+                        {formatAlertType(alert.type)}
+                      </p>
+                      <h2 className="mt-3 font-heading text-2xl text-atlas-text">
+                        {alert.title}
+                      </h2>
+                    </div>
+                    <span className="rounded-full border border-glass-border bg-atlas-surface/60 px-3 py-1 text-xs text-atlas-text-secondary">
+                      {formatAlertTimestamp(alert.createdAt)}
+                    </span>
+                  </div>
+
+                  {alert.context && (
+                    <p className="mt-4 max-w-3xl text-sm leading-6 text-atlas-text-secondary">
+                      {alert.context}
+                    </p>
+                  )}
+
+                  <InlineDraftCard alert={alert} />
+                </article>
+              ))}
+            </div>
+
+            {isManager && nudges.length > 0 && (
+>>>>>>> codex/fix-chart-rendering
               <div className="mt-8">
                 <h3 className="mb-4 text-sm font-medium text-atlas-text-secondary">
                   Team Nudges
                 </h3>
+<<<<<<< HEAD
                 <div className="space-y-4">{nudges.map(renderAlertCard)}</div>
               </div>
             ) : null}
+=======
+                <div className="space-y-4">
+                  {nudges.map((alert) => (
+                    <article
+                      key={alert.id}
+                      className="bg-glass rounded-2xl border border-glass-border p-6 backdrop-blur-xl transition-all duration-300 sm:p-7"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-teal">
+                            {formatAlertType(alert.type)}
+                          </p>
+                          <h2 className="mt-3 font-heading text-2xl text-atlas-text">
+                            {alert.title}
+                          </h2>
+                        </div>
+                        <span className="rounded-full border border-glass-border bg-atlas-surface/60 px-3 py-1 text-xs text-atlas-text-secondary">
+                          {formatAlertTimestamp(alert.createdAt)}
+                        </span>
+                      </div>
+
+                      {alert.context && (
+                        <p className="mt-4 max-w-3xl text-sm leading-6 text-atlas-text-secondary">
+                          {alert.context}
+                        </p>
+                      )}
+
+                      <InlineDraftCard alert={alert} />
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
+>>>>>>> codex/fix-chart-rendering
           </div>
         )}
       </div>
