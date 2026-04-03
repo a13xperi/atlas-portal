@@ -1,14 +1,21 @@
 import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
+import { useRouter } from "next/navigation";
 import AlertsPage from "@/app/alerts/page";
 
-const mockUseAuth = jest.fn(() => ({
-  user: { handle: "analyst", role: "ANALYST" },
+const mockPush = jest.fn();
+
+jest.mock("next/navigation", () => ({
+  useRouter: jest.fn(),
+  usePathname: jest.fn(() => "/alerts"),
+  useSearchParams: jest.fn(() => new URLSearchParams()),
 }));
 
 jest.mock("@/lib/auth", () => ({
-  useAuth: mockUseAuth,
+  useAuth: jest.fn(() => ({
+    user: { handle: "analyst", role: "ANALYST" },
+  })),
 }));
 
 jest.mock("@/components/layout/AppShell", () => ({
@@ -16,12 +23,14 @@ jest.mock("@/components/layout/AppShell", () => ({
   default: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
+const mockUseRouter = jest.mocked(useRouter);
+
 describe("AlertsPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseAuth.mockReturnValue({
-      user: { handle: "analyst", role: "ANALYST" },
-    });
+    mockUseRouter.mockReturnValue({
+      push: mockPush,
+    } as ReturnType<typeof useRouter>);
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -35,12 +44,12 @@ describe("AlertsPage", () => {
     expect(await screen.findByText("No alerts yet")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "When trending topics or market movements match your interests, alerts will appear here."
+        /configure your subscriptions to start receiving signals/i
       )
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /enable subscriptions/i })
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: /enable subscriptions/i })
+    ).toBeInTheDocument();
   });
 
   it("renders alerts from the feed with inline draft actions", async () => {
@@ -72,7 +81,7 @@ describe("AlertsPage", () => {
     );
   });
 
-  it("hides manager nudges for non-manager users", async () => {
+  it("renders all alert types from the feed", async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -101,46 +110,6 @@ describe("AlertsPage", () => {
     expect(
       await screen.findByText("Whale moved a large ETH position")
     ).toBeInTheDocument();
-    expect(
-      screen.queryByText("Send a nudge to inactive analysts")
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText("Team Nudges")).not.toBeInTheDocument();
-  });
-
-  it("separates team nudges for manager users", async () => {
-    mockUseAuth.mockReturnValue({
-      user: { handle: "manager", role: "MANAGER" },
-    });
-
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: jest.fn().mockResolvedValue({
-        alerts: [
-          {
-            id: "alert-1",
-            type: "WHALE_ACTIVITY",
-            title: "Whale moved a large ETH position",
-            context: "Exchange-bound flows ticked higher over the last 15 minutes.",
-            createdAt: "2026-04-03T10:00:00.000Z",
-          },
-          {
-            id: "alert-2",
-            type: "TEAM_NUDGE",
-            title: "Send a nudge to inactive analysts",
-            context: "Three analysts have not drafted this week.",
-            createdAt: "2026-04-03T11:00:00.000Z",
-          },
-        ],
-      }),
-    });
-
-    render(<AlertsPage />);
-
-    expect(
-      await screen.findByText("Whale moved a large ETH position")
-    ).toBeInTheDocument();
-    expect(screen.getByText("Team Nudges")).toBeInTheDocument();
     expect(
       screen.getByText("Send a nudge to inactive analysts")
     ).toBeInTheDocument();

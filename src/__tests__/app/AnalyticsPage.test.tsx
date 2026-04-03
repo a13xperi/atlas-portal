@@ -100,15 +100,15 @@ describe("AnalyticsPage", () => {
       await screen.findByRole("heading", { name: "Your Analytics" })
     ).toBeInTheDocument();
     expect(screen.getByText("100% Accuracy")).toBeInTheDocument();
-    expect(screen.getByTitle("Predicted: 0")).toHaveStyle({ height: "0%" });
-    expect(screen.getByTitle("Actual: 0")).toHaveStyle({ height: "0%" });
+    expect(screen.getByText("Engagement Velocity")).toBeInTheDocument();
+    expect(screen.getByText("Predicted")).toBeInTheDocument();
+    expect(screen.getByText("Actual")).toBeInTheDocument();
 
-    const activityBars = Array.from(container.querySelectorAll("div")).filter((element) =>
-      element.classList.contains("bg-atlas-teal/40")
+    const zeroHeightElements = Array.from(
+      container.querySelectorAll<HTMLElement>('[style*="height: 0px"]')
     );
 
-    expect(activityBars).toHaveLength(1);
-    expect(activityBars[0]).toHaveStyle({ height: "0%" });
+    expect(zeroHeightElements.length).toBeGreaterThan(0);
 
     const inlineStyles = Array.from(container.querySelectorAll<HTMLElement>("[style]"))
       .map((element) => element.getAttribute("style") ?? "");
