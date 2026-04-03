@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
+import AlertsPage from "@/app/alerts/page";
 
 const mockUseAuth = jest.fn(() => ({
   user: { handle: "analyst", role: "ANALYST" },
@@ -14,8 +15,6 @@ jest.mock("@/components/layout/AppShell", () => ({
   __esModule: true,
   default: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
-
-const AlertsPage = require("@/app/alerts/page").default;
 
 describe("AlertsPage", () => {
   beforeEach(() => {
