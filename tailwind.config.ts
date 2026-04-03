@@ -22,6 +22,7 @@ const config: Config = {
         "atlas-text-muted": "#718096",
         glass: "rgba(255,255,255,0.08)",
         "glass-border": "rgba(255,255,255,0.15)",
+        "atlas-surface-glass": "rgba(255,255,255,0.04)",
       },
       borderRadius: {
         "3xl": "24px",
