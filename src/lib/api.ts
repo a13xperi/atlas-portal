@@ -183,6 +183,10 @@ export const api = {
       request<{ draft: TweetDraft }>(`/api/drafts/${draftId}/refine`, { method: "POST", body: { instruction } }),
     team: (limit = 50) =>
       request<{ drafts: TeamDraft[]; total: number }>(`/api/drafts/team?limit=${limit}`),
+    postToX: (id: string) =>
+      request<{ draft: TweetDraft; tweet: { id: string; text: string } }>(`/api/drafts/${id}/post-to-x`, { method: "POST" }),
+    thread: (id: string) =>
+      request<{ thread: string[]; count: number }>(`/api/drafts/${id}/thread`, { method: "POST" }),
   },
 
   analytics: {
@@ -282,6 +286,8 @@ export interface User {
   role: "ANALYST" | "MANAGER" | "ADMIN";
   displayName?: string;
   email?: string;
+  bio?: string;
+  avatarUrl?: string | null;
 }
 
 export interface VoiceProfile {

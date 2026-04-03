@@ -23,13 +23,20 @@ interface ProfileFormState {
   bio: string;
 }
 
+interface ProfileUser extends User {
+  bio?: string;
+  avatarUrl?: string;
+}
+
 const roleBadgeClasses: Record<User["role"], string> = {
   ANALYST: "border-atlas-teal/30 bg-atlas-teal/10 text-atlas-teal",
   MANAGER: "border-atlas-warning/30 bg-atlas-warning/10 text-atlas-warning",
   ADMIN: "border-atlas-error/30 bg-atlas-error/10 text-atlas-error",
 };
 
-function createFormState(user: Pick<User, "email" | "displayName" | "bio"> | null): ProfileFormState {
+function createFormState(
+  user: Pick<ProfileUser, "email" | "displayName" | "bio"> | null
+): ProfileFormState {
   return {
     email: user?.email ?? "",
     displayName: user?.displayName ?? "",
@@ -55,7 +62,7 @@ function getAvatarInitials(profile: Pick<User, "displayName" | "handle">) {
 export default function ProfilePage() {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const [profile, setProfile] = useState<User | null>(user ?? null);
+  const [profile, setProfile] = useState<ProfileUser | null>(user ?? null);
   const [formState, setFormState] = useState<ProfileFormState>(() => createFormState(user));
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [saving, setSaving] = useState(false);

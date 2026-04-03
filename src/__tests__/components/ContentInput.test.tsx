@@ -27,6 +27,29 @@ describe("ContentInput", () => {
     expect(input).toHaveAttribute("rows", "3");
   });
 
+  it("supports a controlled value", () => {
+    const handleTextChange = jest.fn();
+    const { rerender } = render(
+      <ContentInput value="Saved draft" onTextChange={handleTextChange} />
+    );
+
+    const input = screen.getByPlaceholderText(
+      "Paste a tweet idea or link…"
+    ) as HTMLTextAreaElement;
+
+    expect(input).toHaveValue("Saved draft");
+
+    fireEvent.change(input, { target: { value: "Updated draft" } });
+
+    expect(handleTextChange).toHaveBeenCalledWith("Updated draft");
+
+    rerender(
+      <ContentInput value="Updated draft" onTextChange={handleTextChange} />
+    );
+
+    expect(input).toHaveValue("Updated draft");
+  });
+
   it("submits the entered text on Enter and clears the input", () => {
     const handleTextSubmit = jest.fn();
 

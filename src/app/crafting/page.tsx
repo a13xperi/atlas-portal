@@ -11,6 +11,7 @@ import {
   Loader2,
   Mic,
   RefreshCw,
+  TrendingUp,
   X,
 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -43,8 +44,15 @@ const CRAFTING_MODES = [
 ] as const;
 
 const NEWS_SOURCE_PREFIX = "source:";
+const DRAFT_AUTOSAVE_STORAGE_KEY = "atlas_draft_autosave";
+const DRAFT_AUTOSAVE_MAX_AGE_MS = 60 * 60 * 1000;
+const DRAFT_AUTOSAVE_DEBOUNCE_MS = 1000;
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
+
+function isCraftingMode(mode: unknown): mode is CraftingMode {
+  return CRAFTING_MODES.some((craftingMode) => craftingMode.id === mode);
+}
 
 const DRAFT_STATUS_LABELS: Record<TweetDraft["status"], string> = {
   DRAFT: "Draft",
@@ -158,6 +166,7 @@ export default function CraftingPage() {
   const [draftVersions, setDraftVersions] = useState<TweetDraft[]>([]);
   const [activeDraft, setActiveDraft] = useState<TweetDraft | null>(null);
   const [activeMode, setActiveMode] = useState<CraftingMode>("new_post");
+  const [inputText, setInputText] = useState("");
   const [replyAngle, setReplyAngle] = useState<string | null>(null);
   const [voiceMode, setVoiceMode] = useState<"my_voice" | "blended" | "specific">(
     "my_voice"
@@ -181,12 +190,14 @@ export default function CraftingPage() {
   const [sourceError, setSourceError] = useState("");
   const [compareMode, setCompareMode] = useState(false);
   const [compareVersion, setCompareVersion] = useState<number | null>(null);
+  const [restored, setRestored] = useState(false);
   const [urlPreview, setUrlPreview] = useState<{
     title?: string;
     url: string;
   } | null>(null);
   const activeDraftInitialized = useRef(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
+  const restoredTimeoutRef = useRef<number | null>(null);
   const draftInputValueRef = useRef("");
   const handleCreateDraftRef = useRef<
     ((text?: string) => Promise<boolean | void>) | null
@@ -254,8 +265,82 @@ export default function CraftingPage() {
       if (copyResetTimeoutRef.current !== null) {
         window.clearTimeout(copyResetTimeoutRef.current);
       }
+
+      if (restoredTimeoutRef.current !== null) {
+        window.clearTimeout(restoredTimeoutRef.current);
+      }
     };
   }, []);
+
+  useEffect(() => {
+    try {
+      const savedDraft = localStorage.getItem(DRAFT_AUTOSAVE_STORAGE_KEY);
+
+      if (!savedDraft) {
+        return;
+      }
+
+      const parsedDraft: {
+        mode?: unknown;
+        text?: unknown;
+        timestamp?: unknown;
+      } = JSON.parse(savedDraft);
+      const savedText =
+        typeof parsedDraft.text === "string" ? parsedDraft.text : "";
+      const savedTimestamp =
+        typeof parsedDraft.timestamp === "number" ? parsedDraft.timestamp : 0;
+
+      if (
+        Date.now() - savedTimestamp >= DRAFT_AUTOSAVE_MAX_AGE_MS ||
+        !savedText
+      ) {
+        return;
+      }
+
+      setInputText(savedText);
+      draftInputValueRef.current = savedText;
+
+      if (isCraftingMode(parsedDraft.mode)) {
+        setActiveMode(parsedDraft.mode);
+      }
+
+      setRestored(true);
+
+      if (restoredTimeoutRef.current !== null) {
+        window.clearTimeout(restoredTimeoutRef.current);
+      }
+
+      restoredTimeoutRef.current = window.setTimeout(() => {
+        setRestored(false);
+        restoredTimeoutRef.current = null;
+      }, 3000);
+    } catch {
+      // Ignore malformed autosave data.
+    }
+  }, []);
+
+  useEffect(() => {
+    const autosaveTimer = window.setTimeout(() => {
+      if (!inputText) {
+        return;
+      }
+
+      try {
+        localStorage.setItem(
+          DRAFT_AUTOSAVE_STORAGE_KEY,
+          JSON.stringify({
+            mode: activeMode,
+            text: inputText,
+            timestamp: Date.now(),
+          })
+        );
+      } catch {
+        // Ignore storage failures so drafting remains uninterrupted.
+      }
+    }, DRAFT_AUTOSAVE_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(autosaveTimer);
+  }, [activeMode, inputText]);
 
   useEffect(() => {
     if (!compareMode) {
@@ -464,6 +549,7 @@ export default function CraftingPage() {
   }, []);
 
   const handleDraftTextChange = (text: string) => {
+    setInputText(text);
     draftInputValueRef.current = text;
     const trimmedText = text.trim();
 
@@ -497,6 +583,11 @@ export default function CraftingPage() {
         selectedBlendId || undefined
       );
       commitDraft(draft);
+      try {
+        localStorage.removeItem(DRAFT_AUTOSAVE_STORAGE_KEY);
+      } catch {
+        // Ignore storage failures after successful generation.
+      }
       return true;
     } catch (createDraftError: unknown) {
       console.error("Failed to generate draft:", createDraftError);
@@ -587,6 +678,11 @@ export default function CraftingPage() {
         selectedBlendId || undefined
       );
       commitDraft(draft, trimmedArticleUrl);
+      try {
+        localStorage.removeItem(DRAFT_AUTOSAVE_STORAGE_KEY);
+      } catch {
+        // Ignore storage failures after successful generation.
+      }
       return { showFallback: Boolean(trimmedFallbackText) };
     } catch (generateNewsError: unknown) {
       console.error("Failed to generate news draft:", generateNewsError);
@@ -1008,6 +1104,7 @@ export default function CraftingPage() {
                         ? "Paste the tweet or quote you want to reply to…"
                         : "Paste a tweet idea or link…"
                     }
+                    value={inputText}
                     onTextSubmit={handleCreateDraft}
                     onTextChange={handleDraftTextChange}
                     onDrop={handleFileDrop}
@@ -1021,6 +1118,11 @@ export default function CraftingPage() {
                     sourceError={sourceError}
                     contentError={contentError}
                   />
+                  {restored ? (
+                    <p className="mt-2 text-[10px] animate-pulse text-atlas-teal">
+                      Previous draft restored
+                    </p>
+                  ) : null}
                   <div className="mt-3">
                     <GradientButton
                       fullWidth
@@ -1188,6 +1290,59 @@ export default function CraftingPage() {
                     <span>&middot;</span>
                     <span>~{activeDraftReadingTime} min read</span>
                   </div>
+                  {activeDraft &&
+                  (activeDraft.confidence != null ||
+                    activeDraft.predictedEngagement != null) ? (
+                    <div className="mt-3 flex items-center gap-4 border-t border-glass-border/50 pt-3">
+                      {activeDraft.confidence != null ? (
+                        <div className="flex items-center gap-1.5">
+                          <div className="relative h-4 w-4">
+                            <svg className="h-4 w-4 -rotate-90" viewBox="0 0 16 16">
+                              <circle
+                                cx="8"
+                                cy="8"
+                                r="6"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                className="text-atlas-surface"
+                              />
+                              <circle
+                                cx="8"
+                                cy="8"
+                                r="6"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeDasharray={`${
+                                  activeDraft.confidence * 37.7
+                                } 37.7`}
+                                className={
+                                  activeDraft.confidence > 0.8
+                                    ? "text-atlas-teal"
+                                    : activeDraft.confidence > 0.5
+                                      ? "text-atlas-warning"
+                                      : "text-atlas-error"
+                                }
+                              />
+                            </svg>
+                          </div>
+                          <span className="text-[10px] text-atlas-text-muted">
+                            {Math.round(activeDraft.confidence * 100)}% match
+                          </span>
+                        </div>
+                      ) : null}
+                      {activeDraft.predictedEngagement != null ? (
+                        <div className="flex items-center gap-1.5">
+                          <TrendingUp className="h-3.5 w-3.5 text-atlas-text-muted" />
+                          <span className="text-[10px] text-atlas-text-muted">
+                            ~{activeDraft.predictedEngagement.toLocaleString()} predicted
+                            reach
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </>
               ) : null}
               <div className="mt-4 border-t border-glass-border pt-4">
@@ -1373,31 +1528,6 @@ export default function CraftingPage() {
                 disabled={creating}
                 loading={refiningChip}
               />
-            </div>
-          ) : null}
-
-          {activeDraft ? (
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-glass-border border-l-4 border-l-atlas-success bg-atlas-surface p-4">
-                <p className="text-xs uppercase tracking-wider text-atlas-text-secondary">
-                  Confidence
-                </p>
-                <p className="font-heading text-2xl font-bold text-atlas-success">
-                  {activeDraft.confidence
-                    ? `${Math.round(activeDraft.confidence * 100)}%`
-                    : "—"}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-glass-border border-l-4 border-l-atlas-teal bg-atlas-surface p-4">
-                <p className="text-xs uppercase tracking-wider text-atlas-text-secondary">
-                  Predicted engagement
-                </p>
-                <p className="font-heading text-2xl font-bold text-atlas-teal">
-                  {activeDraft.predictedEngagement
-                    ? `~${(activeDraft.predictedEngagement / 1000).toFixed(1)}K`
-                    : "—"}
-                </p>
-              </div>
             </div>
           ) : null}
 
