@@ -13,6 +13,11 @@ export const metadata: Metadata = {
   description:
     "Content-to-tweet crafting platform with personalized voice profiles for crypto analysts.",
   metadataBase: new URL("https://delphi-atlas.vercel.app"),
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/manifest.json",
   openGraph: {
     title: "Atlas — Delphi Digital",
     description: "Craft tweets that sound like you. Powered by voice AI.",
