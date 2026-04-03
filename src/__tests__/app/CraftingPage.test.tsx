@@ -122,18 +122,18 @@ describe("CraftingPage", () => {
     expect(mockedApi.drafts.generate).not.toHaveBeenCalled();
   });
 
-  it("blocks submissions over 2000 characters", async () => {
+  it("blocks submissions over 10000 characters", async () => {
     render(<CraftingPage />);
 
     const input = screen.getByPlaceholderText(
       "Paste a tweet idea or link…"
     ) as HTMLInputElement;
 
-    fireEvent.change(input, { target: { value: "a".repeat(2001) } });
+    fireEvent.change(input, { target: { value: "a".repeat(10001) } });
     fireEvent.keyDown(input, { key: "Enter", code: "Enter", charCode: 13 });
 
     expect(
-      await screen.findByText("Content must be under 2000 characters.")
+      await screen.findByText("Content must be under 10,000 characters.")
     ).toBeInTheDocument();
     expect(mockedApi.drafts.generate).not.toHaveBeenCalled();
   });

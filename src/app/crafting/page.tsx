@@ -245,8 +245,8 @@ export default function CraftingPage() {
     if (!trimmedContent) {
       setContentError("Content is required.");
       isValid = false;
-    } else if (trimmedContent.length > 2000) {
-      setContentError("Content must be under 2000 characters.");
+    } else if (trimmedContent.length > 10000) {
+      setContentError("Content must be under 10,000 characters.");
       isValid = false;
     } else {
       setContentError("");
@@ -686,12 +686,31 @@ export default function CraftingPage() {
                     sourceError={sourceError}
                     contentError={contentError}
                   />
-                  {creating ? (
-                    <div className="mt-2 flex items-center gap-2 text-sm text-atlas-teal">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Crafting your tweet…
-                    </div>
-                  ) : null}
+                  <div className="mt-3">
+                    <GradientButton
+                      fullWidth
+                      disabled={creating}
+                      onClick={() => {
+                        const input = document.querySelector<HTMLInputElement>(
+                          'input[placeholder*="Paste"]'
+                        );
+                        if (input?.value) {
+                          void handleCreateDraft(input.value);
+                        }
+                      }}
+                    >
+                      {creating ? (
+                        <span className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Crafting your tweet…
+                        </span>
+                      ) : activeMode === "reply_to_tweet" ? (
+                        "Generate Reply"
+                      ) : (
+                        "Generate Draft"
+                      )}
+                    </GradientButton>
+                  </div>
                   {error ? (
                     <div className="mt-2 flex items-center justify-between rounded-lg border border-atlas-error/30 bg-atlas-error/10 px-3 py-2 text-sm text-atlas-error">
                       <span>{error}</span>

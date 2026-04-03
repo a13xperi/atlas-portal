@@ -119,17 +119,8 @@ export default function LoopPanel() {
   if (loading) return <LoopPanelSkeleton />;
 
   if (error && !loopState) {
-    return (
-      <div className="bg-atlas-surface border border-glass-border rounded-2xl p-6">
-        <div className="flex items-center gap-3 text-atlas-error text-sm">
-          <Activity className="h-4 w-4" />
-          <span>Unable to load loop status</span>
-          <button onClick={fetchState} className="text-atlas-teal hover:underline ml-2">
-            Retry
-          </button>
-        </div>
-      </div>
-    );
+    // Silently hide — loop endpoint may not be available in production
+    return null;
   }
 
   if (!loopState || (loopState.status === "idle" && loopState.iterations.length === 0)) {
