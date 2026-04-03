@@ -4,11 +4,9 @@ import { useEffect, useState } from "react";
 import AppShell from "@/components/layout/AppShell";
 import { Skeleton } from "@/components/ui/Skeleton";
 import Link from "next/link";
-import { useAuth } from "@/lib/auth";
 import { api, AnalyticsSummary, LearningLogEntry, TweetDraft, DailyEngagement, DailyActivity } from "@/lib/api";
 
 export default function AnalyticsPage() {
-  const { user } = useAuth();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [logEntries, setLogEntries] = useState<LearningLogEntry[]>([]);
   const [topDrafts, setTopDrafts] = useState<TweetDraft[]>([]);
@@ -32,18 +30,22 @@ export default function AnalyticsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const chartMax = engagementDays.length > 0
-    ? Math.max(...engagementDays.flatMap((d) => [d.predicted, d.actual]), 1)
-    : 100;
+  const activityCounts = activityDays.map((day) => day.count);
+  const activityMax = activityCounts.length > 0 ? Math.max(...activityCounts) : 0;
+  const engagementValues = engagementDays.flatMap((day) => [day.predicted, day.actual]);
+  const chartMax = engagementValues.length > 0 ? Math.max(...engagementValues) : 0;
+  const totalPredictionError = engagementDays.length === 0
+    ? 0
+    : engagementDays.reduce((sum, day) => {
+        const maxValue = Math.max(day.predicted, day.actual);
+        const normalizedError = maxValue === 0 ? 0 : Math.abs(day.predicted - day.actual) / maxValue;
+
+        return sum + normalizedError;
+      }, 0);
 
   const accuracyPct = engagementDays.length > 0
     ? Math.round(
-        (1 -
-          engagementDays.reduce((sum, d) => {
-            const maxVal = Math.max(d.predicted, d.actual, 1);
-            return sum + Math.abs(d.predicted - d.actual) / maxVal;
-          }, 0) /
-            engagementDays.length) *
+        (1 - (engagementDays.length === 0 ? 0 : totalPredictionError / engagementDays.length)) *
           100
       )
     : null;
@@ -63,6 +65,24 @@ export default function AnalyticsPage() {
       ];
 
   const allZero = usageStats.every((s) => s.value === "0");
+  const hasNoAnalyticsData = !loading
+    && !error
+    && !summary
+    && engagementDays.length === 0
+    && activityDays.length === 0
+    && logEntries.length === 0
+    && topDrafts.length === 0;
+
+  if (hasNoAnalyticsData) {
+    return (
+      <AppShell>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <h2 className="font-heading text-2xl text-atlas-text">No analytics data yet</h2>
+          <p className="mt-2 text-atlas-text-secondary">Start crafting drafts to see your analytics here.</p>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
@@ -105,15 +125,14 @@ export default function AnalyticsPage() {
         </div>
         {/* Sparkline */}
         {activityDays.length > 0 ? (() => {
-          const sparkData = activityDays;
-          const maxCount = Math.max(...sparkData.map((a) => a.count), 1);
+          const sparkData = activityDays ?? [];
           return (
             <div className="mt-6 h-8 flex items-end gap-1">
               {sparkData.map((d, i) => (
                 <div
                   key={i}
                   className="flex-1 bg-atlas-teal/40 rounded-sm"
-                  style={{ height: `${(d.count / maxCount) * 100}%` }}
+                  style={{ height: `${activityMax === 0 ? 0 : (d.count / activityMax) * 100}%` }}
                 />
               ))}
             </div>
@@ -157,17 +176,17 @@ export default function AnalyticsPage() {
           {/* Chart body */}
           <div className="ml-10 h-full flex items-end gap-0">
             {engagementDays.length > 0 ? (
-              engagementDays.map((day) => (
+              (engagementDays ?? []).map((day) => (
                 <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
                   <div className="w-full flex items-end justify-center gap-1 h-40">
                     <div
                       className="w-3 bg-atlas-teal/60 rounded-t"
-                      style={{ height: `${(day.predicted / chartMax) * 100}%` }}
+                      style={{ height: `${chartMax === 0 ? 0 : (day.predicted / chartMax) * 100}%` }}
                       title={`Predicted: ${day.predicted}`}
                     />
                     <div
                       className="w-3 bg-atlas-success rounded-t"
-                      style={{ height: `${(day.actual / chartMax) * 100}%` }}
+                      style={{ height: `${chartMax === 0 ? 0 : (day.actual / chartMax) * 100}%` }}
                       title={`Actual: ${day.actual}`}
                     />
                   </div>
@@ -256,7 +275,7 @@ export default function AnalyticsPage() {
             <div className="px-6 py-8 text-center">
               <p className="text-sm text-atlas-text-muted">No top drafts yet. Create and post drafts to see your best performers here.</p>
             </div>
-          ) : topDrafts.map((d) => (
+          ) : (topDrafts ?? []).map((d) => (
             <Link
               key={d.id}
               href={`/crafting?draft=${d.id}`}
