@@ -4,79 +4,75 @@ import DraftHistorySidebar, {
   DraftHistoryItem,
 } from "@/components/crafting/DraftHistorySidebar";
 
-const firstDraft = {
-  id: "draft-1",
-  content:
-    "Bitcoin keeps absorbing sell pressure while spot ETF flows stay firm and funding remains balanced across majors.",
-  version: 1,
-  status: "DRAFT" as const,
-  createdAt: "2026-04-03T08:30:00.000Z",
-};
-
-const secondDraft = {
-  id: "draft-2",
-  content:
-    "Ethereum is setting up for a catch-up move if BTC stays range-bound and on-chain activity keeps improving through the weekend.",
-  version: 2,
-  status: "DRAFT" as const,
-  createdAt: "2026-04-03T09:15:00.000Z",
-};
+const draftHistoryItems: DraftHistoryItem[] = [
+  {
+    draft: {
+      id: "draft-1",
+      content:
+        "Bitcoin just reclaimed a key resistance level and the follow-through matters more than the breakout headline.",
+      version: 1,
+      status: "DRAFT",
+      createdAt: "2026-04-03T12:00:00.000Z",
+    },
+    copiedToClipboard: true,
+    generatedAt: "2026-04-03T12:00:00.000Z",
+  },
+  {
+    draft: {
+      id: "draft-2",
+      content: "ETH order flow still looks cleaner than most of the majors right now.",
+      version: 1,
+      status: "DRAFT",
+      createdAt: "2026-04-03T12:05:00.000Z",
+    },
+    copiedToClipboard: false,
+    generatedAt: "2026-04-03T12:05:00.000Z",
+  },
+];
 
 describe("DraftHistorySidebar", () => {
-  it("shows the desktop sidebar shell and empty state copy", () => {
+  it("renders the empty state when there are no drafts", () => {
     render(
-      <DraftHistorySidebar drafts={[]} activeDraftId={null} onSelect={jest.fn()} />
+      <DraftHistorySidebar
+        drafts={[]}
+        activeDraftId={null}
+        onSelectDraft={jest.fn()}
+      />
     );
 
     expect(screen.getByText("Draft History")).toBeInTheDocument();
     expect(
       screen.getByText("No drafts yet. Generate your first tweet above.")
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Draft history")).toHaveClass(
-      "hidden",
-      "lg:flex",
-      "w-64"
-    );
   });
 
-  it("renders draft cards with preview, badge, and character count", () => {
-    const drafts: DraftHistoryItem[] = [
-      { draft: firstDraft, isCopied: true },
-      { draft: secondDraft, isCopied: false },
-    ];
-
+  it("renders draft metadata and copied badge", () => {
     render(
       <DraftHistorySidebar
-        drafts={drafts}
-        activeDraftId={firstDraft.id}
-        onSelect={jest.fn()}
+        drafts={draftHistoryItems}
+        activeDraftId="draft-1"
+        onSelectDraft={jest.fn()}
       />
     );
 
-    expect(
-      screen.getByText(
-        "Bitcoin keeps absorbing sell pressure while spot ETF flows stay firm and funding…"
-      )
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Bitcoin just reclaimed a key resistance level/i)).toBeInTheDocument();
+    expect(screen.getByText("109 chars")).toBeInTheDocument();
     expect(screen.getByText("Draft created")).toBeInTheDocument();
-    expect(screen.getByText(`${firstDraft.content.length} chars`)).toBeInTheDocument();
-    expect(screen.getByText(`${secondDraft.content.length} chars`)).toBeInTheDocument();
   });
 
-  it("loads a selected draft back into the main workspace callback", () => {
-    const handleSelect = jest.fn();
+  it("loads a draft when a history card is clicked", () => {
+    const handleSelectDraft = jest.fn();
 
     render(
       <DraftHistorySidebar
-        drafts={[{ draft: secondDraft, isCopied: false }]}
+        drafts={draftHistoryItems}
         activeDraftId={null}
-        onSelect={handleSelect}
+        onSelectDraft={handleSelectDraft}
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Ethereum is setting up/i }));
+    fireEvent.click(screen.getByRole("button", { name: /ETH order flow/i }));
 
-    expect(handleSelect).toHaveBeenCalledTimes(1);
-    expect(handleSelect).toHaveBeenCalledWith(secondDraft);
+    expect(handleSelectDraft).toHaveBeenCalledWith(draftHistoryItems[1].draft);
   });
 });

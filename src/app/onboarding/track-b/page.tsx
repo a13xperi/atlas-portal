@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import OnboardingShell from "@/components/layout/OnboardingShell";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
@@ -9,7 +9,11 @@ import GradientButton from "@/components/ui/GradientButton";
 import { Check, Loader2, Plus } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
-import { styleToDimensions } from "@/lib/voice-profile-dimensions";
+import {
+  hasAnyVoiceDimension,
+  styleToDimensions,
+  VoiceDimensions,
+} from "@/lib/voice-profile-dimensions";
 
 const styleOptions = [
   { label: "Fun", description: "Playful, witty, meme-friendly" },
@@ -30,13 +34,26 @@ export default function TrackBPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [selectedStyle, setSelectedStyle] = useState<string | null>("Custom mix");
+  const [dimensions, setDimensions] = useState<VoiceDimensions>(() =>
+    styleToDimensions("Custom mix")
+  );
   const [selectedVoices, setSelectedVoices] = useState<Set<string>>(new Set());
   const [blendValues, setBlendValues] = useState([40, 35, 25]);
   const [saving, setSaving] = useState(false);
   const [addingHandle, setAddingHandle] = useState(false);
   const [newHandle, setNewHandle] = useState("");
   const [tweetLinks, setTweetLinks] = useState("");
-  const previewDimensions = styleToDimensions(selectedStyle);
+  const [displayName, setDisplayName] = useState("");
+  const [displayNameError, setDisplayNameError] = useState("");
+  const [dimensionsError, setDimensionsError] = useState("");
+
+  useEffect(() => {
+    const fallbackDisplayName = user?.displayName || user?.handle;
+
+    if (!fallbackDisplayName) return;
+
+    setDisplayName((current) => current || fallbackDisplayName);
+  }, [user?.displayName, user?.handle]);
 
   const toggleVoice = (voice: string) => {
     setSelectedVoices((prev) => {
@@ -62,12 +79,31 @@ export default function TrackBPage() {
   };
 
   const handleSaveAndContinue = async () => {
+    const trimmedDisplayName = displayName.trim();
+    const hasVoiceDimension = hasAnyVoiceDimension(dimensions);
+    let isValid = true;
+
+    if (trimmedDisplayName.length < 2) {
+      setDisplayNameError("Display name must be at least 2 characters.");
+      isValid = false;
+    } else {
+      setDisplayNameError("");
+    }
+
+    if (!hasVoiceDimension) {
+      setDimensionsError("Set at least one voice dimension above 0.");
+      isValid = false;
+    } else {
+      setDimensionsError("");
+    }
+
+    if (!isValid) return;
+
     setSaving(true);
     try {
-      // 1. Save voice dimensions based on style selection
-      await api.voice.updateProfile(previewDimensions);
+      await api.users.updateProfile({ displayName: trimmedDisplayName });
+      await api.voice.updateProfile(dimensions);
 
-      // 2. Save selected reference voices
       const voices = Array.from(selectedVoices);
       for (const voice of voices) {
         try {
@@ -77,7 +113,6 @@ export default function TrackBPage() {
         }
       }
 
-      // 3. Create a blend from the slider values if voices selected
       if (voices.length > 0) {
         const blendVoices = voices.slice(0, 3).map((v, i) => ({
           label: v,
@@ -111,6 +146,32 @@ export default function TrackBPage() {
           </p>
         )}
 
+        <section>
+          <label
+            htmlFor="display-name"
+            className="text-xs text-atlas-text-secondary uppercase tracking-wide"
+          >
+            Display name
+          </label>
+          <input
+            id="display-name"
+            type="text"
+            value={displayName}
+            onChange={(event) => {
+              const nextDisplayName = event.target.value;
+              setDisplayName(nextDisplayName);
+              if (displayNameError && nextDisplayName.trim().length >= 2) {
+                setDisplayNameError("");
+              }
+            }}
+            placeholder={user?.displayName || user?.handle || "Your display name"}
+            className="mt-2 w-full bg-atlas-surface rounded-lg px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary border border-glass-border focus:outline-none focus:border-atlas-teal"
+          />
+          {displayNameError && (
+            <p className="text-red-400 text-sm mt-1">{displayNameError}</p>
+          )}
+        </section>
+
         <p className="text-atlas-text text-center">
           No worries, I got you. There is no wrong way to do this.
         </p>
@@ -125,7 +186,13 @@ export default function TrackBPage() {
               <button
                 key={label}
                 type="button"
-                onClick={() => setSelectedStyle(label)}
+                onClick={() => {
+                  setSelectedStyle(label);
+                  setDimensions(styleToDimensions(label));
+                  if (dimensionsError) {
+                    setDimensionsError("");
+                  }
+                }}
                 className={`bg-atlas-surface rounded-2xl p-4 text-center transition-all ${
                   selectedStyle === label
                     ? "border border-atlas-teal ring-1 ring-atlas-teal text-atlas-text"
@@ -144,12 +211,25 @@ export default function TrackBPage() {
 
         <section>
           <h3 className="font-heading text-lg text-atlas-text mb-3">
-            Here’s how that choice maps across your full voice profile.
+            Here&apos;s how that choice maps across your full voice profile.
           </h3>
-          <VoiceDimensionSections values={previewDimensions} />
+          <VoiceDimensionSections
+            values={dimensions}
+            interactive
+            onChange={(field, value) => {
+              setSelectedStyle("Custom mix");
+              setDimensions((current) => ({
+                ...current,
+                [field]: value,
+              }));
+            }}
+          />
           <p className="text-atlas-text-muted text-xs italic mt-3">
-            You’ll keep all 12 dimensions editable later in Voice Profiles.
+            You&apos;ll keep all 12 dimensions editable later in Voice Profiles.
           </p>
+          {dimensionsError && (
+            <p className="text-red-400 text-sm mt-1">{dimensionsError}</p>
+          )}
         </section>
 
         {/* Reference Voices */}

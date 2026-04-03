@@ -1,6 +1,7 @@
 describe("env", () => {
-  const originalApiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const originalNodeEnv = process.env.NODE_ENV;
+  const envRef = process.env as Record<string, string | undefined>;
+  const originalApiUrl = envRef.NEXT_PUBLIC_API_URL;
+  const originalNodeEnv = envRef.NODE_ENV;
 
   function loadEnvModule() {
     let envModule: typeof import("@/lib/env") | undefined;
@@ -14,15 +15,15 @@ describe("env", () => {
 
   afterEach(() => {
     if (originalApiUrl === undefined) {
-      delete process.env.NEXT_PUBLIC_API_URL;
+      delete envRef.NEXT_PUBLIC_API_URL;
     } else {
-      process.env.NEXT_PUBLIC_API_URL = originalApiUrl;
+      envRef.NEXT_PUBLIC_API_URL = originalApiUrl;
     }
 
     if (originalNodeEnv === undefined) {
-      delete process.env.NODE_ENV;
+      delete envRef.NODE_ENV;
     } else {
-      process.env.NODE_ENV = originalNodeEnv;
+      envRef.NODE_ENV = originalNodeEnv;
     }
 
     jest.resetModules();
@@ -35,7 +36,7 @@ describe("env", () => {
   });
 
   it("loads an overridden NEXT_PUBLIC_API_URL value", () => {
-    process.env.NEXT_PUBLIC_API_URL = "https://atlas.example.com";
+    envRef.NEXT_PUBLIC_API_URL = "https://atlas.example.com";
 
     const { env } = loadEnvModule();
 
@@ -43,14 +44,14 @@ describe("env", () => {
   });
 
   it("throws when NEXT_PUBLIC_API_URL is missing", () => {
-    delete process.env.NEXT_PUBLIC_API_URL;
+    delete envRef.NEXT_PUBLIC_API_URL;
 
     expect(() => loadEnvModule()).toThrow("[Atlas] Missing required environment variables:");
     expect(() => loadEnvModule()).toThrow("NEXT_PUBLIC_API_URL");
   });
 
   it("throws when NEXT_PUBLIC_API_URL is not a valid URL", () => {
-    process.env.NEXT_PUBLIC_API_URL = "atlas-not-a-url";
+    envRef.NEXT_PUBLIC_API_URL = "atlas-not-a-url";
 
     expect(() => loadEnvModule()).toThrow('[Atlas] NEXT_PUBLIC_API_URL is not a valid URL: "atlas-not-a-url"');
   });

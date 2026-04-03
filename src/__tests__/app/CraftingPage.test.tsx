@@ -1,7 +1,6 @@
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen } from "@testing-library/react";
-import CraftingPage from "@/app/crafting/page";
-import { api } from "@/lib/api";
+import type { ReactNode } from "react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const mockUseAuth = jest.fn();
 
@@ -11,12 +10,12 @@ jest.mock("@/lib/auth", () => ({
 
 jest.mock("@/components/layout/AppShell", () => ({
   __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  default: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
 jest.mock("next/link", () => ({
   __esModule: true,
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
+  default: ({ children, href }: { children: ReactNode; href: string }) => (
     <a href={href}>{children}</a>
   ),
 }));
@@ -46,7 +45,10 @@ jest.mock("@/lib/api", () => ({
   },
 }));
 
-const mockedApi = api as {
+const { api } = require("@/lib/api");
+const CraftingPage = require("@/app/crafting/page").default;
+
+const mockedApi = api as unknown as {
   drafts: {
     list: jest.Mock;
     generate: jest.Mock;
@@ -68,6 +70,17 @@ const mockedApi = api as {
     generateForDraft: jest.Mock;
   };
 };
+
+function createDraft(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "draft-1",
+    content: "Fresh draft copy",
+    version: 1,
+    status: "DRAFT",
+    createdAt: "2026-04-03T10:00:00.000Z",
+    ...overrides,
+  };
+}
 
 describe("CraftingPage", () => {
   beforeEach(() => {
@@ -96,7 +109,7 @@ describe("CraftingPage", () => {
   it("shows inline errors when trying to submit empty content", async () => {
     render(<CraftingPage />);
 
-    fireEvent.keyDown(screen.getByRole("textbox", { name: "Tweet idea input" }), {
+    fireEvent.keyDown(screen.getByPlaceholderText("Paste a tweet idea or link…"), {
       key: "Enter",
       code: "Enter",
       charCode: 13,
@@ -112,9 +125,9 @@ describe("CraftingPage", () => {
   it("blocks submissions over 2000 characters", async () => {
     render(<CraftingPage />);
 
-    const input = screen.getByRole("textbox", {
-      name: "Tweet idea input",
-    }) as HTMLInputElement;
+    const input = screen.getByPlaceholderText(
+      "Paste a tweet idea or link…"
+    ) as HTMLInputElement;
 
     fireEvent.change(input, { target: { value: "a".repeat(2001) } });
     fireEvent.keyDown(input, { key: "Enter", code: "Enter", charCode: 13 });
@@ -123,5 +136,117 @@ describe("CraftingPage", () => {
       await screen.findByText("Content must be under 2000 characters.")
     ).toBeInTheDocument();
     expect(mockedApi.drafts.generate).not.toHaveBeenCalled();
+  });
+
+  it("generates a news draft with the source URL appended and keeps it during refinement", async () => {
+    const articleUrl = "https://example.com/articles/eth-etf";
+    const initialDraftText = "ETH ETF flows are accelerating again.";
+    const refinedDraftText = "ETH ETF flows are accelerating again with stronger momentum.";
+
+    mockedApi.drafts.generate.mockResolvedValue({
+      draft: createDraft({
+        id: "draft-1",
+        content: initialDraftText,
+        sourceType: "ARTICLE",
+        sourceContent: articleUrl,
+      }),
+    });
+    mockedApi.drafts.refine.mockResolvedValue({
+      draft: createDraft({
+        id: "draft-1",
+        content: refinedDraftText,
+        version: 2,
+        sourceType: "ARTICLE",
+        sourceContent: articleUrl,
+      }),
+    });
+
+    render(<CraftingPage />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "News to Post" }));
+    fireEvent.change(screen.getByLabelText("Article URL input"), {
+      target: { value: articleUrl },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Generate Post" }));
+
+    await waitFor(() =>
+      expect(mockedApi.drafts.generate).toHaveBeenCalledWith(
+        articleUrl,
+        "ARTICLE",
+        undefined
+      )
+    );
+
+    const generatedDraft = `${initialDraftText}\n\nsource: ${articleUrl}`;
+    const generatedDraftBox = await screen.findByRole("textbox", {
+      name: "Generated draft",
+    });
+
+    expect(generatedDraftBox).toHaveValue(generatedDraft);
+    expect(
+      screen.getByText(`${generatedDraft.length} / 280`)
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Shorter" }));
+
+    await waitFor(() =>
+      expect(mockedApi.drafts.refine).toHaveBeenCalledWith(
+        "draft-1",
+        "Make it shorter and more concise"
+      )
+    );
+
+    await waitFor(() =>
+      expect(generatedDraftBox).toHaveValue(
+        `${refinedDraftText}\n\nsource: ${articleUrl}`
+      )
+    );
+  });
+
+  it("shows the fallback textarea when article fetching fails and can generate from pasted text", async () => {
+    const articleUrl = "https://example.com/articles/solana-update";
+    const fallbackText = "Solana activity is climbing and validators are seeing higher demand.";
+    const fallbackDraftText = "Solana demand is climbing again and the validator story is getting stronger.";
+
+    mockedApi.drafts.generate
+      .mockRejectedValueOnce(new Error("Fetch failed"))
+      .mockResolvedValueOnce({
+        draft: createDraft({
+          id: "draft-2",
+          content: fallbackDraftText,
+          sourceType: "MANUAL",
+          sourceContent: fallbackText,
+        }),
+      });
+
+    render(<CraftingPage />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "News to Post" }));
+    fireEvent.change(screen.getByLabelText("Article URL input"), {
+      target: { value: articleUrl },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Generate Post" }));
+
+    expect(
+      await screen.findByText("Could not fetch article. Paste the article text or key points.")
+    ).toBeInTheDocument();
+
+    const fallbackInput = await screen.findByLabelText("Article text fallback");
+    fireEvent.change(fallbackInput, { target: { value: fallbackText } });
+    fireEvent.click(screen.getByRole("button", { name: "Generate Post" }));
+
+    await waitFor(() =>
+      expect(mockedApi.drafts.generate).toHaveBeenLastCalledWith(
+        fallbackText,
+        "MANUAL",
+        undefined
+      )
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("textbox", { name: "Generated draft" })
+      ).toHaveValue(`${fallbackDraftText}\n\nsource: ${articleUrl}`)
+    );
   });
 });

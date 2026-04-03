@@ -4,16 +4,15 @@ import DimensionBar from "@/components/ui/DimensionBar";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { colors } from "@/lib/tokens";
 import {
-  clampVoiceDimension,
   formatVoiceDimensionValue,
-  getVoiceDimensions,
+  pickVoiceDimensions,
   VoiceDimensionField,
-  VoiceDimensionValues,
+  VoiceDimensions,
   VOICE_DIMENSION_SECTIONS,
-} from "@/lib/voiceDimensions";
+} from "@/lib/voice-profile-dimensions";
 
 interface VoiceDimensionSectionsProps {
-  values?: Partial<VoiceDimensionValues> | null;
+  values?: Partial<VoiceDimensions> | null;
   interactive?: boolean;
   loading?: boolean;
   onChange?: (field: VoiceDimensionField, value: number) => void;
@@ -25,7 +24,7 @@ export default function VoiceDimensionSections({
   loading = false,
   onChange,
 }: VoiceDimensionSectionsProps) {
-  const resolvedValues = getVoiceDimensions(values);
+  const resolvedValues = pickVoiceDimensions(values);
 
   return (
     <div className="space-y-4">
@@ -63,9 +62,7 @@ export default function VoiceDimensionSections({
                 <DimensionBar
                   key={dimension.field}
                   label={dimension.label}
-                  percentage={clampVoiceDimension(
-                    resolvedValues[dimension.field] ?? 50
-                  )}
+                  percentage={resolvedValues[dimension.field] ?? 50}
                   interactive={interactive}
                   onChange={(value) => onChange?.(dimension.field, value)}
                   step={10}

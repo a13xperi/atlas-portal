@@ -1,7 +1,5 @@
 import "@testing-library/jest-dom";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import TrackAPage from "@/app/onboarding/track-a/page";
-import { api } from "@/lib/api";
 
 const push = jest.fn();
 const mockUseAuth = jest.fn();
@@ -39,7 +37,10 @@ jest.mock("@/lib/api", () => ({
   },
 }));
 
-const mockedApi = api as {
+const { api } = require("@/lib/api");
+const TrackAPage = require("@/app/onboarding/track-a/page").default;
+
+const mockedApi = api as unknown as {
   users: { updateProfile: jest.Mock };
   voice: {
     updateProfile: jest.Mock;
@@ -79,7 +80,7 @@ describe("TrackAPage", () => {
     expect(mockedApi.voice.updateProfile).not.toHaveBeenCalled();
   });
 
-  it("saves the display name and 12-dimension voice profile when the form is valid", async () => {
+  it("saves the display name and voice profile when the form is valid", async () => {
     render(<TrackAPage />);
 
     fireEvent.change(screen.getByLabelText("Display name"), {

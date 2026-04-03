@@ -1,5 +1,3 @@
-import { VoiceProfile } from "@/lib/api";
-
 export const VOICE_DIMENSION_FIELDS = [
   "humor",
   "formality",
@@ -97,7 +95,7 @@ function clampVoiceDimension(value: number) {
 }
 
 export function pickVoiceDimensions(
-  values?: Partial<VoiceDimensions> | Partial<VoiceProfile> | null
+  values?: Partial<Record<VoiceDimensionField, number>> | null
 ): VoiceDimensions {
   return VOICE_DIMENSION_FIELDS.reduce<VoiceDimensions>((accumulator, field) => {
     const nextValue = values?.[field];
@@ -126,12 +124,6 @@ export function hasAnyVoiceDimension(dimensions: VoiceDimensions) {
 
 export function formatVoiceDimensionValue(value: number) {
   return `${Math.round(clampVoiceDimension(value) / 10)}/10`;
-}
-
-export function hasAnyVoiceDimension(
-  values?: Partial<VoiceDimensions> | Partial<VoiceProfile> | null
-) {
-  return VOICE_DIMENSION_FIELDS.some((field) => (values?.[field] ?? 0) > 0);
 }
 
 export function styleToDimensions(style: string | null): VoiceDimensions {

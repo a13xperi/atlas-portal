@@ -11,16 +11,10 @@ interface RequestOptions {
   body?: unknown;
 }
 
-interface DraftGenerationRequest {
+interface GenerateDraftInput {
   sourceContent: string;
   sourceType: string;
   blendId?: string;
-  replyAngle?: "Direct" | "Curious" | "Concise";
-  angleInstruction?: string;
-}
-
-interface FetchTweetByUrlRequest {
-  url: string;
 }
 
 class ApiError extends Error {
@@ -144,23 +138,25 @@ export const api = {
       request<{ draft: TweetDraft }>(`/api/drafts/${id}`),
     create: (content: string, sourceType?: string, sourceContent?: string) =>
       request<{ draft: TweetDraft }>("/api/drafts", { method: "POST", body: { content, sourceType, sourceContent } }),
-    generate: ({
-      sourceContent,
-      sourceType,
-      blendId,
-      replyAngle,
-      angleInstruction,
-    }: DraftGenerationRequest) =>
-      request<{ draft: TweetDraft }>("/api/drafts/generate", {
+    generate: (
+      sourceContentOrInput: string | GenerateDraftInput,
+      sourceType?: string,
+      blendId?: string
+    ) => {
+      const payload =
+        typeof sourceContentOrInput === "string"
+          ? {
+              sourceContent: sourceContentOrInput,
+              sourceType: sourceType || "MANUAL",
+              blendId,
+            }
+          : sourceContentOrInput;
+
+      return request<{ draft: TweetDraft }>("/api/drafts/generate", {
         method: "POST",
-        body: {
-          sourceContent,
-          sourceType,
-          blendId,
-          replyAngle,
-          angleInstruction,
-        },
-      }),
+        body: payload,
+      });
+    },
     regenerate: (draftId: string, feedback?: string) =>
       request<{ draft: TweetDraft }>(`/api/drafts/${draftId}/regenerate`, {
         method: "POST", body: { feedback },
@@ -201,14 +197,6 @@ export const api = {
       request<{ subscriptions: AlertSubscription[] }>("/api/alerts/subscriptions"),
     subscribe: (type: string, value: string, delivery?: string[]) =>
       request<{ subscription: AlertSubscription }>("/api/alerts/subscriptions", { method: "POST", body: { type, value, delivery } }),
-  },
-
-  tweets: {
-    fetchByUrl: ({ url }: FetchTweetByUrlRequest) =>
-      request<{ tweet: FetchedTweet }>("/api/tweets/fetch", {
-        method: "POST",
-        body: { url },
-      }),
   },
 
   images: {
@@ -275,6 +263,14 @@ export interface VoiceProfile {
   formality: number;
   brevity: number;
   contrarianTone: number;
+  directness?: number;
+  warmth?: number;
+  technicalDepth?: number;
+  confidence?: number;
+  evidenceOrientation?: number;
+  solutionOrientation?: number;
+  socialPosture?: number;
+  selfPromotionalIntensity?: number;
   maturity: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
   tweetsAnalyzed: number;
 }
@@ -318,15 +314,6 @@ export interface TweetDraft {
   blendId?: string;
   feedback?: string;
   createdAt: string;
-}
-
-export interface FetchedTweet {
-  id: string;
-  text: string;
-  url: string;
-  authorHandle?: string;
-  authorName?: string;
-  createdAt?: string;
 }
 
 export interface TeamDraft extends TweetDraft {

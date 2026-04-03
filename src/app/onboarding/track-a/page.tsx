@@ -232,7 +232,16 @@ export default function TrackAPage() {
           <h2 className="font-heading text-xl text-atlas-text mb-4">
             This is what I think your writing voice is.
           </h2>
-          <VoiceDimensionSections values={dimensions} />
+          <VoiceDimensionSections
+            values={dimensions}
+            interactive
+            onChange={(field, value) =>
+              setDimensions((current) => ({
+                ...current,
+                [field]: value,
+              }))
+            }
+          />
           <p className="text-atlas-text-secondary text-sm italic mt-4">
             Rate the examples below to help me dial it in. Thumbs up = more like
             me, thumbs down = less. Every bar uses the same editable 0-10 scale

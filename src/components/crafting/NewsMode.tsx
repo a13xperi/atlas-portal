@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { Link2, Loader2 } from "lucide-react";
+import { FormEvent, useState } from "react";
+import { Loader2 } from "lucide-react";
 import GradientButton from "@/components/ui/GradientButton";
 
-interface NewsModeProps {
-  creating: boolean;
-  error: string | null;
-  onDismissError: () => void;
+export interface NewsModeProps {
+  creating?: boolean;
+  error?: string | null;
+  onDismissError?: () => void;
   onGenerateNews: (
     articleUrl: string,
     fallbackText?: string
@@ -15,7 +15,7 @@ interface NewsModeProps {
 }
 
 export default function NewsMode({
-  creating,
+  creating = false,
   error,
   onDismissError,
   onGenerateNews,
@@ -23,82 +23,99 @@ export default function NewsMode({
   const [articleUrl, setArticleUrl] = useState("");
   const [fallbackText, setFallbackText] = useState("");
   const [showFallback, setShowFallback] = useState(false);
-  const [urlError, setUrlError] = useState("");
 
-  const handleGenerate = async () => {
-    const trimmedUrl = articleUrl.trim();
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
 
-    if (!trimmedUrl) {
-      setUrlError("Paste an article URL to continue.");
-      return;
-    }
+    const result = await onGenerateNews(
+      articleUrl,
+      showFallback ? fallbackText : ""
+    );
 
-    setUrlError("");
-    const result = await onGenerateNews(trimmedUrl, fallbackText.trim());
-
-    if (result?.showFallback) {
-      setShowFallback(true);
-    }
+    setShowFallback(Boolean(result?.showFallback));
   };
 
   return (
-    <div className="mt-6 space-y-4">
-      <div className="bg-glass backdrop-blur-xl border border-glass-border rounded-2xl p-5 sm:p-6">
-        <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
-          Paste an article URL and Atlas will turn it into an X post in your voice.
+    <form
+      className="mt-6 space-y-4 rounded-2xl border border-glass-border bg-glass p-5 backdrop-blur-xl"
+      onSubmit={handleSubmit}
+    >
+      <div>
+        <label
+          htmlFor="news-article-url"
+          className="text-xs uppercase tracking-wide text-atlas-text-secondary"
+        >
+          Paste an article URL
         </label>
-        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <Link2 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-atlas-text-muted" />
-            <input
-              type="url"
-              value={articleUrl}
-              onChange={(event) => setArticleUrl(event.currentTarget.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  void handleGenerate();
-                }
-              }}
-              aria-label="Article URL input"
-              placeholder="https://example.com/article"
-              className="w-full rounded-lg border border-glass-border bg-atlas-surface py-3 pl-11 pr-4 text-sm text-atlas-text placeholder-atlas-text-secondary focus:outline-none focus:border-atlas-teal"
-            />
-          </div>
-          <GradientButton onClick={() => void handleGenerate()} disabled={creating}>
-            <span className="inline-flex items-center gap-2">
-              {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {creating ? "Generating…" : "Generate Post"}
-            </span>
-          </GradientButton>
-        </div>
-        {urlError ? (
-          <p className="mt-2 text-sm text-atlas-error">{urlError}</p>
-        ) : null}
-        {showFallback ? (
-          <textarea
-            value={fallbackText}
-            onChange={(event) => setFallbackText(event.currentTarget.value)}
-            rows={6}
-            aria-label="Article text fallback"
-            placeholder="Paste the article text or key points"
-            className="mt-3 w-full rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:outline-none focus:border-atlas-teal"
-          />
-        ) : null}
+        <input
+          id="news-article-url"
+          type="url"
+          value={articleUrl}
+          onChange={(event) => setArticleUrl(event.target.value)}
+          placeholder="Paste an article URL…"
+          aria-label="Article URL input"
+          className="mt-3 w-full rounded-lg border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
+        />
       </div>
 
+      {showFallback ? (
+        <div>
+          <label
+            htmlFor="news-fallback-text"
+            className="text-xs uppercase tracking-wide text-atlas-text-secondary"
+          >
+            Article text or key points
+          </label>
+          <textarea
+            id="news-fallback-text"
+            value={fallbackText}
+            onChange={(event) => setFallbackText(event.target.value)}
+            placeholder="Paste the article text or key points"
+            aria-label="Article text fallback"
+            rows={5}
+            className="mt-3 w-full rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
+          />
+          <p className="mt-2 text-xs text-atlas-text-muted">
+            Atlas will use this fallback text if the article URL cannot be fetched.
+          </p>
+        </div>
+      ) : null}
+
       {error ? (
-        <div className="flex items-center justify-between rounded-xl border border-atlas-error/30 bg-atlas-error/10 px-4 py-3 text-sm text-atlas-error">
+        <div className="flex items-center justify-between rounded-lg border border-atlas-error/30 bg-atlas-error/10 px-3 py-2 text-sm text-atlas-error">
           <span>{error}</span>
           <button
             type="button"
             onClick={onDismissError}
-            className="ml-3 text-atlas-error transition-colors hover:text-atlas-text"
+            aria-label="Dismiss error"
+            className="ml-2 transition-colors hover:text-atlas-text"
           >
             x
           </button>
         </div>
       ) : null}
-    </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <GradientButton disabled={creating} type="submit">
+          {creating ? (
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Generating Post...
+            </span>
+          ) : (
+            "Generate Post"
+          )}
+        </GradientButton>
+        {!showFallback ? (
+          <button
+            type="button"
+            onClick={() => setShowFallback(true)}
+            className="text-sm text-atlas-text-secondary transition-colors hover:text-atlas-teal"
+          >
+            Paste text instead
+          </button>
+        ) : null}
+      </div>
+    </form>
   );
 }
