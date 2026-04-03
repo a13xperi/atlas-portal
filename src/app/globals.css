@@ -91,19 +91,3 @@
   scrollbar-width: thin;
   scrollbar-color: #2d3748 #1a1a2e;
 }
-
-/* Global loading bar */
-.nprogress-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 2px;
-  background: linear-gradient(
-    to right,
-    theme("colors.atlas-teal"),
-    theme("colors.atlas-steel")
-  );
-  z-index: 9999;
-  pointer-events: none;
-  transition: width 0.3s ease, opacity 0.2s ease;
-}
