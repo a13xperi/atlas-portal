@@ -114,6 +114,12 @@ describe("VoiceProfilesPage", () => {
     fireEvent.click(useButton);
 
     expect(await screen.findByText("Active")).toBeInTheDocument();
+    expect(screen.getByText("Active Blend")).toBeInTheDocument();
+    expect(screen.getAllByText(/60%\s*Personal/).length).toBeGreaterThan(0);
+    expect(screen.getByText("40% Hasu")).toBeInTheDocument();
+    expect(
+      screen.getByText("Drafts will use this blend's voice mix")
+    ).toBeInTheDocument();
     expect(localStorage.getItem("atlas_active_blend")).toBe("blend-1");
 
     fireEvent.click(screen.getByText("Active"));

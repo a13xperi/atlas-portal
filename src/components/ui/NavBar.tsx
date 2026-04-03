@@ -1,7 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Bell, Menu, X } from "lucide-react";
+import {
+  Search,
+  Bell,
+  Menu,
+  X,
+  LayoutDashboard,
+  PenTool,
+  Mic2,
+  BarChart3,
+  Zap,
+  BookOpen,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import NotificationDropdown from "@/components/ui/NotificationDropdown";
@@ -14,13 +26,13 @@ export interface NavBarProps {
 }
 
 const navLinks = [
-  { label: "Dashboard", href: "/dashboard" },
-  { label: "Crafting", href: "/crafting" },
-  { label: "Voice", href: "/voice-profiles" },
-  { label: "Analytics", href: "/analytics" },
-  { label: "Signals", href: "/alerts" },
-  { label: "Library", href: "/team-library" },
-  { label: "Team", href: "/management" },
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Crafting", href: "/crafting", icon: PenTool },
+  { label: "Voice", href: "/voice-profiles", icon: Mic2 },
+  { label: "Analytics", href: "/analytics", icon: BarChart3 },
+  { label: "Signals", href: "/alerts", icon: Zap },
+  { label: "Library", href: "/team-library", icon: BookOpen },
+  { label: "Team", href: "/management", icon: Users },
 ];
 
 function DelphiLogo() {
@@ -208,21 +220,26 @@ export default function NavBar({ variant }: NavBarProps) {
             }`}
           >
             <div className="flex flex-col gap-1">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileOpen(false)}
-                  aria-current={pathname === link.href ? "page" : undefined}
-                  className={`block rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                    pathname === link.href
-                      ? "bg-atlas-surface font-medium text-atlas-text"
-                      : "text-atlas-text-secondary hover:bg-atlas-surface hover:text-atlas-text"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {navLinks.map((link) => {
+                const Icon = link.icon;
+
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    aria-current={pathname === link.href ? "page" : undefined}
+                    className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                      pathname === link.href
+                        ? "bg-atlas-surface font-medium text-atlas-text"
+                        : "text-atlas-text-secondary hover:bg-atlas-surface hover:text-atlas-text"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {link.label}
+                  </Link>
+                );
+              })}
             </div>
             <button
               type="button"

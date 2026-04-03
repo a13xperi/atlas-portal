@@ -186,6 +186,23 @@ export default function VoiceProfilesPage() {
     });
   };
 
+  const getBlendedDimensions = () => {
+    if (!activeBlendId || !profile) {
+      return null;
+    }
+
+    const blend = blends.find((item) => item.id === activeBlendId);
+
+    if (!blend) {
+      return null;
+    }
+
+    return blend.voices.map((voice) => ({
+      label: voice.label,
+      percentage: voice.percentage,
+    }));
+  };
+
   const displayBlends = blends.map((blend) => ({
     id: blend.id,
     name: blend.name,
@@ -193,6 +210,7 @@ export default function VoiceProfilesPage() {
     isTemplate:
       (blend as SavedBlend & { isTemplate?: boolean }).isTemplate === true,
   }));
+  const blendedDimensions = getBlendedDimensions();
 
   return (
     <AppShell>
@@ -281,6 +299,29 @@ export default function VoiceProfilesPage() {
         </div>
 
         <div className="mt-6">
+          {activeBlendId && blendedDimensions ? (
+            <div className="mb-4 rounded-xl border border-atlas-teal/30 bg-atlas-teal/5 p-3">
+              <p className="mb-2 text-xs font-medium text-atlas-teal">
+                Active Blend
+              </p>
+              <div className="flex items-center gap-2">
+                {blendedDimensions.map((voice, index) => (
+                  <span
+                    key={`${voice.label}-${voice.percentage}`}
+                    className="text-xs text-atlas-text"
+                  >
+                    {voice.percentage}% {voice.label}
+                    {index < blendedDimensions.length - 1 ? (
+                      <span className="mx-1 text-atlas-text-muted">+</span>
+                    ) : null}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-1 text-[10px] text-atlas-text-muted">
+                Drafts will use this blend&apos;s voice mix
+              </p>
+            </div>
+          ) : null}
           <VoiceDimensionSections
             values={draftDimensions}
             interactive

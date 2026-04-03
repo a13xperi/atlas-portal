@@ -116,6 +116,61 @@ describe("AlertsPage", () => {
     );
   });
 
+  it("conducts inline research for an alert without leaving the feed", async () => {
+    (global.fetch as jest.Mock).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.includes("/api/alerts/subscriptions")) {
+        return createMockResponse({ subscriptions: [] });
+      }
+
+      if (url.includes("/api/alerts/feed?category=SIGNAL")) {
+        return createMockResponse({
+          alerts: [
+            {
+              id: "alert-1",
+              type: "WHALE_ACTIVITY",
+              title: "Whale moved a large ETH position",
+              context: "Exchange-bound flows ticked higher over the last 15 minutes.",
+              createdAt: "2026-04-03T10:00:00.000Z",
+            },
+          ],
+        });
+      }
+
+      if (url.includes("/api/research")) {
+        return createMockResponse({
+          result: {
+            id: "research-1",
+            query: "Whale moved a large ETH position",
+            summary: "Large holders are rotating ETH to exchanges, which can precede near-term selling pressure.",
+          },
+        });
+      }
+
+      return createMockResponse({});
+    });
+
+    render(<AlertsPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Research" }));
+
+    expect(await screen.findByText("Research Summary")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Large holders are rotating ETH to exchanges, which can precede near-term selling pressure."
+      )
+    ).toBeInTheDocument();
+
+    await waitFor(() =>
+      expect(
+        (global.fetch as jest.Mock).mock.calls.some(([url]) =>
+          String(url).includes("/api/research")
+        )
+      ).toBe(true)
+    );
+  });
+
   it("requests the signal-only feed", async () => {
     render(<AlertsPage />);
 

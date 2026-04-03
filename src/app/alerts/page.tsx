@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Settings } from "lucide-react";
+import { Loader2, Search, Settings } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import InlineDraftCard from "@/components/alerts/InlineDraftCard";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -29,6 +29,10 @@ export default function AlertsPage() {
   const [showSubscriptions, setShowSubscriptions] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [researchingId, setResearchingId] = useState<string | null>(null);
+  const [researchResult, setResearchResult] = useState<Record<string, string>>(
+    {}
+  );
 
   useEffect(() => {
     let isActive = true;
@@ -199,6 +203,48 @@ export default function AlertsPage() {
                   <p className="mt-4 max-w-3xl text-sm leading-6 text-atlas-text-secondary">
                     {alert.context}
                   </p>
+                )}
+
+                <div className="mt-5 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setResearchingId(alert.id);
+
+                      try {
+                        const res = await api.research.conduct(alert.title);
+                        setResearchResult((prev) => ({
+                          ...prev,
+                          [alert.id]: res.result.summary,
+                        }));
+                      } catch {
+                        setResearchResult((prev) => ({
+                          ...prev,
+                          [alert.id]: "Research failed. Try again.",
+                        }));
+                      }
+
+                      setResearchingId(null);
+                    }}
+                    disabled={researchingId === alert.id}
+                    className="flex items-center gap-1 text-xs text-atlas-text-secondary transition-colors hover:text-atlas-teal disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {researchingId === alert.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Search className="h-3 w-3" />
+                    )}
+                    Research
+                  </button>
+                </div>
+
+                {researchResult[alert.id] && (
+                  <div className="mt-2 rounded-lg bg-atlas-bg p-3 text-xs text-atlas-text-secondary">
+                    <p className="mb-1 text-[10px] font-medium text-atlas-teal">
+                      Research Summary
+                    </p>
+                    {researchResult[alert.id]}
+                  </div>
                 )}
 
                 <InlineDraftCard alert={alert} />
