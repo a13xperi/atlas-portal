@@ -176,6 +176,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
 
       {isOpen && (
         <div
+          id="command-palette"
           className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4"
           role="dialog"
           aria-modal="true"
@@ -191,7 +192,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
           <div className="relative w-full max-w-lg bg-atlas-nav border border-glass-border rounded-2xl shadow-2xl overflow-hidden">
             {/* Search input */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-glass-border">
-              <Search className="w-4 h-4 text-atlas-text-muted shrink-0" />
+              <Search className="w-4 h-4 text-atlas-text-muted shrink-0" aria-hidden="true" />
               <input
                 ref={inputRef}
                 type="text"
@@ -207,7 +208,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
             </div>
 
             {/* Results */}
-            <div className="max-h-80 overflow-y-auto py-2" role="listbox">
+            <div className="max-h-80 overflow-y-auto py-2" aria-label="Commands">
               {sections.map((section) => (
                 <div key={section.heading ?? "default"}>
                   {section.heading && (
@@ -219,26 +220,31 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
                     const idx = flatIndex++;
                     const isActive = idx === activeIndex;
                     return (
-                      <button
+                      <div
                         key={cmd.id}
-                        type="button"
-                        role="option"
-                        aria-selected={isActive}
-                        onClick={cmd.action}
-                        onMouseEnter={() => setActiveIndex(idx)}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors group ${
+                        className={`group flex items-center gap-2 px-2 ${
                           isActive ? "bg-atlas-teal/10" : "hover:bg-white/5"
                         }`}
+                        onMouseEnter={() => setActiveIndex(idx)}
                       >
-                        <cmd.icon className={`w-4 h-4 shrink-0 ${isActive ? "text-atlas-teal" : "text-atlas-text-muted"}`} />
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm truncate ${isActive ? "text-atlas-text" : "text-atlas-text-secondary"}`}>
-                            {cmd.label}
-                          </p>
-                          {cmd.description && (
-                            <p className="text-xs text-atlas-text-muted truncate">{cmd.description}</p>
-                          )}
-                        </div>
+                        <button
+                          type="button"
+                          onClick={cmd.action}
+                          className="flex flex-1 items-center gap-3 px-2 py-2.5 text-left transition-colors"
+                        >
+                          <cmd.icon
+                            aria-hidden="true"
+                            className={`w-4 h-4 shrink-0 ${isActive ? "text-atlas-teal" : "text-atlas-text-muted"}`}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm truncate ${isActive ? "text-atlas-text" : "text-atlas-text-secondary"}`}>
+                              {cmd.label}
+                            </p>
+                            {cmd.description && (
+                              <p className="text-xs text-atlas-text-muted truncate">{cmd.description}</p>
+                            )}
+                          </div>
+                        </button>
                         <button
                           type="button"
                           onClick={(e) => toggleFavorite(cmd.id, e)}
@@ -246,11 +252,11 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
                           className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-white/10"
                         >
                           {favorites.has(cmd.id)
-                            ? <Star className="w-3.5 h-3.5 text-atlas-warning fill-atlas-warning" />
-                            : <StarOff className="w-3.5 h-3.5 text-atlas-text-muted" />
+                            ? <Star className="w-3.5 h-3.5 text-atlas-warning fill-atlas-warning" aria-hidden="true" />
+                            : <StarOff className="w-3.5 h-3.5 text-atlas-text-muted" aria-hidden="true" />
                           }
                         </button>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -268,7 +274,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
               <span><kbd className="font-mono">↑↓</kbd> navigate</span>
               <span><kbd className="font-mono">↵</kbd> open</span>
               <span><kbd className="font-mono">⌘K</kbd> toggle</span>
-              <span className="ml-auto"><Star className="w-3 h-3 inline mr-0.5 fill-atlas-warning text-atlas-warning" /> pin favorite</span>
+              <span className="ml-auto"><Star className="w-3 h-3 inline mr-0.5 fill-atlas-warning text-atlas-warning" aria-hidden="true" /> pin favorite</span>
             </div>
           </div>
         </div>

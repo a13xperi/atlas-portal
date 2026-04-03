@@ -62,7 +62,6 @@ export default function NewsMode({
             onArticleUrlChange?.(nextArticleUrl);
           }}
           placeholder="Paste an article URL…"
-          aria-label="Article URL input"
           className="mt-3 w-full rounded-lg border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
         />
       </div>
@@ -82,7 +81,6 @@ export default function NewsMode({
             value={fallbackText}
             onChange={(event) => setFallbackText(event.target.value)}
             placeholder="Paste the article text or key points"
-            aria-label="Article text fallback"
             rows={5}
             className="mt-3 w-full rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
           />

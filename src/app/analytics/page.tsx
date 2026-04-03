@@ -113,6 +113,18 @@ export default function AnalyticsPage() {
     && activityDays.length === 0
     && logEntries.length === 0
     && topDrafts.length === 0;
+  const latestActivityCount =
+    activityDays.length > 0 ? activityDays[activityDays.length - 1]?.count ?? 0 : 0;
+  const activitySparklineSummary =
+    activityDays.length > 0
+      ? `Activity over ${activityDays.length} days. Peak day had ${activityMax} actions and the latest day had ${latestActivityCount}.`
+      : "No activity data yet. Activity data will appear as you create drafts.";
+  const recentLogEntries = logEntries.slice(-20);
+  const positiveSignalCount = logEntries.filter((entry) => entry.positive).length;
+  const confidenceTrendSummary =
+    recentLogEntries.length > 0
+      ? `Confidence trend across ${recentLogEntries.length} recent learning events. ${positiveSignalCount} positive signals detected so far.`
+      : "No confidence data yet. Confidence data builds as you create and refine drafts.";
 
   if (hasNoAnalyticsData) {
     return (
@@ -127,9 +139,13 @@ export default function AnalyticsPage() {
 
   return (
     <AppShell>
-      <div id="analytics-content">
+      <div id="analytics-content" aria-busy={loading}>
         {error && (
-          <div role="alert" className="mb-6 px-4 py-3 bg-atlas-error/10 border border-atlas-error/30 rounded-xl text-atlas-error text-sm">
+          <div
+            role="alert"
+            aria-live="polite"
+            className="mb-6 px-4 py-3 bg-atlas-error/10 border border-atlas-error/30 rounded-xl text-atlas-error text-sm"
+          >
             {error}
           </div>
         )}
@@ -169,10 +185,15 @@ export default function AnalyticsPage() {
           {activityDays.length > 0 ? (() => {
             const sparkData = activityDays ?? [];
             return (
-              <div className="mt-6 h-8 flex items-end gap-1">
+              <div
+                role="img"
+                aria-label={activitySparklineSummary}
+                className="mt-6 h-8 flex items-end gap-1"
+              >
                 {sparkData.map((d, i) => (
                   <div
                     key={i}
+                    aria-hidden="true"
                     className={`flex-1 rounded-sm ${d.count > 0 ? "bg-atlas-teal/40" : ""}`}
                     style={{ height: d.count > 0 && activityMax > 0 ? `${(d.count / activityMax) * 100}%` : "0px" }}
                   />
@@ -210,13 +231,18 @@ export default function AnalyticsPage() {
             <h3 className="font-heading text-lg text-atlas-text">
               Model Reliability
             </h3>
-            <div className="mt-4 h-20 flex items-end gap-0.5">
+            <div
+              role="img"
+              aria-label={confidenceTrendSummary}
+              className="mt-4 h-20 flex items-end gap-0.5"
+            >
               {(logEntries ?? []).length > 0 ? (logEntries ?? []).slice(-20).map(
                 (entry, i) => {
                   const score = entry.positive ? 70 + (i * 1.5) : 30 + (i * 1.5);
                   return (
                     <div
                       key={i}
+                      aria-hidden="true"
                       className={`flex-1 rounded-t ${entry.positive ? "bg-atlas-teal" : "bg-atlas-warning"}`}
                       style={{ height: `${Math.min(score, 100)}%`, minHeight: "32px" }}
                     />
@@ -331,8 +357,16 @@ export default function AnalyticsPage() {
             return (
               <>
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 relative h-3 bg-atlas-surface rounded-full overflow-hidden">
+                  <div
+                    className="flex-1 relative h-3 bg-atlas-surface rounded-full overflow-hidden"
+                    role="progressbar"
+                    aria-label="Growth velocity progress"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={progressPct}
+                  >
                     <div
+                      aria-hidden="true"
                       className="h-full bg-atlas-teal rounded-full transition-all duration-500"
                       style={{ width: `${progressPct}%` }}
                     />
