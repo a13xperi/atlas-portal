@@ -384,6 +384,10 @@ export interface Alert {
   title: string;
   context?: string;
   draftReply?: string;
+  category?: "SIGNAL" | "NOTIFICATION";
+  sourceUrl?: string;
+  sentiment?: string;
+  relevance?: number;
   createdAt: string;
 }
 
