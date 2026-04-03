@@ -138,6 +138,39 @@ describe("CraftingPage", () => {
     expect(mockedApi.drafts.generate).not.toHaveBeenCalled();
   });
 
+  it("renders drafts in the sidebar and switches the active draft when one is selected", async () => {
+    const firstDraft = createDraft({
+      id: "draft-1",
+      content: "First draft copy focuses on Bitcoin reclaiming resistance cleanly.",
+    });
+    const secondDraft = createDraft({
+      id: "draft-2",
+      content: "Second draft copy frames ETH strength as the cleaner momentum trade.",
+      createdAt: "2026-04-03T10:05:00.000Z",
+    });
+
+    mockedApi.drafts.list.mockResolvedValue({ drafts: [firstDraft, secondDraft] });
+
+    render(<CraftingPage />);
+
+    const generatedDraft = await screen.findByRole("textbox", {
+      name: "Generated draft",
+    });
+
+    expect(generatedDraft).toHaveValue(firstDraft.content);
+    expect(
+      screen.queryByText("No drafts yet. Generate your first tweet above.")
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /Second draft copy frames ETH strength as the cleaner momentum trade/i,
+      })
+    );
+
+    await waitFor(() => expect(generatedDraft).toHaveValue(secondDraft.content));
+  });
+
   it("generates a news draft with the source URL appended and keeps it during refinement", async () => {
     const articleUrl = "https://example.com/articles/eth-etf";
     const initialDraftText = "ETH ETF flows are accelerating again.";
