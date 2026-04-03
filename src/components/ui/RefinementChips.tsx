@@ -53,6 +53,11 @@ export default function RefinementChips({
       {chips.map((chip) => {
         const isLoading = loading === chip.label;
         const isDisabled = disabled || !!loading;
+        const chipClasses = isLoading
+          ? "border-atlas-teal bg-atlas-teal/10 text-atlas-teal cursor-wait"
+          : isDisabled
+            ? "border-glass-border text-atlas-text-secondary opacity-50 cursor-not-allowed"
+            : "border-glass-border text-atlas-text-secondary hover:bg-atlas-teal/10 hover:text-atlas-teal hover:border-atlas-teal";
 
         return (
           <button
@@ -60,11 +65,8 @@ export default function RefinementChips({
             type="button"
             onClick={() => onRefine(chip)}
             disabled={isDisabled}
-            className={`rounded-full border border-glass-border px-3 py-1.5 text-xs text-atlas-text-secondary transition-colors ${
-              isDisabled
-                ? "opacity-50 cursor-not-allowed"
-                : "hover:bg-atlas-teal/10 hover:text-atlas-teal hover:border-atlas-teal"
-            }`}
+            aria-pressed={isLoading}
+            className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${chipClasses}`}
           >
             {isLoading ? (
               <>
