@@ -264,6 +264,7 @@ export default function DashboardPage() {
             <Link
               href={stat.href}
               className="bg-atlas-surface border border-glass-border rounded-2xl p-6 card-interactive group block"
+              aria-label={`${stat.label}: ${stat.value}`}
             >
               <span className="text-atlas-text-secondary text-sm group-hover:text-atlas-teal transition-colors">
                 {stat.label}
