@@ -30,9 +30,9 @@ export default function DimensionBar({
         </span>
       </div>
       <div className="relative flex h-5 items-center">
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-atlas-text-secondary/20" />
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-atlas-text-secondary/30" />
         <div
-          className="pointer-events-none absolute left-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-gradient-to-r from-atlas-teal via-atlas-teal/80 to-atlas-teal/60 transition-all duration-300"
+          className="pointer-events-none absolute left-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-gradient-to-r from-atlas-teal to-atlas-teal transition-all duration-300"
           style={{ width: `${clampedPercentage}%` }}
         />
         {interactive ? (
@@ -75,8 +75,10 @@ export default function DimensionBar({
               hover:[&::-webkit-slider-thumb]:mt-[-8px]
               hover:[&::-webkit-slider-thumb]:h-5
               hover:[&::-webkit-slider-thumb]:w-5
+              hover:[&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(78,205,196,0.5)]
               hover:[&::-moz-range-thumb]:h-5
-              hover:[&::-moz-range-thumb]:w-5"
+              hover:[&::-moz-range-thumb]:w-5
+              hover:[&::-moz-range-thumb]:shadow-[0_0_8px_rgba(78,205,196,0.5)]"
           />
         ) : (
           <div
