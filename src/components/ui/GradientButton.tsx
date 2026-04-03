@@ -1,13 +1,16 @@
 "use client";
 
+import { Children, isValidElement, type ReactNode } from "react";
+
 export interface GradientButtonProps {
-  children: React.ReactNode;
+  children: ReactNode;
   onClick?: () => void;
   fullWidth?: boolean;
   variant?: "primary" | "outline-success" | "outline-warning" | "outline-teal";
   type?: "button" | "submit";
   size?: "default" | "lg";
   disabled?: boolean;
+  "aria-label"?: string;
 }
 
 const variantClasses: Record<
@@ -23,6 +26,24 @@ const variantClasses: Record<
     "bg-transparent border border-atlas-teal text-atlas-teal hover:bg-atlas-teal/10 rounded-lg font-semibold transition-all duration-200",
 };
 
+function getAccessibleText(children: ReactNode): string {
+  return Children.toArray(children)
+    .map((child) => {
+      if (typeof child === "string" || typeof child === "number") {
+        return String(child);
+      }
+
+      if (isValidElement<{ children?: ReactNode }>(child)) {
+        return getAccessibleText(child.props.children);
+      }
+
+      return "";
+    })
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export default function GradientButton({
   children,
   onClick,
@@ -31,14 +52,18 @@ export default function GradientButton({
   type = "button",
   size = "default",
   disabled = false,
+  "aria-label": ariaLabel,
 }: GradientButtonProps) {
   const sizeClasses = size === "lg" ? "px-6 py-4 text-lg font-bold" : "px-6 py-3 text-sm";
+  const accessibleLabel = ariaLabel ?? (getAccessibleText(children) || undefined);
 
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
+      aria-label={accessibleLabel}
+      aria-disabled={disabled || undefined}
       className={`${variantClasses[variant]} ${sizeClasses} cursor-pointer ${
         fullWidth ? "w-full" : ""
       } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}

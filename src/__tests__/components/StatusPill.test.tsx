@@ -8,9 +8,12 @@ describe("StatusPill", () => {
     expect(screen.getByText("Posted")).toBeInTheDocument();
   });
 
-  it("renders as a span element", () => {
+  it("renders as a status span element", () => {
     render(<StatusPill label="Draft" variant="draft" />);
-    expect(screen.getByText("Draft").tagName).toBe("SPAN");
+    const pill = screen.getByRole("status");
+
+    expect(pill.tagName).toBe("SPAN");
+    expect(pill).toHaveTextContent("Draft");
   });
 
   it.each([

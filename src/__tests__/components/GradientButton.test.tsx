@@ -31,7 +31,16 @@ describe("GradientButton", () => {
     const button = screen.getByRole("button", { name: "Disabled" });
 
     expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("aria-disabled", "true");
     expect(button).toHaveClass("opacity-50");
     expect(button).toHaveClass("cursor-not-allowed");
+  });
+
+  it("supports an explicit aria-label", () => {
+    render(<GradientButton aria-label="Generate tweet"><span>Go</span></GradientButton>);
+
+    expect(
+      screen.getByRole("button", { name: "Generate tweet" })
+    ).toBeInTheDocument();
   });
 });

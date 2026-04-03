@@ -1,13 +1,17 @@
+import type { ReactNode } from "react";
+
 export interface GlassCardProps {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   maxWidth?: "480px" | "640px" | "720px" | "full";
+  "aria-label"?: string;
 }
 
 export default function GlassCard({
   children,
   className = "",
   maxWidth = "480px",
+  "aria-label": ariaLabel,
 }: GlassCardProps) {
   const widthClass =
     maxWidth === "full" ? "w-full" : "";
@@ -15,6 +19,8 @@ export default function GlassCard({
 
   return (
     <div
+      role="region"
+      aria-label={ariaLabel}
       className={`glass-card px-6 sm:px-[49px] py-8 sm:py-[41px] w-full ${widthClass} ${className}`}
       style={widthStyle}
     >

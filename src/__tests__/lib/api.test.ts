@@ -156,3 +156,34 @@ describe("api.drafts.list", () => {
     );
   });
 });
+
+describe("api.drafts.generate", () => {
+  it("sends the selected reply angle metadata in the request body", async () => {
+    mockFetch({ draft: { id: "draft_1" } });
+
+    await api.drafts.generate({
+      sourceContent: "ETH keeps pushing into key resistance.",
+      sourceType: "MANUAL",
+      blendId: "blend_123",
+      replyAngle: "Curious",
+      angleInstruction:
+        "Write with a curious, questioning tone. Pose thought-provoking questions.",
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/api/drafts/generate`,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          sourceContent: "ETH keeps pushing into key resistance.",
+          sourceType: "MANUAL",
+          blendId: "blend_123",
+          replyAngle: "Curious",
+          angleInstruction:
+            "Write with a curious, questioning tone. Pose thought-provoking questions.",
+        }),
+        credentials: "include",
+      })
+    );
+  });
+});

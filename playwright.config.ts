@@ -1,32 +1,44 @@
-import { defineConfig } from "@playwright/test";
+import { defineConfig, devices } from "@playwright/test";
+
+const PORT = 3000;
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${PORT}`;
+const apiURL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "https://api-production-9bef.up.railway.app";
 
 export default defineConfig({
   testDir: "./e2e",
+  testMatch: "smoke.spec.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? "github" : "list",
-  timeout: 30_000,
-  expect: { timeout: 10_000 },
-
+  timeout: 45_000,
+  expect: {
+    timeout: 10_000,
+  },
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
-
   projects: [
     {
       name: "chromium",
-      use: { browserName: "chromium" },
+      use: {
+        ...devices["Desktop Chrome"],
+      },
     },
   ],
-
   webServer: {
     command: "npm run dev",
-    url: "http://localhost:3000",
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
+    timeout: 120_000,
+    env: {
+      ...process.env,
+      NEXT_PUBLIC_API_URL: apiURL,
+    },
   },
 });

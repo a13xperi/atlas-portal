@@ -22,7 +22,13 @@ describe("DimensionBar", () => {
       />
     );
 
-    fireEvent.change(screen.getByRole("slider"), { target: { value: "72" } });
+    const slider = screen.getByRole("slider", { name: "Formality" });
+
+    expect(slider).toHaveAttribute("aria-valuemin", "0");
+    expect(slider).toHaveAttribute("aria-valuemax", "100");
+    expect(slider).toHaveAttribute("aria-valuenow", "50");
+
+    fireEvent.change(slider, { target: { value: "72" } });
 
     expect(handleChange).toHaveBeenCalledTimes(1);
     expect(handleChange).toHaveBeenCalledWith(72);
