@@ -1,10 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import AppShell from "@/components/layout/AppShell";
 import { Skeleton } from "@/components/ui/Skeleton";
 import Link from "next/link";
 import { api, AnalyticsSummary, LearningLogEntry, TweetDraft, DailyEngagement, DailyActivity } from "@/lib/api";
+
+const EngagementVelocityChart = dynamic(
+  () => import("@/components/analytics/EngagementVelocityChart"),
+  {
+    loading: () => (
+      <div className="h-48 rounded-2xl bg-atlas-surface animate-pulse" />
+    ),
+    ssr: false,
+  }
+);
 
 export default function AnalyticsPage() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
@@ -32,23 +43,6 @@ export default function AnalyticsPage() {
 
   const activityCounts = activityDays.map((day) => day.count);
   const activityMax = activityCounts.length > 0 ? Math.max(...activityCounts) : 0;
-  const engagementValues = engagementDays.flatMap((day) => [day.predicted, day.actual]);
-  const chartMax = engagementValues.length > 0 ? Math.max(...engagementValues) : 0;
-  const totalPredictionError = engagementDays.length === 0
-    ? 0
-    : engagementDays.reduce((sum, day) => {
-        const maxValue = Math.max(day.predicted, day.actual);
-        const normalizedError = maxValue === 0 ? 0 : Math.abs(day.predicted - day.actual) / maxValue;
-
-        return sum + normalizedError;
-      }, 0);
-
-  const accuracyPct = engagementDays.length > 0
-    ? Math.round(
-        (1 - (engagementDays.length === 0 ? 0 : totalPredictionError / engagementDays.length)) *
-          100
-      )
-    : null;
 
   const usageStats = summary
     ? [
@@ -150,71 +144,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* SECTION 3: Engagement Chart (Hero) */}
-      <div className="mb-6 rounded-xl border border-glass-border bg-atlas-surface p-6 sm:p-8">
-        <div className="mb-2 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="font-heading text-xl text-atlas-text">
-            Engagement Velocity
-          </h2>
-          {accuracyPct !== null && (
-            <span className="text-xs text-atlas-success bg-atlas-success/10 px-2 py-1 rounded-full font-medium">
-              {accuracyPct}% Accuracy
-            </span>
-          )}
-        </div>
-        <p className="text-sm text-atlas-text-secondary mb-6">
-          Actual performance against neural prediction models.
-        </p>
-
-        {/* Chart area */}
-        <div className="relative h-48">
-          {/* Y-axis labels */}
-          <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[10px] text-atlas-text-muted pr-2">
-            <span>High</span>
-            <span>Med</span>
-            <span>Low</span>
-          </div>
-          {/* Chart body */}
-          <div className="ml-10 h-full flex items-end gap-0">
-            {engagementDays.length > 0 ? (
-              (engagementDays ?? []).map((day) => (
-                <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full flex items-end justify-center gap-1 h-40">
-                    {day.predicted > 0 && (
-                      <div
-                        className="w-3 bg-atlas-teal/60 rounded-t"
-                        style={{ height: `${(day.predicted / chartMax) * 100}%` }}
-                        title={`Predicted: ${day.predicted}`}
-                      />
-                    )}
-                    {day.actual > 0 && (
-                      <div
-                        className="w-3 bg-atlas-success rounded-t"
-                        style={{ height: `${(day.actual / chartMax) * 100}%` }}
-                        title={`Actual: ${day.actual}`}
-                      />
-                    )}
-                  </div>
-                  <span className="text-[10px] text-atlas-text-muted">{day.dayLabel}</span>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-atlas-text-muted italic ml-2">No engagement data yet. Create and post drafts to see predictions vs actuals.</p>
-            )}
-          </div>
-        </div>
-
-        {/* Legend */}
-        <div className="mt-4 flex flex-wrap gap-4 sm:gap-6">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-sm bg-atlas-teal/60" />
-            <span className="text-xs text-atlas-text-secondary">Predicted</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-sm bg-atlas-success" />
-            <span className="text-xs text-atlas-text-secondary">Actual</span>
-          </div>
-        </div>
-      </div>
+      <EngagementVelocityChart engagementDays={engagementDays} />
 
       {/* SECTION 4: Confidence Trend + Model Reliability */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">

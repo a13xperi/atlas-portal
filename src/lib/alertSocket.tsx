@@ -14,7 +14,7 @@ interface Alert {
 
 interface AlertSocketState {
   connected: boolean;
-  unreadCount: number;
+  unreadNotifications: number;
   latestAlert: Alert | null;
   clearUnread: () => void;
   onNewAlert: (cb: (alert: Alert) => void) => () => void;
@@ -22,7 +22,7 @@ interface AlertSocketState {
 
 const AlertSocketContext = createContext<AlertSocketState>({
   connected: false,
-  unreadCount: 0,
+  unreadNotifications: 0,
   latestAlert: null,
   clearUnread: () => {},
   onNewAlert: () => () => {},
@@ -35,7 +35,7 @@ export function AlertSocketProvider({ children }: { children: React.ReactNode })
   const socketRef = useRef<Socket | null>(null);
   const listenersRef = useRef<Set<(alert: Alert) => void>>(new Set());
   const [connected, setConnected] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [latestAlert, setLatestAlert] = useState<Alert | null>(null);
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export function AlertSocketProvider({ children }: { children: React.ReactNode })
 
     socket.on("new-alert", (alert: Alert) => {
       setLatestAlert(alert);
-      setUnreadCount((c) => c + 1);
+      setUnreadNotifications((count) => count + 1);
       listenersRef.current.forEach((cb) => cb(alert));
     });
 
@@ -72,7 +72,7 @@ export function AlertSocketProvider({ children }: { children: React.ReactNode })
     };
   }, [user]);
 
-  const clearUnread = useCallback(() => setUnreadCount(0), []);
+  const clearUnread = useCallback(() => setUnreadNotifications(0), []);
 
   const onNewAlert = useCallback((cb: (alert: Alert) => void) => {
     listenersRef.current.add(cb);
@@ -80,7 +80,7 @@ export function AlertSocketProvider({ children }: { children: React.ReactNode })
   }, []);
 
   return (
-    <AlertSocketContext.Provider value={{ connected, unreadCount, latestAlert, clearUnread, onNewAlert }}>
+    <AlertSocketContext.Provider value={{ connected, unreadNotifications, latestAlert, clearUnread, onNewAlert }}>
       {children}
     </AlertSocketContext.Provider>
   );

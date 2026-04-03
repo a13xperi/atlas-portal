@@ -198,8 +198,12 @@ export const api = {
   },
 
   alerts: {
-    feed: () =>
-      request<{ alerts: Alert[] }>("/api/alerts/feed"),
+    feed: (category?: "SIGNAL" | "NOTIFICATION") =>
+      request<{ alerts: Alert[] }>(`/api/alerts/feed${category ? `?category=${category}` : ""}`),
+    notifications: () =>
+      request<{ alerts: Alert[] }>("/api/alerts/feed?category=NOTIFICATION"),
+    dismiss: (id: string) =>
+      request<{ alert: Alert }>(`/api/alerts/${id}`, { method: "PATCH", body: { dismissed: true } }),
     subscriptions: () =>
       request<{ subscriptions: AlertSubscription[] }>("/api/alerts/subscriptions"),
     subscribe: (type: string, value: string, delivery?: string[]) =>
