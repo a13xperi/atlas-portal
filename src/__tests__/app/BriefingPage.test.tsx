@@ -94,6 +94,8 @@ describe("BriefingPage", () => {
       sources: ["Delphi Research", "X/Twitter"],
       channel: "Portal + Email",
     });
-    expect(await screen.findByText("Preferences saved.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Preferences saved locally for this session.")
+    ).toBeInTheDocument();
   });
 });

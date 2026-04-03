@@ -210,7 +210,7 @@ describe("api.briefing.updatePreferences", () => {
     expect(fetch).toHaveBeenCalledWith(
       `${API_URL}/api/briefing/preferences`,
       expect.objectContaining({
-        method: "PUT",
+        method: "PATCH",
         body: JSON.stringify({
           deliveryTime: "08:00",
           topics: ["Macro"],

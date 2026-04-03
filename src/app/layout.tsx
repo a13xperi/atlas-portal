@@ -28,7 +28,6 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
-  themeColor: colors.atlasBg,
 };
 
 export const viewport: Viewport = {
