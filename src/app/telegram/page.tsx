@@ -1,204 +1,82 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
-import GradientButton from "@/components/ui/GradientButton";
-import { Check } from "lucide-react";
+import {
+  ExternalLink,
+  MessageCircle,
+  Search,
+  Send,
+} from "lucide-react";
 
-const capabilities = [
-  "Send me a report to condense into a tweet",
-  "Drop a tweet or creator link to clone a voice",
-  "Add a voice to your style library",
-  "Get real-time alerts when big accounts post",
-  "Review and approve draft tweets on the go",
-  "Send feedback — text or voice note — anytime",
-  "Share styles with your team instantly",
-  "Manage alert subscriptions on the fly",
-];
-
-const chatSnippets = [
-  { from: "user", text: "/subscribe @VitalikButerin" },
-  { from: "atlas", text: "Done — you'll get alerts when Vitalik posts. Synced to your Portal too." },
-  { from: "user", text: "/alerts pause 2h" },
-];
-
-const telegramFor = [
-  "Quick content drops on the go",
-  "Voice note feedback",
-  "Alert triage and fast replies",
-  "Approving drafts from your phone",
-  "Subscribing to new accounts",
-];
-
-const portalFor = [
-  "Deep voice profile editing",
-  "Blend creation and fine-tuning",
-  "Analytics and engagement data",
-  "Team style library browsing",
-  "Management dashboards",
-];
+const setupSteps = [
+  {
+    number: "1",
+    title: "Open Telegram",
+    description: "Download or open the Telegram app on your device",
+    Icon: ExternalLink,
+  },
+  {
+    number: "2",
+    title: "Find Our Bot",
+    description: "Search for @AtlasDelphiBot in Telegram",
+    Icon: Search,
+  },
+  {
+    number: "3",
+    title: "Start the Connection",
+    description: "Send /start to link your Atlas account",
+    Icon: Send,
+  },
+] as const;
 
 export default function TelegramPage() {
-  const router = useRouter();
-
   return (
     <AppShell>
-      <h1 className="font-heading text-2xl text-atlas-text">
-        Connect Atlas on Telegram — One Bot, Everything.
-      </h1>
+      <div className="mx-auto flex max-w-2xl flex-col px-4 py-10 font-body sm:px-6">
+        <span className="mb-6 inline-block rounded-full bg-atlas-teal/20 px-4 py-1.5 text-sm font-medium text-atlas-teal">
+          Coming Soon
+        </span>
 
-      {/* Setup Steps */}
-      <div className="mt-8 space-y-6">
-        {[
-          {
-            step: 1,
-            title: "Download Telegram",
-            desc: "Get it from your app store if you don't have it yet.",
-          },
-          {
-            step: 2,
-            title: "Scan QR code or tap link",
-            desc: "Connect your Atlas account to the Telegram bot.",
-          },
-          {
-            step: 3,
-            title: "Send a test message",
-            desc: "Atlas will reply in your voice within seconds.",
-          },
-        ].map((item) => (
-          <div key={item.step} className="flex items-start gap-4">
-            <div className="w-8 h-8 rounded-full bg-atlas-teal flex items-center justify-center text-sm font-semibold text-atlas-bg shrink-0">
-              {item.step}
-            </div>
-            <div>
-              <p className="text-atlas-text font-medium">{item.title}</p>
-              <p className="text-atlas-text-secondary text-sm mt-1">
-                {item.desc}
-              </p>
-              {item.step === 2 && (
-                <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                  <div className="w-[140px] h-[140px] bg-atlas-surface border-2 border-atlas-teal rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
-                    <div className="text-center space-y-2">
-                      <div className="grid grid-cols-5 gap-1 mx-auto w-20 h-20">
-                        {Array.from({ length: 25 }).map((_, i) => (
-                          <div key={i} className={`rounded-sm ${[0,1,3,4,5,9,10,14,15,19,20,21,23,24].includes(i) ? 'bg-atlas-teal' : 'bg-atlas-surface'}`} />
-                        ))}
-                      </div>
-                      <p className="text-[10px] text-atlas-text-muted">Scan to connect</p>
-                    </div>
-                  </div>
-                  <a href="https://t.me/AtlasDelphiBot" target="_blank" rel="noopener noreferrer" className="text-atlas-teal text-sm hover:underline cursor-pointer">
-                    or tap this link to connect →
-                  </a>
-                </div>
-              )}
-              {item.step === 3 && (
-                <div className="mt-3 bg-atlas-surface rounded-2xl p-4 max-w-sm">
-                  <div className="bg-atlas-nav rounded-lg px-3 py-2 text-sm text-atlas-text mb-2 w-fit">
-                    Hey Atlas, draft something about ETH staking yields
-                  </div>
-                  <div className="bg-atlas-teal/20 rounded-lg px-3 py-2 text-sm text-atlas-text ml-auto w-fit">
-                    Here&apos;s a draft in your voice...
-                  </div>
-                </div>
-              )}
-            </div>
+        <div className="mb-8 flex items-start gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-atlas-teal/20 text-atlas-teal">
+            <MessageCircle className="h-6 w-6" />
           </div>
-        ))}
-      </div>
-
-      <p className="text-atlas-text-muted text-sm italic mt-4">
-        Atlas will reply in your voice within seconds.
-      </p>
-
-      <hr className="border-glass-border my-8" />
-
-      {/* Capabilities */}
-      <div className="bg-atlas-surface border border-glass-border rounded-2xl p-8">
-        <h3 className="font-heading text-lg text-atlas-text mb-4">
-          Everything Atlas can do from Telegram.
-        </h3>
-        <div className="space-y-3">
-          {capabilities.map((item) => (
-            <div key={item} className="flex items-center gap-3">
-              <Check className="w-4 h-4 text-atlas-teal shrink-0" />
-              <span className="text-sm text-atlas-text">{item}</span>
-            </div>
-          ))}
+          <div>
+            <h1 className="font-heading text-3xl text-atlas-text">
+              Connect Telegram
+            </h1>
+            <p className="mt-2 text-base text-atlas-text-secondary">
+              Get Atlas alerts delivered to your Telegram
+            </p>
+          </div>
         </div>
-        <p className="text-atlas-text-muted text-sm italic mt-6">
-          Portal and Telegram are two windows into one brain.
-        </p>
-      </div>
 
-      {/* Subscription Management */}
-      <div className="mt-8 bg-atlas-surface border border-glass-border rounded-2xl p-8">
-        <p className="text-atlas-text-secondary text-sm mb-4">
-          Manage your alert subscriptions from Telegram.
-        </p>
-        <div className="space-y-3 max-w-md">
-          {chatSnippets.map((msg, i) => (
+        <div>
+          {setupSteps.map(({ number, title, description, Icon }) => (
             <div
-              key={i}
-              className={`rounded-lg px-3 py-2 text-sm w-fit ${
-                msg.from === "user"
-                  ? "bg-atlas-nav text-atlas-text"
-                  : "bg-atlas-teal/20 text-atlas-text ml-auto"
-              }`}
+              key={number}
+              className="mb-4 rounded-2xl border border-glass-border bg-glass p-6 backdrop-blur-xl"
             >
-              {msg.text}
+              <div className="flex items-start gap-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-atlas-teal/20 font-bold text-atlas-teal">
+                  {number}
+                </div>
+
+                <div className="flex-1">
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-atlas-teal/10 text-atlas-teal">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-atlas-text">
+                    {title}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-atlas-text-secondary">
+                    {description}
+                  </p>
+                </div>
+              </div>
             </div>
           ))}
         </div>
-        <p className="text-atlas-text-muted text-xs italic mt-4">
-          All changes sync to Portal automatically.
-        </p>
-      </div>
-
-      {/* Comparison */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-atlas-surface border border-glass-border rounded-2xl p-6">
-          <h4 className="text-atlas-text font-medium mb-3">
-            Telegram is for:
-          </h4>
-          <ul className="space-y-2">
-            {telegramFor.map((item) => (
-              <li
-                key={item}
-                className="text-sm text-atlas-text-secondary flex items-center gap-2"
-              >
-                <span className="w-1 h-1 rounded-full bg-atlas-teal" />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="bg-atlas-surface border border-glass-border rounded-2xl p-6">
-          <h4 className="text-atlas-text font-medium mb-3">
-            The Portal is for:
-          </h4>
-          <ul className="space-y-2">
-            {portalFor.map((item) => (
-              <li
-                key={item}
-                className="text-sm text-atlas-text-secondary flex items-center gap-2"
-              >
-                <span className="w-1 h-1 rounded-full bg-atlas-teal" />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      <p className="text-center text-atlas-text-secondary text-sm mt-4">
-        Use both. They share the same brain.
-      </p>
-
-      <div className="mt-8">
-        <GradientButton fullWidth onClick={() => router.push("/dashboard")}>
-          Back to Dashboard
-        </GradientButton>
       </div>
     </AppShell>
   );
