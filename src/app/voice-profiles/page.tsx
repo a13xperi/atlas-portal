@@ -19,38 +19,6 @@ import {
   VOICE_DIMENSION_FIELDS,
 } from "@/lib/voice-profile-dimensions";
 
-const VOICE_PRESETS: Array<{
-  label: string;
-  values: VoiceDimensions;
-}> = [
-  {
-    label: "CT Degen",
-    values: {
-      ...DEFAULT_VOICE_DIMENSIONS,
-      humor: 80,
-      formality: 20,
-      brevity: 90,
-      contrarianTone: 70,
-    },
-  },
-  {
-    label: "Research Analyst",
-    values: {
-      ...DEFAULT_VOICE_DIMENSIONS,
-      humor: 20,
-      formality: 80,
-      brevity: 30,
-      contrarianTone: 30,
-    },
-  },
-  {
-    label: "Balanced",
-    values: {
-      ...DEFAULT_VOICE_DIMENSIONS,
-    },
-  },
-];
-
 function formatMaturityLabel(maturity?: VoiceProfile["maturity"]) {
   if (!maturity) {
     return "Beginner";
@@ -173,36 +141,27 @@ export default function VoiceProfilesPage() {
     }));
   };
 
-  const persistDimensions = async (
-    dimensions: VoiceDimensions,
-    fallbackMessage: string
-  ) => {
-    setSavingDimensions(true);
-    setError(null);
-
-    try {
-      const response = await api.voice.updateProfile(dimensions);
-      setProfile(response.profile);
-      setDraftDimensions(pickVoiceDimensions(response.profile));
-      return response.profile;
-    } catch (saveError: unknown) {
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : fallbackMessage
-      );
-      return null;
-    } finally {
-      setSavingDimensions(false);
-    }
-  };
-
   const saveDimensions = async () => {
     if (!hasUnsavedChanges) {
       return;
     }
 
-    await persistDimensions(draftDimensions, "Failed to save voice profile");
+    setSavingDimensions(true);
+    setError(null);
+
+    try {
+      const response = await api.voice.updateProfile(draftDimensions);
+      setProfile(response.profile);
+      setDraftDimensions(pickVoiceDimensions(response.profile));
+    } catch (saveError: unknown) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Failed to save voice profile"
+      );
+    } finally {
+      setSavingDimensions(false);
+    }
   };
 
   const handleResetDimensions = async () => {
@@ -210,14 +169,23 @@ export default function VoiceProfilesPage() {
       return;
     }
 
-    await persistDimensions(
-      DEFAULT_VOICE_DIMENSIONS,
-      "Failed to reset voice profile"
-    );
-  };
+    setSavingDimensions(true);
+    setError(null);
 
-  const handlePresetSelect = async (presetValues: VoiceDimensions) => {
-    await persistDimensions(presetValues, "Failed to apply voice preset");
+    try {
+      const response = await api.voice.updateProfile(DEFAULT_VOICE_DIMENSIONS);
+      setProfile(response.profile);
+      setDraftDimensions(pickVoiceDimensions(response.profile));
+    } catch (resetError: unknown) {
+      console.error(resetError);
+      setError(
+        resetError instanceof Error
+          ? resetError.message
+          : "Failed to reset voice profile"
+      );
+    } finally {
+      setSavingDimensions(false);
+    }
   };
 
   const toggleVoice = (id: string) => {
@@ -391,35 +359,6 @@ export default function VoiceProfilesPage() {
               </p>
             </div>
           ) : null}
-          <div className="mb-4">
-            <p className="mb-2 text-xs uppercase tracking-[0.18em] text-atlas-text-secondary">
-              Quick presets
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {VOICE_PRESETS.map((preset) => {
-                const isActive = VOICE_DIMENSION_FIELDS.every(
-                  (field) => draftDimensions[field] === preset.values[field]
-                );
-
-                return (
-                  <button
-                    key={preset.label}
-                    type="button"
-                    onClick={() => handlePresetSelect(preset.values)}
-                    disabled={loading || savingDimensions}
-                    aria-pressed={isActive}
-                    className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
-                      isActive
-                        ? "border-atlas-teal bg-atlas-teal/10 text-atlas-teal"
-                        : "border-glass-border bg-atlas-surface text-atlas-text-secondary hover:border-atlas-teal/40 hover:text-atlas-text"
-                    } disabled:cursor-not-allowed disabled:opacity-50`}
-                  >
-                    {preset.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
           <VoiceDimensionSections
             values={draftDimensions}
             interactive

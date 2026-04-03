@@ -1,11 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type DragEventHandler } from "react";
 import { Mic, FileText, MessageSquare, TrendingUp } from "lucide-react";
 
 export interface ContentInputProps {
   placeholder?: string;
-  value?: string;
   onDrop?: (files: FileList) => void;
   onTextChange?: (text: string) => void;
   onTextSubmit?: (
@@ -16,11 +15,15 @@ export interface ContentInputProps {
   acceptFileTypes?: string;
   sourceError?: string;
   contentError?: string;
+  value?: string;
+  contentDropActive?: boolean;
+  onContentDragOver?: DragEventHandler<HTMLDivElement>;
+  onContentDragLeave?: DragEventHandler<HTMLDivElement>;
+  onContentDrop?: DragEventHandler<HTMLDivElement>;
 }
 
 export default function ContentInput({
   placeholder = "Paste a tweet idea or link…",
-  value,
   onDrop,
   onTextChange,
   onTextSubmit,
@@ -29,12 +32,16 @@ export default function ContentInput({
   acceptFileTypes = ".pdf,.doc,.docx,.txt,.md",
   sourceError,
   contentError,
+  value,
+  contentDropActive = false,
+  onContentDragOver,
+  onContentDragLeave,
+  onContentDrop,
 }: ContentInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const [internalText, setInternalText] = useState("");
-  const isControlled = value !== undefined;
-  const text = isControlled ? value : internalText;
+  const text = value ?? internalText;
 
   const handleDrop = (event: React.DragEvent) => {
     event.preventDefault();
@@ -50,11 +57,15 @@ export default function ContentInput({
     }
   };
 
-  const clearText = () => {
-    if (!isControlled) {
-      setInternalText("");
+  const updateText = (nextText: string) => {
+    if (value === undefined) {
+      setInternalText(nextText);
     }
-    onTextChange?.("");
+    onTextChange?.(nextText);
+  };
+
+  const clearText = () => {
+    updateText("");
   };
 
   const handleSubmit = () => {
@@ -144,38 +155,46 @@ export default function ContentInput({
         </p>
       ) : null}
 
-      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-start">
-        <textarea
-          ref={textInputRef}
-          aria-label="Content input"
-          placeholder={placeholder}
-          value={text}
-          rows={3}
-          onChange={(event) => {
-            const nextText = event.currentTarget.value;
-
-            if (!isControlled) {
-              setInternalText(nextText);
-            }
-
-            onTextChange?.(nextText);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              handleSubmit();
-            }
-          }}
-          className="w-full flex-1 rounded-lg border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
-        />
-        {showMic ? (
-          <button
-            type="button"
-            aria-label="Record voice note"
-            className="flex w-full items-center justify-center rounded-lg border border-glass-border bg-atlas-surface p-3 text-atlas-text-secondary transition-colors hover:text-atlas-teal sm:w-auto sm:self-stretch"
-          >
-            <Mic className="w-4 h-4" aria-hidden="true" />
-          </button>
+      <div
+        onDragOver={onContentDragOver}
+        onDragLeave={onContentDragLeave}
+        onDrop={onContentDrop}
+        className="relative"
+      >
+        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-start">
+          <textarea
+            ref={textInputRef}
+            aria-label="Content input"
+            placeholder={placeholder}
+            value={text}
+            rows={3}
+            onChange={(event) => {
+              updateText(event.currentTarget.value);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                handleSubmit();
+              }
+            }}
+            className="w-full flex-1 rounded-lg border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
+          />
+          {showMic ? (
+            <button
+              type="button"
+              aria-label="Record voice note"
+              className="flex w-full items-center justify-center rounded-lg border border-glass-border bg-atlas-surface p-3 text-atlas-text-secondary transition-colors hover:text-atlas-teal sm:w-auto sm:self-stretch"
+            >
+              <Mic className="w-4 h-4" aria-hidden="true" />
+            </button>
+          ) : null}
+        </div>
+        {contentDropActive ? (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl border-2 border-dashed border-atlas-teal bg-atlas-surface/95 backdrop-blur-sm">
+            <span className="text-sm font-medium text-atlas-teal">
+              Drop file here
+            </span>
+          </div>
         ) : null}
       </div>
 

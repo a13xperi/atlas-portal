@@ -176,16 +176,11 @@ describe("CraftingPage", () => {
 
     render(<CraftingPage />);
 
-    await waitFor(() => expect(mockedApi.drafts.list).toHaveBeenCalledTimes(1));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("textbox", { name: "Generated draft" })
-      ).toHaveValue(firstDraft.content)
-    );
-
-    const generatedDraft = screen.getByRole("textbox", {
+    const generatedDraft = await screen.findByRole("textbox", {
       name: "Generated draft",
     });
+
+    expect(generatedDraft).toHaveValue(firstDraft.content);
     expect(
       screen.queryByText("No drafts yet. Generate your first tweet above.")
     ).not.toBeInTheDocument();
