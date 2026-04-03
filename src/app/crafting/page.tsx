@@ -855,6 +855,7 @@ export default function CraftingPage() {
                 <button
                   type="button"
                   onClick={handleCopyDraft}
+                  title={copiedDraftId === activeDraft.id ? "Copied!" : "Copy to clipboard"}
                   className={`inline-flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-1.5 text-sm transition-colors hover:border-atlas-teal focus:outline-none focus:border-atlas-teal ${
                     copiedDraftId === activeDraft.id
                       ? "text-atlas-success"
@@ -864,12 +865,16 @@ export default function CraftingPage() {
                   {copiedDraftId === activeDraft.id ? (
                     <>
                       <Check className="h-4 w-4" />
-                      Copied!
+                      <span className="text-xs" aria-live="polite">
+                        Copied!
+                      </span>
                     </>
                   ) : (
                     <>
                       <Clipboard className="h-4 w-4" />
-                      Copy
+                      <span className="text-xs" aria-live="polite">
+                        Copy
+                      </span>
                     </>
                   )}
                 </button>
