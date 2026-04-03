@@ -727,11 +727,11 @@ export default function CraftingPage() {
     setError(null);
 
     try {
-      const { draft } = await api.drafts.generate(
-        trimmedFallbackText || trimmedArticleUrl,
-        trimmedFallbackText ? "MANUAL" : "ARTICLE",
-        selectedBlendId || undefined
-      );
+      const { draft } = await api.drafts.generate({
+        sourceContent: trimmedFallbackText || trimmedArticleUrl,
+        sourceType: trimmedFallbackText ? "MANUAL" : "ARTICLE",
+        blendId: selectedBlendId || undefined,
+      });
       setVoiceComparison(null);
       setCompareMode(false);
       setCompareVersion(null);
