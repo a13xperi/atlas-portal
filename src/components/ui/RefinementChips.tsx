@@ -14,6 +14,7 @@ interface RefinementChipsProps {
 const chips: RefinementChipOption[] = [
   { label: "Shorter", instruction: "Make it shorter and more concise" },
   { label: "Snarkier", instruction: "Make it snarkier and more provocative" },
+  { label: "Opposite stance", instruction: "Take the opposite stance — argue the contrarian position" },
   { label: "Hook", instruction: "Add a stronger hook at the beginning" },
   { label: "Thread it", instruction: "Convert this into a thread format" },
 ] as const;

@@ -22,6 +22,12 @@ jest.mock("next/link", () => ({
 
 jest.mock("@/lib/api", () => ({
   api: {
+    auth: {
+      x: {
+        status: jest.fn(),
+        authorize: jest.fn(),
+      },
+    },
     drafts: {
       list: jest.fn(),
       generate: jest.fn(),
@@ -49,6 +55,12 @@ const { api } = require("@/lib/api");
 const CraftingPage = require("@/app/crafting/page").default;
 
 const mockedApi = api as unknown as {
+  auth: {
+    x: {
+      status: jest.Mock;
+      authorize: jest.Mock;
+    };
+  };
   drafts: {
     list: jest.Mock;
     generate: jest.Mock;
@@ -94,12 +106,16 @@ describe("CraftingPage", () => {
     mockedApi.drafts.regenerate.mockReset();
     mockedApi.drafts.delete.mockReset();
     mockedApi.drafts.refine.mockReset();
+    mockedApi.auth.x.status.mockReset();
+    mockedApi.auth.x.authorize.mockReset();
     mockedApi.analytics.summary.mockReset();
     mockedApi.voice.getBlends.mockReset();
     mockedApi.trending.topics.mockReset();
     mockedApi.images.generateForDraft.mockReset();
 
     mockedApi.drafts.list.mockResolvedValue({ drafts: [] });
+    mockedApi.auth.x.status.mockRejectedValue(new Error("X unavailable"));
+    mockedApi.auth.x.authorize.mockResolvedValue({ url: "https://example.com/auth" });
     mockedApi.analytics.summary.mockResolvedValue({ summary: null });
     mockedApi.voice.getBlends.mockResolvedValue({ blends: [] });
     mockedApi.trending.topics.mockResolvedValue({ topics: [] });
@@ -135,14 +151,72 @@ describe("CraftingPage", () => {
     fireEvent.keyDown(document, { key: "Enter", metaKey: true });
 
     await waitFor(() =>
-      expect(mockedApi.drafts.generate).toHaveBeenCalledWith(
-        "Fresh BTC momentum read",
-        "MANUAL",
-        undefined
-      )
+      expect(mockedApi.drafts.generate).toHaveBeenCalledWith({
+        sourceContent: "Fresh BTC momentum read",
+        sourceType: "MANUAL",
+        blendId: undefined,
+        replyAngle: undefined,
+      })
     );
 
     expect(screen.getByText("⌘↩ to generate")).toBeInTheDocument();
+  });
+
+  it("compares two voice variants side by side and lets the user pick the winner", async () => {
+    const currentDraft = createDraft({
+      id: "draft-current",
+      content: "BTC looks ready to reclaim range highs with steady bid support.",
+    });
+    const variantDraft = createDraft({
+      id: "draft-variant",
+      content: "BTC looks ready to rip back through range highs if this bid keeps showing up.",
+    });
+
+    mockedApi.drafts.generate
+      .mockResolvedValueOnce({ draft: currentDraft })
+      .mockResolvedValueOnce({ draft: variantDraft });
+
+    render(<CraftingPage />);
+
+    fireEvent.change(screen.getByPlaceholderText("Paste a tweet idea or link…"), {
+      target: { value: "Fresh BTC momentum read" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Compare Voices" }));
+
+    await waitFor(() => expect(mockedApi.drafts.generate).toHaveBeenCalledTimes(2));
+
+    expect(mockedApi.drafts.generate).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        sourceContent: "Fresh BTC momentum read",
+        sourceType: "MANUAL",
+        blendId: undefined,
+        replyAngle: undefined,
+      })
+    );
+    expect(mockedApi.drafts.generate).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        sourceContent: "Fresh BTC momentum read",
+        sourceType: "MANUAL",
+        blendId: undefined,
+        replyAngle: undefined,
+        angleInstruction: expect.stringContaining("Increase humor"),
+      })
+    );
+
+    expect(await screen.findByText("Current profile")).toBeInTheDocument();
+    expect(screen.getByText("Variation")).toBeInTheDocument();
+    expect(screen.getAllByText(currentDraft.content).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(variantDraft.content).length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Pick funnier variation" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("textbox", { name: "Generated draft" })
+      ).toHaveValue(variantDraft.content)
+    );
   });
 
   it("blocks submissions over 10000 characters", async () => {
@@ -246,11 +320,11 @@ describe("CraftingPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Generate Post" }));
 
     await waitFor(() =>
-      expect(mockedApi.drafts.generate).toHaveBeenCalledWith(
-        articleUrl,
-        "ARTICLE",
-        undefined
-      )
+      expect(mockedApi.drafts.generate).toHaveBeenCalledWith({
+        sourceContent: articleUrl,
+        sourceType: "ARTICLE",
+        blendId: undefined,
+      })
     );
 
     const generatedDraft = `${initialDraftText}\n\nsource: ${articleUrl}`;
@@ -310,11 +384,11 @@ describe("CraftingPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Generate Post" }));
 
     await waitFor(() =>
-      expect(mockedApi.drafts.generate).toHaveBeenLastCalledWith(
-        fallbackText,
-        "MANUAL",
-        undefined
-      )
+      expect(mockedApi.drafts.generate).toHaveBeenLastCalledWith({
+        sourceContent: fallbackText,
+        sourceType: "MANUAL",
+        blendId: undefined,
+      })
     );
 
     await waitFor(() =>
@@ -344,10 +418,12 @@ describe("CraftingPage", () => {
     expect(postToXButton).toBeInTheDocument();
     fireEvent.click(postToXButton);
 
-    expect(openSpy).toHaveBeenCalledWith(
-      "https://twitter.com/intent/tweet?text=BTC%20looks%20constructive%20above%20range%20highs.",
-      "_blank",
-      "width=550,height=420"
+    await waitFor(() =>
+      expect(openSpy).toHaveBeenCalledWith(
+        "https://twitter.com/intent/tweet?text=BTC%20looks%20constructive%20above%20range%20highs.",
+        "_blank",
+        "width=550,height=420"
+      )
     );
 
     openSpy.mockRestore();
