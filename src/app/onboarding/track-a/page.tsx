@@ -219,7 +219,7 @@ export default function TrackAPage() {
 
           <div className="mt-5 grid gap-5 sm:grid-cols-[1.15fr_0.85fr] sm:items-start">
             <div>
-              <h1 className="font-heading text-3xl text-atlas-text">
+              <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">
                 Connect Your X Account
               </h1>
               <p className="mt-3 text-sm leading-6 text-atlas-text-secondary">
@@ -371,7 +371,7 @@ export default function TrackAPage() {
               <Sparkles className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="font-heading text-xl text-atlas-text">
+              <h2 className="font-heading font-bold tracking-tight text-xl text-atlas-text">
                 Guide the first pass
               </h2>
               <p className="mt-2 text-sm leading-6 text-atlas-text-secondary">

@@ -282,7 +282,7 @@ export default function VoiceProfilesPage() {
       <p className="mb-2 text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
         Voice Studio
       </p>
-      <h1 className="font-heading text-2xl text-atlas-text">
+      <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
         Your Voice — Detailed Breakdown
       </h1>
 
@@ -293,7 +293,7 @@ export default function VoiceProfilesPage() {
               <Wand2 className="h-5 w-5 text-atlas-teal" />
             </div>
             <div className="flex-1">
-              <h3 className="font-heading text-lg text-atlas-text">
+              <h3 className="font-heading font-semibold text-lg text-atlas-text">
                 Auto-calibrate your voice
               </h3>
               <p className="mt-1 text-sm text-atlas-text-secondary">
@@ -729,7 +729,7 @@ export default function VoiceProfilesPage() {
       </div>
 
       <div className="mt-8 rounded-2xl border border-glass-border bg-atlas-surface-glass p-8 backdrop-blur-sm">
-        <h3 className="font-heading text-lg text-atlas-text">
+        <h3 className="font-heading font-semibold text-lg text-atlas-text">
           Create or Edit a Blend
         </h3>
         <div className="mt-4 space-y-4">

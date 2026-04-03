@@ -147,7 +147,7 @@ export default function LoopPanel() {
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-3">
           <Activity className={`h-5 w-5 text-atlas-teal ${status === "running" ? "animate-pulse" : ""}`} />
-          <h3 className="font-heading text-lg text-atlas-text">Mission Control</h3>
+          <h3 className="font-heading font-semibold text-lg text-atlas-text">Mission Control</h3>
         </div>
         <StatusPill label={pillConfig.label} variant={pillConfig.variant} />
       </div>

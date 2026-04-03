@@ -178,7 +178,7 @@ export default function TrackBPage() {
 
           <div className="mt-5 grid gap-4 sm:grid-cols-[1.1fr_0.9fr] sm:items-start">
             <div>
-              <h1 className="font-heading text-3xl text-atlas-text">
+              <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">
                 Build Your Voice Manually
               </h1>
               <p className="mt-3 text-sm leading-6 text-atlas-text-secondary">
@@ -244,7 +244,7 @@ export default function TrackBPage() {
         </section>
 
         <section>
-          <h3 className="mb-3 font-heading text-lg text-atlas-text">
+          <h3 className="mb-3 font-heading font-semibold text-lg text-atlas-text">
             Choose your starting style
           </h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -277,7 +277,7 @@ export default function TrackBPage() {
         </section>
 
         <section>
-          <h3 className="mb-3 font-heading text-lg text-atlas-text">
+          <h3 className="mb-3 font-heading font-semibold text-lg text-atlas-text">
             Fine-tune each voice dimension
           </h3>
           <VoiceDimensionSections

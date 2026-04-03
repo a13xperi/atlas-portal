@@ -94,7 +94,7 @@ export default function AlertsPage() {
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
               Signals Feed
             </p>
-            <h1 className="mt-3 font-heading text-3xl text-atlas-text sm:text-4xl">
+            <h1 className="mt-3 font-heading font-extrabold tracking-tight text-3xl text-atlas-text sm:text-4xl">
               Draft responses without leaving the feed
             </h1>
             <p className="mt-3 max-w-2xl text-sm text-atlas-text-secondary sm:text-base">
@@ -190,7 +190,7 @@ export default function AlertsPage() {
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-teal">
                       {formatAlertType(alert.type)}
                     </p>
-                    <h2 className="mt-3 font-heading text-2xl text-atlas-text">
+                    <h2 className="mt-3 font-heading font-bold tracking-tight text-2xl text-atlas-text">
                       {alert.title}
                     </h2>
                   </div>
@@ -257,7 +257,7 @@ export default function AlertsPage() {
               <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
                 Signals
               </p>
-              <h2 className="mt-4 font-heading text-3xl text-atlas-text sm:text-4xl">
+              <h2 className="mt-4 font-heading font-extrabold tracking-tight text-3xl text-atlas-text sm:text-4xl">
                 No signals yet
               </h2>
               <p className="mt-4 text-sm text-atlas-text-secondary sm:text-base">

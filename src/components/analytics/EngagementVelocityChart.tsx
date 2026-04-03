@@ -30,7 +30,7 @@ export default function EngagementVelocityChart({
   return (
     <div className="bg-atlas-surface border border-glass-border rounded-xl p-6 sm:p-8 mb-6">
       <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="font-heading text-xl text-atlas-text">
+        <h2 className="font-heading font-bold tracking-tight text-xl text-atlas-text">
           Engagement Velocity
         </h2>
         {accuracyPct !== null && (

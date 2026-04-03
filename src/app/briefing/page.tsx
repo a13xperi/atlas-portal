@@ -159,7 +159,7 @@ export default function BriefingPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-atlas-teal">
           Morning Briefing
         </p>
-        <h1 className="font-heading text-3xl text-atlas-text sm:text-4xl">
+        <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text sm:text-4xl">
           Configure Your Daily Digest
         </h1>
         <p className="max-w-3xl text-sm leading-7 text-atlas-text-secondary sm:text-base">
@@ -171,7 +171,7 @@ export default function BriefingPage() {
       <form className="space-y-6" onSubmit={handleSubmit}>
         <GlassCard maxWidth="full" className="space-y-5">
           <div className="space-y-2">
-            <h2 className="font-heading text-2xl text-atlas-text">
+            <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
               Delivery Time
             </h2>
             <p className="text-sm leading-6 text-atlas-text-secondary">
@@ -206,7 +206,7 @@ export default function BriefingPage() {
 
         <GlassCard maxWidth="full" className="space-y-5">
           <div className="space-y-2">
-            <h2 className="font-heading text-2xl text-atlas-text">Topics</h2>
+            <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Topics</h2>
             <p className="text-sm leading-6 text-atlas-text-secondary">
               Tailor the macro and sector themes we should prioritize in your brief.
             </p>
@@ -241,7 +241,7 @@ export default function BriefingPage() {
 
         <GlassCard maxWidth="full" className="space-y-5">
           <div className="space-y-2">
-            <h2 className="font-heading text-2xl text-atlas-text">Sources</h2>
+            <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Sources</h2>
             <p className="text-sm leading-6 text-atlas-text-secondary">
               Select the research channels we should blend into the morning digest.
             </p>
@@ -276,7 +276,7 @@ export default function BriefingPage() {
 
         <GlassCard maxWidth="full" className="space-y-5">
           <div className="space-y-2">
-            <h2 className="font-heading text-2xl text-atlas-text">
+            <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
               Delivery Channel
             </h2>
             <p className="text-sm leading-6 text-atlas-text-secondary">
@@ -318,7 +318,7 @@ export default function BriefingPage() {
 
         <GlassCard maxWidth="full" className="space-y-5">
           <div className="space-y-2">
-            <h2 className="font-heading text-2xl text-atlas-text">
+            <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
               Save Preferences
             </h2>
             <p className="text-sm leading-6 text-atlas-text-secondary">

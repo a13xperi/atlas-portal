@@ -42,7 +42,7 @@ export default function TelegramPage() {
             <MessageCircle className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="font-heading text-3xl text-atlas-text">
+            <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">
               Connect Telegram
             </h1>
             <p className="mt-2 text-base text-atlas-text-secondary">

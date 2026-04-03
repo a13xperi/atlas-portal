@@ -154,7 +154,7 @@ export default function ManagementPage() {
           <div className="w-16 h-16 rounded-full bg-atlas-surface border border-glass-border flex items-center justify-center mb-4">
             <span className="text-2xl">🔒</span>
           </div>
-          <h1 className="font-heading text-2xl text-atlas-text mb-2">Manager Access Required</h1>
+          <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text mb-2">Manager Access Required</h1>
           <p className="text-atlas-text-secondary max-w-md">
             The Team Management dashboard is available to managers and admins only.
             Contact your team lead for access.
@@ -186,7 +186,7 @@ export default function ManagementPage() {
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="font-heading text-3xl text-atlas-text">
+        <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">
           Team Management — Atlas
         </h1>
         <p className="text-atlas-text-secondary mt-1">
@@ -202,7 +202,7 @@ export default function ManagementPage() {
           : kpiCards.map((kpi, i) => (
               <div key={kpi.label} className="bg-atlas-surface border border-glass-border rounded-2xl p-8 text-center">
                 <p className="text-xs text-atlas-text-secondary uppercase tracking-wide">{kpi.label}</p>
-                <p className="font-heading text-5xl text-atlas-text mt-2">{kpi.value}</p>
+                <p className="font-heading font-extrabold text-5xl text-atlas-text mt-2">{kpi.value}</p>
                 {kpi.change && <p className="text-sm font-bold text-atlas-success mt-1">{kpi.change}</p>}
               </div>
             ))}
@@ -211,7 +211,7 @@ export default function ManagementPage() {
       {/* SECTION 2: Usage Table */}
       <div className="bg-atlas-surface border border-glass-border rounded-2xl overflow-hidden mb-8">
         <div className="px-6 py-4 border-b border-glass-border">
-          <h2 className="font-heading text-xl text-atlas-text">Operational Activity</h2>
+          <h2 className="font-heading font-bold tracking-tight text-xl text-atlas-text">Operational Activity</h2>
         </div>
         <div className="space-y-4 px-4 py-4 md:hidden">
           {tableData.length === 0 && !loading ? (
@@ -290,7 +290,7 @@ export default function ManagementPage() {
       {/* SECTION 3: Leaderboard Strip */}
       <div className="mb-8">
         <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="font-heading text-xl text-atlas-text">Top Performers</h2>
+          <h2 className="font-heading font-bold tracking-tight text-xl text-atlas-text">Top Performers</h2>
           <button type="button" className="text-sm text-atlas-text-secondary hover:text-atlas-text transition-colors">View All Rankings</button>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-5">
@@ -309,7 +309,7 @@ export default function ManagementPage() {
       {/* SECTION 4: Side-by-side Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
         <div className="bg-atlas-surface border border-glass-border rounded-2xl p-6">
-          <h3 className="font-heading text-xl text-atlas-text mb-4">Team Prediction Accuracy</h3>
+          <h3 className="font-heading font-bold tracking-tight text-xl text-atlas-text mb-4">Team Prediction Accuracy</h3>
           <div className="h-40 flex items-end gap-0">
             {(() => {
               if (teamEngagement.length === 0) {
@@ -334,7 +334,7 @@ export default function ManagementPage() {
         </div>
 
         <div className="bg-atlas-surface border border-glass-border rounded-2xl p-6">
-          <h3 className="font-heading text-xl text-atlas-text mb-4">Days to Best Engagement</h3>
+          <h3 className="font-heading font-bold tracking-tight text-xl text-atlas-text mb-4">Days to Best Engagement</h3>
           <div className="space-y-4">
             {timeToPeak.length > 0 ? timeToPeak.map((entry) => (
               <div key={entry.name} className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
@@ -360,7 +360,7 @@ export default function ManagementPage() {
         <div className="bg-white/[0.03] border border-glass-border rounded-2xl p-6 sm:p-10 mb-8">
           <div className="flex flex-col md:flex-row gap-12">
             <div className="md:w-1/3">
-              <h2 className="font-heading text-2xl text-atlas-text">Needs Attention</h2>
+              <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Needs Attention</h2>
               <p className="text-atlas-text-secondary mt-2 leading-relaxed">
                 System has flagged {inactiveAnalysts.length} analyst{inactiveAnalysts.length !== 1 ? "s" : ""} who appear inactive. Operational efficiency may be impacted.
               </p>

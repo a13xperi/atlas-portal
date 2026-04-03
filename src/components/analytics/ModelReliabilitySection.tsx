@@ -18,7 +18,7 @@ export default function ModelReliabilitySection({
         <p className="text-[10px] text-atlas-text-secondary uppercase tracking-wide mb-1">
           Confidence Trend
         </p>
-        <h3 className="font-heading text-lg text-atlas-text">
+        <h3 className="font-heading font-semibold text-lg text-atlas-text">
           Model Reliability
         </h3>
         <div className="mt-4 h-20 flex items-end gap-0.5">
@@ -44,11 +44,11 @@ export default function ModelReliabilitySection({
       </div>
       <div className="bg-atlas-surface border border-glass-border rounded-xl p-6 flex items-center">
         {logEntries.length > 0 ? (
-          <p className="font-heading text-base text-atlas-text italic leading-relaxed">
+          <p className="font-heading font-medium text-base text-atlas-text italic leading-relaxed">
             {positiveSignals} positive signals detected across your recent activity.
           </p>
         ) : (
-          <p className="font-heading text-base text-atlas-text-muted italic leading-relaxed">
+          <p className="font-heading font-medium text-base text-atlas-text-muted italic leading-relaxed">
             Model insights will appear here as your usage history grows.
           </p>
         )}
