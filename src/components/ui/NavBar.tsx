@@ -64,12 +64,19 @@ export default function NavBar({ variant }: NavBarProps) {
   const { user } = useAuth();
   const { unreadCount } = useAlertSocket();
   const { open: openPalette } = useCommandPalette();
+  const hasUser = Boolean(user);
   const initial = user?.handle?.[0]?.toUpperCase() || user?.displayName?.[0]?.toUpperCase() || "A";
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!hasUser) {
+      setMobileOpen(false);
+    }
+  }, [hasUser]);
 
   useEffect(() => {
     if (!mobileOpen) {
@@ -125,33 +132,38 @@ export default function NavBar({ variant }: NavBarProps) {
               </kbd>
             </button>
           )}
-          <Link
-            href="/alerts"
-            className={`relative transition-colors ${
-              pathname === "/alerts"
-                ? "text-atlas-teal"
-                : "text-atlas-text-secondary hover:text-atlas-text"
-            }`}
-            aria-label="Alerts"
-          >
-            <Bell className="w-5 h-5" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 flex min-w-[16px] items-center justify-center rounded-full bg-atlas-error px-1 text-[10px] font-bold leading-none text-atlas-bg h-4">
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </span>
-            )}
-          </Link>
-          <Link
-            href="/profile"
-            className={`w-8 h-8 rounded-full bg-atlas-surface border flex items-center justify-center text-xs transition-colors ${
-              pathname === "/profile"
-                ? "border-atlas-teal text-atlas-teal"
-                : "border-glass-border text-atlas-text-secondary hover:border-atlas-text-secondary"
-            }`}
-          >
-            {initial}
-          </Link>
-          {variant === "app" && (
+          {user && (
+            <>
+              <Link
+                href="/alerts"
+                className={`relative transition-colors ${
+                  pathname === "/alerts"
+                    ? "text-atlas-teal"
+                    : "text-atlas-text-secondary hover:text-atlas-text"
+                }`}
+                aria-label="Alerts"
+              >
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex min-w-[16px] items-center justify-center rounded-full bg-atlas-error px-1 text-[10px] font-bold leading-none text-atlas-bg h-4">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </Link>
+              <Link
+                href="/profile"
+                aria-label="Profile"
+                className={`w-8 h-8 rounded-full bg-atlas-surface border flex items-center justify-center text-xs transition-colors ${
+                  pathname === "/profile"
+                    ? "border-atlas-teal text-atlas-teal"
+                    : "border-glass-border text-atlas-text-secondary hover:border-atlas-text-secondary"
+                }`}
+              >
+                {initial}
+              </Link>
+            </>
+          )}
+          {variant === "app" && user && (
             <button
               type="button"
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -166,7 +178,7 @@ export default function NavBar({ variant }: NavBarProps) {
         </div>
       </div>
 
-      {variant === "app" ? (
+      {variant === "app" && user ? (
         <div className={`md:hidden ${mobileOpen ? "pointer-events-auto" : "pointer-events-none"}`}>
           <button
             type="button"
