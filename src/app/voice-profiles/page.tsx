@@ -36,6 +36,10 @@ export default function VoiceProfilesPage() {
   const [blends, setBlends] = useState<SavedBlend[]>([]);
   const [selectedVoices, setSelectedVoices] = useState<Set<string>>(new Set());
   const [blendValues, setBlendValues] = useState([40, 30, 20, 10]);
+  const [showAddVoice, setShowAddVoice] = useState(false);
+  const [newVoiceName, setNewVoiceName] = useState("");
+  const [newVoiceHandle, setNewVoiceHandle] = useState("");
+  const [addingVoice, setAddingVoice] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingDimensions, setSavingDimensions] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -218,9 +222,70 @@ export default function VoiceProfilesPage() {
             })
           )}
         </div>
-        <p className="mt-3 cursor-pointer text-sm text-atlas-teal hover:underline">
+        <button
+          type="button"
+          onClick={() => setShowAddVoice(true)}
+          className="mt-3 text-sm text-atlas-teal hover:underline"
+        >
           + Add your own
-        </p>
+        </button>
+        {showAddVoice ? (
+          <div className="mt-3 space-y-3 rounded-xl border border-glass-border bg-atlas-surface p-4">
+            <input
+              type="text"
+              placeholder="Voice name (e.g. Hasu)"
+              value={newVoiceName}
+              onChange={(event) => setNewVoiceName(event.target.value)}
+              className="w-full rounded-lg border border-glass-border bg-atlas-bg px-3 py-2 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
+            />
+            <input
+              type="text"
+              placeholder="X handle (optional)"
+              value={newVoiceHandle}
+              onChange={(event) => setNewVoiceHandle(event.target.value)}
+              className="w-full rounded-lg border border-glass-border bg-atlas-bg px-3 py-2 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
+            />
+            <div className="flex gap-2">
+              <GradientButton
+                size="sm"
+                onClick={async () => {
+                  if (!newVoiceName.trim()) {
+                    return;
+                  }
+
+                  setAddingVoice(true);
+
+                  try {
+                    await api.voice.addReference(
+                      newVoiceName.trim(),
+                      newVoiceHandle.trim() || undefined
+                    );
+                    setNewVoiceName("");
+                    setNewVoiceHandle("");
+                    setShowAddVoice(false);
+
+                    const response = await api.voice.getReferences();
+                    setReferences(response.voices);
+                  } catch (addVoiceError) {
+                    console.error(addVoiceError);
+                  } finally {
+                    setAddingVoice(false);
+                  }
+                }}
+                disabled={addingVoice || !newVoiceName.trim()}
+              >
+                {addingVoice ? "Adding..." : "Add Voice"}
+              </GradientButton>
+              <button
+                type="button"
+                onClick={() => setShowAddVoice(false)}
+                className="text-sm text-atlas-text-secondary hover:text-atlas-text"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-8">
