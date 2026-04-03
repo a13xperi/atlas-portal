@@ -84,31 +84,42 @@ export default function NotificationDropdown({
   return (
     <div
       ref={dropdownRef}
+      id="notification-dropdown"
       role="dialog"
-      aria-label="Notifications"
+      aria-modal="false"
+      aria-labelledby="notification-dropdown-title"
       className="absolute right-0 top-full z-50 mt-2 max-h-96 w-80 overflow-y-auto rounded-2xl border border-glass-border bg-atlas-nav backdrop-blur-xl shadow-lg"
     >
       <div className="flex items-center justify-between border-b border-glass-border px-4 py-3">
-        <h3 className="text-sm font-medium text-atlas-text">Notifications</h3>
+        <h3
+          id="notification-dropdown-title"
+          className="text-sm font-medium text-atlas-text"
+        >
+          Notifications
+        </h3>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close notifications"
           className="text-atlas-text-muted transition-colors hover:text-atlas-text"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
 
       {loading ? (
-        <div className="px-4 py-8 text-center text-sm text-atlas-text-muted">
-          Loading...
+        <div
+          role="status"
+          aria-live="polite"
+          className="px-4 py-8 text-center text-sm text-atlas-text-muted"
+        >
+          Loading…
         </div>
       ) : null}
 
       {!loading && notifications.length === 0 ? (
         <div className="px-4 py-8 text-center">
-          <Check className="mx-auto mb-2 h-8 w-8 text-atlas-teal" />
+          <Check className="mx-auto mb-2 h-8 w-8 text-atlas-teal" aria-hidden="true" />
           <p className="text-sm text-atlas-text-secondary">All caught up</p>
         </div>
       ) : null}

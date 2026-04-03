@@ -5,6 +5,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useId,
   type DragEvent as ReactDragEvent,
 } from "react";
 import {
@@ -213,6 +214,11 @@ function buildVoiceVariationInstruction(
 }
 
 export default function CraftingPage() {
+  const voiceModeLabelId = useId();
+  const savedBlendLabelId = useId();
+  const blendIntensityLabelId = useId();
+  const regenerationGuidanceId = useId();
+  const draftFeedbackHintId = useId();
   const { user } = useAuth();
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [draftHistory, setDraftHistory] = useState<DraftHistoryItem[]>([]);
@@ -984,6 +990,11 @@ export default function CraftingPage() {
         100
       )
     : 0;
+  const usageSummary =
+    summary
+      ? `This week you have given ${feedbackCount} feedback items and refined ${draftsRefined} drafts.`
+      : "Usage summary will appear after you create and refine drafts.";
+  const activeTabPanelId = `${activeMode}-panel`;
 
   const handleCompareVoices = async (text = draftInputValueRef.current) => {
     if (!user) {
@@ -1110,7 +1121,12 @@ export default function CraftingPage() {
     <AppShell>
       <div className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:gap-0 sm:rounded-3xl sm:px-6">
         <div className="flex items-center gap-4 sm:gap-6">
-          <svg className="h-10 w-10 shrink-0" viewBox="0 0 40 40">
+          <svg
+            aria-hidden="true"
+            focusable="false"
+            className="h-10 w-10 shrink-0"
+            viewBox="0 0 40 40"
+          >
             <circle
               cx="20"
               cy="20"
@@ -1133,7 +1149,12 @@ export default function CraftingPage() {
               transform="rotate(-90 20 20)"
             />
           </svg>
-          <div className="flex flex-wrap gap-3 text-sm text-atlas-text-secondary sm:gap-6">
+          <div
+            role="status"
+            aria-live="polite"
+            aria-label={usageSummary}
+            className="flex flex-wrap gap-3 text-sm text-atlas-text-secondary sm:gap-6"
+          >
             <span>Feedback given: {feedbackCount} this week</span>
             <span>Drafts refined: {draftsRefined}</span>
           </div>
@@ -1192,7 +1213,9 @@ export default function CraftingPage() {
                   <button
                     key={mode.id}
                     type="button"
+                    id={`${mode.id}-tab`}
                     role="tab"
+                    aria-controls={`${mode.id}-panel`}
                     aria-selected={isActive}
                     tabIndex={isActive ? 0 : -1}
                     onClick={() => handleModeChange(mode.id)}
@@ -1209,40 +1232,52 @@ export default function CraftingPage() {
             </div>
 
             {activeMode === "news_to_post" ? (
-              <NewsMode
-                creating={creating}
-                error={error}
-                onDismissError={() => setError(null)}
-                onGenerateNews={handleGenerateNews}
-                onArticleUrlChange={handleNewsUrlChange}
-                urlPreviewCard={
-                  activeMode === "news_to_post" && urlPreview ? (
-                    <div className="mt-3 flex items-center gap-3 rounded-xl border border-glass-border bg-atlas-surface p-3">
-                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-atlas-teal/10">
-                        <Link2 className="h-5 w-5 text-atlas-teal" />
+              <div
+                id={activeTabPanelId}
+                role="tabpanel"
+                aria-labelledby={`${activeMode}-tab`}
+                className="mt-6"
+              >
+                <NewsMode
+                  creating={creating}
+                  error={error}
+                  onDismissError={() => setError(null)}
+                  onGenerateNews={handleGenerateNews}
+                  onArticleUrlChange={handleNewsUrlChange}
+                  urlPreviewCard={
+                    activeMode === "news_to_post" && urlPreview ? (
+                      <div className="mt-3 flex items-center gap-3 rounded-xl border border-glass-border bg-atlas-surface p-3">
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-atlas-teal/10">
+                          <Link2 className="h-5 w-5 text-atlas-teal" aria-hidden="true" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm text-atlas-text">
+                            {urlPreview.title || "News Article"}
+                          </p>
+                          <p className="truncate text-xs text-atlas-text-muted">
+                            {urlPreview.url}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setUrlPreview(null)}
+                          className="text-atlas-text-muted hover:text-atlas-text"
+                          aria-label="Dismiss URL preview"
+                        >
+                          <X className="h-4 w-4" aria-hidden="true" />
+                        </button>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm text-atlas-text">
-                          {urlPreview.title || "News Article"}
-                        </p>
-                        <p className="truncate text-xs text-atlas-text-muted">
-                          {urlPreview.url}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setUrlPreview(null)}
-                        className="text-atlas-text-muted hover:text-atlas-text"
-                        aria-label="Dismiss URL preview"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ) : null
-                }
-              />
+                    ) : null
+                  }
+                />
+              </div>
             ) : (
-              <div className="mt-6">
+              <div
+                id={activeTabPanelId}
+                role="tabpanel"
+                aria-labelledby={`${activeMode}-tab`}
+                className="mt-6"
+              >
                 <p className="text-xs uppercase tracking-wide text-atlas-text-secondary">
                   {activeMode === "reply_to_tweet"
                     ? "Paste the tweet or quote you want Atlas to respond to."
@@ -1308,7 +1343,7 @@ export default function CraftingPage() {
                     >
                       {creating && !comparingVoices ? (
                         <span className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                           Crafting your tweet…
                         </span>
                       ) : activeMode === "reply_to_tweet" ? (
@@ -1348,7 +1383,7 @@ export default function CraftingPage() {
                         aria-label="Dismiss error"
                         className="ml-2 transition-colors hover:text-atlas-text"
                       >
-                        x
+                        <X className="h-4 w-4" aria-hidden="true" />
                       </button>
                     </div>
                   ) : null}
@@ -1358,8 +1393,16 @@ export default function CraftingPage() {
           </div>
 
           <div className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6">
+            <label
+              id={voiceModeLabelId}
+              htmlFor="voice-mode"
+              className="shrink-0 text-sm text-atlas-text-secondary"
+            >
+              Voice mode
+            </label>
             <select
-              aria-label="Voice mode"
+              id="voice-mode"
+              aria-labelledby={voiceModeLabelId}
               value={voiceMode}
               onChange={(event) => {
                 const nextMode = event.target.value as
@@ -1379,22 +1422,35 @@ export default function CraftingPage() {
               <option value="specific">Specific person</option>
             </select>
             {voiceMode === "blended" && blends.length > 0 ? (
-              <select
-                aria-label="Saved blend"
-                value={selectedBlendId || ""}
-                onChange={(event) => setSelectedBlendId(event.target.value || null)}
-                className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
-              >
-                <option value="">Pick a blend…</option>
-                {blends.map((blend) => (
-                  <option key={blend.id} value={blend.id}>
-                    {blend.name}
-                  </option>
-                ))}
-              </select>
+              <>
+                <label
+                  id={savedBlendLabelId}
+                  htmlFor="saved-blend"
+                  className="shrink-0 text-sm text-atlas-text-secondary"
+                >
+                  Saved blend
+                </label>
+                <select
+                  id="saved-blend"
+                  aria-labelledby={savedBlendLabelId}
+                  value={selectedBlendId || ""}
+                  onChange={(event) => setSelectedBlendId(event.target.value || null)}
+                  className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
+                >
+                  <option value="">Pick a blend…</option>
+                  {blends.map((blend) => (
+                    <option key={blend.id} value={blend.id}>
+                      {blend.name}
+                    </option>
+                  ))}
+                </select>
+              </>
             ) : null}
             <div className="flex w-full flex-col gap-2 sm:min-w-[200px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="shrink-0 text-sm text-atlas-text-secondary">
+              <span
+                id={blendIntensityLabelId}
+                className="shrink-0 text-sm text-atlas-text-secondary"
+              >
                 {selectedBlendId
                   ? `My Voice ↔ ${
                       blends.find((blend) => blend.id === selectedBlendId)?.name || "Blend"
@@ -1402,12 +1458,13 @@ export default function CraftingPage() {
                   : "Blend:"}
               </span>
               <input
-                aria-label="Blend intensity"
                 type="range"
                 min={0}
                 max={100}
                 value={blendValue}
                 onChange={(event) => setBlendValue(Number(event.target.value))}
+                aria-labelledby={blendIntensityLabelId}
+                aria-valuetext={`${blendValue} percent`}
                 className="flex-1 accent-atlas-teal"
               />
               <span className="w-10 text-right text-sm text-atlas-text">{blendValue}%</span>
@@ -1483,7 +1540,12 @@ export default function CraftingPage() {
                   <div className="mt-2 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="relative h-5 w-5">
-                        <svg className="h-5 w-5 -rotate-90" viewBox="0 0 20 20">
+                        <svg
+                          aria-hidden="true"
+                          focusable="false"
+                          className="h-5 w-5 -rotate-90"
+                          viewBox="0 0 20 20"
+                        >
                           <circle
                             cx="10"
                             cy="10"
@@ -1543,7 +1605,12 @@ export default function CraftingPage() {
                       {activeDraft.confidence != null ? (
                         <div className="flex items-center gap-1.5">
                           <div className="relative h-4 w-4">
-                            <svg className="h-4 w-4 -rotate-90" viewBox="0 0 16 16">
+                            <svg
+                              aria-hidden="true"
+                              focusable="false"
+                              className="h-4 w-4 -rotate-90"
+                              viewBox="0 0 16 16"
+                            >
                               <circle
                                 cx="8"
                                 cy="8"
@@ -1580,7 +1647,7 @@ export default function CraftingPage() {
                       ) : null}
                       {activeDraft.predictedEngagement != null ? (
                         <div className="flex items-center gap-1.5">
-                          <TrendingUp className="h-3.5 w-3.5 text-atlas-text-muted" />
+                          <TrendingUp className="h-3.5 w-3.5 text-atlas-text-muted" aria-hidden="true" />
                           <span className="text-[10px] text-atlas-text-muted">
                             ~{activeDraft.predictedEngagement.toLocaleString()} predicted
                             reach
@@ -1604,6 +1671,7 @@ export default function CraftingPage() {
                       <div key={step.status} className="flex items-center gap-1.5">
                         {index > 0 ? (
                           <ChevronRight
+                            aria-hidden="true"
                             className={`h-3 w-3 ${
                               isCompleted
                                 ? "text-atlas-success"
@@ -1622,7 +1690,7 @@ export default function CraftingPage() {
                         >
                           {isCompleted ? (
                             <span className="inline-flex items-center gap-1">
-                              <Check className="h-3 w-3" />
+                              <Check className="h-3 w-3" aria-hidden="true" />
                               {step.label}
                             </span>
                           ) : (
@@ -1655,9 +1723,9 @@ export default function CraftingPage() {
                           className="inline-flex items-center gap-1.5 rounded-lg bg-atlas-teal/20 px-3 py-1.5 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/30 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {statusUpdating ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
+                            <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
                           ) : (
-                            <CheckCircle className="h-3 w-3" />
+                            <CheckCircle className="h-3 w-3" aria-hidden="true" />
                           )}
                           Approve
                         </button>
@@ -1667,7 +1735,7 @@ export default function CraftingPage() {
                           disabled={statusUpdating}
                           className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-atlas-text-muted transition-colors hover:text-atlas-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          <Archive className="h-3 w-3" />
+                          <Archive className="h-3 w-3" aria-hidden="true" />
                           Archive
                         </button>
                       </>
@@ -1680,9 +1748,9 @@ export default function CraftingPage() {
                         className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-steel px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {statusUpdating ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
                         ) : (
-                          <Check className="h-3 w-3" />
+                          <Check className="h-3 w-3" aria-hidden="true" />
                         )}
                         Mark as Posted
                       </button>
@@ -1758,14 +1826,14 @@ export default function CraftingPage() {
                   >
                     {copiedDraftId === activeDraft.id ? (
                       <>
-                        <Check className="h-4 w-4" />
+                        <Check className="h-4 w-4" aria-hidden="true" />
                         <span className="text-xs" aria-live="polite">
                           Copied!
                         </span>
                       </>
                     ) : (
                       <>
-                        <Clipboard className="h-4 w-4" />
+                        <Clipboard className="h-4 w-4" aria-hidden="true" />
                         <span className="text-xs" aria-live="polite">
                           Copy
                         </span>
@@ -1899,12 +1967,16 @@ export default function CraftingPage() {
                   onClick={() => setShowFeedback(true)}
                   className="flex items-center gap-1.5 rounded-lg border border-glass-border px-3 py-1.5 text-xs font-medium text-atlas-text-secondary transition-colors hover:border-atlas-teal/50 hover:text-atlas-text"
                 >
-                  <RefreshCw className="h-3.5 w-3.5" />
+                  <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
                   Regenerate
                 </button>
               ) : (
                 <div className="flex items-center gap-2">
+                  <label htmlFor={regenerationGuidanceId} className="sr-only">
+                    Describe how Atlas should regenerate the draft
+                  </label>
                   <input
+                    id={regenerationGuidanceId}
                     type="text"
                     value={feedbackText}
                     onChange={(event) => setFeedbackText(event.target.value)}
@@ -1939,9 +2011,12 @@ export default function CraftingPage() {
           {!voiceComparison && canReviseActiveDraft ? (
             <div className="mt-6">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <label htmlFor="feedback-input" className="sr-only">
+                  Feedback for the current draft
+                </label>
                 <input
                   id="feedback-input"
-                  aria-label="Feedback for the current draft"
+                  aria-describedby={draftFeedbackHintId}
                   type="text"
                   value={feedback}
                   onChange={(event) => setFeedback(event.target.value)}
@@ -1958,10 +2033,10 @@ export default function CraftingPage() {
                   aria-label="Record voice feedback"
                   className="flex items-center justify-center rounded-lg border border-glass-border bg-atlas-surface p-3 text-atlas-text-secondary transition-colors hover:text-atlas-teal"
                 >
-                  <Mic className="h-4 w-4" />
+                  <Mic className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
-              <p className="mt-2 text-sm italic text-atlas-text-muted">
+              <p id={draftFeedbackHintId} className="mt-2 text-sm italic text-atlas-text-muted">
                 Don&apos;t worry about hurting my feelings.
               </p>
             </div>

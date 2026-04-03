@@ -168,14 +168,21 @@ export default function DashboardPage() {
       )}
 
       <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-4">
-        <p className="mb-2 text-xs text-atlas-text-secondary">Quick Draft</p>
+        <label
+          htmlFor="quick-draft-input"
+          className="mb-2 block text-xs text-atlas-text-secondary"
+        >
+          Quick Draft
+        </label>
         <div className="flex gap-2">
           <input
+            id="quick-draft-input"
+            name="quickDraft"
             type="text"
             value={quickDraft}
             onChange={(event) => setQuickDraft(event.target.value)}
             placeholder="Drop a hot take or paste an article URL..."
-            aria-label="Quick Draft"
+            autoComplete="off"
             disabled={quickDrafting}
             className="flex-1 rounded-lg border border-glass-border bg-atlas-bg px-3 py-2 text-sm text-atlas-text placeholder-atlas-text-muted focus:border-atlas-teal focus:outline-none"
             onKeyDown={(event) => {
@@ -194,19 +201,19 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <dl className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
           <div
             key={stat.label}
             className="bg-atlas-surface border border-glass-border rounded-2xl p-6"
           >
-            <p className="text-atlas-text-secondary text-sm">{stat.label}</p>
-            <p className="text-[30px] font-semibold mt-1 text-atlas-text">
+            <dt className="text-atlas-text-secondary text-sm">{stat.label}</dt>
+            <dd className="text-[30px] font-semibold mt-1 text-atlas-text">
               {stat.value}
-            </p>
+            </dd>
           </div>
         ))}
-      </div>
+      </dl>
       {showStatsEmptyState && (
         <p className="text-xs text-atlas-text-muted mt-1">
           Get started by crafting your first draft
@@ -224,7 +231,7 @@ export default function DashboardPage() {
             href={card.href}
             className="card-interactive flex flex-col items-center gap-3 rounded-2xl border border-glass-border bg-atlas-surface p-6 text-center text-atlas-text"
           >
-            <card.icon className="w-5 h-5 text-atlas-teal" />
+            <card.icon className="w-5 h-5 text-atlas-teal" aria-hidden="true" />
             {card.label}
           </Link>
         ))}
@@ -252,7 +259,7 @@ export default function DashboardPage() {
         ) : (
           <div className="rounded-2xl border border-glass-border bg-atlas-surface-glass p-8 text-center backdrop-blur-sm">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-atlas-teal/20 to-atlas-steel/20">
-              <PenTool className="h-8 w-8 text-atlas-teal" />
+              <PenTool className="h-8 w-8 text-atlas-teal" aria-hidden="true" />
             </div>
             <h3 className="mb-2 font-heading text-xl text-atlas-text">
               Ready to craft your first draft?

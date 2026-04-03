@@ -44,6 +44,8 @@ function DelphiLogo() {
       height="28"
       viewBox="0 0 28 28"
       fill="none"
+      aria-hidden="true"
+      focusable="false"
       className="text-atlas-teal"
     >
       <circle
@@ -143,9 +145,11 @@ export default function NavBar({ variant }: NavBarProps) {
               type="button"
               onClick={openPalette}
               aria-label="Open command palette (⌘K)"
+              aria-haspopup="dialog"
+              aria-controls="command-palette"
               className="hidden sm:flex items-center gap-1.5 text-atlas-text-secondary hover:text-atlas-text transition-colors group"
             >
-              <Search className="w-5 h-5" />
+              <Search className="w-5 h-5" aria-hidden="true" />
               <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 rounded border border-glass-border text-[10px] font-mono text-atlas-text-muted group-hover:border-atlas-text-secondary transition-colors">
                 ⌘K
               </kbd>
@@ -160,14 +164,21 @@ export default function NavBar({ variant }: NavBarProps) {
                   aria-controls="notification-dropdown"
                   aria-expanded={notifOpen}
                   aria-haspopup="dialog"
+                  aria-label={
+                    unreadNotifications > 0
+                      ? `Notifications, ${unreadNotifications} unread`
+                      : "Notifications"
+                  }
                   className={`relative p-1 transition-colors ${
                     notifOpen ? "text-atlas-teal" : "text-atlas-text-secondary hover:text-atlas-text"
                   }`}
-                  aria-label="Notifications"
                 >
-                  <Bell className="h-5 w-5" />
+                  <Bell className="h-5 w-5" aria-hidden="true" />
                   {unreadNotifications > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-4 rounded-full bg-atlas-error px-1 text-[10px] font-bold text-white">
+                    <span
+                      aria-hidden="true"
+                      className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-4 rounded-full bg-atlas-error px-1 text-[10px] font-bold text-white"
+                    >
                       {unreadNotifications > 99 ? "99+" : unreadNotifications}
                     </span>
                   )}
@@ -176,7 +187,7 @@ export default function NavBar({ variant }: NavBarProps) {
               </div>
               <Link
                 href="/profile"
-                aria-label="Profile"
+                aria-label="Open profile"
                 className={`w-8 h-8 rounded-full bg-atlas-surface border flex items-center justify-center text-xs transition-colors ${
                   pathname === "/profile"
                     ? "border-atlas-teal text-atlas-teal"
@@ -196,7 +207,11 @@ export default function NavBar({ variant }: NavBarProps) {
               aria-expanded={mobileOpen}
               aria-label={mobileOpen ? "Close sidebar" : "Open sidebar"}
             >
-              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileOpen ? (
+                <X className="w-5 h-5" aria-hidden="true" />
+              ) : (
+                <Menu className="w-5 h-5" aria-hidden="true" />
+              )}
             </button>
           )}
         </div>
@@ -214,41 +229,44 @@ export default function NavBar({ variant }: NavBarProps) {
           />
           <aside
             id="mobile-sidebar"
-            role="navigation"
-            aria-label="Mobile navigation"
+            aria-label="Mobile navigation drawer"
             aria-hidden={!mobileOpen}
             className={`fixed inset-y-14 left-0 z-50 w-72 max-w-[calc(100vw-1rem)] overflow-y-auto border-r border-glass-border bg-atlas-nav px-4 py-4 transition-transform duration-200 ${
               mobileOpen ? "translate-x-0" : "-translate-x-full"
             }`}
           >
-            <div className="flex flex-col gap-1">
-              {navLinks.map((link) => {
-                const Icon = link.icon;
+            <nav aria-label="Mobile navigation">
+              <div className="flex flex-col gap-1">
+                {navLinks.map((link) => {
+                  const Icon = link.icon;
 
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileOpen(false)}
-                    aria-current={pathname === link.href ? "page" : undefined}
-                    className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                      pathname === link.href
-                        ? "bg-atlas-surface font-medium text-atlas-text"
-                        : "text-atlas-text-secondary hover:bg-atlas-surface hover:text-atlas-text"
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {link.label}
-                  </Link>
-                );
-              })}
-            </div>
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMobileOpen(false)}
+                      aria-current={pathname === link.href ? "page" : undefined}
+                      className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                        pathname === link.href
+                          ? "bg-atlas-surface font-medium text-atlas-text"
+                          : "text-atlas-text-secondary hover:bg-atlas-surface hover:text-atlas-text"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" aria-hidden="true" />
+                      {link.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </nav>
             <button
               type="button"
               onClick={() => {
                 setMobileOpen(false);
                 openPalette();
               }}
+              aria-haspopup="dialog"
+              aria-controls="command-palette"
               className="mt-3 block w-full rounded-lg px-3 py-2.5 text-left text-sm text-atlas-text-secondary transition-colors hover:bg-atlas-surface hover:text-atlas-text sm:hidden"
             >
               Search (⌘K)
