@@ -5,6 +5,7 @@ import { Mic, Loader2, Image as ImageIcon, Palette } from "lucide-react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import NewsMode from "@/components/crafting/NewsMode";
+import ReplyMode, { ReplyAngle } from "@/components/crafting/ReplyMode";
 import ContentInput from "@/components/ui/ContentInput";
 import GradientButton from "@/components/ui/GradientButton";
 import RefinementChips, {
@@ -26,46 +27,16 @@ const CRAFTING_MODES = [
   { id: "news_to_post", label: "News to Post" },
 ] as const;
 
-const NEWS_SOURCE_PREFIX = "source:";
-
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
 
-function appendSourceUrl(content: string, sourceUrl?: string) {
-  const trimmedContent = content.trimEnd();
-  const trimmedSourceUrl = sourceUrl?.trim();
-
-  if (!trimmedContent || !trimmedSourceUrl) {
-    return trimmedContent;
-  }
-
-  const sourceLine = `${NEWS_SOURCE_PREFIX} ${trimmedSourceUrl}`;
-
-  if (trimmedContent.includes(sourceLine)) {
-    return trimmedContent;
-  }
-
-  return `${trimmedContent}\n\n${sourceLine}`;
-}
-
-function extractSourceUrl(draft: TweetDraft | null) {
-  if (!draft) {
-    return null;
-  }
-
-  const contentMatch = draft.content.match(/source:\s*(https?:\/\/\S+)/i);
-
-  if (contentMatch?.[1]) {
-    return contentMatch[1];
-  }
-
-  const trimmedSourceContent = draft.sourceContent?.trim();
-
-  if (trimmedSourceContent?.startsWith("http")) {
-    return trimmedSourceContent;
-  }
-
-  return null;
-}
+const REPLY_ANGLE_INSTRUCTIONS: Record<ReplyAngle, string> = {
+  Direct:
+    "Write in a direct, assertive tone. State the point clearly without hedging.",
+  Curious:
+    "Write with a curious, questioning tone. Pose thought-provoking questions.",
+  Concise:
+    "Write in the most concise way possible. Every word must earn its place.",
+};
 
 export default function CraftingPage() {
   const { user } = useAuth();
@@ -73,6 +44,8 @@ export default function CraftingPage() {
   const [activeDraft, setActiveDraft] = useState<TweetDraft | null>(null);
   const [activeVersion, setActiveVersion] = useState(0);
   const [activeMode, setActiveMode] = useState<CraftingMode>("new_post");
+  const [selectedReplyAngle, setSelectedReplyAngle] =
+    useState<ReplyAngle>("Direct");
   const [voiceMode, setVoiceMode] = useState<"my_voice" | "blended" | "specific">(
     "my_voice"
   );
@@ -88,9 +61,10 @@ export default function CraftingPage() {
   const [generatingImage, setGeneratingImage] = useState(false);
   const [refiningChip, setRefiningChip] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [sourceError, setSourceError] = useState<string | null>(null);
-  const [contentError, setContentError] = useState<string | null>(null);
+  const [contentError, setContentError] = useState("");
+  const [sourceError, setSourceError] = useState("");
   const activeDraftInitialized = useRef(false);
+  const activeDraftCharacterCount = activeDraft?.content.length ?? 0;
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -129,27 +103,64 @@ export default function CraftingPage() {
       const { topics } = await api.trending.topics();
       setTrendingTopics(topics);
     } catch {
-      // Trending is optional and should not block the page.
+      // Trending is optional — do not block the page.
     }
   }, []);
 
   useEffect(() => {
-    loadDrafts();
-    loadSummary();
-    loadTrending();
-    loadBlends();
+    void loadDrafts();
+    void loadSummary();
+    void loadTrending();
+    void loadBlends();
   }, [loadBlends, loadDrafts, loadSummary, loadTrending]);
 
-  const commitDraft = (draft: TweetDraft, sourceUrl?: string) => {
-    const normalizedDraft = sourceUrl
-      ? { ...draft, content: appendSourceUrl(draft.content, sourceUrl) }
-      : draft;
+  const validateDraftSource = (content: string, hasSource: boolean) => {
+    const trimmedContent = content.trim();
+    let isValid = true;
 
+    if (!trimmedContent) {
+      setContentError("Content is required.");
+      isValid = false;
+    } else if (trimmedContent.length > 2000) {
+      setContentError("Content must be under 2000 characters.");
+      isValid = false;
+    } else {
+      setContentError("");
+    }
+
+    if (!hasSource) {
+      setSourceError("Select at least one source before generating.");
+      isValid = false;
+    } else {
+      setSourceError("");
+    }
+
+    return { isValid, trimmedContent };
+  };
+
+  const buildGenerateRequest = (sourceContent: string, sourceType: string) => {
+    const trimmedSourceContent = sourceContent.trim();
+    const isReplyDraft = sourceType === "TWEET";
+
+    return {
+      sourceContent: isReplyDraft
+        ? `Original tweet:\n${trimmedSourceContent}\n\n${REPLY_ANGLE_INSTRUCTIONS[selectedReplyAngle]}`
+        : trimmedSourceContent,
+      sourceType,
+      blendId: selectedBlendId || undefined,
+      replyAngle: isReplyDraft ? selectedReplyAngle : undefined,
+      angleInstruction: isReplyDraft
+        ? REPLY_ANGLE_INSTRUCTIONS[selectedReplyAngle]
+        : undefined,
+    };
+  };
+
+  const commitDraft = (draft: TweetDraft) => {
     setDrafts((previousDrafts) => [
-      normalizedDraft,
-      ...previousDrafts.filter((existingDraft) => existingDraft.id !== normalizedDraft.id),
+      draft,
+      ...previousDrafts.filter((existingDraft) => existingDraft.id !== draft.id),
     ]);
-    setActiveDraft(normalizedDraft);
+    setActiveDraft(draft);
     setActiveVersion(0);
     setVisualConcept(null);
     activeDraftInitialized.current = true;
@@ -158,77 +169,41 @@ export default function CraftingPage() {
   const handleModeChange = (mode: CraftingMode) => {
     setActiveMode(mode);
     setError(null);
-    setSourceError(null);
-    setContentError(null);
+    setContentError("");
+    setSourceError("");
   };
 
-  const handleFileDrop = async (files: FileList) => {
-    if (!user || files.length === 0) return;
-
-    const file = files[0];
-
-    try {
-      const text = await file.text();
-
-      if (!text.trim()) {
-        return;
-      }
-
-      setCreating(true);
-      setError(null);
-      setSourceError(null);
-      setContentError(null);
-
-      const { draft } = await api.drafts.generate({
-        sourceContent: text.trim().slice(0, 10000),
-        sourceType: "REPORT",
-        blendId: selectedBlendId || undefined,
-      });
-      commitDraft(draft);
-    } catch (fileDropError: unknown) {
-      console.error("Failed to process file:", fileDropError);
-      setError(
-        fileDropError instanceof Error ? fileDropError.message : "Failed to process file"
-      );
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const handleCreateDraft = async (text: string) => {
-    if (!user) return false;
-
+  const handleDraftTextChange = (text: string) => {
     const trimmedText = text.trim();
-
-    if (!trimmedText) {
-      setContentError("Content is required.");
-      setSourceError("Select at least one source before generating.");
-      return false;
-    }
 
     if (trimmedText.length > 2000) {
       setContentError("Content must be under 2000 characters.");
-      setSourceError(null);
-      return false;
+    } else if (contentError) {
+      setContentError("");
     }
 
-    setCreating(true);
+    if (sourceError && trimmedText) {
+      setSourceError("");
+    }
+  };
+
+  const createDraftFromSource = async (
+    content: string,
+    sourceType: string,
+    hasSource: boolean
+  ) => {
+    if (!user) return false;
+
     setError(null);
-    setSourceError(null);
-    setContentError(null);
+    const { isValid, trimmedContent } = validateDraftSource(content, hasSource);
+    if (!isValid) return false;
+
+    setCreating(true);
 
     try {
-      const sourceType =
-        activeMode === "reply_to_tweet"
-          ? "MANUAL"
-          : trimmedText.startsWith("http")
-            ? "ARTICLE"
-            : "MANUAL";
-      const { draft } = await api.drafts.generate({
-        sourceContent: trimmedText,
-        sourceType,
-        blendId: selectedBlendId || undefined,
-      });
+      const { draft } = await api.drafts.generate(
+        buildGenerateRequest(trimmedContent, sourceType)
+      );
       commitDraft(draft);
       return true;
     } catch (createDraftError: unknown) {
@@ -244,6 +219,30 @@ export default function CraftingPage() {
     }
   };
 
+  const handleFileDrop = async (files: FileList) => {
+    if (!user || files.length === 0) return;
+
+    const file = files[0];
+
+    try {
+      const text = await file.text();
+      await createDraftFromSource(text.slice(0, 10000), "REPORT", true);
+    } catch (fileDropError: unknown) {
+      console.error("Failed to process file:", fileDropError);
+      setError(
+        fileDropError instanceof Error ? fileDropError.message : "Failed to process file"
+      );
+    }
+  };
+
+  const handleCreateDraft = async (text: string) => {
+    const sourceType = text.trim().startsWith("http") ? "ARTICLE" : "MANUAL";
+    return createDraftFromSource(text, sourceType, Boolean(text.trim()));
+  };
+
+  const handleCreateReplyDraft = async (tweetText: string) =>
+    createDraftFromSource(tweetText, "TWEET", Boolean(tweetText.trim()));
+
   const handleGenerateNews = async (articleUrl: string, fallbackText = "") => {
     if (!user) {
       return {};
@@ -256,12 +255,13 @@ export default function CraftingPage() {
     setError(null);
 
     try {
-      const { draft } = await api.drafts.generate({
-        sourceContent: trimmedFallbackText || trimmedArticleUrl,
-        sourceType: trimmedFallbackText ? "MANUAL" : "ARTICLE",
-        blendId: selectedBlendId || undefined,
-      });
-      commitDraft(draft, trimmedArticleUrl);
+      const { draft } = await api.drafts.generate(
+        buildGenerateRequest(
+          trimmedFallbackText || trimmedArticleUrl,
+          trimmedFallbackText ? "MANUAL" : "ARTICLE"
+        )
+      );
+      commitDraft(draft);
       return { showFallback: Boolean(trimmedFallbackText) };
     } catch (generateNewsError: unknown) {
       console.error("Failed to generate news draft:", generateNewsError);
@@ -289,16 +289,14 @@ export default function CraftingPage() {
     setError(null);
 
     try {
-      const sourceUrl = extractSourceUrl(activeDraft);
-      const { draft } = await api.drafts.update(activeDraft.id, { status: "APPROVED" });
-      const normalizedDraft = sourceUrl
-        ? { ...draft, content: appendSourceUrl(draft.content, sourceUrl) }
-        : draft;
-
-      setActiveDraft(normalizedDraft);
+      const { draft } = await api.drafts.update(activeDraft.id, {
+        content: activeDraft.content,
+        status: "APPROVED",
+      });
+      setActiveDraft(draft);
       setDrafts((previousDrafts) =>
         previousDrafts.map((existingDraft) =>
-          existingDraft.id === normalizedDraft.id ? normalizedDraft : existingDraft
+          existingDraft.id === draft.id ? draft : existingDraft
         )
       );
     } catch (shipError: unknown) {
@@ -316,24 +314,18 @@ export default function CraftingPage() {
     setError(null);
 
     try {
-      const sourceUrl = extractSourceUrl(activeDraft);
       const { draft } = await api.drafts.regenerate(activeDraft.id, feedback.trim());
-      commitDraft(draft, sourceUrl ?? undefined);
+      commitDraft(draft);
       setFeedback("");
-    } catch {
+    } catch (regenerateError) {
       try {
-        const sourceUrl = extractSourceUrl(activeDraft);
         const { draft } = await api.drafts.update(activeDraft.id, {
           feedback: feedback.trim(),
         });
-        const normalizedDraft = sourceUrl
-          ? { ...draft, content: appendSourceUrl(draft.content, sourceUrl) }
-          : draft;
-
-        setActiveDraft(normalizedDraft);
+        setActiveDraft(draft);
         setDrafts((previousDrafts) =>
           previousDrafts.map((existingDraft) =>
-            existingDraft.id === normalizedDraft.id ? normalizedDraft : existingDraft
+            existingDraft.id === draft.id ? draft : existingDraft
           )
         );
         setFeedback("");
@@ -357,9 +349,8 @@ export default function CraftingPage() {
     setError(null);
 
     try {
-      const sourceUrl = extractSourceUrl(activeDraft);
       const { draft } = await api.drafts.regenerate(activeDraft.id);
-      commitDraft(draft, sourceUrl ?? undefined);
+      commitDraft(draft);
     } catch (tryAgainError: unknown) {
       console.error("Failed to regenerate:", tryAgainError);
       setError(
@@ -377,20 +368,14 @@ export default function CraftingPage() {
     setError(null);
 
     try {
-      const sourceUrl = extractSourceUrl(activeDraft);
       const { draft } = await api.drafts.refine(activeDraft.id, instruction);
-      const normalizedDraft = sourceUrl
-        ? { ...draft, content: appendSourceUrl(draft.content, sourceUrl) }
-        : draft;
-
-      setActiveDraft(normalizedDraft);
+      setActiveDraft(draft);
       setDrafts((previousDrafts) =>
         previousDrafts.map((existingDraft) =>
-          existingDraft.id === normalizedDraft.id ? normalizedDraft : existingDraft
+          existingDraft.id === draft.id ? draft : existingDraft
         )
       );
     } catch (refineError: unknown) {
-      console.error("Failed to refine draft:", refineError);
       setError(refineError instanceof Error ? refineError.message : "Refinement failed");
     } finally {
       setRefiningChip(null);
@@ -416,6 +401,18 @@ export default function CraftingPage() {
     } finally {
       setGeneratingImage(false);
     }
+  };
+
+  const handleDraftContentChange = (content: string) => {
+    if (!activeDraft) return;
+
+    const updatedDraft = { ...activeDraft, content };
+    setActiveDraft(updatedDraft);
+    setDrafts((previousDrafts) =>
+      previousDrafts.map((existingDraft) =>
+        existingDraft.id === updatedDraft.id ? updatedDraft : existingDraft
+      )
+    );
   };
 
   const versionDrafts = drafts.slice(0, 3);
@@ -467,28 +464,6 @@ export default function CraftingPage() {
         </Link>
       </div>
 
-      {trendingTopics.length > 0 ? (
-        <div id="trending-section" className="mt-6">
-          <label className="text-xs uppercase tracking-wide text-atlas-text-secondary">
-            Trending now — click to craft a tweet
-          </label>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {trendingTopics.slice(0, 6).map((topic) => (
-              <button
-                key={topic.id}
-                type="button"
-                onClick={() => handleCreateDraft(`${topic.headline}. ${topic.context || ""}`)}
-                className="rounded-full border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs text-atlas-text transition-colors hover:border-atlas-teal hover:text-atlas-teal"
-              >
-                {topic.headline.length > 50
-                  ? `${topic.headline.slice(0, 50)}…`
-                  : topic.headline}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
       <div className="mt-6">
         <div
           role="tablist"
@@ -517,8 +492,47 @@ export default function CraftingPage() {
             );
           })}
         </div>
+      </div>
 
-        {isNewsMode ? (
+      {isNewsMode && trendingTopics.length > 0 ? (
+        <div id="trending-section" className="mt-6">
+          <label className="text-xs uppercase tracking-wide text-atlas-text-secondary">
+            Trending now — click to craft a tweet
+          </label>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {trendingTopics.slice(0, 6).map((topic) => (
+              <button
+                key={topic.id}
+                type="button"
+                onClick={() =>
+                  void createDraftFromSource(
+                    `${topic.headline}. ${topic.context || ""}`,
+                    "TRENDING_TOPIC",
+                    true
+                  )
+                }
+                className="rounded-full border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs text-atlas-text transition-colors hover:border-atlas-teal hover:text-atlas-teal"
+              >
+                {topic.headline.length > 50
+                  ? `${topic.headline.slice(0, 50)}…`
+                  : topic.headline}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="mt-6">
+        {isReplyMode ? (
+          <ReplyMode
+            creating={creating}
+            error={error}
+            onDismissError={() => setError(null)}
+            onGenerateReply={handleCreateReplyDraft}
+            onReplyAngleChange={setSelectedReplyAngle}
+            selectedReplyAngle={selectedReplyAngle}
+          />
+        ) : isNewsMode ? (
           <NewsMode
             creating={creating}
             error={error}
@@ -528,45 +542,24 @@ export default function CraftingPage() {
         ) : (
           <div className="mt-6">
             <label className="text-xs uppercase tracking-wide text-atlas-text-secondary">
-              {isReplyMode
-                ? "Paste the tweet or quote you want Atlas to respond to."
-                : "Feed Atlas content — it crafts the tweet in your voice."}
+              Feed Atlas content — it crafts the tweet in your voice.
             </label>
             <div className="mt-3">
               <ContentInput
-                placeholder={
-                  isReplyMode
-                    ? "Paste the tweet or quote you want to reply to…"
-                    : "Paste a tweet idea or link…"
-                }
                 onTextSubmit={handleCreateDraft}
-                onTextChange={(value) => {
-                  if (sourceError && value.trim()) {
-                    setSourceError(null);
-                  }
-
-                  if (!contentError) {
-                    return;
-                  }
-
-                  if (!value.trim()) {
-                    return;
-                  }
-
-                  if (value.trim().length <= 2000) {
-                    setContentError(null);
-                  }
-                }}
+                onTextChange={handleDraftTextChange}
                 onDrop={handleFileDrop}
                 onTrendingClick={() => {
-                  const trendingSection = document.getElementById("trending-section");
-
-                  if (trendingSection) {
-                    trendingSection.scrollIntoView({ behavior: "smooth" });
-                  }
+                  handleModeChange("news_to_post");
+                  requestAnimationFrame(() => {
+                    const trendingSection = document.getElementById("trending-section");
+                    if (trendingSection) {
+                      trendingSection.scrollIntoView({ behavior: "smooth" });
+                    }
+                  });
                 }}
-                sourceError={sourceError ?? undefined}
-                contentError={contentError ?? undefined}
+                sourceError={sourceError}
+                contentError={contentError}
               />
               {creating ? (
                 <div className="mt-2 flex items-center gap-2 text-sm text-atlas-teal">
@@ -582,7 +575,7 @@ export default function CraftingPage() {
                     onClick={() => setError(null)}
                     className="ml-2 transition-colors hover:text-atlas-text"
                   >
-                    x
+                    ✕
                   </button>
                 </div>
               ) : null}
@@ -591,7 +584,7 @@ export default function CraftingPage() {
         )}
       </div>
 
-      <div className="mt-6 flex flex-col flex-wrap items-start gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6">
+      <div className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6">
         <select
           value={voiceMode}
           onChange={(event) => {
@@ -602,7 +595,7 @@ export default function CraftingPage() {
               setSelectedBlendId(null);
             }
           }}
-          className="rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none"
+          className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
         >
           <option value="my_voice">My voice</option>
           <option value="blended">Blended</option>
@@ -612,7 +605,7 @@ export default function CraftingPage() {
           <select
             value={selectedBlendId || ""}
             onChange={(event) => setSelectedBlendId(event.target.value || null)}
-            className="rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none"
+            className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
           >
             <option value="">Pick a blend…</option>
             {blends.map((blend) => (
@@ -622,12 +615,10 @@ export default function CraftingPage() {
             ))}
           </select>
         ) : null}
-        <div className="flex min-w-[200px] flex-1 items-center gap-3">
+        <div className="flex min-w-[200px] flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <span className="shrink-0 text-sm text-atlas-text-secondary">
             {selectedBlendId
-              ? `My Voice ↔ ${
-                  blends.find((blend) => blend.id === selectedBlendId)?.name || "Blend"
-                }`
+              ? `My Voice ↔ ${blends.find((blend) => blend.id === selectedBlendId)?.name || "Blend"}`
               : "Blend:"}
           </span>
           <input
@@ -646,10 +637,10 @@ export default function CraftingPage() {
         <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6">
           <textarea
             value={activeDraft.content}
-            readOnly
-            rows={6}
+            onChange={(event) => handleDraftContentChange(event.target.value)}
+            rows={5}
             aria-label="Generated draft"
-            className="w-full resize-none bg-transparent text-atlas-text leading-relaxed focus:outline-none"
+            className="w-full resize-none bg-transparent leading-relaxed text-atlas-text focus:outline-none"
           />
           {activeDraft.status === "APPROVED" ? (
             <span className="mt-3 inline-block rounded bg-atlas-success/10 px-2 py-1 text-xs text-atlas-success">
@@ -658,14 +649,14 @@ export default function CraftingPage() {
           ) : null}
           <p
             className={`mt-2 text-right text-xs ${
-              activeDraft.content.length >= 280
+              activeDraftCharacterCount >= 280
                 ? "text-atlas-error"
-                : activeDraft.content.length >= 260
+                : activeDraftCharacterCount >= 260
                   ? "text-atlas-warning"
                   : "text-atlas-text-secondary"
             }`}
           >
-            {activeDraft.content.length} / 280
+            {activeDraftCharacterCount} / 280
           </p>
         </div>
       ) : (
@@ -691,7 +682,9 @@ export default function CraftingPage() {
               Confidence
             </p>
             <p className="font-heading text-2xl font-bold text-atlas-success">
-              {activeDraft.confidence ? `${Math.round(activeDraft.confidence * 100)}%` : "—"}
+              {activeDraft.confidence
+                ? `${Math.round(activeDraft.confidence * 100)}%`
+                : "—"}
             </p>
           </div>
           <div className="rounded-2xl border border-glass-border border-l-4 border-l-atlas-teal bg-atlas-surface p-4">
@@ -712,7 +705,7 @@ export default function CraftingPage() {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <button
               type="button"
-              onClick={() => handleGenerateVisual("quote_card")}
+              onClick={() => void handleGenerateVisual("quote_card")}
               disabled={generatingImage}
               className="flex items-center justify-center gap-2 rounded-lg border border-glass-border bg-atlas-surface px-4 py-2 text-sm text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal disabled:opacity-50"
             >
@@ -724,9 +717,9 @@ export default function CraftingPage() {
               {generatingImage ? "Generating…" : "Generate visual"}
             </button>
             <select
-              onChange={(event) => handleGenerateVisual(event.target.value)}
+              onChange={(event) => void handleGenerateVisual(event.target.value)}
               disabled={generatingImage}
-              className="rounded-lg border border-glass-border bg-atlas-surface px-2 py-2 text-xs text-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
+              className="w-full rounded-lg border border-glass-border bg-atlas-surface px-2 py-2 text-xs text-atlas-text-secondary focus:border-atlas-teal focus:outline-none sm:w-auto"
             >
               <option value="">Style…</option>
               <option value="infographic">Infographic</option>
@@ -788,7 +781,11 @@ export default function CraftingPage() {
 
       {activeDraft && activeDraft.status !== "APPROVED" ? (
         <div className="mt-6 flex flex-wrap gap-3">
-          <GradientButton variant="outline-success" onClick={handleShip} disabled={loading || creating}>
+          <GradientButton
+            variant="outline-success"
+            onClick={handleShip}
+            disabled={loading || creating}
+          >
             {loading ? "Shipping…" : "Ship it"}
           </GradientButton>
           <GradientButton
@@ -797,7 +794,11 @@ export default function CraftingPage() {
           >
             Not quite — tell me what&apos;s off
           </GradientButton>
-          <GradientButton variant="outline-teal" onClick={handleTryAgain} disabled={creating}>
+          <GradientButton
+            variant="outline-teal"
+            onClick={handleTryAgain}
+            disabled={creating}
+          >
             {creating ? "Regenerating…" : "Try again"}
           </GradientButton>
         </div>
