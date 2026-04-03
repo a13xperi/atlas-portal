@@ -206,6 +206,8 @@ export const api = {
       request<{ draft: TweetDraft }>(`/api/drafts/${draftId}/post`, {
         method: "POST",
       }),
+    thread: (draftId: string) =>
+      request<{ thread: string[]; count: number }>(`/api/drafts/${draftId}/thread`, { method: "POST" }),
     team: (limit = 50) =>
       request<{ drafts: TeamDraft[]; total: number }>(`/api/drafts/team?limit=${limit}`),
   },
