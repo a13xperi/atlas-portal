@@ -5,6 +5,7 @@ import { Mic, FileText, MessageSquare, TrendingUp } from "lucide-react";
 
 export interface ContentInputProps {
   placeholder?: string;
+  value?: string;
   onDrop?: (files: FileList) => void;
   onTextChange?: (text: string) => void;
   onTextSubmit?: (
@@ -19,6 +20,7 @@ export interface ContentInputProps {
 
 export default function ContentInput({
   placeholder = "Paste a tweet idea or link…",
+  value,
   onDrop,
   onTextChange,
   onTextSubmit,
@@ -30,7 +32,8 @@ export default function ContentInput({
 }: ContentInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
-  const [text, setText] = useState("");
+  const [internalText, setInternalText] = useState("");
+  const text = value ?? internalText;
 
   const handleDrop = (event: React.DragEvent) => {
     event.preventDefault();
@@ -47,7 +50,9 @@ export default function ContentInput({
   };
 
   const clearText = () => {
-    setText("");
+    if (value === undefined) {
+      setInternalText("");
+    }
     onTextChange?.("");
   };
 
@@ -146,7 +151,9 @@ export default function ContentInput({
           value={text}
           rows={3}
           onChange={(event) => {
-            setText(event.currentTarget.value);
+            if (value === undefined) {
+              setInternalText(event.currentTarget.value);
+            }
             onTextChange?.(event.currentTarget.value);
           }}
           onKeyDown={(event) => {
