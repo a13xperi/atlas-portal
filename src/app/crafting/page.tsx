@@ -1,7 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Clipboard, Link2, Loader2, Mic, X } from "lucide-react";
+import {
+  Archive,
+  Check,
+  CheckCircle,
+  ChevronRight,
+  Clipboard,
+  Link2,
+  Loader2,
+  Mic,
+  RefreshCw,
+  X,
+} from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
@@ -48,6 +59,19 @@ const DRAFT_STATUS_PILL_STYLES: Record<TweetDraft["status"], string> = {
   POSTED: "bg-atlas-success/20 text-atlas-success",
   ARCHIVED: "bg-atlas-text-muted/20 text-atlas-text-muted",
 };
+
+const DRAFT_STATUS_HINTS: Record<TweetDraft["status"], string> = {
+  DRAFT: "Review and approve when ready",
+  APPROVED: "Ready to post",
+  POSTED: "Published",
+  ARCHIVED: "Archived",
+};
+
+const DRAFT_WORKFLOW_STEPS: { status: TweetDraft["status"]; label: string }[] = [
+  { status: "DRAFT", label: "Draft" },
+  { status: "APPROVED", label: "Approved" },
+  { status: "POSTED", label: "Posted" },
+];
 
 const VisualConceptSection = dynamic(
   () => import("@/components/crafting/VisualConceptSection"),
@@ -142,6 +166,8 @@ export default function CraftingPage() {
   const [selectedBlendId, setSelectedBlendId] = useState<string | null>(null);
   const [blendValue, setBlendValue] = useState(30);
   const [feedback, setFeedback] = useState("");
+  const [feedbackText, setFeedbackText] = useState("");
+  const [showFeedback, setShowFeedback] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [creating, setCreating] = useState(false);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
@@ -161,7 +187,18 @@ export default function CraftingPage() {
   } | null>(null);
   const activeDraftInitialized = useRef(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
+  const draftInputValueRef = useRef("");
+  const handleCreateDraftRef = useRef<
+    ((text?: string) => Promise<boolean | void>) | null
+  >(null);
   const canReviseActiveDraft = activeDraft?.status === "DRAFT";
+  const activeDraftWordCount = activeDraft?.content
+    ? activeDraft.content.split(/\s+/).filter(Boolean).length
+    : 0;
+  const activeDraftReadingTime = Math.max(
+    1,
+    Math.ceil(activeDraftWordCount / 200)
+  );
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -254,7 +291,7 @@ export default function CraftingPage() {
     setUrlPreview(null);
   };
 
-  const prependDraftHistory = (draft: TweetDraft, sourceUrl?: string) => {
+  const prependDraftHistory = useCallback((draft: TweetDraft, sourceUrl?: string) => {
     const normalizedDraft = normalizeDraftWithSource(draft, sourceUrl);
 
     setDraftHistory((previousHistory) => {
@@ -276,7 +313,7 @@ export default function CraftingPage() {
     });
 
     return normalizedDraft;
-  };
+  }, []);
 
   const updateDraftHistory = (draft: TweetDraft, sourceUrl?: string) => {
     const normalizedDraft = normalizeDraftWithSource(draft, sourceUrl);
@@ -356,7 +393,7 @@ export default function CraftingPage() {
     }
   };
 
-  const commitDraft = (
+  const commitDraft = useCallback((
     draft: TweetDraft,
     sourceUrl?: string,
     previousVersion?: TweetDraft | null
@@ -400,9 +437,9 @@ export default function CraftingPage() {
     setActiveDraft(normalizedDraft);
     setVisualConcept(null);
     activeDraftInitialized.current = true;
-  };
+  }, [prependDraftHistory]);
 
-  const validateDraftSubmission = (content: string, hasSource: boolean) => {
+  const validateDraftSubmission = useCallback((content: string, hasSource: boolean) => {
     const trimmedContent = content.trim();
     let isValid = true;
 
@@ -424,9 +461,10 @@ export default function CraftingPage() {
     }
 
     return { isValid, trimmedContent };
-  };
+  }, []);
 
   const handleDraftTextChange = (text: string) => {
+    draftInputValueRef.current = text;
     const trimmedText = text.trim();
 
     if (trimmedText.length > 2000) {
@@ -440,7 +478,7 @@ export default function CraftingPage() {
     }
   };
 
-  const createDraftFromSource = async (
+  const createDraftFromSource = useCallback(async (
     content: string,
     sourceType: "REPORT" | "ARTICLE" | "MANUAL",
     hasSource: boolean
@@ -471,7 +509,7 @@ export default function CraftingPage() {
     } finally {
       setCreating(false);
     }
-  };
+  }, [commitDraft, selectedBlendId, user, validateDraftSubmission]);
 
   const handleFileDrop = async (files: FileList) => {
     if (!user || files.length === 0) return;
@@ -496,7 +534,7 @@ export default function CraftingPage() {
     }
   };
 
-  const handleCreateDraft = async (text: string) => {
+  const handleCreateDraft = async (text = draftInputValueRef.current) => {
     const trimmedText = text.trim();
     const sourceType =
       activeMode === "reply_to_tweet"
@@ -515,6 +553,21 @@ export default function CraftingPage() {
 
     return createDraftFromSource(text, sourceType, Boolean(trimmedText));
   };
+
+  handleCreateDraftRef.current = handleCreateDraft;
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        void handleCreateDraftRef.current?.();
+      }
+    };
+
+    document.addEventListener("keydown", handler);
+
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
 
   const handleGenerateNews = async (articleUrl: string, fallbackText = "") => {
     if (!user) {
@@ -624,15 +677,20 @@ export default function CraftingPage() {
     }
   };
 
-  const handleTryAgain = async () => {
+  const handleTryAgain = async (nextFeedback?: string) => {
     if (!user || !activeDraft) return;
+
+    const trimmedFeedback = nextFeedback?.trim();
 
     setCreating(true);
     setError(null);
 
     try {
       const sourceUrl = extractSourceUrl(activeDraft);
-      const { draft } = await api.drafts.regenerate(activeDraft.id);
+      const { draft } = await api.drafts.regenerate(
+        activeDraft.id,
+        trimmedFeedback || undefined
+      );
       commitDraft(draft, sourceUrl ?? undefined, activeDraft);
     } catch (tryAgainError: unknown) {
       console.error("Failed to regenerate:", tryAgainError);
@@ -967,14 +1025,7 @@ export default function CraftingPage() {
                     <GradientButton
                       fullWidth
                       disabled={creating}
-                      onClick={() => {
-                        const input = document.querySelector<HTMLInputElement>(
-                          'input[placeholder*="Paste"]'
-                        );
-                        if (input?.value) {
-                          void handleCreateDraft(input.value);
-                        }
-                      }}
+                      onClick={() => void handleCreateDraft()}
                     >
                       {creating ? (
                         <span className="flex items-center gap-2">
@@ -987,6 +1038,9 @@ export default function CraftingPage() {
                         "Generate Draft"
                       )}
                     </GradientButton>
+                    <p className="mt-1 text-center text-[10px] text-atlas-text-muted">
+                      ⌘↩ to generate
+                    </p>
                   </div>
                   {error ? (
                     <div
@@ -1076,102 +1130,163 @@ export default function CraftingPage() {
                 className="w-full resize-none bg-transparent text-atlas-text leading-relaxed focus:outline-none"
               />
               {activeDraft.content ? (
-                <div className="mt-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="relative h-5 w-5">
-                      <svg className="h-5 w-5 -rotate-90" viewBox="0 0 20 20">
-                        <circle
-                          cx="10"
-                          cy="10"
-                          r="8"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          className="text-atlas-surface"
-                        />
-                        <circle
-                          cx="10"
-                          cy="10"
-                          r="8"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeDasharray={`${Math.min(
-                            (activeDraft.content.length / 280) * 50.3,
-                            50.3
-                          )} 50.3`}
-                          className={
-                            activeDraft.content.length > 280
-                              ? "text-atlas-error"
-                              : activeDraft.content.length > 250
-                                ? "text-atlas-warning"
-                                : "text-atlas-teal"
-                          }
-                        />
-                      </svg>
+                <>
+                  <div className="mt-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="relative h-5 w-5">
+                        <svg className="h-5 w-5 -rotate-90" viewBox="0 0 20 20">
+                          <circle
+                            cx="10"
+                            cy="10"
+                            r="8"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="text-atlas-surface"
+                          />
+                          <circle
+                            cx="10"
+                            cy="10"
+                            r="8"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeDasharray={`${Math.min(
+                              (activeDraft.content.length / 280) * 50.3,
+                              50.3
+                            )} 50.3`}
+                            className={
+                              activeDraft.content.length > 280
+                                ? "text-atlas-error"
+                                : activeDraft.content.length > 250
+                                  ? "text-atlas-warning"
+                                  : "text-atlas-teal"
+                            }
+                          />
+                        </svg>
+                      </div>
+                      <span
+                        className={`text-xs font-mono ${
+                          activeDraft.content.length > 280
+                            ? "text-atlas-error"
+                            : activeDraft.content.length > 250
+                              ? "text-atlas-warning"
+                              : "text-atlas-text-secondary"
+                        }`}
+                      >
+                        {activeDraft.content.length}/280
+                      </span>
                     </div>
+                    {activeDraft.content.length > 280 ? (
+                      <span className="text-xs text-atlas-error">
+                        {activeDraft.content.length - 280} over limit
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="mt-1 flex items-center gap-3 text-[10px] text-atlas-text-muted">
+                    <span>{activeDraftWordCount} words</span>
+                    <span>&middot;</span>
+                    <span>~{activeDraftReadingTime} min read</span>
+                  </div>
+                </>
+              ) : null}
+              <div className="mt-4 border-t border-glass-border pt-4">
+                <div className="flex items-center gap-1.5">
+                  {DRAFT_WORKFLOW_STEPS.map((step, index) => {
+                    const stepIndex = DRAFT_WORKFLOW_STEPS.findIndex(
+                      (s) => s.status === activeDraft.status,
+                    );
+                    const isCompleted = index < stepIndex;
+                    const isCurrent = step.status === activeDraft.status;
+
+                    return (
+                      <div key={step.status} className="flex items-center gap-1.5">
+                        {index > 0 ? (
+                          <ChevronRight
+                            className={`h-3 w-3 ${
+                              isCompleted
+                                ? "text-atlas-success"
+                                : "text-atlas-text-muted"
+                            }`}
+                          />
+                        ) : null}
+                        <span
+                          className={`text-xs font-medium ${
+                            isCurrent
+                              ? "text-atlas-text"
+                              : isCompleted
+                                ? "text-atlas-success"
+                                : "text-atlas-text-muted"
+                          }`}
+                        >
+                          {isCompleted ? (
+                            <span className="inline-flex items-center gap-1">
+                              <Check className="h-3 w-3" />
+                              {step.label}
+                            </span>
+                          ) : (
+                            step.label
+                          )}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="flex items-center gap-2">
                     <span
-                      className={`text-xs font-mono ${
-                        activeDraft.content.length > 280
-                          ? "text-atlas-error"
-                          : activeDraft.content.length > 250
-                            ? "text-atlas-warning"
-                            : "text-atlas-text-secondary"
-                      }`}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${DRAFT_STATUS_PILL_STYLES[activeDraft.status]}`}
                     >
-                      {activeDraft.content.length}/280
+                      {DRAFT_STATUS_LABELS[activeDraft.status]}
+                    </span>
+                    <span className="text-xs text-atlas-text-muted">
+                      {DRAFT_STATUS_HINTS[activeDraft.status]}
                     </span>
                   </div>
-                  {activeDraft.content.length > 280 ? (
-                    <span className="text-xs text-atlas-error">
-                      {activeDraft.content.length - 280} over limit
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
-              <div className="mt-4 flex flex-col gap-3 border-t border-glass-border pt-4 sm:flex-row sm:items-center">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${DRAFT_STATUS_PILL_STYLES[activeDraft.status]}`}
-                  >
-                    {DRAFT_STATUS_LABELS[activeDraft.status]}
-                  </span>
-                  <span className="text-xs text-atlas-text-muted">
-                    Draft workflow
-                  </span>
-                </div>
-                <div className="flex-1" />
-                <div className="flex flex-wrap items-center gap-2">
-                  {activeDraft.status === "DRAFT" ? (
-                    <>
+                  <div className="flex-1" />
+                  <div className="flex flex-wrap items-center gap-2">
+                    {activeDraft.status === "DRAFT" ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => void handleUpdateDraftStatus("APPROVED")}
+                          disabled={statusUpdating}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-atlas-teal/20 px-3 py-1.5 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/30 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {statusUpdating ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <CheckCircle className="h-3 w-3" />
+                          )}
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleUpdateDraftStatus("ARCHIVED")}
+                          disabled={statusUpdating}
+                          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-atlas-text-muted transition-colors hover:text-atlas-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <Archive className="h-3 w-3" />
+                          Archive
+                        </button>
+                      </>
+                    ) : null}
+                    {activeDraft.status === "APPROVED" ? (
                       <button
                         type="button"
-                        onClick={() => void handleUpdateDraftStatus("APPROVED")}
+                        onClick={() => void handleUpdateDraftStatus("POSTED")}
                         disabled={statusUpdating}
-                        className="rounded-lg bg-atlas-teal/20 px-3 py-1.5 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/30 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-steel px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {statusUpdating ? "Updating..." : "Approve"}
+                        {statusUpdating ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Check className="h-3 w-3" />
+                        )}
+                        Mark as Posted
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleUpdateDraftStatus("ARCHIVED")}
-                        disabled={statusUpdating}
-                        className="rounded-lg px-3 py-1.5 text-xs font-medium text-atlas-text-muted transition-colors hover:text-atlas-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        Archive
-                      </button>
-                    </>
-                  ) : null}
-                  {activeDraft.status === "APPROVED" ? (
-                    <button
-                      type="button"
-                      onClick={() => void handleUpdateDraftStatus("POSTED")}
-                      disabled={statusUpdating}
-                      className="rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-steel px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {statusUpdating ? "Updating..." : "Mark as Posted"}
-                    </button>
-                  ) : null}
+                    ) : null}
+                  </div>
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -1183,6 +1298,30 @@ export default function CraftingPage() {
                   <span className="text-xs">Delete draft</span>
                 </button>
                 <div className="flex items-center gap-3">
+                  {activeDraft.status === "APPROVED" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const text = encodeURIComponent(activeDraft.content);
+                        window.open(
+                          `https://twitter.com/intent/tweet?text=${text}`,
+                          "_blank",
+                          "width=550,height=420"
+                        );
+                      }}
+                      className="flex items-center gap-1.5 rounded-lg border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs font-medium text-atlas-text transition-colors hover:border-atlas-teal/50"
+                    >
+                      <svg
+                        className="h-3.5 w-3.5"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                      </svg>
+                      Post to X
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={handleCopyDraft}
@@ -1364,13 +1503,46 @@ export default function CraftingPage() {
               >
                 Not quite — tell me what&apos;s off
               </GradientButton>
-              <GradientButton
-                variant="outline-teal"
-                onClick={handleTryAgain}
-                disabled={creating}
-              >
-                {creating ? "Regenerating…" : "Try again"}
-              </GradientButton>
+              {!showFeedback ? (
+                <button
+                  type="button"
+                  onClick={() => setShowFeedback(true)}
+                  className="flex items-center gap-1.5 rounded-lg border border-glass-border px-3 py-1.5 text-xs font-medium text-atlas-text-secondary transition-colors hover:border-atlas-teal/50 hover:text-atlas-text"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Regenerate
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={feedbackText}
+                    onChange={(event) => setFeedbackText(event.target.value)}
+                    placeholder="Make it shorter, more data-driven..."
+                    className="flex-1 rounded-lg border border-glass-border bg-atlas-bg px-3 py-1.5 text-xs text-atlas-text placeholder-atlas-text-muted focus:border-atlas-teal focus:outline-none"
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        void handleTryAgain(feedbackText || undefined);
+                        setFeedbackText("");
+                        setShowFeedback(false);
+                      }
+                      if (event.key === "Escape") setShowFeedback(false);
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleTryAgain(feedbackText || undefined);
+                      setFeedbackText("");
+                      setShowFeedback(false);
+                    }}
+                    className="rounded-lg bg-atlas-teal px-3 py-1.5 text-xs font-medium text-white"
+                  >
+                    Go
+                  </button>
+                </div>
+              )}
             </div>
           ) : null}
 
