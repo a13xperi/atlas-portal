@@ -1,8 +1,9 @@
+import React from "react";
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
-function ThrowError({ message = "Crafting exploded" }: { message?: string }) {
+function ThrowError({ message = "Crafting exploded" }: { message?: string }): React.ReactNode {
   throw new Error(message);
 }
 
