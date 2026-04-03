@@ -25,19 +25,43 @@ export default function LoginPage() {
     }
   }, [authLoading, user, router]);
 
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
   const handleSubmit = async () => {
     setError("");
+
+    if (!email.trim()) {
+      setError("Email is required");
+      return;
+    }
+
+    if (!isValidEmail(email.trim())) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    if (!password) {
+      setError("Password is required");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
+    if (mode === "register" && !handle.trim()) {
+      setError("Handle is required");
+      return;
+    }
+
     setSubmitting(true);
+
     try {
       if (mode === "login") {
         await login(email.trim(), password);
         router.push("/dashboard");
       } else {
-        if (!handle.trim()) {
-          setError("Handle is required");
-          setSubmitting(false);
-          return;
-        }
         await register(handle.trim(), email.trim(), password, "A");
         router.push("/onboarding/track-a");
       }
@@ -57,12 +81,13 @@ export default function LoginPage() {
   return (
     <OnboardingShell maxWidth="480px">
       <div className="text-center">
-        <h1 className="font-heading text-[48px] font-bold tracking-[-1.2px] text-atlas-text">
+        <h1 className="font-heading text-[56px] font-bold tracking-[-1.5px] bg-gradient-to-r from-atlas-text via-atlas-teal to-atlas-text bg-clip-text text-transparent">
           ATLAS
         </h1>
         <p className="font-heading text-lg italic text-[#bcc9c7] mt-2">
           If you are here, you&apos;re already in the right place
         </p>
+        <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-atlas-teal/50 to-transparent" />
 
         <div className="h-8" />
 
@@ -77,11 +102,11 @@ export default function LoginPage() {
                 value={handle}
                 onChange={(e) => setHandle(e.target.value)}
                 placeholder="@yourhandle"
-                className="mt-2 w-full bg-atlas-surface rounded-lg text-atlas-text placeholder-atlas-text-secondary px-4 py-3 border border-glass-border focus:outline-none focus:border-atlas-teal"
+                className="mt-2 w-full bg-atlas-surface rounded-lg text-atlas-text placeholder-atlas-text-secondary px-4 py-3 border border-glass-border focus:outline-none focus:border-atlas-teal focus:shadow-[0_0_0_2px_rgba(78,205,196,0.15)]"
                 onKeyDown={handleKeyDown}
               />
             </div>
-            <div className="h-3" />
+            <div className="h-4" />
           </>
         )}
 
@@ -94,12 +119,12 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className="mt-2 w-full bg-atlas-surface rounded-lg text-atlas-text placeholder-atlas-text-secondary px-4 py-3 border border-glass-border focus:outline-none focus:border-atlas-teal"
+            className="mt-2 w-full bg-atlas-surface rounded-lg text-atlas-text placeholder-atlas-text-secondary px-4 py-3 border border-glass-border focus:outline-none focus:border-atlas-teal focus:shadow-[0_0_0_2px_rgba(78,205,196,0.15)]"
             onKeyDown={handleKeyDown}
           />
         </div>
 
-        <div className="h-3" />
+        <div className="h-4" />
 
         <div className="text-left">
           <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
@@ -111,7 +136,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Min 6 characters"
-              className="mt-2 w-full bg-atlas-surface rounded-lg text-atlas-text placeholder-atlas-text-secondary px-4 py-3 pr-12 border border-glass-border focus:outline-none focus:border-atlas-teal"
+              className="mt-2 w-full bg-atlas-surface rounded-lg text-atlas-text placeholder-atlas-text-secondary px-4 py-3 pr-12 border border-glass-border focus:outline-none focus:border-atlas-teal focus:shadow-[0_0_0_2px_rgba(78,205,196,0.15)]"
               onKeyDown={handleKeyDown}
             />
             <button
@@ -152,7 +177,7 @@ export default function LoginPage() {
 
         <div className="h-6" />
 
-        <p className="text-atlas-text-muted text-xs">Powered by Delphi</p>
+        <p className="text-atlas-text-muted text-xs tracking-wider uppercase">Powered by Delphi Digital</p>
       </div>
     </OnboardingShell>
   );

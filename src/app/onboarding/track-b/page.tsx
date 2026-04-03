@@ -6,7 +6,14 @@ import OnboardingShell from "@/components/layout/OnboardingShell";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import ProgressBar from "@/components/ui/ProgressBar";
 import GradientButton from "@/components/ui/GradientButton";
-import { Check, Loader2, Plus } from "lucide-react";
+import {
+  Check,
+  Loader2,
+  PenLine,
+  Plus,
+  SlidersHorizontal,
+  Sparkles,
+} from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import {
@@ -28,6 +35,24 @@ const referenceVoices = [
   "Hasu",
   "DegenSpartan",
   "Mando",
+];
+
+const manualSetupSteps = [
+  {
+    icon: Sparkles,
+    title: "Choose a preset",
+    description: "Start with Fun, Serious, or a custom mix.",
+  },
+  {
+    icon: SlidersHorizontal,
+    title: "Tune all 12 dimensions",
+    description: "Dial the balance until the tone feels right.",
+  },
+  {
+    icon: PenLine,
+    title: "Save your baseline",
+    description: "Use it as your default voice inside Atlas.",
+  },
 ];
 
 export default function TrackBPage() {
@@ -138,9 +163,52 @@ export default function TrackBPage() {
       <ProgressBar currentStep={1} totalSteps={7} />
 
       <div className="mt-8 space-y-8">
-        {/* Handle display */}
+        <section className="rounded-3xl border border-glass-border bg-atlas-surface/60 p-6 sm:p-7">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="rounded-full border border-atlas-teal/30 bg-atlas-teal/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-atlas-teal">
+              Track B · Manual setup
+            </span>
+            <span className="rounded-full border border-glass-border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-atlas-text-secondary">
+              Step 1 · Shape your voice
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-[1.1fr_0.9fr] sm:items-start">
+            <div>
+              <h1 className="font-heading text-3xl text-atlas-text">
+                Build Your Voice Manually
+              </h1>
+              <p className="mt-3 text-sm leading-6 text-atlas-text-secondary">
+                Pick a starting style, then fine-tune each dimension to match
+                how you write.
+              </p>
+            </div>
+
+            <div className="grid gap-3">
+              {manualSetupSteps.map(({ icon: Icon, title, description }) => (
+                <div
+                  key={title}
+                  className="rounded-2xl border border-glass-border bg-atlas-surface/70 p-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-xl border border-atlas-teal/20 bg-atlas-teal/10 p-2 text-atlas-teal">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-atlas-text">{title}</p>
+                      <p className="mt-1 text-xs leading-5 text-atlas-text-secondary">
+                        {description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {user?.handle && (
-          <p className="text-atlas-text-secondary text-sm text-center">
+          <p className="text-center text-sm text-atlas-text-secondary">
             Setting up voice for{" "}
             <span className="text-atlas-teal">@{user.handle}</span>
           </p>
@@ -165,23 +233,18 @@ export default function TrackBPage() {
               }
             }}
             placeholder={user?.displayName || user?.handle || "Your display name"}
-            className="mt-2 w-full bg-atlas-surface rounded-lg px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary border border-glass-border focus:outline-none focus:border-atlas-teal"
+            className="mt-2 w-full rounded-lg border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
           />
           {displayNameError && (
-            <p className="text-red-400 text-sm mt-1">{displayNameError}</p>
+            <p className="mt-1 text-sm text-red-400">{displayNameError}</p>
           )}
         </section>
 
-        <p className="text-atlas-text text-center">
-          No worries, I got you. There is no wrong way to do this.
-        </p>
-
-        {/* Style Prompt */}
         <section>
-          <h3 className="font-heading text-lg text-atlas-text mb-3">
-            What type of style do you like?
+          <h3 className="mb-3 font-heading text-lg text-atlas-text">
+            Choose your starting style
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {styleOptions.map(({ label, description }) => (
               <button
                 key={label}
@@ -193,25 +256,26 @@ export default function TrackBPage() {
                     setDimensionsError("");
                   }
                 }}
-                className={`bg-atlas-surface rounded-2xl p-4 text-center transition-all ${
+                className={`rounded-2xl bg-atlas-surface p-4 text-center transition-all ${
                   selectedStyle === label
                     ? "border border-atlas-teal ring-1 ring-atlas-teal text-atlas-text"
                     : "border border-glass-border text-atlas-text-secondary hover:border-atlas-text-secondary"
                 }`}
               >
                 <span className="text-sm font-medium">{label}</span>
-                <p className="text-xs text-atlas-text-muted mt-1">{description}</p>
+                <p className="mt-1 text-xs text-atlas-text-muted">{description}</p>
               </button>
             ))}
           </div>
-          <p className="text-atlas-text-muted text-xs italic mt-2">
-            Your default tone — you can vary it post-by-post from the Crafting Station.
+          <p className="mt-2 text-xs italic text-atlas-text-muted">
+            Your default tone — you can vary it post-by-post from the Crafting
+            Station.
           </p>
         </section>
 
         <section>
-          <h3 className="font-heading text-lg text-atlas-text mb-3">
-            Here&apos;s how that choice maps across your full voice profile.
+          <h3 className="mb-3 font-heading text-lg text-atlas-text">
+            Fine-tune each voice dimension
           </h3>
           <VoiceDimensionSections
             values={dimensions}
@@ -224,38 +288,42 @@ export default function TrackBPage() {
               }));
             }}
           />
-          <p className="text-atlas-text-muted text-xs italic mt-3">
+          <p className="mt-3 text-xs italic text-atlas-text-muted">
             You&apos;ll keep all 12 dimensions editable later in Voice Profiles.
           </p>
           {dimensionsError && (
-            <p className="text-red-400 text-sm mt-1">{dimensionsError}</p>
+            <p className="mt-1 text-sm text-red-400">{dimensionsError}</p>
           )}
         </section>
 
-        {/* Reference Voices */}
         <section>
           <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
             Pick voices you admire.
           </label>
-          <div className="mt-3 grid grid-cols-3 sm:grid-cols-6 gap-3">
-            {[...referenceVoices, ...Array.from(selectedVoices).filter((v) => !referenceVoices.includes(v))].map((voice) => {
+          <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-6">
+            {[
+              ...referenceVoices,
+              ...Array.from(selectedVoices).filter(
+                (voice) => !referenceVoices.includes(voice)
+              ),
+            ].map((voice) => {
               const isSelected = selectedVoices.has(voice);
               return (
                 <button
                   key={voice}
                   type="button"
                   onClick={() => toggleVoice(voice)}
-                  className={`flex flex-col items-center gap-2 bg-atlas-surface rounded-2xl p-3 transition-all ${
+                  className={`flex flex-col items-center gap-2 rounded-2xl bg-atlas-surface p-3 transition-all ${
                     isSelected
                       ? "border border-atlas-teal"
                       : "border border-glass-border"
                   }`}
                 >
-                  <div className="relative w-10 h-10 rounded-full bg-atlas-teal/20 flex items-center justify-center text-atlas-teal text-sm font-medium">
+                  <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-atlas-teal/20 text-sm font-medium text-atlas-teal">
                     {voice[0]}
                     {isSelected && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-atlas-teal flex items-center justify-center">
-                        <Check className="w-2.5 h-2.5 text-atlas-bg" />
+                      <div className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-atlas-teal">
+                        <Check className="h-2.5 w-2.5 text-atlas-bg" />
                       </div>
                     )}
                   </div>
@@ -267,22 +335,23 @@ export default function TrackBPage() {
             })}
           </div>
 
-          {/* Add custom handle */}
           {addingHandle ? (
-            <div className="flex items-center gap-2 mt-3">
+            <div className="mt-3 flex items-center gap-2">
               <input
                 type="text"
                 value={newHandle}
-                onChange={(e) => setNewHandle(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleAddCustomHandle(); }}
+                onChange={(event) => setNewHandle(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") handleAddCustomHandle();
+                }}
                 placeholder="@twitterhandle"
                 autoFocus
-                className="flex-1 bg-atlas-surface rounded-lg px-4 py-2 text-sm text-atlas-text placeholder-atlas-text-secondary border border-glass-border focus:outline-none focus:border-atlas-teal"
+                className="flex-1 rounded-lg border border-glass-border bg-atlas-surface px-4 py-2 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
               />
               <button
                 type="button"
                 onClick={handleAddCustomHandle}
-                className="px-3 py-2 text-sm rounded-lg bg-atlas-teal/10 text-atlas-teal border border-atlas-teal/30"
+                className="rounded-lg border border-atlas-teal/30 bg-atlas-teal/10 px-3 py-2 text-sm text-atlas-teal"
               >
                 Add
               </button>
@@ -298,56 +367,62 @@ export default function TrackBPage() {
             <button
               type="button"
               onClick={() => setAddingHandle(true)}
-              className="flex items-center gap-1 text-atlas-teal text-sm mt-3 hover:underline"
+              className="mt-3 flex items-center gap-1 text-sm text-atlas-teal hover:underline"
             >
-              <Plus className="w-3 h-3" /> Add your own — paste a Twitter handle
+              <Plus className="h-3 w-3" /> Add your own — paste a Twitter handle
             </button>
           )}
         </section>
 
-        {/* Paste Tweet Links (Optional) */}
         <section>
           <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
-            Paste tweet links you like <span className="text-atlas-text-muted">(optional)</span>
+            Paste tweet links you like{" "}
+            <span className="text-atlas-text-muted">(optional)</span>
           </label>
           <textarea
             value={tweetLinks}
-            onChange={(e) => setTweetLinks(e.target.value)}
+            onChange={(event) => setTweetLinks(event.target.value)}
             placeholder="Paste one or more tweet URLs — one per line"
             rows={3}
-            className="mt-2 w-full bg-atlas-surface rounded-2xl px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary border border-dashed border-atlas-text-secondary/30 focus:outline-none focus:border-atlas-teal resize-none"
+            className="mt-2 w-full resize-none rounded-2xl border border-dashed border-atlas-text-secondary/30 bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
           />
-          <p className="text-atlas-text-muted text-xs mt-1">
+          <p className="mt-1 text-xs text-atlas-text-muted">
             You can also send these via Telegram later.
           </p>
         </section>
 
-        {/* Blend Sliders */}
         <section>
           <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
             Adjust your voice blend
           </label>
           <div className="mt-3 space-y-4">
-            {["My voice", ...(Array.from(selectedVoices).slice(0, 2).length > 0 ? Array.from(selectedVoices).slice(0, 2) : ["Reference A", "Reference B"])].map((label, i) => (
+            {[
+              "My voice",
+              ...(Array.from(selectedVoices).slice(0, 2).length > 0
+                ? Array.from(selectedVoices).slice(0, 2)
+                : ["Reference A", "Reference B"]),
+            ].map((label, index) => (
               <div key={label} className="flex items-center gap-4">
-                <span className="text-sm text-atlas-text-secondary w-28 shrink-0">
+                <span className="w-28 shrink-0 text-sm text-atlas-text-secondary">
                   {label}
                 </span>
                 <input
                   type="range"
                   min={0}
                   max={100}
-                  value={blendValues[i]}
-                  onChange={(e) => updateBlend(i, Number(e.target.value))}
+                  value={blendValues[index]}
+                  onChange={(event) =>
+                    updateBlend(index, Number(event.target.value))
+                  }
                   className="flex-1 accent-atlas-teal"
                 />
-                <span className="text-sm text-atlas-text w-10 text-right">
-                  {blendValues[i]}%
+                <span className="w-10 text-right text-sm text-atlas-text">
+                  {blendValues[index]}%
                 </span>
               </div>
             ))}
           </div>
-          <p className="text-atlas-text-muted text-xs mt-2">
+          <p className="mt-2 text-xs text-atlas-text-muted">
             You can always adjust this later from Voice Profiles.
           </p>
         </section>
@@ -359,10 +434,10 @@ export default function TrackBPage() {
         >
           {saving ? (
             <span className="flex items-center justify-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" /> Saving your voice…
+              <Loader2 className="h-4 w-4 animate-spin" /> Saving your voice...
             </span>
           ) : (
-            "Let\u2019s get started"
+            "Let's get started"
           )}
         </GradientButton>
       </div>
