@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import AppShell from "@/components/layout/AppShell";
 import { Skeleton } from "@/components/ui/Skeleton";
-import Link from "next/link";
 import { api, AnalyticsSummary, LearningLogEntry, TweetDraft, DailyEngagement, DailyActivity } from "@/lib/api";
 
 const EngagementVelocityChart = dynamic(
@@ -33,12 +32,23 @@ export default function AnalyticsPage() {
     Promise.all([
       api.analytics.summary().then((r) => setSummary(r.summary ?? null)).catch((e: Error) => { errors.push(e.message); }),
       api.analytics.learningLog().then((r) => setLogEntries(r.entries ?? [])).catch(() => {}),
-      api.drafts.list().then((r) => setTopDrafts((r.drafts ?? []).slice(0, 4))).catch(() => {}),
       api.analytics.engagementDaily().then((r) => setEngagementDays(r.days ?? [])).catch(() => {}),
       api.analytics.activityDaily().then((r) => setActivityDays(r.days ?? [])).catch(() => {}),
     ])
       .then(() => { if (errors.length > 0) setError(errors[0]); })
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    api.drafts.list("POSTED")
+      .then((res) => {
+        const sorted = (res.drafts ?? [])
+          .filter((draft) => draft.actualEngagement != null)
+          .sort((a, b) => (b.actualEngagement ?? 0) - (a.actualEngagement ?? 0))
+          .slice(0, 3);
+        setTopDrafts(sorted);
+      })
+      .catch(() => {});
   }, []);
 
   const handleExportPDF = () => {
@@ -232,55 +242,30 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* SECTION 5: Top Tweets */}
-        <div className="mb-6">
-          <h2 className="font-heading text-xl text-atlas-text mb-4 flex items-center gap-3">
-            <span className="w-1 h-6 bg-atlas-teal rounded-full" />
-            Top Performance Assets
-          </h2>
-          <div className="bg-atlas-surface border border-glass-border rounded-xl overflow-hidden">
-            <div className="hidden sm:grid grid-cols-[1fr_100px_80px] px-6 py-3 border-b border-glass-border">
-              <span className="text-xs text-atlas-text-secondary font-medium">
-                Snippet
-              </span>
-              <span className="text-xs text-atlas-text-secondary font-medium">
-                Engagement
-              </span>
-              <span className="text-xs text-atlas-text-secondary font-medium">
-                Status
-              </span>
+        {topDrafts.length > 0 && (
+          <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-4">
+            <h3 className="mb-3 text-sm font-medium text-atlas-text">Top Performing Drafts</h3>
+            <div className="space-y-3">
+              {topDrafts.map((draft, i) => (
+                <div key={draft.id} className="flex items-start gap-3">
+                  <span
+                    className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                      i === 0 ? "bg-atlas-teal/20 text-atlas-teal" : "bg-atlas-surface text-atlas-text-muted"
+                    }`}
+                  >
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-2 text-sm text-atlas-text">{draft.content}</p>
+                    <p className="mt-1 text-[10px] text-atlas-text-muted">
+                      {draft.actualEngagement} engagements
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-            {topDrafts.length === 0 ? (
-              <div className="px-6 py-8 text-center">
-                <p className="text-sm text-atlas-text-muted">No top drafts yet. Create and post drafts to see your best performers here.</p>
-              </div>
-            ) : (topDrafts ?? []).map((d) => (
-              <Link
-                key={d.id}
-                href={`/crafting?draft=${d.id}`}
-                className="flex flex-col sm:grid sm:grid-cols-[1fr_100px_80px] px-4 sm:px-6 py-4 border-b border-glass-border last:border-0 hover:bg-glass cursor-pointer transition-colors gap-1 sm:gap-0"
-              >
-                <span className="text-sm text-atlas-text truncate pr-4">
-                  {d.content.slice(0, 80)}{d.content.length > 80 ? "..." : ""}
-                </span>
-                <span className="text-sm text-atlas-teal font-medium">
-                  {d.predictedEngagement
-                    ? `${(d.predictedEngagement / 1000).toFixed(1)}k`
-                    : "—"}
-                </span>
-                <span
-                  className={`text-xs font-medium ${
-                    d.status.toLowerCase() === "posted"
-                      ? "text-atlas-success"
-                      : "text-atlas-teal"
-                  }`}
-                >
-                  {d.status.toLowerCase()}
-                </span>
-              </Link>
-            ))}
           </div>
-        </div>
+        )}
 
         {/* SECTION 6: Learning Log */}
         <div className="mb-6 rounded-xl border border-glass-border bg-atlas-surface p-6 sm:p-8">

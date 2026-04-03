@@ -124,6 +124,19 @@ export const api = {
       request<{ success: boolean }>("/api/auth/logout", { method: "POST" }),
     me: () =>
       request<{ user: User & { voiceProfile: VoiceProfile } }>("/api/auth/me"),
+    x: {
+      authorize: () =>
+        request<{ url: string }>("/api/auth/x/authorize"),
+      callback: (code: string, state: string) =>
+        request<{ xHandle?: string }>("/api/auth/x/callback", {
+          method: "POST",
+          body: { code, state },
+        }),
+      status: () =>
+        request<{ linked: boolean; tokenExpired?: boolean; xHandle?: string }>(
+          "/api/auth/x/status"
+        ),
+    },
   },
 
   voice: {
@@ -175,12 +188,24 @@ export const api = {
       request<{ draft: TweetDraft }>(`/api/drafts/${draftId}/regenerate`, {
         method: "POST", body: { feedback },
       }),
-    update: (id: string, data: { content?: string; status?: string; feedback?: string }) =>
+    update: (
+      id: string,
+      data: {
+        content?: string;
+        status?: string;
+        feedback?: string;
+        actualEngagement?: number;
+      }
+    ) =>
       request<{ draft: TweetDraft }>(`/api/drafts/${id}`, { method: "PATCH", body: data }),
     delete: (id: string) =>
       request<{ success: boolean }>(`/api/drafts/${id}`, { method: "DELETE" }),
     refine: (draftId: string, instruction: string) =>
       request<{ draft: TweetDraft }>(`/api/drafts/${draftId}/refine`, { method: "POST", body: { instruction } }),
+    postToX: (draftId: string) =>
+      request<{ draft: TweetDraft }>(`/api/drafts/${draftId}/post`, {
+        method: "POST",
+      }),
     team: (limit = 50) =>
       request<{ drafts: TeamDraft[]; total: number }>(`/api/drafts/team?limit=${limit}`),
   },
@@ -282,6 +307,8 @@ export interface User {
   role: "ANALYST" | "MANAGER" | "ADMIN";
   displayName?: string;
   email?: string;
+  bio?: string;
+  avatarUrl?: string | null;
 }
 
 export interface VoiceProfile {

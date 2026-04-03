@@ -164,6 +164,30 @@ export default function VoiceProfilesPage() {
     }
   };
 
+  const handleResetDimensions = async () => {
+    if (!window.confirm("Reset all voice dimensions to defaults?")) {
+      return;
+    }
+
+    setSavingDimensions(true);
+    setError(null);
+
+    try {
+      const response = await api.voice.updateProfile(DEFAULT_VOICE_DIMENSIONS);
+      setProfile(response.profile);
+      setDraftDimensions(pickVoiceDimensions(response.profile));
+    } catch (resetError: unknown) {
+      console.error(resetError);
+      setError(
+        resetError instanceof Error
+          ? resetError.message
+          : "Failed to reset voice profile"
+      );
+    } finally {
+      setSavingDimensions(false);
+    }
+  };
+
   const toggleVoice = (id: string) => {
     setSelectedVoices((previous) => {
       const next = new Set(previous);
@@ -186,6 +210,23 @@ export default function VoiceProfilesPage() {
     });
   };
 
+  const getBlendedDimensions = () => {
+    if (!activeBlendId || !profile) {
+      return null;
+    }
+
+    const blend = blends.find((item) => item.id === activeBlendId);
+
+    if (!blend) {
+      return null;
+    }
+
+    return blend.voices.map((voice) => ({
+      label: voice.label,
+      percentage: voice.percentage,
+    }));
+  };
+
   const displayBlends = blends.map((blend) => ({
     id: blend.id,
     name: blend.name,
@@ -193,6 +234,7 @@ export default function VoiceProfilesPage() {
     isTemplate:
       (blend as SavedBlend & { isTemplate?: boolean }).isTemplate === true,
   }));
+  const blendedDimensions = getBlendedDimensions();
 
   return (
     <AppShell>
@@ -265,7 +307,20 @@ export default function VoiceProfilesPage() {
 
       <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface-glass p-8 backdrop-blur-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
+          <div className="flex-1">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs uppercase tracking-[0.18em] text-atlas-text-secondary">
+                Voice dimensions
+              </p>
+              <button
+                type="button"
+                onClick={handleResetDimensions}
+                disabled={loading || savingDimensions}
+                className="text-xs text-atlas-text-muted transition-colors hover:text-atlas-warning disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Reset to defaults
+              </button>
+            </div>
             <p className="text-sm italic text-atlas-text-muted">
               SignalSocial-style depth, but still fully adjustable whenever your
               voice evolves.
@@ -281,6 +336,29 @@ export default function VoiceProfilesPage() {
         </div>
 
         <div className="mt-6">
+          {activeBlendId && blendedDimensions ? (
+            <div className="mb-4 rounded-xl border border-atlas-teal/30 bg-atlas-teal/5 p-3">
+              <p className="mb-2 text-xs font-medium text-atlas-teal">
+                Active Blend
+              </p>
+              <div className="flex items-center gap-2">
+                {blendedDimensions.map((voice, index) => (
+                  <span
+                    key={`${voice.label}-${voice.percentage}`}
+                    className="text-xs text-atlas-text"
+                  >
+                    {voice.percentage}% {voice.label}
+                    {index < blendedDimensions.length - 1 ? (
+                      <span className="mx-1 text-atlas-text-muted">+</span>
+                    ) : null}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-1 text-[10px] text-atlas-text-muted">
+                Drafts will use this blend&apos;s voice mix
+              </p>
+            </div>
+          ) : null}
           <VoiceDimensionSections
             values={draftDimensions}
             interactive

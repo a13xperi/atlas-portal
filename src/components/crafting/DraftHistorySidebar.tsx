@@ -25,19 +25,17 @@ function formatDraftPreview(content: string) {
   return `${preview.slice(0, 80).trimEnd()}…`;
 }
 
-function formatTimestamp(timestamp: string) {
-  const date = new Date(timestamp);
+function relativeTime(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
 
-  if (Number.isNaN(date.getTime())) {
-    return timestamp;
-  }
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
 
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
 export default function DraftHistorySidebar({
@@ -67,7 +65,7 @@ export default function DraftHistorySidebar({
           </div>
         ) : (
           <div className="space-y-3">
-            {drafts.map(({ draft, copiedToClipboard, generatedAt }) => {
+            {drafts.map(({ draft, copiedToClipboard }) => {
               const isActive = draft.id === activeDraftId;
 
               return (
@@ -85,8 +83,22 @@ export default function DraftHistorySidebar({
                     {formatDraftPreview(draft.content)}
                   </p>
 
-                  <div className="mt-3 flex items-center justify-between gap-3 font-body text-xs text-atlas-text-secondary">
-                    <span>{formatTimestamp(generatedAt)}</span>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        draft.status === "POSTED"
+                          ? "bg-atlas-success"
+                          : draft.status === "APPROVED"
+                            ? "bg-atlas-teal"
+                            : "bg-atlas-text-muted"
+                      }`}
+                    />
+                    <span className="text-[10px] text-atlas-text-muted">
+                      {relativeTime(draft.createdAt)}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-end gap-3 font-body text-xs text-atlas-text-secondary">
                     <span>{draft.content.length} chars</span>
                   </div>
 

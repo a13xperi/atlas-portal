@@ -11,6 +11,7 @@ import {
   Loader2,
   Mic,
   RefreshCw,
+  TrendingUp,
   X,
 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -40,6 +41,14 @@ const CRAFTING_MODES = [
   { id: "new_post", label: "New Post" },
   { id: "reply_to_tweet", label: "Reply to Tweet" },
   { id: "news_to_post", label: "News to Post" },
+] as const;
+
+const TWEET_TEMPLATES = [
+  { label: "Hot Take", template: "Unpopular opinion: " },
+  { label: "Thread Starter", template: "🧵 Here's what most people get wrong about " },
+  { label: "Data Insight", template: "The data shows something interesting: " },
+  { label: "Prediction", template: "Bold prediction: by end of Q4, " },
+  { label: "Question", template: "Genuine question for CT: " },
 ] as const;
 
 const NEWS_SOURCE_PREFIX = "source:";
@@ -181,6 +190,7 @@ export default function CraftingPage() {
   const [sourceError, setSourceError] = useState("");
   const [compareMode, setCompareMode] = useState(false);
   const [compareVersion, setCompareVersion] = useState<number | null>(null);
+  const [draftInputText, setDraftInputText] = useState("");
   const [urlPreview, setUrlPreview] = useState<{
     title?: string;
     url: string;
@@ -465,6 +475,7 @@ export default function CraftingPage() {
 
   const handleDraftTextChange = (text: string) => {
     draftInputValueRef.current = text;
+    setDraftInputText(text);
     const trimmedText = text.trim();
 
     if (trimmedText.length > 2000) {
@@ -1008,6 +1019,7 @@ export default function CraftingPage() {
                         ? "Paste the tweet or quote you want to reply to…"
                         : "Paste a tweet idea or link…"
                     }
+                    value={draftInputText}
                     onTextSubmit={handleCreateDraft}
                     onTextChange={handleDraftTextChange}
                     onDrop={handleFileDrop}
@@ -1021,6 +1033,25 @@ export default function CraftingPage() {
                     sourceError={sourceError}
                     contentError={contentError}
                   />
+                  {activeMode === "new_post" && !draftInputText ? (
+                    <div className="mt-3">
+                      <p className="mb-2 text-[10px] text-atlas-text-muted">
+                        Start from a template
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {TWEET_TEMPLATES.map((templatePreset) => (
+                          <button
+                            key={templatePreset.label}
+                            type="button"
+                            onClick={() => handleDraftTextChange(templatePreset.template)}
+                            className="rounded-full border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs text-atlas-text-secondary transition-colors hover:border-atlas-teal/50 hover:text-atlas-text"
+                          >
+                            {templatePreset.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="mt-3">
                     <GradientButton
                       fullWidth
@@ -1188,6 +1219,58 @@ export default function CraftingPage() {
                     <span>&middot;</span>
                     <span>~{activeDraftReadingTime} min read</span>
                   </div>
+                  {activeDraft.confidence != null ||
+                  activeDraft.predictedEngagement != null ? (
+                    <div className="mt-3 flex items-center gap-4 border-t border-glass-border/50 pt-3">
+                      {activeDraft.confidence != null ? (
+                        <div className="flex items-center gap-1.5">
+                          <div className="relative h-4 w-4">
+                            <svg className="h-4 w-4 -rotate-90" viewBox="0 0 16 16">
+                              <circle
+                                cx="8"
+                                cy="8"
+                                r="6"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                className="text-atlas-surface"
+                              />
+                              <circle
+                                cx="8"
+                                cy="8"
+                                r="6"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeDasharray={`${
+                                  activeDraft.confidence * 37.7
+                                } 37.7`}
+                                className={
+                                  activeDraft.confidence > 0.8
+                                    ? "text-atlas-teal"
+                                    : activeDraft.confidence > 0.5
+                                      ? "text-atlas-warning"
+                                      : "text-atlas-error"
+                                }
+                              />
+                            </svg>
+                          </div>
+                          <span className="text-[10px] text-atlas-text-muted">
+                            {Math.round(activeDraft.confidence * 100)}% match
+                          </span>
+                        </div>
+                      ) : null}
+                      {activeDraft.predictedEngagement != null ? (
+                        <div className="flex items-center gap-1.5">
+                          <TrendingUp className="h-3.5 w-3.5 text-atlas-text-muted" />
+                          <span className="text-[10px] text-atlas-text-muted">
+                            ~{activeDraft.predictedEngagement.toLocaleString()} predicted
+                            reach
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </>
               ) : null}
               <div className="mt-4 border-t border-glass-border pt-4">
@@ -1298,16 +1381,30 @@ export default function CraftingPage() {
                   <span className="text-xs">Delete draft</span>
                 </button>
                 <div className="flex items-center gap-3">
-                  {activeDraft.status === "APPROVED" ? (
+                  {activeDraft.status === "APPROVED" || activeDraft.status === "DRAFT" ? (
                     <button
                       type="button"
-                      onClick={() => {
-                        const text = encodeURIComponent(activeDraft.content);
-                        window.open(
-                          `https://twitter.com/intent/tweet?text=${text}`,
-                          "_blank",
-                          "width=550,height=420"
-                        );
+                      onClick={async () => {
+                        try {
+                          setError(null);
+                          // Check if X account is linked
+                          const xStatus = await api.auth.x.status();
+                          if (!xStatus.linked || xStatus.tokenExpired) {
+                            // Start OAuth flow
+                            const { url } = await api.auth.x.authorize();
+                            window.location.href = url;
+                            return;
+                          }
+                          // Post to X via backend
+                          const result = await api.drafts.postToX(activeDraft.id);
+                          setActiveDraft(result.draft);
+                          syncDraftReferences(result.draft);
+                        } catch (postError: unknown) {
+                          console.error("Post to X failed:", postError);
+                          // Fallback to intent
+                          const text = encodeURIComponent(activeDraft.content);
+                          window.open(`https://twitter.com/intent/tweet?text=${text}`, "_blank", "width=550,height=420");
+                        }
                       }}
                       className="flex items-center gap-1.5 rounded-lg border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs font-medium text-atlas-text transition-colors hover:border-atlas-teal/50"
                     >
@@ -1373,31 +1470,6 @@ export default function CraftingPage() {
                 disabled={creating}
                 loading={refiningChip}
               />
-            </div>
-          ) : null}
-
-          {activeDraft ? (
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-glass-border border-l-4 border-l-atlas-success bg-atlas-surface p-4">
-                <p className="text-xs uppercase tracking-wider text-atlas-text-secondary">
-                  Confidence
-                </p>
-                <p className="font-heading text-2xl font-bold text-atlas-success">
-                  {activeDraft.confidence
-                    ? `${Math.round(activeDraft.confidence * 100)}%`
-                    : "—"}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-glass-border border-l-4 border-l-atlas-teal bg-atlas-surface p-4">
-                <p className="text-xs uppercase tracking-wider text-atlas-text-secondary">
-                  Predicted engagement
-                </p>
-                <p className="font-heading text-2xl font-bold text-atlas-teal">
-                  {activeDraft.predictedEngagement
-                    ? `~${(activeDraft.predictedEngagement / 1000).toFixed(1)}K`
-                    : "—"}
-                </p>
-              </div>
             </div>
           ) : null}
 

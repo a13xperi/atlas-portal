@@ -37,7 +37,6 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: colors.atlasBg,
   width: "device-width",
   initialScale: 1,
 };
@@ -49,6 +48,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${playfairDisplay.variable} ${inter.variable}`}>
+      <head>
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content={colors.atlasTeal} />
+      </head>
       <body className="font-body bg-atlas-bg text-atlas-text min-h-screen">
         <RouteProgress />
         <Providers>{children}</Providers>
