@@ -68,6 +68,7 @@ export default function ProfilePage() {
             <div className="mb-6 flex flex-col items-center">
               <div className="mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-gradient-to-r from-atlas-teal to-atlas-steel text-3xl font-heading text-white shadow-lg shadow-atlas-teal/20">
                 {profileUser.avatarUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
                   <img
                     src={profileUser.avatarUrl}
                     alt={`${profileTitle} avatar`}
