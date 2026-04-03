@@ -164,6 +164,30 @@ export default function VoiceProfilesPage() {
     }
   };
 
+  const handleResetDimensions = async () => {
+    if (!window.confirm("Reset all voice dimensions to defaults?")) {
+      return;
+    }
+
+    setSavingDimensions(true);
+    setError(null);
+
+    try {
+      const response = await api.voice.updateProfile(DEFAULT_VOICE_DIMENSIONS);
+      setProfile(response.profile);
+      setDraftDimensions(pickVoiceDimensions(response.profile));
+    } catch (resetError: unknown) {
+      console.error(resetError);
+      setError(
+        resetError instanceof Error
+          ? resetError.message
+          : "Failed to reset voice profile"
+      );
+    } finally {
+      setSavingDimensions(false);
+    }
+  };
+
   const toggleVoice = (id: string) => {
     setSelectedVoices((previous) => {
       const next = new Set(previous);
@@ -265,7 +289,20 @@ export default function VoiceProfilesPage() {
 
       <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface-glass p-8 backdrop-blur-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
+          <div className="flex-1">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs uppercase tracking-[0.18em] text-atlas-text-secondary">
+                Voice dimensions
+              </p>
+              <button
+                type="button"
+                onClick={handleResetDimensions}
+                disabled={loading || savingDimensions}
+                className="text-xs text-atlas-text-muted transition-colors hover:text-atlas-warning disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Reset to defaults
+              </button>
+            </div>
             <p className="text-sm italic text-atlas-text-muted">
               SignalSocial-style depth, but still fully adjustable whenever your
               voice evolves.

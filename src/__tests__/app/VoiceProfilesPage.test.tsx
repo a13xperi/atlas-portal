@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { DEFAULT_VOICE_DIMENSIONS } from "@/lib/voice-profile-dimensions";
 
 const mockProfile = {
   id: "vp1",
@@ -166,5 +167,34 @@ describe("VoiceProfilesPage", () => {
     });
 
     expect(screen.getByText("Based on 42 tweets analyzed.")).toBeInTheDocument();
+  });
+
+  it("resets voice dimensions to defaults", async () => {
+    const resetProfile = {
+      ...mockProfile,
+      ...DEFAULT_VOICE_DIMENSIONS,
+    };
+
+    const confirmSpy = jest.spyOn(window, "confirm").mockReturnValue(true);
+    mockApi.voice.updateProfile.mockResolvedValueOnce({ profile: resetProfile });
+
+    render(<VoiceProfilesPage />);
+
+    expect(
+      await screen.findByRole("button", { name: /reset to defaults/i })
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /reset to defaults/i }));
+
+    await waitFor(() => {
+      expect(confirmSpy).toHaveBeenCalledWith(
+        "Reset all voice dimensions to defaults?"
+      );
+      expect(mockApi.voice.updateProfile).toHaveBeenCalledWith(
+        DEFAULT_VOICE_DIMENSIONS
+      );
+    });
+
+    confirmSpy.mockRestore();
   });
 });
