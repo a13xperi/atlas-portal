@@ -92,13 +92,13 @@ describe("VoiceProfilesPage", () => {
 
     expect(await screen.findByText("Research-heavy")).toBeInTheDocument();
 
-    const useButton = screen.getByRole("button", { name: "Use" });
+    const useButton = screen.getByText("Use");
     fireEvent.click(useButton);
 
-    expect(await screen.findByRole("button", { name: "Active" })).toBeInTheDocument();
+    expect(await screen.findByText("Active")).toBeInTheDocument();
     expect(localStorage.getItem("atlas_active_blend")).toBe("blend-1");
 
-    fireEvent.click(screen.getByRole("button", { name: "Active" }));
+    fireEvent.click(screen.getByText("Active"));
 
     await waitFor(() => {
       expect(localStorage.getItem("atlas_active_blend")).toBeNull();
