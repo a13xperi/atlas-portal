@@ -840,9 +840,9 @@ export default function CraftingPage() {
         <div className="min-w-0 flex-1">
           {trendingTopics.length > 0 ? (
             <div id="trending-section">
-              <label className="text-xs uppercase tracking-wide text-atlas-text-secondary">
+              <p className="text-xs uppercase tracking-wide text-atlas-text-secondary">
                 Trending now — click to craft a tweet
-              </label>
+              </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {trendingTopics.slice(0, 6).map((topic) => (
                   <button
@@ -930,11 +930,11 @@ export default function CraftingPage() {
               />
             ) : (
               <div className="mt-6">
-                <label className="text-xs uppercase tracking-wide text-atlas-text-secondary">
+                <p className="text-xs uppercase tracking-wide text-atlas-text-secondary">
                   {activeMode === "reply_to_tweet"
                     ? "Paste the tweet or quote you want Atlas to respond to."
                     : "Feed Atlas content — it crafts the tweet in your voice."}
-                </label>
+                </p>
                 {activeMode === "reply_to_tweet" ? (
                   <div className="mb-2 mt-4">
                     <ReplyAngleSelector
@@ -989,11 +989,15 @@ export default function CraftingPage() {
                     </GradientButton>
                   </div>
                   {error ? (
-                    <div className="mt-2 flex items-center justify-between rounded-lg border border-atlas-error/30 bg-atlas-error/10 px-3 py-2 text-sm text-atlas-error">
+                    <div
+                      role="alert"
+                      className="mt-2 flex items-center justify-between rounded-lg border border-atlas-error/30 bg-atlas-error/10 px-3 py-2 text-sm text-atlas-error"
+                    >
                       <span>{error}</span>
                       <button
                         type="button"
                         onClick={() => setError(null)}
+                        aria-label="Dismiss error"
                         className="ml-2 transition-colors hover:text-atlas-text"
                       >
                         x
@@ -1007,6 +1011,7 @@ export default function CraftingPage() {
 
           <div className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6">
             <select
+              aria-label="Voice mode"
               value={voiceMode}
               onChange={(event) => {
                 const nextMode = event.target.value as
@@ -1027,6 +1032,7 @@ export default function CraftingPage() {
             </select>
             {voiceMode === "blended" && blends.length > 0 ? (
               <select
+                aria-label="Saved blend"
                 value={selectedBlendId || ""}
                 onChange={(event) => setSelectedBlendId(event.target.value || null)}
                 className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
@@ -1048,6 +1054,7 @@ export default function CraftingPage() {
                   : "Blend:"}
               </span>
               <input
+                aria-label="Blend intensity"
                 type="range"
                 min={0}
                 max={100}
@@ -1068,6 +1075,60 @@ export default function CraftingPage() {
                 aria-label="Generated draft"
                 className="w-full resize-none bg-transparent text-atlas-text leading-relaxed focus:outline-none"
               />
+              {activeDraft.content ? (
+                <div className="mt-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="relative h-5 w-5">
+                      <svg className="h-5 w-5 -rotate-90" viewBox="0 0 20 20">
+                        <circle
+                          cx="10"
+                          cy="10"
+                          r="8"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className="text-atlas-surface"
+                        />
+                        <circle
+                          cx="10"
+                          cy="10"
+                          r="8"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeDasharray={`${Math.min(
+                            (activeDraft.content.length / 280) * 50.3,
+                            50.3
+                          )} 50.3`}
+                          className={
+                            activeDraft.content.length > 280
+                              ? "text-atlas-error"
+                              : activeDraft.content.length > 250
+                                ? "text-atlas-warning"
+                                : "text-atlas-teal"
+                          }
+                        />
+                      </svg>
+                    </div>
+                    <span
+                      className={`text-xs font-mono ${
+                        activeDraft.content.length > 280
+                          ? "text-atlas-error"
+                          : activeDraft.content.length > 250
+                            ? "text-atlas-warning"
+                            : "text-atlas-text-secondary"
+                      }`}
+                    >
+                      {activeDraft.content.length}/280
+                    </span>
+                  </div>
+                  {activeDraft.content.length > 280 ? (
+                    <span className="text-xs text-atlas-error">
+                      {activeDraft.content.length - 280} over limit
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="mt-4 flex flex-col gap-3 border-t border-glass-border pt-4 sm:flex-row sm:items-center">
                 <div className="flex flex-wrap items-center gap-2">
                   <span
@@ -1122,20 +1183,14 @@ export default function CraftingPage() {
                   <span className="text-xs">Delete draft</span>
                 </button>
                 <div className="flex items-center gap-3">
-                  <p
-                    className={`text-xs ${
-                      activeDraft.content.length >= 280
-                        ? "text-atlas-error"
-                        : activeDraft.content.length >= 260
-                          ? "text-atlas-warning"
-                          : "text-atlas-text-secondary"
-                    }`}
-                  >
-                    {activeDraft.content.length} / 280
-                  </p>
                   <button
                     type="button"
                     onClick={handleCopyDraft}
+                    aria-label={
+                      copiedDraftId === activeDraft.id
+                        ? "Draft copied to clipboard"
+                        : "Copy draft to clipboard"
+                    }
                     title={
                       copiedDraftId === activeDraft.id
                         ? "Copied!"
@@ -1324,6 +1379,7 @@ export default function CraftingPage() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
                   id="feedback-input"
+                  aria-label="Feedback for the current draft"
                   type="text"
                   value={feedback}
                   onChange={(event) => setFeedback(event.target.value)}
@@ -1337,6 +1393,7 @@ export default function CraftingPage() {
                 />
                 <button
                   type="button"
+                  aria-label="Record voice feedback"
                   className="flex items-center justify-center rounded-lg border border-glass-border bg-atlas-surface p-3 text-atlas-text-secondary transition-colors hover:text-atlas-teal"
                 >
                   <Mic className="h-4 w-4" />

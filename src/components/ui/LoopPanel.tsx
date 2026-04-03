@@ -158,9 +158,15 @@ export default function LoopPanel() {
       </p>
 
       {error && (
-        <div className="text-atlas-error text-xs mb-4">
+        <div role="alert" className="text-atlas-error text-xs mb-4">
           {error}
-          <button onClick={fetchState} className="text-atlas-teal hover:underline ml-2">Retry</button>
+          <button
+            type="button"
+            onClick={fetchState}
+            className="text-atlas-teal hover:underline ml-2"
+          >
+            Retry
+          </button>
         </div>
       )}
 

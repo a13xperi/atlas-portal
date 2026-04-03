@@ -189,7 +189,7 @@ describe("api.drafts.generate", () => {
 });
 
 describe("api.briefing.updatePreferences", () => {
-  it("sends PUT with the briefing preferences payload", async () => {
+  it("sends PATCH with the briefing preferences payload", async () => {
     const data = {
       preference: {
         deliveryTime: "08:00",
@@ -210,7 +210,7 @@ describe("api.briefing.updatePreferences", () => {
     expect(fetch).toHaveBeenCalledWith(
       `${API_URL}/api/briefing/preferences`,
       expect.objectContaining({
-        method: "PATCH",
+        method: "PUT",
         body: JSON.stringify({
           deliveryTime: "08:00",
           topics: ["Macro"],

@@ -80,6 +80,7 @@ export default function ContentInput({
     <div className="space-y-3">
       <input
         ref={fileInputRef}
+        aria-label="Upload report file"
         type="file"
         accept={acceptFileTypes}
         onChange={handleFileSelect}
@@ -132,7 +133,9 @@ export default function ContentInput({
       </div>
 
       {sourceError ? (
-        <p className="text-sm text-atlas-error">{sourceError}</p>
+        <p role="alert" className="text-sm text-atlas-error">
+          {sourceError}
+        </p>
       ) : null}
 
       <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-start">
@@ -174,7 +177,9 @@ export default function ContentInput({
       </p>
 
       {contentError ? (
-        <p className="text-sm text-atlas-error">{contentError}</p>
+        <p role="alert" className="text-sm text-atlas-error">
+          {contentError}
+        </p>
       ) : null}
     </div>
   );

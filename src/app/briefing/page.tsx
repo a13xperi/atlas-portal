@@ -79,8 +79,10 @@ export default function BriefingPage() {
           );
         }
 
-        if (typeof preference.channel === "string" && isDeliveryChannel(preference.channel)) {
-          setChannel(preference.channel);
+        const savedChannel = preference.channel ?? preference.deliveryChannel;
+
+        if (typeof savedChannel === "string" && isDeliveryChannel(savedChannel)) {
+          setChannel(savedChannel);
         }
       } catch {
         // Silently fail. Local UI state remains the fallback.
@@ -309,7 +311,7 @@ export default function BriefingPage() {
               aria-live="polite"
               className="text-sm text-atlas-success"
             >
-              Preferences saved locally for this session.
+              Preferences saved.
             </p>
           )}
         </GlassCard>

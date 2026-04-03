@@ -95,7 +95,7 @@ describe("BriefingPage", () => {
       channel: "Portal + Email",
     });
     expect(
-      await screen.findByText("Preferences saved locally for this session.")
+      await screen.findByText("Preferences saved.")
     ).toBeInTheDocument();
   });
 });

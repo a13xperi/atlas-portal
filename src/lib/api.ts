@@ -220,9 +220,9 @@ export const api = {
   briefing: {
     getPreferences: () =>
       request<{ preference: BriefingPreference | null }>("/api/briefing/preferences"),
-    updatePreferences: (data: Partial<BriefingPreference>) =>
+    updatePreferences: (data: BriefingPreferenceInput) =>
       request<{ preference: BriefingPreference }>("/api/briefing/preferences", {
-        method: "PATCH",
+        method: "PUT",
         body: data,
       }),
   },

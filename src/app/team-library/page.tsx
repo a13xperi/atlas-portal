@@ -76,6 +76,7 @@ export default function TeamLibraryPage() {
       {/* Filter Bar */}
       <div className="flex flex-wrap gap-4 mb-8">
         <select
+          aria-label="Sort team library styles"
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
           className="bg-atlas-surface rounded-lg text-atlas-text-secondary px-3 py-2 text-sm border border-glass-border focus:outline-none focus:border-atlas-teal"
@@ -85,6 +86,7 @@ export default function TeamLibraryPage() {
           <option value="confidence">Highest Confidence</option>
         </select>
         <select
+          aria-label="Filter team library styles"
           value={filterBy}
           onChange={(e) => setFilterBy(e.target.value)}
           className="bg-atlas-surface rounded-lg text-atlas-text-secondary px-3 py-2 text-sm border border-glass-border focus:outline-none focus:border-atlas-teal"
@@ -118,7 +120,10 @@ export default function TeamLibraryPage() {
       )}
       <div className="columns-1 md:columns-2 gap-6 space-y-6">
         {visibleItems.map((item) => (
-          <div key={item.id} className="bg-atlas-surface border border-glass-border rounded-2xl p-8 flex flex-col">
+          <div
+            key={item.id}
+            className="card-interactive flex flex-col rounded-2xl border border-glass-border bg-atlas-surface p-8"
+          >
             <p className="text-lg text-atlas-text leading-relaxed">{item.content}</p>
             {item.feedback && (
               <p className="text-sm text-atlas-text-secondary mt-3 italic">{item.feedback}</p>

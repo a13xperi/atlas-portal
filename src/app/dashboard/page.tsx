@@ -133,11 +133,16 @@ export default function DashboardPage() {
       </h1>
 
       {error && (
-        <div className="mb-4 mt-4 flex items-center justify-between rounded-lg border border-atlas-warning/20 bg-atlas-warning/5 px-4 py-2 text-sm text-atlas-warning">
+        <div
+          role="alert"
+          aria-live="polite"
+          className="mb-4 mt-4 flex items-center justify-between rounded-lg border border-atlas-warning/20 bg-atlas-warning/5 px-4 py-2 text-sm text-atlas-warning"
+        >
           <span>{error}</span>
           <button
             type="button"
             onClick={() => setError(null)}
+            aria-label="Dismiss dashboard warning"
             className="ml-2 text-atlas-text-secondary hover:text-atlas-text"
           >
             ✕
@@ -168,7 +173,7 @@ export default function DashboardPage() {
           <Link
             key={card.label}
             href={card.href}
-            className="bg-atlas-surface border border-glass-border rounded-2xl p-6 text-center text-atlas-text hover:-translate-y-0.5 hover:shadow-lg transition-all flex flex-col items-center gap-3"
+            className="card-interactive flex flex-col items-center gap-3 rounded-2xl border border-glass-border bg-atlas-surface p-6 text-center text-atlas-text"
           >
             <card.icon className="w-5 h-5 text-atlas-teal" />
             {card.label}

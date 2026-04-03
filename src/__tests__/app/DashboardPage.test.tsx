@@ -191,7 +191,9 @@ describe("DashboardPage", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("Summary request failed")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "✕" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dismiss dashboard warning" })
+    );
 
     expect(
       screen.queryByText("Some dashboard data is temporarily unavailable.")
