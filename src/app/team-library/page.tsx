@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import AppShell from "@/components/layout/AppShell";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
-import { api, TweetDraft } from "@/lib/api";
+import { api, TeamDraft } from "@/lib/api";
 
 export default function TeamLibraryPage() {
   const { user } = useAuth();
-  const [libraryItems, setLibraryItems] = useState<TweetDraft[]>([]);
+  const [libraryItems, setLibraryItems] = useState<TeamDraft[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -20,10 +20,9 @@ export default function TeamLibraryPage() {
     setLoading(true);
     setError(null);
     try {
-      const draftsRes = await api.drafts.list("APPROVED");
-      const drafts = draftsRes.drafts;
-      setLibraryItems(drafts.slice(0, 6));
-      setTotalCount(drafts.length);
+      const draftsRes = await api.drafts.team(6);
+      setLibraryItems(draftsRes.drafts);
+      setTotalCount(draftsRes.total);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load team library");
     } finally {
@@ -51,7 +50,7 @@ export default function TeamLibraryPage() {
     return sortedItems;
   }, [filterBy, sortedItems]);
 
-  function formatEngagement(item: TweetDraft) {
+  function formatEngagement(item: TeamDraft) {
     const engagement = item.predictedEngagement ?? item.actualEngagement;
     return engagement ? `${(engagement / 1000).toFixed(1)}k` : "—";
   }
@@ -125,6 +124,10 @@ export default function TeamLibraryPage() {
               <p className="text-sm text-atlas-text-secondary mt-3 italic">{item.feedback}</p>
             )}
             <div className="mt-auto pt-4 border-t border-glass-border">
+              <p className="text-sm text-atlas-text font-medium">
+                {item.user.displayName || item.user.handle}
+              </p>
+              <p className="text-xs text-atlas-text-secondary mt-1">@{item.user.handle}</p>
               <p className="text-sm text-atlas-text-secondary font-medium">Team voice</p>
               <p className="text-xs text-atlas-teal font-bold mt-1">{formatEngagement(item)} Engagement</p>
             </div>

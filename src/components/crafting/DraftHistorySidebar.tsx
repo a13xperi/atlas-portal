@@ -12,6 +12,7 @@ interface DraftHistorySidebarProps {
   drafts: DraftHistoryItem[];
   activeDraftId: string | null;
   onSelectDraft: (draft: TweetDraft) => void;
+  mobile?: boolean;
 }
 
 function formatDraftPreview(content: string) {
@@ -43,10 +44,11 @@ export default function DraftHistorySidebar({
   drafts,
   activeDraftId,
   onSelectDraft,
+  mobile = false,
 }: DraftHistorySidebarProps) {
   return (
-    <aside className="hidden w-64 shrink-0 lg:block">
-      <div className="sticky top-24 space-y-4">
+    <aside className={mobile ? "w-full" : "hidden w-64 shrink-0 lg:block"}>
+      <div className={mobile ? "space-y-4" : "sticky top-24 space-y-4"}>
         <div className="bg-glass/50 backdrop-blur-xl border border-glass-border rounded-2xl p-5">
           <h2 className="font-heading text-lg text-atlas-text">Draft History</h2>
           <p className="mt-1 font-body text-sm text-atlas-text-secondary">

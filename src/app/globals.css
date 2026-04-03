@@ -10,6 +10,21 @@
   body {
     @apply bg-atlas-bg text-atlas-text font-body;
   }
+
+  *:focus-visible {
+    @apply outline outline-2 outline-atlas-teal outline-offset-2 rounded;
+  }
+
+  *:focus:not(:focus-visible) {
+    @apply outline-none;
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    @apply outline-none ring-2 ring-atlas-teal/15;
+    border-color: theme('colors.atlas-teal') !important;
+  }
 }
 
 @layer components {

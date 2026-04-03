@@ -73,6 +73,50 @@ export default function VoiceProfilesPage() {
     (field) => draftDimensions[field] !== persistedDimensions[field]
   );
 
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-4xl animate-pulse space-y-8 px-4 py-8">
+          <div className="space-y-2">
+            <div className="h-4 w-24 rounded bg-atlas-surface" />
+            <div className="h-8 w-72 rounded bg-atlas-surface" />
+          </div>
+
+          <div className="space-y-4 rounded-2xl border border-glass-border bg-atlas-surface p-6">
+            <div className="h-5 w-32 rounded bg-atlas-bg" />
+            {[1, 2, 3, 4].map((item) => (
+              <div key={item} className="space-y-2">
+                <div className="flex justify-between">
+                  <div className="h-3 w-24 rounded bg-atlas-bg" />
+                  <div className="h-3 w-8 rounded bg-atlas-bg" />
+                </div>
+                <div className="h-2 w-full rounded-full bg-atlas-bg" />
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-glass-border bg-atlas-surface p-6">
+            <div className="h-5 w-40 rounded bg-atlas-bg" />
+            <div className="flex gap-3">
+              {[1, 2, 3].map((item) => (
+                <div key={item} className="h-10 w-28 rounded-lg bg-atlas-bg" />
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-glass-border bg-atlas-surface p-6">
+            <div className="h-5 w-32 rounded bg-atlas-bg" />
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2].map((item) => (
+                <div key={item} className="h-24 rounded-xl bg-atlas-bg" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
   const updateDimension = (field: VoiceDimensionField, value: number) => {
     setDraftDimensions((current) => ({
       ...current,

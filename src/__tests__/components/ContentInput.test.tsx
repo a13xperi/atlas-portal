@@ -17,13 +17,14 @@ describe("ContentInput", () => {
 
     const input = screen.getByPlaceholderText(
       "Paste a tweet idea or link…"
-    ) as HTMLInputElement;
+    ) as HTMLTextAreaElement;
     const text = "BTC breaks resistance";
 
     fireEvent.change(input, { target: { value: text } });
 
     expect(input).toHaveValue(text);
     expect(input.value).toHaveLength(text.length);
+    expect(input).toHaveAttribute("rows", "3");
   });
 
   it("submits the entered text on Enter and clears the input", () => {
@@ -33,7 +34,7 @@ describe("ContentInput", () => {
 
     const input = screen.getByPlaceholderText(
       "Paste a tweet idea or link…"
-    ) as HTMLInputElement;
+    ) as HTMLTextAreaElement;
     const text = "Macro tailwinds for ETH";
 
     fireEvent.change(input, { target: { value: text } });
@@ -51,13 +52,35 @@ describe("ContentInput", () => {
 
     const input = screen.getByPlaceholderText(
       "Paste a tweet idea or link…"
-    ) as HTMLInputElement;
+    ) as HTMLTextAreaElement;
     const text = "Keep this draft";
 
     fireEvent.change(input, { target: { value: text } });
     fireEvent.keyDown(input, { key: "Enter", code: "Enter", charCode: 13 });
 
     expect(handleTextSubmit).toHaveBeenCalledWith(text);
+    expect(input).toHaveValue(text);
+  });
+
+  it("does not submit on Shift+Enter", () => {
+    const handleTextSubmit = jest.fn();
+
+    render(<ContentInput onTextSubmit={handleTextSubmit} />);
+
+    const input = screen.getByPlaceholderText(
+      "Paste a tweet idea or link…"
+    ) as HTMLTextAreaElement;
+    const text = "Keep writing";
+
+    fireEvent.change(input, { target: { value: text } });
+    fireEvent.keyDown(input, {
+      key: "Enter",
+      code: "Enter",
+      charCode: 13,
+      shiftKey: true,
+    });
+
+    expect(handleTextSubmit).not.toHaveBeenCalled();
     expect(input).toHaveValue(text);
   });
 });

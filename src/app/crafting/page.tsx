@@ -9,7 +9,6 @@ import DraftHistorySidebar, {
   DraftHistoryItem,
 } from "@/components/crafting/DraftHistorySidebar";
 import NewsMode from "@/components/crafting/NewsMode";
-import CraftingSkeleton from "@/components/skeletons/CraftingSkeleton";
 import ContentInput from "@/components/ui/ContentInput";
 import GradientButton from "@/components/ui/GradientButton";
 import ReplyAngleSelector from "@/components/ui/ReplyAngleSelector";
@@ -35,6 +34,20 @@ const CRAFTING_MODES = [
 const NEWS_SOURCE_PREFIX = "source:";
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
+
+const DRAFT_STATUS_LABELS: Record<TweetDraft["status"], string> = {
+  DRAFT: "Draft",
+  APPROVED: "Approved",
+  POSTED: "Posted",
+  ARCHIVED: "Archived",
+};
+
+const DRAFT_STATUS_PILL_STYLES: Record<TweetDraft["status"], string> = {
+  DRAFT: "bg-atlas-surface text-atlas-text-secondary",
+  APPROVED: "bg-atlas-teal/20 text-atlas-teal",
+  POSTED: "bg-atlas-success/20 text-atlas-success",
+  ARCHIVED: "bg-atlas-text-muted/20 text-atlas-text-muted",
+};
 
 const VisualConceptSection = dynamic(
   () => import("@/components/crafting/VisualConceptSection"),
@@ -129,7 +142,7 @@ export default function CraftingPage() {
   const [selectedBlendId, setSelectedBlendId] = useState<string | null>(null);
   const [blendValue, setBlendValue] = useState(30);
   const [feedback, setFeedback] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState(false);
   const [creating, setCreating] = useState(false);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
@@ -231,14 +244,6 @@ export default function CraftingPage() {
       );
     }
   }, [activeDraft, compareMode, compareVersion, draftVersions]);
-
-  if (loading) {
-    return (
-      <AppShell>
-        <CraftingSkeleton />
-      </AppShell>
-    );
-  }
 
   const handleModeChange = (mode: CraftingMode) => {
     setActiveMode(mode);
@@ -1119,11 +1124,11 @@ export default function CraftingPage() {
             </div>
           )}
 
-          {activeDraft ? (
+          {canReviseActiveDraft ? (
             <div className="mt-4">
               <RefinementChips
                 onRefine={handleRefine}
-                disabled={!activeDraft || creating}
+                disabled={creating}
                 loading={refiningChip}
               />
             </div>
@@ -1248,15 +1253,8 @@ export default function CraftingPage() {
             </div>
           ) : null}
 
-          {activeDraft && activeDraft.status !== "APPROVED" ? (
+          {canReviseActiveDraft ? (
             <div className="mt-6 flex flex-wrap gap-3">
-              <GradientButton
-                variant="outline-success"
-                onClick={handleShip}
-                disabled={loading || creating}
-              >
-                {loading ? "Shipping…" : "Ship it"}
-              </GradientButton>
               <GradientButton
                 variant="outline-warning"
                 onClick={() => document.getElementById("feedback-input")?.focus()}
@@ -1273,7 +1271,7 @@ export default function CraftingPage() {
             </div>
           ) : null}
 
-          {activeDraft && activeDraft.status !== "APPROVED" ? (
+          {canReviseActiveDraft ? (
             <div className="mt-6">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input

@@ -19,6 +19,13 @@ interface GenerateDraftInput {
   angleInstruction?: string;
 }
 
+interface BriefingPreferenceInput {
+  deliveryTime: string;
+  topics: string[];
+  sources: string[];
+  channel: string;
+}
+
 class ApiError extends Error {
   statusCode: number;
   constructor(message: string, statusCode: number) {
@@ -210,6 +217,16 @@ export const api = {
       request<{ subscription: AlertSubscription }>("/api/alerts/subscriptions", { method: "POST", body: { type, value, delivery } }),
   },
 
+  briefing: {
+    getPreferences: () =>
+      request<{ preference: BriefingPreference | null }>("/api/briefing/preferences"),
+    updatePreferences: (data: BriefingPreferenceInput) =>
+      request<{ preference: BriefingPreference }>("/api/briefing/preferences", {
+        method: "PUT",
+        body: data,
+      }),
+  },
+
   images: {
     generate: (prompt: string, style?: string) =>
       request<{ image: GeneratedImage }>("/api/images/generate", { method: "POST", body: { prompt, style } }),
@@ -376,6 +393,13 @@ export interface AlertSubscription {
   value: string;
   isActive: boolean;
   delivery: string[];
+}
+
+export interface BriefingPreference {
+  deliveryTime: string;
+  topics: string[];
+  sources: string[];
+  channel: string;
 }
 
 export interface TeamAnalyst {
