@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Search, Bell, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import NotificationDropdown from "@/components/ui/NotificationDropdown";
 import { useAuth } from "@/lib/auth";
 import { useAlertSocket } from "@/lib/alertSocket";
 import { useCommandPalette } from "@/components/ui/CommandPalette";
@@ -17,6 +18,7 @@ const navLinks = [
   { label: "Crafting", href: "/crafting" },
   { label: "Voice", href: "/voice-profiles" },
   { label: "Analytics", href: "/analytics" },
+  { label: "Signals", href: "/alerts" },
   { label: "Library", href: "/team-library" },
   { label: "Team", href: "/management" },
 ];
@@ -62,19 +64,22 @@ function DelphiLogo() {
 export default function NavBar({ variant }: NavBarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
-  const { unreadCount } = useAlertSocket();
+  const { unreadNotifications } = useAlertSocket();
   const { open: openPalette } = useCommandPalette();
   const hasUser = Boolean(user);
   const initial = user?.handle?.[0]?.toUpperCase() || user?.displayName?.[0]?.toUpperCase() || "A";
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   useEffect(() => {
     setMobileOpen(false);
+    setNotifOpen(false);
   }, [pathname]);
 
   useEffect(() => {
     if (!hasUser) {
       setMobileOpen(false);
+      setNotifOpen(false);
     }
   }, [hasUser]);
 
@@ -134,22 +139,24 @@ export default function NavBar({ variant }: NavBarProps) {
           )}
           {user && (
             <>
-              <Link
-                href="/alerts"
-                className={`relative transition-colors ${
-                  pathname === "/alerts"
-                    ? "text-atlas-teal"
-                    : "text-atlas-text-secondary hover:text-atlas-text"
-                }`}
-                aria-label="Alerts"
-              >
-                <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 flex min-w-[16px] items-center justify-center rounded-full bg-atlas-error px-1 text-[10px] font-bold leading-none text-atlas-bg h-4">
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </span>
-                )}
-              </Link>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setNotifOpen(!notifOpen)}
+                  className={`relative p-1 transition-colors ${
+                    notifOpen ? "text-atlas-teal" : "text-atlas-text-secondary hover:text-atlas-text"
+                  }`}
+                  aria-label="Notifications"
+                >
+                  <Bell className="h-5 w-5" />
+                  {unreadNotifications > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-4 rounded-full bg-atlas-error px-1 text-[10px] font-bold text-white">
+                      {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                    </span>
+                  )}
+                </button>
+                <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
+              </div>
               <Link
                 href="/profile"
                 aria-label="Profile"

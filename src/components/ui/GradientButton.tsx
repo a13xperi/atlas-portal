@@ -8,7 +8,7 @@ export interface GradientButtonProps {
   fullWidth?: boolean;
   variant?: "primary" | "outline-success" | "outline-warning" | "outline-teal";
   type?: "button" | "submit";
-  size?: "default" | "lg";
+  size?: "sm" | "default" | "lg";
   disabled?: boolean;
   "aria-label"?: string;
 }
@@ -54,7 +54,12 @@ export default function GradientButton({
   disabled = false,
   "aria-label": ariaLabel,
 }: GradientButtonProps) {
-  const sizeClasses = size === "lg" ? "px-6 py-4 text-lg font-bold" : "px-6 py-3 text-sm";
+  const sizeClasses =
+    size === "lg"
+      ? "px-6 py-4 text-lg font-bold"
+      : size === "sm"
+        ? "px-4 py-2 text-sm"
+        : "px-6 py-3 text-sm";
   const accessibleLabel = ariaLabel ?? (getAccessibleText(children) || undefined);
 
   return (

@@ -59,7 +59,7 @@ describe("NavBar", () => {
     });
     mockUseAlertSocket.mockReturnValue({
       connected: true,
-      unreadCount: 2,
+      unreadNotifications: 2,
       latestAlert: null,
       clearUnread: jest.fn(),
       onNewAlert: jest.fn(() => jest.fn()),
@@ -83,6 +83,7 @@ describe("NavBar", () => {
     expect(screen.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute(
       "aria-current"
     );
+    expect(screen.getByRole("link", { name: "Signals" })).toBeInTheDocument();
   });
 
   it("toggles the mobile sidebar navigation from the hamburger button", () => {
@@ -117,7 +118,7 @@ describe("NavBar", () => {
     const { container } = render(<NavBar variant="onboarding" />);
 
     expect(screen.getByRole("link", { name: "Atlas" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Alerts" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Notifications" })).not.toBeInTheDocument();
     expect(container.querySelector('a[href="/profile"]')).not.toBeInTheDocument();
   });
 

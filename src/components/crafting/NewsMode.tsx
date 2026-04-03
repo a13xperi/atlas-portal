@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, ReactNode, useState } from "react";
 import { Loader2 } from "lucide-react";
 import GradientButton from "@/components/ui/GradientButton";
 
@@ -8,17 +8,21 @@ export interface NewsModeProps {
   creating?: boolean;
   error?: string | null;
   onDismissError?: () => void;
+  onArticleUrlChange?: (value: string) => void;
   onGenerateNews: (
     articleUrl: string,
     fallbackText?: string
   ) => Promise<{ showFallback?: boolean } | void>;
+  urlPreviewCard?: ReactNode;
 }
 
 export default function NewsMode({
   creating = false,
   error,
   onDismissError,
+  onArticleUrlChange,
   onGenerateNews,
+  urlPreviewCard,
 }: NewsModeProps) {
   const [articleUrl, setArticleUrl] = useState("");
   const [fallbackText, setFallbackText] = useState("");
@@ -51,12 +55,19 @@ export default function NewsMode({
           id="news-article-url"
           type="url"
           value={articleUrl}
-          onChange={(event) => setArticleUrl(event.target.value)}
+          onChange={(event) => {
+            const nextArticleUrl = event.target.value;
+
+            setArticleUrl(nextArticleUrl);
+            onArticleUrlChange?.(nextArticleUrl);
+          }}
           placeholder="Paste an article URL…"
           aria-label="Article URL input"
           className="mt-3 w-full rounded-lg border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
         />
       </div>
+
+      {urlPreviewCard}
 
       {showFallback ? (
         <div>

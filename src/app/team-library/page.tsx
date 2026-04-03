@@ -1,26 +1,19 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import AppShell from "@/components/layout/AppShell";
-import GradientButton from "@/components/ui/GradientButton";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
 import { api, TweetDraft } from "@/lib/api";
 
-interface StyleCard {
-  tweet: string;
-  subtext?: string;
-  blend: string;
-  engagement: string;
-  authorHandle?: string;
-}
-
 export default function TeamLibraryPage() {
   const { user } = useAuth();
-  const [styleCards, setStyleCards] = useState<StyleCard[]>([]);
+  const [libraryItems, setLibraryItems] = useState<TweetDraft[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState("recent");
+  const [filterBy, setFilterBy] = useState("all");
 
   const loadData = useCallback(async () => {
     if (!user) { setLoading(false); return; }
@@ -29,17 +22,7 @@ export default function TeamLibraryPage() {
     try {
       const draftsRes = await api.drafts.list("APPROVED");
       const drafts = draftsRes.drafts;
-
-      const cards: StyleCard[] = drafts.slice(0, 6).map((d: TweetDraft) => ({
-        tweet: d.content,
-        blend: "Team voice",
-        engagement: d.predictedEngagement
-          ? `${(d.predictedEngagement / 1000).toFixed(1)}k`
-          : d.actualEngagement
-          ? `${(d.actualEngagement / 1000).toFixed(1)}k`
-          : "—",
-      }));
-      setStyleCards(cards);
+      setLibraryItems(drafts.slice(0, 6));
       setTotalCount(drafts.length);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load team library");
@@ -49,6 +32,29 @@ export default function TeamLibraryPage() {
   }, [user]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const sortedItems = useMemo(() => {
+    const items = [...(libraryItems ?? [])];
+    if (sortBy === "engagement") items.sort((a, b) => (b.actualEngagement ?? 0) - (a.actualEngagement ?? 0));
+    if (sortBy === "confidence") items.sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0));
+    if (sortBy === "recent") items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return items;
+  }, [libraryItems, sortBy]);
+
+  const visibleItems = useMemo(() => {
+    if (filterBy === "with-engagement") {
+      return sortedItems.filter((item) => (item.actualEngagement ?? 0) > 0);
+    }
+    if (filterBy === "with-confidence") {
+      return sortedItems.filter((item) => (item.confidence ?? 0) > 0);
+    }
+    return sortedItems;
+  }, [filterBy, sortedItems]);
+
+  function formatEngagement(item: TweetDraft) {
+    const engagement = item.predictedEngagement ?? item.actualEngagement;
+    return engagement ? `${(engagement / 1000).toFixed(1)}k` : "—";
+  }
 
   return (
     <AppShell>
@@ -70,14 +76,24 @@ export default function TeamLibraryPage() {
 
       {/* Filter Bar */}
       <div className="flex flex-wrap gap-4 mb-8">
-        {["By analyst", "By voice type", "By engagement"].map((filter) => (
-          <select
-            key={filter}
-            className="bg-atlas-surface border border-glass-border rounded-lg px-4 py-2.5 text-sm text-atlas-text-secondary focus:outline-none focus:border-atlas-teal"
-          >
-            <option>{filter}</option>
-          </select>
-        ))}
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="bg-atlas-surface rounded-lg text-atlas-text-secondary px-3 py-2 text-sm border border-glass-border focus:outline-none focus:border-atlas-teal"
+        >
+          <option value="recent">Most Recent</option>
+          <option value="engagement">Highest Engagement</option>
+          <option value="confidence">Highest Confidence</option>
+        </select>
+        <select
+          value={filterBy}
+          onChange={(e) => setFilterBy(e.target.value)}
+          className="bg-atlas-surface rounded-lg text-atlas-text-secondary px-3 py-2 text-sm border border-glass-border focus:outline-none focus:border-atlas-teal"
+        >
+          <option value="all">All Styles</option>
+          <option value="with-engagement">With Engagement</option>
+          <option value="with-confidence">With Confidence</option>
+        </select>
       </div>
 
       {/* Masonry Grid */}
@@ -96,25 +112,40 @@ export default function TeamLibraryPage() {
           ))}
         </div>
       )}
-      {styleCards.length === 0 && !loading && (
+      {visibleItems.length === 0 && !loading && (
         <div className="bg-atlas-surface border border-glass-border rounded-2xl p-12 text-center mb-8">
           <p className="text-atlas-text-secondary">No approved styles yet. Approve drafts in Crafting to build the library.</p>
         </div>
       )}
       <div className="columns-1 md:columns-2 gap-6 space-y-6">
-        {styleCards.map((card, i) => (
-          <div key={i} className="bg-atlas-surface border border-glass-border rounded-2xl p-8 flex flex-col">
-            <p className="text-lg text-atlas-text leading-relaxed">{card.tweet}</p>
-            {card.subtext && (
-              <p className="text-sm text-atlas-text-secondary mt-3 italic">{card.subtext}</p>
+        {visibleItems.map((item) => (
+          <div key={item.id} className="bg-atlas-surface border border-glass-border rounded-2xl p-8 flex flex-col">
+            <p className="text-lg text-atlas-text leading-relaxed">{item.content}</p>
+            {item.feedback && (
+              <p className="text-sm text-atlas-text-secondary mt-3 italic">{item.feedback}</p>
             )}
             <div className="mt-auto pt-4 border-t border-glass-border">
-              <p className="text-sm text-atlas-text-secondary font-medium">{card.blend}</p>
-              <p className="text-xs text-atlas-teal font-bold mt-1">{card.engagement} Engagement</p>
+              <p className="text-sm text-atlas-text-secondary font-medium">Team voice</p>
+              <p className="text-xs text-atlas-teal font-bold mt-1">{formatEngagement(item)} Engagement</p>
             </div>
             <div className="mt-3 flex gap-4">
-              <button type="button" className="text-xs font-bold text-atlas-teal hover:underline">Use this style</button>
-              <button type="button" className="text-xs font-bold text-atlas-text-secondary hover:text-atlas-text">Preview</button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(item.content);
+                }}
+                className="text-xs font-bold text-atlas-teal hover:underline"
+              >
+                Use this style
+              </button>
+              <button
+                type="button"
+                disabled
+                title="Coming soon"
+                className="text-xs font-bold text-atlas-text-secondary opacity-50 cursor-not-allowed"
+              >
+                Preview
+              </button>
             </div>
           </div>
         ))}
@@ -122,13 +153,27 @@ export default function TeamLibraryPage() {
 
       {/* Footer count */}
       <p className="text-sm text-atlas-text-secondary mt-6 text-center">
-        {styleCards.length} styles shown out of {totalCount}
+        {visibleItems.length} styles shown out of {totalCount}
       </p>
 
       {/* Management Bar */}
       <div className="mt-8 bg-atlas-surface border border-glass-border rounded-2xl px-4 sm:px-8 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-        <button type="button" className="text-sm font-bold text-atlas-text hover:text-atlas-teal transition-colors">Manage All</button>
-        <GradientButton>Push a style to all</GradientButton>
+        <button
+          type="button"
+          disabled
+          title="Coming soon"
+          className="text-sm font-bold text-atlas-text transition-colors opacity-50 cursor-not-allowed"
+        >
+          Manage All
+        </button>
+        <button
+          type="button"
+          disabled
+          title="Coming soon"
+          className="gradient-cta px-6 py-3 text-sm opacity-50 cursor-not-allowed"
+        >
+          Push a style to all
+        </button>
       </div>
     </AppShell>
   );

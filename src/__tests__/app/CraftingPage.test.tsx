@@ -171,6 +171,26 @@ describe("CraftingPage", () => {
     await waitFor(() => expect(generatedDraft).toHaveValue(secondDraft.content));
   });
 
+  it("shows and dismisses the URL preview card in news mode", async () => {
+    render(<CraftingPage />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "News to Post" }));
+    fireEvent.change(screen.getByLabelText("Article URL input"), {
+      target: { value: "https://example.com/articles/preview-card" },
+    });
+
+    expect(await screen.findByText("News Article")).toBeInTheDocument();
+    expect(
+      screen.getByText("https://example.com/articles/preview-card")
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss URL preview" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("News Article")).not.toBeInTheDocument()
+    );
+  });
+
   it("generates a news draft with the source URL appended and keeps it during refinement", async () => {
     const articleUrl = "https://example.com/articles/eth-etf";
     const initialDraftText = "ETH ETF flows are accelerating again.";

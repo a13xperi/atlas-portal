@@ -46,7 +46,8 @@ describe("AlertsPage", () => {
   it("shows the clean empty state when there are no alerts", async () => {
     render(<AlertsPage />);
 
-    expect(await screen.findByText("No alerts yet")).toBeInTheDocument();
+    expect(await screen.findByText("No signals yet")).toBeInTheDocument();
+    expect(screen.getByText("Signals Feed")).toBeInTheDocument();
     expect(
       screen.getByText(
         /configure your subscriptions to start receiving signals/i
@@ -80,43 +81,22 @@ describe("AlertsPage", () => {
       await screen.findByText("Whale moved a large ETH position")
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Draft Post" })).toBeInTheDocument();
+    expect((global.fetch as jest.Mock).mock.calls[0]?.[0]).toContain(
+      "/api/alerts/feed?category=SIGNAL"
+    );
 
     await waitFor(() =>
-      expect(screen.queryByText("No alerts yet")).not.toBeInTheDocument()
+      expect(screen.queryByText("No signals yet")).not.toBeInTheDocument()
     );
   });
 
-  it("renders all alert types from the feed", async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: jest.fn().mockResolvedValue({
-        alerts: [
-          {
-            id: "alert-1",
-            type: "WHALE_ACTIVITY",
-            title: "Whale moved a large ETH position",
-            context: "Exchange-bound flows ticked higher over the last 15 minutes.",
-            createdAt: "2026-04-03T10:00:00.000Z",
-          },
-          {
-            id: "alert-2",
-            type: "TEAM_NUDGE",
-            title: "Send a nudge to inactive analysts",
-            context: "Three analysts have not drafted this week.",
-            createdAt: "2026-04-03T11:00:00.000Z",
-          },
-        ],
-      }),
-    });
-
+  it("requests the signal-only feed", async () => {
     render(<AlertsPage />);
 
-    expect(
-      await screen.findByText("Whale moved a large ETH position")
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Send a nudge to inactive analysts")
-    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect((global.fetch as jest.Mock).mock.calls[0]?.[0]).toContain(
+        "/api/alerts/feed?category=SIGNAL"
+      )
+    );
   });
 });

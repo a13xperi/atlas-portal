@@ -36,6 +36,16 @@ export default function VoiceProfilesPage() {
   const [blends, setBlends] = useState<SavedBlend[]>([]);
   const [selectedVoices, setSelectedVoices] = useState<Set<string>>(new Set());
   const [blendValues, setBlendValues] = useState([40, 30, 20, 10]);
+  const [showAddVoice, setShowAddVoice] = useState(false);
+  const [showNewBlend, setShowNewBlend] = useState(false);
+  const [blendName, setBlendName] = useState("");
+  const [blendVoices, setBlendVoices] = useState<
+    { label: string; percentage: number; referenceVoiceId?: string }[]
+  >([{ label: "Personal", percentage: 50 }]);
+  const [savingBlend, setSavingBlend] = useState(false);
+  const [newVoiceName, setNewVoiceName] = useState("");
+  const [newVoiceHandle, setNewVoiceHandle] = useState("");
+  const [addingVoice, setAddingVoice] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingDimensions, setSavingDimensions] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -133,17 +143,17 @@ export default function VoiceProfilesPage() {
         </div>
       ) : null}
 
+      <p className="mb-2 text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
+        Voice Studio
+      </p>
       <h1 className="font-heading text-2xl text-atlas-text">
-        Your Voice Profiles
+        Your Voice — Detailed Breakdown
       </h1>
 
-      <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-8">
+      <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface-glass p-8 backdrop-blur-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <h3 className="font-heading text-lg text-atlas-text">
-              Your Voice — Detailed Breakdown
-            </h3>
-            <p className="mt-2 text-sm italic text-atlas-text-muted">
+            <p className="text-sm italic text-atlas-text-muted">
               SignalSocial-style depth, but still fully adjustable whenever your
               voice evolves.
             </p>
@@ -218,9 +228,70 @@ export default function VoiceProfilesPage() {
             })
           )}
         </div>
-        <p className="mt-3 cursor-pointer text-sm text-atlas-teal hover:underline">
+        <button
+          type="button"
+          onClick={() => setShowAddVoice(true)}
+          className="mt-3 text-sm text-atlas-teal hover:underline"
+        >
           + Add your own
-        </p>
+        </button>
+        {showAddVoice ? (
+          <div className="mt-3 space-y-3 rounded-xl border border-glass-border bg-atlas-surface p-4">
+            <input
+              type="text"
+              placeholder="Voice name (e.g. Hasu)"
+              value={newVoiceName}
+              onChange={(event) => setNewVoiceName(event.target.value)}
+              className="w-full rounded-lg border border-glass-border bg-atlas-bg px-3 py-2 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
+            />
+            <input
+              type="text"
+              placeholder="X handle (optional)"
+              value={newVoiceHandle}
+              onChange={(event) => setNewVoiceHandle(event.target.value)}
+              className="w-full rounded-lg border border-glass-border bg-atlas-bg px-3 py-2 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
+            />
+            <div className="flex gap-2">
+              <GradientButton
+                size="sm"
+                onClick={async () => {
+                  if (!newVoiceName.trim()) {
+                    return;
+                  }
+
+                  setAddingVoice(true);
+
+                  try {
+                    await api.voice.addReference(
+                      newVoiceName.trim(),
+                      newVoiceHandle.trim() || undefined
+                    );
+                    setNewVoiceName("");
+                    setNewVoiceHandle("");
+                    setShowAddVoice(false);
+
+                    const response = await api.voice.getReferences();
+                    setReferences(response.voices);
+                  } catch (addVoiceError) {
+                    console.error(addVoiceError);
+                  } finally {
+                    setAddingVoice(false);
+                  }
+                }}
+                disabled={addingVoice || !newVoiceName.trim()}
+              >
+                {addingVoice ? "Adding..." : "Add Voice"}
+              </GradientButton>
+              <button
+                type="button"
+                onClick={() => setShowAddVoice(false)}
+                className="text-sm text-atlas-text-secondary hover:text-atlas-text"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-8">
@@ -261,12 +332,127 @@ export default function VoiceProfilesPage() {
             ))
           )}
         </div>
-        <p className="mt-3 cursor-pointer text-sm text-atlas-teal hover:underline">
+        <p
+          className="mt-3 cursor-pointer text-sm text-atlas-teal hover:underline"
+          onClick={() => setShowNewBlend(true)}
+        >
           + New blend
         </p>
+        {showNewBlend ? (
+          <div className="mt-3 space-y-3 rounded-xl border border-glass-border bg-atlas-surface p-4">
+            <input
+              type="text"
+              placeholder="Blend name"
+              value={blendName}
+              onChange={(event) => setBlendName(event.target.value)}
+              className="w-full rounded-lg border border-glass-border bg-atlas-bg px-3 py-2 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
+            />
+            <p className="text-xs text-atlas-text-muted">
+              Add voices and adjust percentages (must total 100%)
+            </p>
+            {blendVoices.map((voice, index) => (
+              <div key={`${voice.label}-${index}`} className="flex items-center gap-2">
+                <select
+                  value={voice.label}
+                  onChange={(event) => {
+                    const referenceVoice = references.find(
+                      (reference) => reference.name === event.target.value
+                    );
+
+                    setBlendVoices((current) => {
+                      const updated = [...current];
+                      updated[index] = {
+                        ...updated[index],
+                        label: event.target.value,
+                        referenceVoiceId: referenceVoice?.id,
+                      };
+                      return updated;
+                    });
+                  }}
+                  className="flex-1 rounded-lg border border-glass-border bg-atlas-bg px-3 py-2 text-sm text-atlas-text"
+                >
+                  <option value="Personal">Personal</option>
+                  {references.map((reference) => (
+                    <option key={reference.id} value={reference.name}>
+                      {reference.name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={voice.percentage}
+                  onChange={(event) => {
+                    const nextPercentage = Number(event.target.value);
+
+                    setBlendVoices((current) => {
+                      const updated = [...current];
+                      updated[index] = {
+                        ...updated[index],
+                        percentage: nextPercentage,
+                      };
+                      return updated;
+                    });
+                  }}
+                  className="w-20 rounded-lg border border-glass-border bg-atlas-bg px-3 py-2 text-center text-sm text-atlas-text"
+                />
+                <span className="text-xs text-atlas-text-muted">%</span>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() =>
+                setBlendVoices([
+                  ...blendVoices,
+                  { label: "Personal", percentage: 0 },
+                ])
+              }
+              className="text-xs text-atlas-teal hover:underline"
+            >
+              + Add voice
+            </button>
+            <div className="flex gap-2 pt-2">
+              <GradientButton
+                size="sm"
+                onClick={async () => {
+                  if (!blendName.trim()) {
+                    return;
+                  }
+
+                  setSavingBlend(true);
+
+                  try {
+                    await api.voice.createBlend(blendName.trim(), blendVoices);
+                    setBlendName("");
+                    setBlendVoices([{ label: "Personal", percentage: 50 }]);
+                    setShowNewBlend(false);
+
+                    const response = await api.voice.getBlends();
+                    setBlends(response.blends);
+                  } catch (saveBlendError) {
+                    console.error(saveBlendError);
+                  } finally {
+                    setSavingBlend(false);
+                  }
+                }}
+                disabled={savingBlend || !blendName.trim()}
+              >
+                {savingBlend ? "Saving..." : "Save Blend"}
+              </GradientButton>
+              <button
+                type="button"
+                onClick={() => setShowNewBlend(false)}
+                className="text-sm text-atlas-text-secondary hover:text-atlas-text"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
-      <div className="mt-8 rounded-2xl border border-glass-border bg-atlas-surface p-8">
+      <div className="mt-8 rounded-2xl border border-glass-border bg-atlas-surface-glass p-8 backdrop-blur-sm">
         <h3 className="font-heading text-lg text-atlas-text">
           Create or Edit a Blend
         </h3>

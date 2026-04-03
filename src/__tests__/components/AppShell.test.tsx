@@ -53,7 +53,7 @@ describe("AppShell", () => {
     });
     mockUseAlertSocket.mockReturnValue({
       connected: false,
-      unreadCount: 0,
+      unreadNotifications: 0,
       latestAlert: null,
       clearUnread: jest.fn(),
       onNewAlert: jest.fn(() => jest.fn()),

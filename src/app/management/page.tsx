@@ -115,6 +115,26 @@ export default function ManagementPage() {
     }
   };
 
+  const handleSendNudge = async () => {
+    if (!confirm("Send a nudge to all inactive analysts?")) {
+      return;
+    }
+
+    await handleAction("sendNudge");
+  };
+
+  const handlePushStyle = async () => {
+    if (
+      !confirm(
+        "Push this voice style to all analysts? This will override their current settings."
+      )
+    ) {
+      return;
+    }
+
+    await handleAction("pushStyle");
+  };
+
   // Time-to-peak (real data from backend, synthetic fallback)
   const maxPeakDays = peaks.length > 0 ? Math.max(...peaks.map((p) => p.days), 30) : 40;
   const timeToPeak = (peaks.length > 0
@@ -348,7 +368,7 @@ export default function ManagementPage() {
                   </div>
                   <p className="text-lg text-atlas-text font-medium mt-3">{analyst.name}</p>
                   <p className="text-xs text-atlas-text-secondary mt-1">{analyst.days}</p>
-                  <button type="button" onClick={() => handleAction("sendNudge")} className="mt-3 text-xs font-bold text-atlas-teal hover:underline disabled:opacity-50" disabled={!!actionLoading}>
+                  <button type="button" onClick={() => void handleSendNudge()} className="mt-3 text-xs font-bold text-atlas-teal hover:underline disabled:opacity-50" disabled={!!actionLoading}>
                     {actionLoading === "sendNudge" ? <><Spinner />Sending…</> : "Send Nudge"}
                   </button>
                 </div>
@@ -363,10 +383,10 @@ export default function ManagementPage() {
         <GradientButton onClick={() => handleAction("pushTopProfiles")} disabled={!!actionLoading}>
           {actionLoading === "pushTopProfiles" ? <><Spinner />Pushing profiles…</> : "Reload inactive with Top 5 profiles"}
         </GradientButton>
-        <GradientButton variant="outline-warning" onClick={() => handleAction("sendNudge")} disabled={!!actionLoading}>
+        <GradientButton variant="outline-warning" onClick={() => void handleSendNudge()} disabled={!!actionLoading}>
           {actionLoading === "sendNudge" ? <><Spinner />Sending nudges…</> : "Send nudge to all inactive"}
         </GradientButton>
-        <GradientButton variant="outline-teal" onClick={() => handleAction("pushStyle")} disabled={!!actionLoading}>
+        <GradientButton variant="outline-teal" onClick={() => void handlePushStyle()} disabled={!!actionLoading}>
           {actionLoading === "pushStyle" ? <><Spinner />Pushing style…</> : "Push a style to all"}
         </GradientButton>
       </div>
