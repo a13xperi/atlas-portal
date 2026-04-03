@@ -64,7 +64,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {loading
           ? Array.from({ length: 4 }).map((_, i) => <SkeletonStatCard key={i} />)
           : stats.map((stat) => (
@@ -84,7 +84,7 @@ export default function DashboardPage() {
         <LoopPanel />
       </div>
 
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {navCards.map((card) => (
           <Link
             key={card.label}
@@ -106,9 +106,9 @@ export default function DashboardPage() {
             drafts.map((draft) => (
               <div
                 key={draft.id}
-                className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 gap-2"
+                className="flex flex-col items-start gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4"
               >
-                <span className="text-xs sm:text-sm text-atlas-text truncate">
+                <span className="min-w-0 text-xs text-atlas-text sm:text-sm">
                   {draft.content.slice(0, 60)}...
                 </span>
                 <StatusPill

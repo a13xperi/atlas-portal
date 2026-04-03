@@ -1,9 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Mic, Loader2, Image as ImageIcon, Palette } from "lucide-react";
+import {
+  Check,
+  Clipboard,
+  Image as ImageIcon,
+  Loader2,
+  Mic,
+  Palette,
+} from "lucide-react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
+import DraftHistorySidebar, {
+  DraftHistoryItem,
+} from "@/components/crafting/DraftHistorySidebar";
+import NewsMode from "@/components/crafting/NewsMode";
 import ContentInput from "@/components/ui/ContentInput";
 import GradientButton from "@/components/ui/GradientButton";
 import RefinementChips, {
@@ -19,11 +30,59 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
+const CRAFTING_MODES = [
+  { id: "new_post", label: "New Post" },
+  { id: "reply_to_tweet", label: "Reply to Tweet" },
+  { id: "news_to_post", label: "News to Post" },
+] as const;
+
+const NEWS_SOURCE_PREFIX = "source:";
+
+type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
+
+function appendSourceUrl(content: string, sourceUrl?: string) {
+  const trimmedContent = content.trimEnd();
+  const trimmedSourceUrl = sourceUrl?.trim();
+
+  if (!trimmedContent || !trimmedSourceUrl) {
+    return trimmedContent;
+  }
+
+  const sourceLine = `${NEWS_SOURCE_PREFIX} ${trimmedSourceUrl}`;
+
+  if (trimmedContent.includes(sourceLine)) {
+    return trimmedContent;
+  }
+
+  return `${trimmedContent}\n\n${sourceLine}`;
+}
+
+function extractSourceUrl(draft: TweetDraft | null) {
+  if (!draft) {
+    return null;
+  }
+
+  const contentMatch = draft.content.match(/source:\s*(https?:\/\/\S+)/i);
+
+  if (contentMatch?.[1]) {
+    return contentMatch[1];
+  }
+
+  const trimmedSourceContent = draft.sourceContent?.trim();
+
+  if (trimmedSourceContent?.startsWith("http")) {
+    return trimmedSourceContent;
+  }
+
+  return null;
+}
+
 export default function CraftingPage() {
   const { user } = useAuth();
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
+  const [draftHistory, setDraftHistory] = useState<DraftHistoryItem[]>([]);
   const [activeDraft, setActiveDraft] = useState<TweetDraft | null>(null);
-  const [activeVersion, setActiveVersion] = useState(0);
+  const [activeMode, setActiveMode] = useState<CraftingMode>("new_post");
   const [voiceMode, setVoiceMode] = useState<"my_voice" | "blended" | "specific">(
     "my_voice"
   );
@@ -40,8 +99,10 @@ export default function CraftingPage() {
   const [refiningChip, setRefiningChip] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [contentError, setContentError] = useState("");
+  const [copiedDraftId, setCopiedDraftId] = useState<string | null>(null);
   const [sourceError, setSourceError] = useState("");
   const activeDraftInitialized = useRef(false);
+  const copyResetTimeoutRef = useRef<number | null>(null);
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -91,13 +152,88 @@ export default function CraftingPage() {
     loadBlends();
   }, [loadBlends, loadDrafts, loadSummary, loadTrending]);
 
-  const commitDraft = (draft: TweetDraft) => {
-    setDrafts((previousDrafts) => [
-      draft,
-      ...previousDrafts.filter((existingDraft) => existingDraft.id !== draft.id),
-    ]);
+  useEffect(() => {
+    return () => {
+      if (copyResetTimeoutRef.current !== null) {
+        window.clearTimeout(copyResetTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleModeChange = (mode: CraftingMode) => {
+    setActiveMode(mode);
+    setError(null);
+    setContentError("");
+    setSourceError("");
+  };
+
+  const prependDraftHistory = (draft: TweetDraft, sourceUrl?: string) => {
+    const normalizedDraft = sourceUrl
+      ? { ...draft, content: appendSourceUrl(draft.content, sourceUrl) }
+      : draft;
+
+    setDraftHistory((previousHistory) => {
+      const existingItem = previousHistory.find(
+        (historyItem) => historyItem.draft.id === normalizedDraft.id
+      );
+      const nextItem: DraftHistoryItem = {
+        draft: normalizedDraft,
+        copiedToClipboard: existingItem?.copiedToClipboard ?? false,
+        generatedAt: existingItem?.generatedAt ?? new Date().toISOString(),
+      };
+
+      return [
+        nextItem,
+        ...previousHistory.filter(
+          (historyItem) => historyItem.draft.id !== normalizedDraft.id
+        ),
+      ].slice(0, 20);
+    });
+
+    return normalizedDraft;
+  };
+
+  const updateDraftHistory = (draft: TweetDraft, sourceUrl?: string) => {
+    const normalizedDraft = sourceUrl
+      ? { ...draft, content: appendSourceUrl(draft.content, sourceUrl) }
+      : draft;
+
+    setDraftHistory((previousHistory) =>
+      previousHistory.map((historyItem) =>
+        historyItem.draft.id === normalizedDraft.id
+          ? { ...historyItem, draft: normalizedDraft }
+          : historyItem
+      )
+    );
+
+    return normalizedDraft;
+  };
+
+  const markDraftAsCopied = (draftId: string) => {
+    setDraftHistory((previousHistory) =>
+      previousHistory.map((historyItem) =>
+        historyItem.draft.id === draftId
+          ? { ...historyItem, copiedToClipboard: true }
+          : historyItem
+      )
+    );
+  };
+
+  const handleSelectDraft = (draft: TweetDraft) => {
     setActiveDraft(draft);
-    setActiveVersion(0);
+    setVisualConcept(null);
+  };
+
+  const commitDraft = (draft: TweetDraft, sourceUrl?: string) => {
+    const normalizedDraft = prependDraftHistory(draft, sourceUrl);
+
+    setDrafts((previousDrafts) => [
+      normalizedDraft,
+      ...previousDrafts.filter(
+        (existingDraft) => existingDraft.id !== normalizedDraft.id
+      ),
+    ]);
+    setActiveDraft(normalizedDraft);
     setVisualConcept(null);
     activeDraftInitialized.current = true;
   };
@@ -189,15 +325,61 @@ export default function CraftingPage() {
     } catch (fileDropError: unknown) {
       console.error("Failed to process file:", fileDropError);
       setError(
-        fileDropError instanceof Error ? fileDropError.message : "Failed to process file"
+        fileDropError instanceof Error
+          ? fileDropError.message
+          : "Failed to process file"
       );
     }
   };
 
   const handleCreateDraft = async (text: string) => {
     const trimmedText = text.trim();
-    const sourceType = trimmedText.startsWith("http") ? "ARTICLE" : "MANUAL";
+    const sourceType =
+      activeMode === "reply_to_tweet"
+        ? "MANUAL"
+        : trimmedText.startsWith("http")
+          ? "ARTICLE"
+          : "MANUAL";
+
     return createDraftFromSource(text, sourceType, Boolean(trimmedText));
+  };
+
+  const handleGenerateNews = async (articleUrl: string, fallbackText = "") => {
+    if (!user) {
+      return {};
+    }
+
+    const trimmedArticleUrl = articleUrl.trim();
+    const trimmedFallbackText = fallbackText.trim();
+
+    setCreating(true);
+    setError(null);
+
+    try {
+      const { draft } = await api.drafts.generate(
+        trimmedFallbackText || trimmedArticleUrl,
+        trimmedFallbackText ? "MANUAL" : "ARTICLE",
+        selectedBlendId || undefined
+      );
+      commitDraft(draft, trimmedArticleUrl);
+      return { showFallback: Boolean(trimmedFallbackText) };
+    } catch (generateNewsError: unknown) {
+      console.error("Failed to generate news draft:", generateNewsError);
+
+      if (!trimmedFallbackText) {
+        setError("Could not fetch article. Paste the article text or key points.");
+        return { showFallback: true };
+      }
+
+      setError(
+        generateNewsError instanceof Error
+          ? generateNewsError.message
+          : "Failed to generate news draft"
+      );
+      return { showFallback: true };
+    } finally {
+      setCreating(false);
+    }
   };
 
   const handleShip = async () => {
@@ -207,11 +389,16 @@ export default function CraftingPage() {
     setError(null);
 
     try {
+      const sourceUrl = extractSourceUrl(activeDraft);
       const { draft } = await api.drafts.update(activeDraft.id, { status: "APPROVED" });
-      setActiveDraft(draft);
+      const normalizedDraft = updateDraftHistory(draft, sourceUrl ?? undefined);
+
+      setActiveDraft(normalizedDraft);
       setDrafts((previousDrafts) =>
         previousDrafts.map((existingDraft) =>
-          existingDraft.id === draft.id ? draft : existingDraft
+          existingDraft.id === normalizedDraft.id
+            ? normalizedDraft
+            : existingDraft
         )
       );
     } catch (shipError: unknown) {
@@ -229,18 +416,24 @@ export default function CraftingPage() {
     setError(null);
 
     try {
+      const sourceUrl = extractSourceUrl(activeDraft);
       const { draft } = await api.drafts.regenerate(activeDraft.id, feedback.trim());
-      commitDraft(draft);
+      commitDraft(draft, sourceUrl ?? undefined);
       setFeedback("");
-    } catch (regenerateError) {
+    } catch {
       try {
+        const sourceUrl = extractSourceUrl(activeDraft);
         const { draft } = await api.drafts.update(activeDraft.id, {
           feedback: feedback.trim(),
         });
-        setActiveDraft(draft);
+        const normalizedDraft = updateDraftHistory(draft, sourceUrl ?? undefined);
+
+        setActiveDraft(normalizedDraft);
         setDrafts((previousDrafts) =>
           previousDrafts.map((existingDraft) =>
-            existingDraft.id === draft.id ? draft : existingDraft
+            existingDraft.id === normalizedDraft.id
+              ? normalizedDraft
+              : existingDraft
           )
         );
         setFeedback("");
@@ -264,8 +457,9 @@ export default function CraftingPage() {
     setError(null);
 
     try {
+      const sourceUrl = extractSourceUrl(activeDraft);
       const { draft } = await api.drafts.regenerate(activeDraft.id);
-      commitDraft(draft);
+      commitDraft(draft, sourceUrl ?? undefined);
     } catch (tryAgainError: unknown) {
       console.error("Failed to regenerate:", tryAgainError);
       setError(
@@ -283,13 +477,9 @@ export default function CraftingPage() {
     setError(null);
 
     try {
+      const sourceUrl = extractSourceUrl(activeDraft);
       const { draft } = await api.drafts.refine(activeDraft.id, instruction);
-      setActiveDraft(draft);
-      setDrafts((previousDrafts) =>
-        previousDrafts.map((existingDraft) =>
-          existingDraft.id === draft.id ? draft : existingDraft
-        )
-      );
+      commitDraft(draft, sourceUrl ?? undefined);
     } catch (refineError: unknown) {
       setError(refineError instanceof Error ? refineError.message : "Refinement failed");
     } finally {
@@ -318,7 +508,39 @@ export default function CraftingPage() {
     }
   };
 
-  const versionDrafts = drafts.slice(0, 3);
+  const handleCopyDraft = async () => {
+    if (!activeDraft || !navigator.clipboard) return;
+
+    try {
+      await navigator.clipboard.writeText(activeDraft.content);
+      setCopiedDraftId(activeDraft.id);
+      markDraftAsCopied(activeDraft.id);
+
+      if (copyResetTimeoutRef.current !== null) {
+        window.clearTimeout(copyResetTimeoutRef.current);
+      }
+
+      copyResetTimeoutRef.current = window.setTimeout(() => {
+        setCopiedDraftId(null);
+        copyResetTimeoutRef.current = null;
+      }, 2000);
+    } catch (copyDraftError: unknown) {
+      console.error("Failed to copy draft:", copyDraftError);
+      setError(
+        copyDraftError instanceof Error
+          ? copyDraftError.message
+          : "Failed to copy draft"
+      );
+    }
+  };
+
+  const versionDrafts =
+    draftHistory.length > 0
+      ? draftHistory.slice(0, 3).map((historyItem) => historyItem.draft)
+      : drafts.slice(0, 3);
+  const activeVersion = versionDrafts.findIndex(
+    (draft) => draft.id === activeDraft?.id
+  );
   const feedbackCount = summary?.feedbackGiven ?? 0;
   const draftsRefined = summary?.refinements ?? 0;
   const usagePercent = summary
@@ -365,308 +587,402 @@ export default function CraftingPage() {
         </Link>
       </div>
 
-      {trendingTopics.length > 0 ? (
-        <div id="trending-section" className="mt-6">
-          <label className="text-xs uppercase tracking-wide text-atlas-text-secondary">
-            Trending now — click to craft a tweet
-          </label>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {trendingTopics.slice(0, 6).map((topic) => (
-              <button
-                key={topic.id}
-                type="button"
-                onClick={() => void createDraftFromSource(`${topic.headline}. ${topic.context || ""}`, "MANUAL", true)}
-                className="rounded-full border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs text-atlas-text transition-colors hover:border-atlas-teal hover:text-atlas-teal"
-              >
-                {topic.headline.length > 50
-                  ? `${topic.headline.slice(0, 50)}…`
-                  : topic.headline}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
+      <div className="mt-6 flex flex-col gap-6 lg:flex-row">
+        <DraftHistorySidebar
+          drafts={draftHistory}
+          activeDraftId={activeDraft?.id ?? null}
+          onSelectDraft={handleSelectDraft}
+        />
 
-      <div className="mt-6">
-        <label className="text-xs uppercase tracking-wide text-atlas-text-secondary">
-          Feed Atlas content — it crafts the tweet in your voice.
-        </label>
-        <div className="mt-3">
-          <ContentInput
-            onTextSubmit={handleCreateDraft}
-            onTextChange={handleDraftTextChange}
-            onDrop={handleFileDrop}
-            onTrendingClick={() => {
-              const trendingSection = document.getElementById("trending-section");
-
-              if (trendingSection) {
-                trendingSection.scrollIntoView({ behavior: "smooth" });
-              }
-            }}
-            sourceError={sourceError}
-            contentError={contentError}
-          />
-          {creating ? (
-            <div className="mt-2 flex items-center gap-2 text-sm text-atlas-teal">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Crafting your tweet…
-            </div>
-          ) : null}
-          {error ? (
-            <div className="mt-2 flex items-center justify-between rounded-lg border border-atlas-error/30 bg-atlas-error/10 px-3 py-2 text-sm text-atlas-error">
-              <span>{error}</span>
-              <button
-                type="button"
-                onClick={() => setError(null)}
-                className="ml-2 transition-colors hover:text-atlas-text"
-              >
-                x
-              </button>
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6">
-        <select
-          value={voiceMode}
-          onChange={(event) => {
-            const nextMode = event.target.value as "my_voice" | "blended" | "specific";
-            setVoiceMode(nextMode);
-
-            if (nextMode === "my_voice") {
-              setSelectedBlendId(null);
-            }
-          }}
-          className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
-        >
-          <option value="my_voice">My voice</option>
-          <option value="blended">Blended</option>
-          <option value="specific">Specific person</option>
-        </select>
-        {voiceMode === "blended" && blends.length > 0 ? (
-          <select
-            value={selectedBlendId || ""}
-            onChange={(event) => setSelectedBlendId(event.target.value || null)}
-            className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
-          >
-            <option value="">Pick a blend…</option>
-            {blends.map((blend) => (
-              <option key={blend.id} value={blend.id}>
-                {blend.name}
-              </option>
-            ))}
-          </select>
-        ) : null}
-        <div className="flex w-full flex-col gap-2 sm:min-w-[200px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-          <span className="shrink-0 text-sm text-atlas-text-secondary">
-            {selectedBlendId
-              ? `My Voice ↔ ${
-                  blends.find((blend) => blend.id === selectedBlendId)?.name || "Blend"
-                }`
-              : "Blend:"}
-          </span>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={blendValue}
-            onChange={(event) => setBlendValue(Number(event.target.value))}
-            className="flex-1 accent-atlas-teal"
-          />
-          <span className="w-10 text-right text-sm text-atlas-text">{blendValue}%</span>
-        </div>
-      </div>
-
-      {activeDraft ? (
-        <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6">
-          <textarea
-            value={activeDraft.content}
-            readOnly
-            rows={6}
-            aria-label="Generated draft"
-            className="w-full resize-none bg-transparent text-atlas-text leading-relaxed focus:outline-none"
-          />
-          {activeDraft.status === "APPROVED" ? (
-            <span className="mt-3 inline-block rounded bg-atlas-success/10 px-2 py-1 text-xs text-atlas-success">
-              Shipped
-            </span>
-          ) : null}
-          <p
-            className={`mt-2 text-right text-xs ${
-              activeDraft.content.length >= 280
-                ? "text-atlas-error"
-                : activeDraft.content.length >= 260
-                  ? "text-atlas-warning"
-                  : "text-atlas-text-secondary"
-            }`}
-          >
-            {activeDraft.content.length} / 280
-          </p>
-        </div>
-      ) : (
-        <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6 text-center text-atlas-text-secondary">
-          <p>No drafts yet. Feed some content above to get started.</p>
-        </div>
-      )}
-
-      {activeDraft ? (
-        <div className="mt-4">
-          <RefinementChips
-            onRefine={handleRefine}
-            disabled={!activeDraft || creating}
-            loadingChip={refiningChip}
-          />
-        </div>
-      ) : null}
-
-      {activeDraft ? (
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-glass-border border-l-4 border-l-atlas-success bg-atlas-surface p-4">
-            <p className="text-xs uppercase tracking-wider text-atlas-text-secondary">
-              Confidence
-            </p>
-            <p className="font-heading text-2xl font-bold text-atlas-success">
-              {activeDraft.confidence ? `${Math.round(activeDraft.confidence * 100)}%` : "—"}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-glass-border border-l-4 border-l-atlas-teal bg-atlas-surface p-4">
-            <p className="text-xs uppercase tracking-wider text-atlas-text-secondary">
-              Predicted engagement
-            </p>
-            <p className="font-heading text-2xl font-bold text-atlas-teal">
-              {activeDraft.predictedEngagement
-                ? `~${(activeDraft.predictedEngagement / 1000).toFixed(1)}K`
-                : "—"}
-            </p>
-          </div>
-        </div>
-      ) : null}
-
-      {activeDraft ? (
-        <div className="mt-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <button
-              type="button"
-              onClick={() => handleGenerateVisual("quote_card")}
-              disabled={generatingImage}
-              className="flex items-center justify-center gap-2 rounded-lg border border-glass-border bg-atlas-surface px-4 py-2 text-sm text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal disabled:opacity-50"
-            >
-              {generatingImage ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Palette className="h-4 w-4" />
-              )}
-              {generatingImage ? "Generating…" : "Generate visual"}
-            </button>
-            <select
-              onChange={(event) => handleGenerateVisual(event.target.value)}
-              disabled={generatingImage}
-              className="w-full rounded-lg border border-glass-border bg-atlas-surface px-2 py-2 text-xs text-atlas-text-secondary focus:border-atlas-teal focus:outline-none sm:w-auto"
-            >
-              <option value="">Style…</option>
-              <option value="infographic">Infographic</option>
-              <option value="quote_card">Quote Card</option>
-              <option value="thumbnail">Thumbnail</option>
-            </select>
-          </div>
-
-          {visualConcept?.concept ? (
-            <div className="mt-3 rounded-2xl border border-glass-border bg-atlas-nav p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <ImageIcon className="h-4 w-4 text-atlas-teal" />
-                <span className="text-xs uppercase tracking-wide text-atlas-teal">
-                  Visual Concept
-                </span>
-              </div>
-              <p className="text-sm text-atlas-text">{visualConcept.concept.concept}</p>
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-xs text-atlas-text-secondary">Colors:</span>
-                {visualConcept.concept.colorScheme?.map((color, index) => (
-                  <div
-                    key={index}
-                    className="h-5 w-5 rounded-full border border-glass-border"
-                    style={{ backgroundColor: color }}
-                    title={color}
-                  />
+        <div className="min-w-0 flex-1">
+          {trendingTopics.length > 0 ? (
+            <div id="trending-section">
+              <label className="text-xs uppercase tracking-wide text-atlas-text-secondary">
+                Trending now — click to craft a tweet
+              </label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {trendingTopics.slice(0, 6).map((topic) => (
+                  <button
+                    key={topic.id}
+                    type="button"
+                    onClick={() =>
+                      void createDraftFromSource(
+                        `${topic.headline}. ${topic.context || ""}`,
+                        "MANUAL",
+                        true
+                      )
+                    }
+                    className="rounded-full border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs text-atlas-text transition-colors hover:border-atlas-teal hover:text-atlas-teal"
+                  >
+                    {topic.headline.length > 50
+                      ? `${topic.headline.slice(0, 50)}…`
+                      : topic.headline}
+                  </button>
                 ))}
               </div>
-              <p className="mt-1 text-xs text-atlas-text-secondary">
-                Layout: {visualConcept.concept.layout}
+            </div>
+          ) : null}
+
+          <div className={trendingTopics.length > 0 ? "mt-6" : undefined}>
+            <div
+              role="tablist"
+              aria-label="Crafting modes"
+              className="inline-flex flex-wrap rounded-xl bg-glass p-1 backdrop-blur-xl"
+            >
+              {CRAFTING_MODES.map((mode) => {
+                const isActive = activeMode === mode.id;
+
+                return (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    tabIndex={isActive ? 0 : -1}
+                    onClick={() => handleModeChange(mode.id)}
+                    className={`text-sm transition-colors ${
+                      isActive
+                        ? "rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-steel px-4 py-2 text-white"
+                        : "px-4 py-2 text-atlas-text-secondary hover:text-white"
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {activeMode === "news_to_post" ? (
+              <NewsMode
+                creating={creating}
+                error={error}
+                onDismissError={() => setError(null)}
+                onGenerateNews={handleGenerateNews}
+              />
+            ) : (
+              <div className="mt-6">
+                <label className="text-xs uppercase tracking-wide text-atlas-text-secondary">
+                  {activeMode === "reply_to_tweet"
+                    ? "Paste the tweet or quote you want Atlas to respond to."
+                    : "Feed Atlas content — it crafts the tweet in your voice."}
+                </label>
+                <div className="mt-3">
+                  <ContentInput
+                    placeholder={
+                      activeMode === "reply_to_tweet"
+                        ? "Paste the tweet or quote you want to reply to…"
+                        : "Paste a tweet idea or link…"
+                    }
+                    onTextSubmit={handleCreateDraft}
+                    onTextChange={handleDraftTextChange}
+                    onDrop={handleFileDrop}
+                    onTrendingClick={() => {
+                      const trendingSection = document.getElementById("trending-section");
+
+                      if (trendingSection) {
+                        trendingSection.scrollIntoView({ behavior: "smooth" });
+                      }
+                    }}
+                    sourceError={sourceError}
+                    contentError={contentError}
+                  />
+                  {creating ? (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-atlas-teal">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Crafting your tweet…
+                    </div>
+                  ) : null}
+                  {error ? (
+                    <div className="mt-2 flex items-center justify-between rounded-lg border border-atlas-error/30 bg-atlas-error/10 px-3 py-2 text-sm text-atlas-error">
+                      <span>{error}</span>
+                      <button
+                        type="button"
+                        onClick={() => setError(null)}
+                        className="ml-2 transition-colors hover:text-atlas-text"
+                      >
+                        x
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6">
+            <select
+              value={voiceMode}
+              onChange={(event) => {
+                const nextMode = event.target.value as
+                  | "my_voice"
+                  | "blended"
+                  | "specific";
+                setVoiceMode(nextMode);
+
+                if (nextMode === "my_voice") {
+                  setSelectedBlendId(null);
+                }
+              }}
+              className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
+            >
+              <option value="my_voice">My voice</option>
+              <option value="blended">Blended</option>
+              <option value="specific">Specific person</option>
+            </select>
+            {voiceMode === "blended" && blends.length > 0 ? (
+              <select
+                value={selectedBlendId || ""}
+                onChange={(event) => setSelectedBlendId(event.target.value || null)}
+                className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
+              >
+                <option value="">Pick a blend…</option>
+                {blends.map((blend) => (
+                  <option key={blend.id} value={blend.id}>
+                    {blend.name}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            <div className="flex w-full flex-col gap-2 sm:min-w-[200px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <span className="shrink-0 text-sm text-atlas-text-secondary">
+                {selectedBlendId
+                  ? `My Voice ↔ ${
+                      blends.find((blend) => blend.id === selectedBlendId)?.name || "Blend"
+                    }`
+                  : "Blend:"}
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={blendValue}
+                onChange={(event) => setBlendValue(Number(event.target.value))}
+                className="flex-1 accent-atlas-teal"
+              />
+              <span className="w-10 text-right text-sm text-atlas-text">{blendValue}%</span>
+            </div>
+          </div>
+
+          {activeDraft ? (
+            <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6">
+              <textarea
+                value={activeDraft.content}
+                readOnly
+                rows={6}
+                aria-label="Generated draft"
+                className="w-full resize-none bg-transparent text-atlas-text leading-relaxed focus:outline-none"
+              />
+              {activeDraft.status === "APPROVED" ? (
+                <span className="mt-3 inline-block rounded bg-atlas-success/10 px-2 py-1 text-xs text-atlas-success">
+                  Shipped
+                </span>
+              ) : null}
+              <div className="mt-3 flex items-center justify-end gap-3">
+                <p
+                  className={`text-xs ${
+                    activeDraft.content.length >= 280
+                      ? "text-atlas-error"
+                      : activeDraft.content.length >= 260
+                        ? "text-atlas-warning"
+                        : "text-atlas-text-secondary"
+                  }`}
+                >
+                  {activeDraft.content.length} / 280
+                </p>
+                <button
+                  type="button"
+                  onClick={handleCopyDraft}
+                  className={`inline-flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-1.5 text-sm transition-colors hover:border-atlas-teal focus:outline-none focus:border-atlas-teal ${
+                    copiedDraftId === activeDraft.id
+                      ? "text-atlas-success"
+                      : "text-atlas-text-secondary hover:text-atlas-teal"
+                  }`}
+                >
+                  {copiedDraftId === activeDraft.id ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Clipboard className="h-4 w-4" />
+                      Copy
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6 text-center text-atlas-text-secondary">
+              <p>No drafts yet. Feed some content above to get started.</p>
+            </div>
+          )}
+
+          {activeDraft ? (
+            <div className="mt-4">
+              <RefinementChips
+                onRefine={handleRefine}
+                disabled={!activeDraft || creating}
+                loading={refiningChip}
+              />
+            </div>
+          ) : null}
+
+          {activeDraft ? (
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-glass-border border-l-4 border-l-atlas-success bg-atlas-surface p-4">
+                <p className="text-xs uppercase tracking-wider text-atlas-text-secondary">
+                  Confidence
+                </p>
+                <p className="font-heading text-2xl font-bold text-atlas-success">
+                  {activeDraft.confidence
+                    ? `${Math.round(activeDraft.confidence * 100)}%`
+                    : "—"}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-glass-border border-l-4 border-l-atlas-teal bg-atlas-surface p-4">
+                <p className="text-xs uppercase tracking-wider text-atlas-text-secondary">
+                  Predicted engagement
+                </p>
+                <p className="font-heading text-2xl font-bold text-atlas-teal">
+                  {activeDraft.predictedEngagement
+                    ? `~${(activeDraft.predictedEngagement / 1000).toFixed(1)}K`
+                    : "—"}
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          {activeDraft ? (
+            <div className="mt-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={() => void handleGenerateVisual("quote_card")}
+                  disabled={generatingImage}
+                  className="flex items-center justify-center gap-2 rounded-lg border border-glass-border bg-atlas-surface px-4 py-2 text-sm text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal disabled:opacity-50"
+                >
+                  {generatingImage ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Palette className="h-4 w-4" />
+                  )}
+                  {generatingImage ? "Generating…" : "Generate visual"}
+                </button>
+                <select
+                  onChange={(event) => void handleGenerateVisual(event.target.value)}
+                  disabled={generatingImage}
+                  className="w-full rounded-lg border border-glass-border bg-atlas-surface px-2 py-2 text-xs text-atlas-text-secondary focus:border-atlas-teal focus:outline-none sm:w-auto"
+                >
+                  <option value="">Style…</option>
+                  <option value="infographic">Infographic</option>
+                  <option value="quote_card">Quote Card</option>
+                  <option value="thumbnail">Thumbnail</option>
+                </select>
+              </div>
+
+              {visualConcept?.concept ? (
+                <div className="mt-3 rounded-2xl border border-glass-border bg-atlas-nav p-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4 text-atlas-teal" />
+                    <span className="text-xs uppercase tracking-wide text-atlas-teal">
+                      Visual Concept
+                    </span>
+                  </div>
+                  <p className="text-sm text-atlas-text">{visualConcept.concept.concept}</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-xs text-atlas-text-secondary">Colors:</span>
+                    {visualConcept.concept.colorScheme?.map((color, index) => (
+                      <div
+                        key={index}
+                        className="h-5 w-5 rounded-full border border-glass-border"
+                        style={{ backgroundColor: color }}
+                        title={color}
+                      />
+                    ))}
+                  </div>
+                  <p className="mt-1 text-xs text-atlas-text-secondary">
+                    Layout: {visualConcept.concept.layout}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {versionDrafts.length > 0 ? (
+            <div className="mt-6 flex flex-wrap gap-2">
+              {versionDrafts.map((draft, index) => (
+                <button
+                  key={draft.id}
+                  type="button"
+                  onClick={() => handleSelectDraft(draft)}
+                  className={`rounded-lg px-4 py-2 text-sm transition-colors ${
+                    activeVersion === index
+                      ? "border-b-2 border-atlas-teal text-atlas-teal"
+                      : "text-atlas-text-secondary hover:text-atlas-text"
+                  }`}
+                >
+                  Version {index + 1}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {activeDraft && activeDraft.status !== "APPROVED" ? (
+            <div className="mt-6 flex flex-wrap gap-3">
+              <GradientButton
+                variant="outline-success"
+                onClick={handleShip}
+                disabled={loading || creating}
+              >
+                {loading ? "Shipping…" : "Ship it"}
+              </GradientButton>
+              <GradientButton
+                variant="outline-warning"
+                onClick={() => document.getElementById("feedback-input")?.focus()}
+              >
+                Not quite — tell me what&apos;s off
+              </GradientButton>
+              <GradientButton
+                variant="outline-teal"
+                onClick={handleTryAgain}
+                disabled={creating}
+              >
+                {creating ? "Regenerating…" : "Try again"}
+              </GradientButton>
+            </div>
+          ) : null}
+
+          {activeDraft && activeDraft.status !== "APPROVED" ? (
+            <div className="mt-6">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  id="feedback-input"
+                  type="text"
+                  value={feedback}
+                  onChange={(event) => setFeedback(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      void handleFeedback();
+                    }
+                  }}
+                  placeholder="Tell me what's off — type or drop a voice note."
+                  className="flex-1 rounded-lg border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
+                />
+                <button
+                  type="button"
+                  className="flex items-center justify-center rounded-lg border border-glass-border bg-atlas-surface p-3 text-atlas-text-secondary transition-colors hover:text-atlas-teal"
+                >
+                  <Mic className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="mt-2 text-sm italic text-atlas-text-muted">
+                Don&apos;t worry about hurting my feelings.
               </p>
             </div>
           ) : null}
         </div>
-      ) : null}
-
-      {versionDrafts.length > 0 ? (
-        <div className="mt-6 flex flex-wrap gap-2">
-          {versionDrafts.map((draft, index) => (
-            <button
-              key={draft.id}
-              type="button"
-              onClick={() => {
-                setActiveVersion(index);
-                setActiveDraft(draft);
-                setVisualConcept(null);
-              }}
-              className={`rounded-lg px-4 py-2 text-sm transition-colors ${
-                activeVersion === index
-                  ? "border-b-2 border-atlas-teal text-atlas-teal"
-                  : "text-atlas-text-secondary hover:text-atlas-text"
-              }`}
-            >
-              Version {index + 1}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      {activeDraft && activeDraft.status !== "APPROVED" ? (
-        <div className="mt-6 flex flex-wrap gap-3">
-          <GradientButton variant="outline-success" onClick={handleShip} disabled={loading || creating}>
-            {loading ? "Shipping…" : "Ship it"}
-          </GradientButton>
-          <GradientButton
-            variant="outline-warning"
-            onClick={() => document.getElementById("feedback-input")?.focus()}
-          >
-            Not quite — tell me what&apos;s off
-          </GradientButton>
-          <GradientButton variant="outline-teal" onClick={handleTryAgain} disabled={creating}>
-            {creating ? "Regenerating…" : "Try again"}
-          </GradientButton>
-        </div>
-      ) : null}
-
-      {activeDraft && activeDraft.status !== "APPROVED" ? (
-        <div className="mt-6">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <input
-              id="feedback-input"
-              type="text"
-              value={feedback}
-              onChange={(event) => setFeedback(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  void handleFeedback();
-                }
-              }}
-              placeholder="Tell me what's off — type or drop a voice note."
-              className="flex-1 rounded-lg border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
-            />
-            <button
-              type="button"
-              className="flex items-center justify-center rounded-lg border border-glass-border bg-atlas-surface p-3 text-atlas-text-secondary transition-colors hover:text-atlas-teal"
-            >
-              <Mic className="h-4 w-4" />
-            </button>
-          </div>
-          <p className="mt-2 text-sm italic text-atlas-text-muted">
-            Don&apos;t worry about hurting my feelings.
-          </p>
-        </div>
-      ) : null}
+      </div>
     </AppShell>
   );
 }

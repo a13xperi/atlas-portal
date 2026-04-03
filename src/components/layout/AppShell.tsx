@@ -32,10 +32,12 @@ export default function AppShell({ children }: AppShellProps) {
   }
 
   return (
-    <div className="min-h-screen bg-atlas-bg">
+    <div className="min-h-screen overflow-x-hidden bg-atlas-bg">
       <NavBar variant="app" />
-      <main className="pt-14">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">{children}</div>
+      <main className="overflow-x-hidden pt-14">
+        <div className="mx-auto w-full max-w-7xl min-w-0 px-4 py-6 sm:px-6 sm:py-8">
+          {children}
+        </div>
       </main>
     </div>
   );

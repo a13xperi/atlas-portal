@@ -43,4 +43,21 @@ describe("ContentInput", () => {
     expect(handleTextSubmit).toHaveBeenCalledWith(text);
     expect(input).toHaveValue("");
   });
+
+  it("keeps the entered text when submission returns false", () => {
+    const handleTextSubmit = jest.fn(() => false);
+
+    render(<ContentInput onTextSubmit={handleTextSubmit} />);
+
+    const input = screen.getByPlaceholderText(
+      "Paste a tweet idea or link…"
+    ) as HTMLInputElement;
+    const text = "Keep this draft";
+
+    fireEvent.change(input, { target: { value: text } });
+    fireEvent.keyDown(input, { key: "Enter", code: "Enter", charCode: 13 });
+
+    expect(handleTextSubmit).toHaveBeenCalledWith(text);
+    expect(input).toHaveValue(text);
+  });
 });

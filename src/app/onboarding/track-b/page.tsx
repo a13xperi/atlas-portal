@@ -12,6 +12,7 @@ import { api } from "@/lib/api";
 import {
   hasAnyVoiceDimension,
   styleToDimensions,
+  VoiceDimensions,
 } from "@/lib/voice-profile-dimensions";
 
 const styleOptions = [
@@ -33,6 +34,9 @@ export default function TrackBPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [selectedStyle, setSelectedStyle] = useState<string | null>("Custom mix");
+  const [dimensions, setDimensions] = useState<VoiceDimensions>(() =>
+    styleToDimensions("Custom mix")
+  );
   const [selectedVoices, setSelectedVoices] = useState<Set<string>>(new Set());
   const [blendValues, setBlendValues] = useState([40, 35, 25]);
   const [saving, setSaving] = useState(false);
@@ -42,7 +46,6 @@ export default function TrackBPage() {
   const [displayName, setDisplayName] = useState("");
   const [displayNameError, setDisplayNameError] = useState("");
   const [dimensionsError, setDimensionsError] = useState("");
-  const previewDimensions = styleToDimensions(selectedStyle);
 
   useEffect(() => {
     const fallbackDisplayName = user?.displayName || user?.handle;
@@ -77,7 +80,7 @@ export default function TrackBPage() {
 
   const handleSaveAndContinue = async () => {
     const trimmedDisplayName = displayName.trim();
-    const hasVoiceDimension = hasAnyVoiceDimension(previewDimensions);
+    const hasVoiceDimension = hasAnyVoiceDimension(dimensions);
     let isValid = true;
 
     if (trimmedDisplayName.length < 2) {
@@ -99,7 +102,7 @@ export default function TrackBPage() {
     setSaving(true);
     try {
       await api.users.updateProfile({ displayName: trimmedDisplayName });
-      await api.voice.updateProfile(previewDimensions);
+      await api.voice.updateProfile(dimensions);
 
       const voices = Array.from(selectedVoices);
       for (const voice of voices) {
@@ -185,6 +188,7 @@ export default function TrackBPage() {
                 type="button"
                 onClick={() => {
                   setSelectedStyle(label);
+                  setDimensions(styleToDimensions(label));
                   if (dimensionsError) {
                     setDimensionsError("");
                   }
@@ -209,7 +213,17 @@ export default function TrackBPage() {
           <h3 className="font-heading text-lg text-atlas-text mb-3">
             Here&apos;s how that choice maps across your full voice profile.
           </h3>
-          <VoiceDimensionSections values={previewDimensions} />
+          <VoiceDimensionSections
+            values={dimensions}
+            interactive
+            onChange={(field, value) => {
+              setSelectedStyle("Custom mix");
+              setDimensions((current) => ({
+                ...current,
+                [field]: value,
+              }));
+            }}
+          />
           <p className="text-atlas-text-muted text-xs italic mt-3">
             You&apos;ll keep all 12 dimensions editable later in Voice Profiles.
           </p>

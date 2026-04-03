@@ -1,12 +1,17 @@
 "use client";
 
+export interface RefinementChipOption {
+  label: string;
+  instruction: string;
+}
+
 interface RefinementChipsProps {
-  onRefine: (instruction: string) => Promise<void>;
+  onRefine: (option: RefinementChipOption) => Promise<void>;
   disabled: boolean;
   loading: string | null;
 }
 
-const chips = [
+const chips: RefinementChipOption[] = [
   { label: "Shorter", instruction: "Make it shorter and more concise" },
   { label: "Snarkier", instruction: "Make it snarkier and more provocative" },
   { label: "Hook", instruction: "Add a stronger hook at the beginning" },
@@ -53,7 +58,7 @@ export default function RefinementChips({
           <button
             key={chip.label}
             type="button"
-            onClick={() => onRefine(chip.instruction)}
+            onClick={() => onRefine(chip)}
             disabled={isDisabled}
             className={`rounded-full border border-glass-border px-3 py-1.5 text-xs text-atlas-text-secondary transition-colors ${
               isDisabled
