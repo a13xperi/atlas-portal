@@ -151,6 +151,14 @@ export default function ContentInput({
         ) : null}
       </div>
 
+      <p className="text-[11px] text-atlas-text-muted">
+        Press{" "}
+        <kbd className="rounded border border-glass-border px-1 py-0.5 text-[10px] font-mono">
+          Enter
+        </kbd>{" "}
+        to generate
+      </p>
+
       {contentError ? (
         <p className="text-sm text-atlas-error">{contentError}</p>
       ) : null}
