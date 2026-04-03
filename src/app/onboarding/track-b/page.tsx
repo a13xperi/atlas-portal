@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import OnboardingShell from "@/components/layout/OnboardingShell";
+import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import ProgressBar from "@/components/ui/ProgressBar";
 import GradientButton from "@/components/ui/GradientButton";
-import { Mic, Check, Loader2, Plus } from "lucide-react";
+import { Check, Loader2, Plus } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
+import { styleToDimensions } from "@/lib/voice-profile-dimensions";
 
 const styleOptions = [
   { label: "Fun", description: "Playful, witty, meme-friendly" },
@@ -24,19 +26,6 @@ const referenceVoices = [
   "Mando",
 ];
 
-// Map style selection to voice dimensions
-function styleToDimensions(style: string | null) {
-  switch (style) {
-    case "Fun":
-      return { humor: 80, formality: 20, brevity: 70, contrarianTone: 50 };
-    case "Serious":
-      return { humor: 15, formality: 75, brevity: 50, contrarianTone: 40 };
-    case "Custom mix":
-    default:
-      return { humor: 50, formality: 50, brevity: 50, contrarianTone: 50 };
-  }
-}
-
 export default function TrackBPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -47,6 +36,7 @@ export default function TrackBPage() {
   const [addingHandle, setAddingHandle] = useState(false);
   const [newHandle, setNewHandle] = useState("");
   const [tweetLinks, setTweetLinks] = useState("");
+  const previewDimensions = styleToDimensions(selectedStyle);
 
   const toggleVoice = (voice: string) => {
     setSelectedVoices((prev) => {
@@ -75,8 +65,7 @@ export default function TrackBPage() {
     setSaving(true);
     try {
       // 1. Save voice dimensions based on style selection
-      const dims = styleToDimensions(selectedStyle);
-      await api.voice.updateProfile(dims);
+      await api.voice.updateProfile(previewDimensions);
 
       // 2. Save selected reference voices
       const voices = Array.from(selectedVoices);
@@ -150,6 +139,16 @@ export default function TrackBPage() {
           </div>
           <p className="text-atlas-text-muted text-xs italic mt-2">
             Your default tone — you can vary it post-by-post from the Crafting Station.
+          </p>
+        </section>
+
+        <section>
+          <h3 className="font-heading text-lg text-atlas-text mb-3">
+            Here’s how that choice maps across your full voice profile.
+          </h3>
+          <VoiceDimensionSections values={previewDimensions} />
+          <p className="text-atlas-text-muted text-xs italic mt-3">
+            You’ll keep all 12 dimensions editable later in Voice Profiles.
           </p>
         </section>
 

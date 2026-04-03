@@ -1,70 +1,73 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
+
+export interface RefinementChipOption {
+  label: string;
+  instruction: string;
+}
+
 interface RefinementChipsProps {
-  onRefine: (instruction: string) => Promise<void>;
+  onRefine: (chip: RefinementChipOption) => Promise<void> | void;
   disabled: boolean;
-  loading: string | null;
+  loadingChip: string | null;
 }
 
-const chips = [
-  { label: "Shorter", instruction: "Make it shorter and more concise" },
-  { label: "Snarkier", instruction: "Make it snarkier and more provocative" },
-  { label: "Hook", instruction: "Add a stronger hook at the beginning" },
-  { label: "Thread it", instruction: "Convert this into a thread format" },
+const chips: readonly RefinementChipOption[] = [
+  {
+    label: "Shorter",
+    instruction:
+      "Rewrite this to be more concise and punchy. Under 200 characters if possible.",
+  },
+  {
+    label: "Snarkier",
+    instruction:
+      "Rewrite with more wit, sarcasm, and edge. Keep the core message.",
+  },
+  {
+    label: "Take opposite stance",
+    instruction:
+      "Rewrite arguing the opposite position with equal conviction.",
+  },
+  {
+    label: "Add hook",
+    instruction:
+      "Add a compelling opening hook that stops the scroll. Keep the rest.",
+  },
+  {
+    label: "Thread it",
+    instruction:
+      "Expand this into a 3-5 tweet thread. Number each tweet. Each under 280 chars.",
+  },
 ] as const;
-
-function ChipSpinner() {
-  return (
-    <svg
-      className="animate-spin h-3 w-3 inline-block mr-1"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-      />
-    </svg>
-  );
-}
 
 export default function RefinementChips({
   onRefine,
   disabled,
-  loading,
+  loadingChip,
 }: RefinementChipsProps) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2" aria-label="Draft refinements">
       {chips.map((chip) => {
-        const isLoading = loading === chip.label;
-        const isDisabled = disabled || !!loading;
+        const isLoading = loadingChip === chip.label;
+        const isDisabled = disabled || Boolean(loadingChip);
 
         return (
           <button
             key={chip.label}
             type="button"
-            onClick={() => onRefine(chip.instruction)}
+            onClick={() => void onRefine(chip)}
             disabled={isDisabled}
-            className={`rounded-full border border-glass-border px-3 py-1.5 text-xs text-atlas-text-secondary transition-colors ${
+            className={`inline-flex items-center gap-1.5 bg-glass border border-glass-border rounded-full px-3 py-1 text-sm text-atlas-text-secondary transition-colors ${
               isDisabled
-                ? "opacity-50 cursor-not-allowed"
-                : "hover:bg-atlas-teal/10 hover:text-atlas-teal hover:border-atlas-teal"
+                ? "cursor-not-allowed opacity-50"
+                : "hover:border-atlas-teal hover:text-atlas-teal"
             }`}
           >
             {isLoading ? (
               <>
-                <ChipSpinner />
-                Refining...
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                <span>{chip.label}</span>
               </>
             ) : (
               chip.label

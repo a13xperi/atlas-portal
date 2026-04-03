@@ -11,6 +11,14 @@ interface RequestOptions {
   body?: unknown;
 }
 
+interface DraftGenerationRequest {
+  sourceContent: string;
+  sourceType: string;
+  blendId?: string;
+  replyAngle?: "Direct" | "Curious" | "Concise";
+  angleInstruction?: string;
+}
+
 class ApiError extends Error {
   statusCode: number;
   constructor(message: string, statusCode: number) {
@@ -132,9 +140,22 @@ export const api = {
       request<{ draft: TweetDraft }>(`/api/drafts/${id}`),
     create: (content: string, sourceType?: string, sourceContent?: string) =>
       request<{ draft: TweetDraft }>("/api/drafts", { method: "POST", body: { content, sourceType, sourceContent } }),
-    generate: (sourceContent: string, sourceType: string, blendId?: string) =>
+    generate: ({
+      sourceContent,
+      sourceType,
+      blendId,
+      replyAngle,
+      angleInstruction,
+    }: DraftGenerationRequest) =>
       request<{ draft: TweetDraft }>("/api/drafts/generate", {
-        method: "POST", body: { sourceContent, sourceType, blendId },
+        method: "POST",
+        body: {
+          sourceContent,
+          sourceType,
+          blendId,
+          replyAngle,
+          angleInstruction,
+        },
       }),
     regenerate: (draftId: string, feedback?: string) =>
       request<{ draft: TweetDraft }>(`/api/drafts/${draftId}/regenerate`, {

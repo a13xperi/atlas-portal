@@ -68,7 +68,10 @@ export default function NavBar({ variant }: NavBarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-atlas-nav border-b border-glass-border">
+    <nav
+      aria-label="Main navigation"
+      className="fixed top-0 left-0 right-0 z-50 bg-atlas-nav border-b border-glass-border"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/dashboard" className="flex items-center gap-2">
@@ -81,6 +84,7 @@ export default function NavBar({ variant }: NavBarProps) {
                 <Link
                   key={link.href}
                   href={link.href}
+                  aria-current={pathname === link.href ? "page" : undefined}
                   className={`text-xs transition-colors ${
                     pathname === link.href
                       ? "text-atlas-text font-medium"
@@ -137,7 +141,7 @@ export default function NavBar({ variant }: NavBarProps) {
               type="button"
               onClick={() => setMobileOpen(!mobileOpen)}
               className="md:hidden text-atlas-text-secondary hover:text-atlas-text transition-colors p-1"
-              aria-label="Toggle menu"
+              aria-label={mobileOpen ? "Close sidebar" : "Open sidebar"}
             >
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -147,11 +151,16 @@ export default function NavBar({ variant }: NavBarProps) {
 
       {/* Mobile menu */}
       {variant === "app" && mobileOpen && (
-        <div className="md:hidden bg-atlas-nav border-t border-glass-border px-4 py-3 space-y-1">
+        <div
+          role="navigation"
+          aria-label="Mobile navigation"
+          className="md:hidden bg-atlas-nav border-t border-glass-border px-4 py-3 space-y-1"
+        >
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
+              aria-current={pathname === link.href ? "page" : undefined}
               onClick={() => setMobileOpen(false)}
               className={`block py-2.5 px-3 rounded-lg text-sm transition-colors ${
                 pathname === link.href
