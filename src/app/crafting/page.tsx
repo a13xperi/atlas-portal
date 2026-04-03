@@ -864,6 +864,7 @@ export default function CraftingPage() {
         setActiveDraft(null);
         setCompareMode(false);
         setCompareVersion(null);
+        setVoiceComparison(null);
         setVisualConcept(null);
         setFeedback("");
       }
@@ -908,6 +909,128 @@ export default function CraftingPage() {
         100
       )
     : 0;
+
+  const handleCompareVoices = useCallback(async (
+    text = draftInputValueRef.current
+  ) => {
+    if (!user) {
+      return false;
+    }
+
+    const { hasSource, sourceContent, sourceType } =
+      prepareDraftGenerationInput(text);
+
+    setError(null);
+    const { isValid, trimmedContent } = validateDraftSubmission(
+      sourceContent,
+      hasSource
+    );
+
+    if (!isValid) {
+      return false;
+    }
+
+    setCreating(true);
+    setComparingVoices(true);
+    setVoiceComparison(null);
+
+    try {
+      const [currentVoiceResult, variantVoiceResult] = await Promise.all([
+        api.drafts.generate({
+          sourceContent: trimmedContent,
+          sourceType,
+          blendId: selectedBlendId || undefined,
+        }),
+        api.drafts.generate({
+          sourceContent: trimmedContent,
+          sourceType,
+          blendId: selectedBlendId || undefined,
+          angleInstruction: buildVoiceVariationInstruction(
+            currentVoiceDimensions.humor,
+            variantVoiceDimensions.humor,
+            variantVoiceDimensions.formality,
+            variantVoiceDimensions.brevity,
+            variantVoiceDimensions.contrarianTone
+          ),
+        }),
+      ]);
+
+      const normalizedCurrentDraft = prependDraftHistory(currentVoiceResult.draft);
+      const normalizedVariantDraft = prependDraftHistory(variantVoiceResult.draft);
+
+      setDrafts((previousDrafts) => [
+        normalizedCurrentDraft,
+        normalizedVariantDraft,
+        ...previousDrafts.filter(
+          (draft) =>
+            draft.id !== normalizedCurrentDraft.id &&
+            draft.id !== normalizedVariantDraft.id
+        ),
+      ]);
+      setDraftVersions([normalizedCurrentDraft]);
+      setActiveDraft(normalizedCurrentDraft);
+      setCompareMode(false);
+      setCompareVersion(null);
+      setVisualConcept(null);
+      setVoiceComparison({
+        options: [
+          {
+            draft: normalizedCurrentDraft,
+            label: "Current profile",
+            summary: currentVoiceSummary,
+            ctaLabel: "Pick current voice",
+          },
+          {
+            draft: normalizedVariantDraft,
+            label: "Variation",
+            summary: variantVoiceSummary,
+            ctaLabel: "Pick funnier variation",
+          },
+        ],
+      });
+      activeDraftInitialized.current = true;
+
+      return true;
+    } catch (compareVoicesError: unknown) {
+      console.error("Failed to generate voice comparison:", compareVoicesError);
+      setError(
+        compareVoicesError instanceof Error
+          ? compareVoicesError.message
+          : "Failed to compare voices"
+      );
+      return false;
+    } finally {
+      setCreating(false);
+      setComparingVoices(false);
+    }
+  }, [
+    currentVoiceDimensions.humor,
+    currentVoiceSummary,
+    prepareDraftGenerationInput,
+    prependDraftHistory,
+    selectedBlendId,
+    user,
+    validateDraftSubmission,
+    variantVoiceDimensions.brevity,
+    variantVoiceDimensions.contrarianTone,
+    variantVoiceDimensions.formality,
+    variantVoiceDimensions.humor,
+    variantVoiceSummary,
+  ]);
+
+  const handlePickVoiceWinner = useCallback((draft: TweetDraft) => {
+    setDrafts((previousDrafts) => [
+      draft,
+      ...previousDrafts.filter((existingDraft) => existingDraft.id !== draft.id),
+    ]);
+    setActiveDraft(draft);
+    setDraftVersions([draft]);
+    setCompareMode(false);
+    setCompareVersion(null);
+    setVoiceComparison(null);
+    setVisualConcept(null);
+    activeDraftInitialized.current = true;
+  }, []);
 
   const handleToggleCompareMode = () => {
     if (compareMode) {
