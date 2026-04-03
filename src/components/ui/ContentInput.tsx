@@ -1,45 +1,83 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Mic, FileText, MessageSquare, TrendingUp } from "lucide-react";
 
 export interface ContentInputProps {
   placeholder?: string;
   onDrop?: (files: FileList) => void;
-  onTextSubmit?: (text: string) => void;
+  onTextChange?: (text: string) => void;
+  onTextSubmit?: (
+    text: string
+  ) => boolean | void | Promise<boolean | void>;
   onTrendingClick?: () => void;
   showMic?: boolean;
   acceptFileTypes?: string;
+  sourceError?: string;
+  contentError?: string;
 }
 
 export default function ContentInput({
   placeholder = "Paste a tweet idea or link…",
   onDrop,
+  onTextChange,
   onTextSubmit,
   onTrendingClick,
   showMic = true,
   acceptFileTypes = ".pdf,.doc,.docx,.txt,.md",
+  sourceError,
+  contentError,
 }: ContentInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
+  const [text, setText] = useState("");
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (onDrop && e.dataTransfer.files.length > 0) {
-      onDrop(e.dataTransfer.files);
+  const handleDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    if (onDrop && event.dataTransfer.files.length > 0) {
+      onDrop(event.dataTransfer.files);
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (onDrop && e.target.files && e.target.files.length > 0) {
-      onDrop(e.target.files);
-      e.target.value = ""; // Reset so same file can be selected again
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (onDrop && event.target.files && event.target.files.length > 0) {
+      onDrop(event.target.files);
+      event.target.value = "";
+    }
+  };
+
+  const clearText = () => {
+    setText("");
+    onTextChange?.("");
+  };
+
+  const handleSubmit = () => {
+    try {
+      const submission = onTextSubmit?.(text);
+
+      if (submission && typeof submission === "object" && "then" in submission) {
+        void submission
+          .then((result) => {
+            if (result !== false) {
+              clearText();
+            }
+          })
+          .catch(() => {
+            // Keep the draft intact when submission fails.
+          });
+        return;
+      }
+
+      if (submission !== false) {
+        clearText();
+      }
+    } catch {
+      // Keep the draft intact when submission fails.
     }
   };
 
   return (
     <div className="space-y-3">
-      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -50,27 +88,27 @@ export default function ContentInput({
 
       <div
         onDrop={handleDrop}
-        onDragOver={(e) => e.preventDefault()}
-        className="border-2 border-dashed border-atlas-text-secondary/30 bg-atlas-surface rounded-2xl p-8 text-center hover:border-atlas-teal/50 transition-colors"
+        onDragOver={(event) => event.preventDefault()}
+        className="rounded-2xl border-2 border-dashed border-atlas-text-secondary/30 bg-atlas-surface p-6 text-center transition-colors hover:border-atlas-teal/50 sm:p-8"
       >
-        <div className="flex justify-center gap-8 mb-4">
+        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-8">
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="flex flex-col items-center gap-2 text-atlas-text-secondary hover:text-atlas-teal transition-colors cursor-pointer"
+            className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-glass-border bg-atlas-nav px-4 py-4 text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal"
           >
             <FileText className="w-8 h-8" />
             <span className="text-xs">Drop a report</span>
           </div>
           <div
             onClick={() => textInputRef.current?.focus()}
-            className="flex flex-col items-center gap-2 text-atlas-text-secondary hover:text-atlas-teal transition-colors cursor-pointer"
+            className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-glass-border bg-atlas-nav px-4 py-4 text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal"
           >
             <MessageSquare className="w-8 h-8" />
             <span className="text-xs">Paste a tweet idea</span>
           </div>
           <div
             onClick={() => onTrendingClick?.()}
-            className="flex flex-col items-center gap-2 text-atlas-text-secondary hover:text-atlas-teal transition-colors cursor-pointer"
+            className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-glass-border bg-atlas-nav px-4 py-4 text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal"
           >
             <TrendingUp className="w-8 h-8" />
             <span className="text-xs">Pick a trending alert</span>
@@ -80,28 +118,42 @@ export default function ContentInput({
           Drag and drop files or click an option above
         </p>
       </div>
-      <div className="flex items-center gap-2">
+
+      {sourceError ? (
+        <p className="text-sm text-atlas-error">{sourceError}</p>
+      ) : null}
+
+      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
         <input
           ref={textInputRef}
           type="text"
           placeholder={placeholder}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              onTextSubmit?.(e.currentTarget.value);
-              e.currentTarget.value = "";
+          value={text}
+          onChange={(event) => {
+            setText(event.currentTarget.value);
+            onTextChange?.(event.currentTarget.value);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              handleSubmit();
             }
           }}
-          className="flex-1 bg-atlas-surface rounded-lg px-4 py-3 text-atlas-text placeholder-atlas-text-secondary text-sm border border-glass-border focus:outline-none focus:border-atlas-teal"
+          className="w-full flex-1 rounded-lg border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
         />
-        {showMic && (
+        {showMic ? (
           <button
             type="button"
-            className="p-3 bg-atlas-surface rounded-lg border border-glass-border text-atlas-text-secondary hover:text-atlas-teal transition-colors"
+            className="flex w-full items-center justify-center rounded-lg border border-glass-border bg-atlas-surface p-3 text-atlas-text-secondary transition-colors hover:text-atlas-teal sm:w-auto"
           >
             <Mic className="w-4 h-4" />
           </button>
-        )}
+        ) : null}
       </div>
+
+      {contentError ? (
+        <p className="text-sm text-atlas-error">{contentError}</p>
+      ) : null}
     </div>
   );
 }

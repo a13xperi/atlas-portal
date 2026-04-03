@@ -14,6 +14,7 @@ const variantClasses: Record<StatusPillProps["variant"], string> = {
 export default function StatusPill({ label, variant }: StatusPillProps) {
   return (
     <span
+      role="status"
       className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${variantClasses[variant]}`}
     >
       {label}

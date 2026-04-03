@@ -13,6 +13,18 @@ describe("GlassCard", () => {
     expect(screen.getByText("Glass content")).toBeInTheDocument();
   });
 
+  it("renders as a labelled region when an aria-label is provided", () => {
+    render(
+      <GlassCard aria-label="Analytics summary">
+        <p>Accessible content</p>
+      </GlassCard>
+    );
+
+    expect(
+      screen.getByRole("region", { name: "Analytics summary" })
+    ).toBeInTheDocument();
+  });
+
   it("applies the glass card styles", () => {
     render(
       <GlassCard>

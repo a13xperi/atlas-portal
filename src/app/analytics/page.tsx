@@ -22,9 +22,9 @@ export default function AnalyticsPage() {
     setError(null);
     const errors: string[] = [];
     Promise.all([
-      api.analytics.summary().then((r) => setSummary(r.summary)).catch((e: Error) => { errors.push(e.message); }),
-      api.analytics.learningLog().then((r) => setLogEntries(r.entries)).catch(() => {}),
-      api.drafts.list().then((r) => setTopDrafts(r.drafts.slice(0, 4))).catch(() => {}),
+      api.analytics.summary().then((r) => setSummary(r.summary ?? null)).catch((e: Error) => { errors.push(e.message); }),
+      api.analytics.learningLog().then((r) => setLogEntries(r.entries ?? [])).catch(() => {}),
+      api.drafts.list().then((r) => setTopDrafts((r.drafts ?? []).slice(0, 4))).catch(() => {}),
       api.analytics.engagementDaily().then((r) => setEngagementDays(r.days ?? [])).catch(() => {}),
       api.analytics.activityDaily().then((r) => setActivityDays(r.days ?? [])).catch(() => {}),
     ])
@@ -83,8 +83,8 @@ export default function AnalyticsPage() {
       </div>
 
       {/* SECTION 2: Usage Insight */}
-      <div className="bg-atlas-surface border border-glass-border rounded-xl p-8 mb-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="mb-6 rounded-xl border border-glass-border bg-atlas-surface p-6 sm:p-8">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {loading
             ? Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="text-center space-y-2">
@@ -131,8 +131,8 @@ export default function AnalyticsPage() {
       </div>
 
       {/* SECTION 3: Engagement Chart (Hero) */}
-      <div className="bg-atlas-surface border border-glass-border rounded-xl p-8 mb-6">
-        <div className="flex items-center justify-between mb-2">
+      <div className="mb-6 rounded-xl border border-glass-border bg-atlas-surface p-6 sm:p-8">
+        <div className="mb-2 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-heading text-xl text-atlas-text">
             Engagement Velocity
           </h2>
@@ -181,7 +181,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Legend */}
-        <div className="flex gap-6 mt-4">
+        <div className="mt-4 flex flex-wrap gap-4 sm:gap-6">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-sm bg-atlas-teal/60" />
             <span className="text-xs text-atlas-text-secondary">Predicted</span>
@@ -285,7 +285,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* SECTION 6: Learning Log */}
-      <div className="bg-atlas-surface border border-glass-border rounded-xl p-8 mb-6">
+      <div className="mb-6 rounded-xl border border-glass-border bg-atlas-surface p-6 sm:p-8">
         <h2 className="font-heading text-xl text-atlas-text mb-6">
           Model Learning Log
         </h2>
@@ -311,7 +311,7 @@ export default function AnalyticsPage() {
           ).map((entry, i) => (
             <div
               key={i}
-              className="flex items-center justify-between py-3 border-b border-glass-border last:border-0"
+              className="flex flex-col items-start gap-3 border-b border-glass-border py-3 last:border-0 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
                 <span className="text-[10px] text-atlas-text-muted sm:w-32 shrink-0">

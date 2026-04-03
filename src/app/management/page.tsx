@@ -46,7 +46,7 @@ export default function ManagementPage() {
     ]);
     if (errors.length > 0) setError(errors[0]);
     setLoading(false);
-  }, []);
+  }, [user]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -125,9 +125,28 @@ export default function ManagementPage() {
         max: 40,
       })));
 
+  const isManager = user?.role === "MANAGER" || user?.role === "ADMIN";
+
+  if (!loading && !isManager) {
+    return (
+      <AppShell>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+          <div className="w-16 h-16 rounded-full bg-atlas-surface border border-glass-border flex items-center justify-center mb-4">
+            <span className="text-2xl">🔒</span>
+          </div>
+          <h1 className="font-heading text-2xl text-atlas-text mb-2">Manager Access Required</h1>
+          <p className="text-atlas-text-secondary max-w-md">
+            The Team Management dashboard is available to managers and admins only.
+            Contact your team lead for access.
+          </p>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
-      {error && (
+      {error && !error.includes("Manager access") && (
         <div role="alert" className="mb-6 px-4 py-3 bg-atlas-error/10 border border-atlas-error/30 rounded-xl text-atlas-error text-sm">
           {error}
         </div>
@@ -152,11 +171,11 @@ export default function ManagementPage() {
       </div>
 
       {/* SECTION 1: Overview KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
         {loading
           ? Array.from({ length: 3 }).map((_, i) => <SkeletonStatCard key={i} />)
           : kpiCards.map((kpi, i) => (
-              <div key={kpi.label} className={`bg-atlas-surface border border-glass-border rounded-2xl p-8 text-center ${i === kpiCards.length - 1 && kpiCards.length % 2 !== 0 ? "col-span-2 md:col-span-1" : ""}`}>
+              <div key={kpi.label} className="bg-atlas-surface border border-glass-border rounded-2xl p-8 text-center">
                 <p className="text-xs text-atlas-text-secondary uppercase tracking-wide">{kpi.label}</p>
                 <p className="font-heading text-5xl text-atlas-text mt-2">{kpi.value}</p>
                 {kpi.change && <p className="text-sm font-bold text-atlas-success mt-1">{kpi.change}</p>}
@@ -169,7 +188,47 @@ export default function ManagementPage() {
         <div className="px-6 py-4 border-b border-glass-border">
           <h2 className="font-heading text-xl text-atlas-text">Operational Activity</h2>
         </div>
-        <div className="overflow-x-auto">
+        <div className="space-y-4 px-4 py-4 md:hidden">
+          {tableData.length === 0 && !loading ? (
+            <div className="rounded-2xl border border-glass-border bg-atlas-nav px-4 py-8 text-center text-sm text-atlas-text-secondary">
+              No team members found. Invite analysts to get started.
+            </div>
+          ) : (
+            tableData.map((row) => (
+              <div
+                key={row.name}
+                className="rounded-2xl border border-glass-border bg-atlas-nav p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-atlas-text">{row.name}</p>
+                    <p className={`mt-1 text-[10px] font-bold uppercase tracking-wide ${row.maturityColor}`}>
+                      {row.maturity}
+                    </p>
+                  </div>
+                  <span className="text-xs text-atlas-text-secondary">
+                    Posts: {row.posts}
+                  </span>
+                </div>
+                <div className="mt-4 grid grid-cols-1 gap-3">
+                  <div className="rounded-xl border border-glass-border bg-atlas-surface px-3 py-2">
+                    <p className="text-[10px] uppercase tracking-wide text-atlas-text-secondary">
+                      Sessions
+                    </p>
+                    <p className="mt-1 text-sm text-atlas-text">{row.sessions}</p>
+                  </div>
+                  <div className="rounded-xl border border-glass-border bg-atlas-surface px-3 py-2">
+                    <p className="text-[10px] uppercase tracking-wide text-atlas-text-secondary">
+                      Drafts
+                    </p>
+                    <p className="mt-1 text-sm text-atlas-text">{row.drafts}</p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full">
             <thead>
               <tr className="border-b border-glass-border">
@@ -205,11 +264,11 @@ export default function ManagementPage() {
 
       {/* SECTION 3: Leaderboard Strip */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-heading text-xl text-atlas-text">Top Performers</h2>
           <button type="button" className="text-sm text-atlas-text-secondary hover:text-atlas-text transition-colors">View All Rankings</button>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-5">
           {leaderboard.map((entry) => (
             <div key={entry.rank} className={`bg-atlas-surface border rounded-2xl p-4 text-center ${entry.rank === 1 ? "border-atlas-teal" : "border-glass-border"}`}>
               <div className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center text-sm font-bold ${entry.rank === 1 ? "bg-atlas-teal text-atlas-bg" : "bg-atlas-nav text-atlas-text"}`}>
@@ -243,7 +302,7 @@ export default function ManagementPage() {
               ));
             })()}
           </div>
-          <div className="flex gap-4 mt-3">
+          <div className="mt-3 flex flex-wrap gap-4">
             <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-atlas-teal/50" /><span className="text-[10px] text-atlas-text-secondary">Model Target</span></div>
             <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-atlas-success" /><span className="text-[10px] text-atlas-text-secondary">Team Actual</span></div>
           </div>
@@ -253,13 +312,13 @@ export default function ManagementPage() {
           <h3 className="font-heading text-xl text-atlas-text mb-4">Days to Best Engagement</h3>
           <div className="space-y-4">
             {timeToPeak.length > 0 ? timeToPeak.map((entry) => (
-              <div key={entry.name} className="flex items-center gap-3">
-                <span className="text-xs text-atlas-text-secondary w-20 shrink-0">{entry.name}</span>
+              <div key={entry.name} className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
+                <span className="text-xs text-atlas-text-secondary sm:w-20 sm:shrink-0">{entry.name}</span>
                 <div className="flex-1 h-4 bg-atlas-nav rounded-full overflow-hidden relative">
                   <div className="h-full bg-atlas-teal rounded-full" style={{ width: `${(entry.days / entry.max) * 100}%` }} />
                   <div className="absolute top-0 h-full w-0.5 bg-atlas-text-muted" style={{ left: `${(30 / entry.max) * 100}%` }} />
                 </div>
-                <span className="text-xs text-atlas-text w-8 text-right">{entry.days}d</span>
+                <span className="text-xs text-atlas-text sm:w-8 sm:text-right">{entry.days}d</span>
               </div>
             )) : (
               <p className="text-sm text-atlas-text-muted italic py-4">Engagement data will populate as team members create drafts and receive feedback.</p>
@@ -281,7 +340,7 @@ export default function ManagementPage() {
                 System has flagged {inactiveAnalysts.length} analyst{inactiveAnalysts.length !== 1 ? "s" : ""} who appear inactive. Operational efficiency may be impacted.
               </p>
             </div>
-            <div className="md:w-2/3 grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:w-2/3 md:grid-cols-3">
               {inactiveAnalysts.map((analyst) => (
                 <div key={analyst.name} className="bg-atlas-surface border border-glass-border rounded-2xl p-5 text-center">
                   <div className="w-12 h-12 rounded-full bg-atlas-error/20 mx-auto flex items-center justify-center text-atlas-error text-lg font-bold">

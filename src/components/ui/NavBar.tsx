@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, Bell, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -67,8 +67,25 @@ export default function NavBar({ variant }: NavBarProps) {
   const initial = user?.handle?.[0]?.toUpperCase() || user?.displayName?.[0]?.toUpperCase() || "A";
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileOpen) {
+      return;
+    }
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [mobileOpen]);
+
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-atlas-nav border-b border-glass-border">
+    <nav aria-label="Main navigation" className="fixed top-0 left-0 right-0 z-50 bg-atlas-nav border-b border-glass-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/dashboard" className="flex items-center gap-2">
@@ -81,6 +98,7 @@ export default function NavBar({ variant }: NavBarProps) {
                 <Link
                   key={link.href}
                   href={link.href}
+                  aria-current={pathname === link.href ? "page" : undefined}
                   className={`text-xs transition-colors ${
                     pathname === link.href
                       ? "text-atlas-text font-medium"
@@ -114,10 +132,11 @@ export default function NavBar({ variant }: NavBarProps) {
                 ? "text-atlas-teal"
                 : "text-atlas-text-secondary hover:text-atlas-text"
             }`}
+            aria-label="Alerts"
           >
             <Bell className="w-5 h-5" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
+              <span className="absolute -top-1.5 -right-1.5 flex min-w-[16px] items-center justify-center rounded-full bg-atlas-error px-1 text-[10px] font-bold leading-none text-atlas-bg h-4">
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
@@ -137,7 +156,9 @@ export default function NavBar({ variant }: NavBarProps) {
               type="button"
               onClick={() => setMobileOpen(!mobileOpen)}
               className="md:hidden text-atlas-text-secondary hover:text-atlas-text transition-colors p-1"
-              aria-label="Toggle menu"
+              aria-controls="mobile-sidebar"
+              aria-expanded={mobileOpen}
+              aria-label={mobileOpen ? "Close sidebar" : "Open sidebar"}
             >
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -145,32 +166,55 @@ export default function NavBar({ variant }: NavBarProps) {
         </div>
       </div>
 
-      {/* Mobile menu */}
-      {variant === "app" && mobileOpen && (
-        <div className="md:hidden bg-atlas-nav border-t border-glass-border px-4 py-3 space-y-1">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setMobileOpen(false)}
-              className={`block py-2.5 px-3 rounded-lg text-sm transition-colors ${
-                pathname === link.href
-                  ? "text-atlas-text bg-atlas-surface font-medium"
-                  : "text-atlas-text-secondary hover:text-atlas-text hover:bg-atlas-surface"
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
+      {variant === "app" ? (
+        <div className={`md:hidden ${mobileOpen ? "pointer-events-auto" : "pointer-events-none"}`}>
           <button
             type="button"
-            onClick={() => { setMobileOpen(false); openPalette(); }}
-            className="block w-full text-left py-2.5 px-3 rounded-lg text-sm text-atlas-text-secondary hover:text-atlas-text hover:bg-atlas-surface sm:hidden"
+            aria-label="Close sidebar overlay"
+            onClick={() => setMobileOpen(false)}
+            className={`fixed inset-0 top-14 z-40 bg-atlas-bg/60 backdrop-blur-sm transition-opacity ${
+              mobileOpen ? "opacity-100" : "opacity-0"
+            }`}
+          />
+          <aside
+            id="mobile-sidebar"
+            role="navigation"
+            aria-label="Mobile navigation"
+            aria-hidden={!mobileOpen}
+            className={`fixed inset-y-14 left-0 z-50 w-72 max-w-[calc(100vw-1rem)] overflow-y-auto border-r border-glass-border bg-atlas-nav px-4 py-4 transition-transform duration-200 ${
+              mobileOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
           >
-            Search (⌘K)
-          </button>
+            <div className="flex flex-col gap-1">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  aria-current={pathname === link.href ? "page" : undefined}
+                  className={`block rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                    pathname === link.href
+                      ? "bg-atlas-surface font-medium text-atlas-text"
+                      : "text-atlas-text-secondary hover:bg-atlas-surface hover:text-atlas-text"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setMobileOpen(false);
+                openPalette();
+              }}
+              className="mt-3 block w-full rounded-lg px-3 py-2.5 text-left text-sm text-atlas-text-secondary transition-colors hover:bg-atlas-surface hover:text-atlas-text sm:hidden"
+            >
+              Search (⌘K)
+            </button>
+          </aside>
         </div>
-      )}
+      ) : null}
     </nav>
   );
 }
