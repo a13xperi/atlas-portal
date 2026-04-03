@@ -17,6 +17,7 @@ import DraftHistorySidebar, {
 import NewsMode from "@/components/crafting/NewsMode";
 import ContentInput from "@/components/ui/ContentInput";
 import GradientButton from "@/components/ui/GradientButton";
+import ReplyAngleSelector from "@/components/ui/ReplyAngleSelector";
 import RefinementChips, {
   RefinementChipOption,
 } from "@/components/ui/RefinementChips";
@@ -83,6 +84,7 @@ export default function CraftingPage() {
   const [draftHistory, setDraftHistory] = useState<DraftHistoryItem[]>([]);
   const [activeDraft, setActiveDraft] = useState<TweetDraft | null>(null);
   const [activeMode, setActiveMode] = useState<CraftingMode>("new_post");
+  const [replyAngle, setReplyAngle] = useState<string | null>(null);
   const [voiceMode, setVoiceMode] = useState<"my_voice" | "blended" | "specific">(
     "my_voice"
   );
@@ -355,6 +357,14 @@ export default function CraftingPage() {
         : trimmedText.startsWith("http")
           ? "ARTICLE"
           : "MANUAL";
+
+    if (sourceType === "MANUAL" && activeMode === "reply_to_tweet") {
+      return createDraftFromSource(
+        replyAngle ? `[Reply angle: ${replyAngle}] ${text}` : text,
+        sourceType,
+        Boolean(trimmedText)
+      );
+    }
 
     return createDraftFromSource(text, sourceType, Boolean(trimmedText));
   };
@@ -692,6 +702,14 @@ export default function CraftingPage() {
                     ? "Paste the tweet or quote you want Atlas to respond to."
                     : "Feed Atlas content — it crafts the tweet in your voice."}
                 </label>
+                {activeMode === "reply_to_tweet" ? (
+                  <div className="mb-2 mt-4">
+                    <ReplyAngleSelector
+                      selectedAngle={replyAngle as "Direct" | "Curious" | "Concise"}
+                      onAngleChange={setReplyAngle}
+                    />
+                  </div>
+                ) : null}
                 <div className="mt-3">
                   <ContentInput
                     placeholder={

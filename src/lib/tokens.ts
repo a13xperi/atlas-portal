@@ -12,6 +12,7 @@ export const colors = {
   atlasTextMuted: "#718096",
   glass: "rgba(255,255,255,0.08)",
   glassBorder: "rgba(255,255,255,0.15)",
+  surfaceGlass: "rgba(255,255,255,0.04)",
 } as const;
 
 export const radii = {
@@ -27,6 +28,7 @@ export const fonts = {
 export const gradients = {
   cta: `linear-gradient(to right, ${colors.atlasTeal}, ${colors.atlasSteel})`,
   onboardingBg: "linear-gradient(to bottom, #1a1a2e, #16213e, #1a1a2e)",
+  appBg: "linear-gradient(to bottom, #1a1a2e, #1e2640, #1a1a2e)",
 } as const;
 
 export const shadows = {
