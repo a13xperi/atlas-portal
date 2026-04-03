@@ -26,7 +26,7 @@ export default function GlobalError({
           </div>
         </div>
 
-        <h2 className="font-heading text-xl text-atlas-text mb-2">
+        <h2 className="font-heading font-bold tracking-tight text-xl text-atlas-text mb-2">
           Something went wrong
         </h2>
 

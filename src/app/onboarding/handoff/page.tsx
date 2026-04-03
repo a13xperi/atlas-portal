@@ -51,7 +51,7 @@ export default function HandoffPage() {
 
         {/* Telegram Panel */}
         <section className="bg-atlas-surface rounded-2xl p-8">
-          <h3 className="font-heading text-lg text-atlas-text mb-4">
+          <h3 className="font-heading font-semibold text-lg text-atlas-text mb-4">
             Meet your Atlas bot on Telegram — one bot, everything.
           </h3>
 

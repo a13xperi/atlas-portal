@@ -19,7 +19,7 @@ export default function VoiceDimensionsCard({
 }: VoiceDimensionsCardProps) {
   return (
     <div className="mt-6 bg-atlas-surface border border-glass-border rounded-2xl p-8">
-      <h3 className="font-heading text-lg text-atlas-text mb-4">
+      <h3 className="font-heading font-semibold text-lg text-atlas-text mb-4">
         Your Voice — Detailed Breakdown
       </h3>
       <div className="space-y-3">

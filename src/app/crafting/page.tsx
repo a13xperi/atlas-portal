@@ -1421,7 +1421,7 @@ export default function CraftingPage() {
                   <p className="text-xs uppercase tracking-[0.24em] text-atlas-text-muted">
                     Voice A/B test
                   </p>
-                  <h3 className="mt-2 font-heading text-2xl text-atlas-text">
+                  <h3 className="mt-2 font-heading font-bold tracking-tight text-2xl text-atlas-text">
                     Compare both voice directions side by side
                   </h3>
                   <p className="mt-2 text-sm text-atlas-text-secondary">

@@ -67,7 +67,7 @@ export default function VersionSidebar({ drafts, activeDraft, onSelect, onClose 
   return (
     <aside className="w-72 shrink-0 bg-atlas-nav border border-glass-border rounded-2xl p-4 flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-8rem)]">
       <div className="flex items-center justify-between">
-        <h3 className="font-heading text-sm text-atlas-text">Version History</h3>
+        <h3 className="font-heading font-semibold text-sm text-atlas-text">Version History</h3>
         <button
           type="button"
           onClick={onClose}
