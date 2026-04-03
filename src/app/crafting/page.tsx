@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import AppShell from "@/components/layout/AppShell";
 import ContentInput from "@/components/ui/ContentInput";
 import GradientButton from "@/components/ui/GradientButton";
+import RefinementChips from "@/components/ui/RefinementChips";
 import { Mic, Loader2, Image as ImageIcon, Palette } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
@@ -25,6 +26,7 @@ export default function CraftingPage() {
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
   const [visualConcept, setVisualConcept] = useState<GeneratedImage | null>(null);
   const [generatingImage, setGeneratingImage] = useState(false);
+  const [refiningChip, setRefiningChip] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const activeDraftInitialized = useRef(false);
 
@@ -175,6 +177,21 @@ export default function CraftingPage() {
       setError(e instanceof Error ? e.message : "Failed to regenerate draft");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleRefine = async (instruction: string) => {
+    if (!activeDraft) return;
+    setRefiningChip(instruction);
+    setError(null);
+    try {
+      const { draft } = await api.drafts.refine(activeDraft.id, instruction);
+      setActiveDraft(draft);
+      setDrafts((prev) => prev.map((d) => (d.id === draft.id ? draft : d)));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Refinement failed");
+    } finally {
+      setRefiningChip(null);
     }
   };
 
@@ -336,10 +353,30 @@ export default function CraftingPage() {
               Shipped
             </span>
           )}
+          <p className={`text-xs text-right mt-2 ${
+            activeDraft.content.length >= 280
+              ? "text-red-400"
+              : activeDraft.content.length >= 260
+                ? "text-yellow-400"
+                : "text-atlas-text-secondary"
+          }`}>
+            {activeDraft.content.length} / 280
+          </p>
         </div>
       ) : (
         <div className="mt-6 bg-atlas-surface border border-glass-border rounded-2xl p-6 text-center text-atlas-text-secondary">
           <p>No drafts yet. Feed some content above to get started.</p>
+        </div>
+      )}
+
+      {/* Refinement Chips */}
+      {activeDraft && (
+        <div className="mt-4">
+          <RefinementChips
+            onRefine={handleRefine}
+            disabled={!activeDraft || creating}
+            loading={refiningChip}
+          />
         </div>
       )}
 

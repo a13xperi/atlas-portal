@@ -46,7 +46,7 @@ export default function TeamLibraryPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => { loadData(); }, [loadData]);
 

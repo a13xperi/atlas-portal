@@ -59,7 +59,11 @@ export default function VoiceProfilesPage() {
   const displayVoices = references;
 
   const displayBlends = blends.length > 0
-    ? blends.map((b) => ({ name: b.name, mix: b.voices.map((v) => `${v.percentage}% ${v.label}`).join(" + ") }))
+    ? blends.map((b) => ({
+        name: b.name,
+        mix: b.voices.map((v) => `${v.percentage}% ${v.label}`).join(" + "),
+        isTemplate: (b as SavedBlend & { isTemplate?: boolean }).isTemplate === true,
+      }))
     : [];
 
   return (
@@ -113,7 +117,7 @@ export default function VoiceProfilesPage() {
         <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           {displayVoices.length === 0 ? (
             <div className="col-span-full text-center py-8">
-              <p className="text-sm text-atlas-text-muted">No reference voices yet. Add voices to start building your style.</p>
+              <p className="text-sm text-atlas-text-muted">No reference voices yet. Add Twitter handles to start building your unique style.</p>
             </div>
           ) : displayVoices.map((voice) => {
             const isSelected = selectedVoices.has(voice.id);
@@ -152,7 +156,7 @@ export default function VoiceProfilesPage() {
         <div className="mt-3 space-y-3">
           {displayBlends.length === 0 ? (
             <div className="col-span-full text-center py-8">
-              <p className="text-sm text-atlas-text-muted">No saved blends yet. Create your first blend using the editor below.</p>
+              <p className="text-sm text-atlas-text-muted">No saved blends yet. Create your first blend using the sliders above.</p>
             </div>
           ) : displayBlends.map((blend) => (
             <div
@@ -160,7 +164,14 @@ export default function VoiceProfilesPage() {
               className="bg-atlas-surface border border-glass-border border-l-2 border-l-atlas-teal rounded-2xl p-4 flex items-center justify-between"
             >
               <div>
-                <p className="text-sm text-atlas-text font-medium">{blend.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-atlas-text font-medium">{blend.name}</p>
+                  {blend.isTemplate && (
+                    <span className="text-[10px] text-atlas-text-secondary bg-atlas-text-secondary/10 px-1.5 py-0.5 rounded">
+                      Template
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-atlas-text-secondary mt-1">{blend.mix}</p>
               </div>
               <GradientButton variant="outline-teal">Use</GradientButton>
