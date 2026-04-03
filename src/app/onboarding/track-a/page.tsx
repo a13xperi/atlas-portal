@@ -3,15 +3,21 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import OnboardingShell from "@/components/layout/OnboardingShell";
-import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import ProgressBar from "@/components/ui/ProgressBar";
 import GradientButton from "@/components/ui/GradientButton";
-import { ThumbsUp, ThumbsDown, Plus, Loader2 } from "lucide-react";
+import {
+  AtSign,
+  Link2,
+  Loader2,
+  Plus,
+  Sparkles,
+  ThumbsDown,
+  ThumbsUp,
+} from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import {
   applyVoiceDimensionDelta,
-  hasAnyVoiceDimension,
   TRACK_A_INITIAL_DIMENSIONS,
   VoiceDimensionField,
   VoiceDimensions,
@@ -66,6 +72,7 @@ const sampleTweets: Array<{
 ];
 
 const referenceAccounts = ["Cobie", "Hsaka", "Ansem", "Hasu"];
+const analysisSignals = ["Recent tweets", "Reply cadence", "Topic mix"];
 
 export default function TrackAPage() {
   const router = useRouter();
@@ -82,16 +89,23 @@ export default function TrackAPage() {
   const [selectedRefs, setSelectedRefs] = useState<Set<string>>(new Set());
   const [addingHandle, setAddingHandle] = useState(false);
   const [newHandle, setNewHandle] = useState("");
+  const [xHandle, setXHandle] = useState("");
+  const [isHandleConfirmed, setIsHandleConfirmed] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [displayNameError, setDisplayNameError] = useState("");
-  const [dimensionsError, setDimensionsError] = useState("");
 
   useEffect(() => {
     const fallbackDisplayName = user?.displayName || user?.handle;
+    const fallbackHandle = user?.handle?.replace(/^@/, "");
 
-    if (!fallbackDisplayName) return;
+    if (fallbackDisplayName) {
+      setDisplayName((current) => current || fallbackDisplayName);
+    }
 
-    setDisplayName((current) => current || fallbackDisplayName);
+    if (fallbackHandle) {
+      setXHandle((current) => current || fallbackHandle);
+      setIsHandleConfirmed((current) => current || true);
+    }
   }, [user?.displayName, user?.handle]);
 
   const updateBlend = (index: number, value: number) => {
@@ -108,10 +122,6 @@ export default function TrackAPage() {
       applyVoiceDimensionDelta(current, tweet.dims, multiplier)
     );
     setRatings((prev) => ({ ...prev, [index]: rating }));
-
-    if (dimensionsError) {
-      setDimensionsError("");
-    }
   };
 
   const toggleRef = (name: string) => {
@@ -132,27 +142,24 @@ export default function TrackAPage() {
     setAddingHandle(false);
   };
 
+  const normalizedXHandle = xHandle.trim().replace(/^@/, "");
+
+  const handleConfirm = () => {
+    if (!normalizedXHandle) return;
+
+    setXHandle(normalizedXHandle);
+    setIsHandleConfirmed(true);
+  };
+
   const handleSaveAndContinue = async () => {
     const trimmedDisplayName = displayName.trim();
-    const hasVoiceDimension = hasAnyVoiceDimension(dimensions);
-    let isValid = true;
 
     if (trimmedDisplayName.length < 2) {
       setDisplayNameError("Display name must be at least 2 characters.");
-      isValid = false;
-    } else {
-      setDisplayNameError("");
+      return;
     }
 
-    if (!hasVoiceDimension) {
-      setDimensionsError("Set at least one voice dimension above 0.");
-      isValid = false;
-    } else {
-      setDimensionsError("");
-    }
-
-    if (!isValid) return;
-
+    setDisplayNameError("");
     setSaving(true);
     try {
       await api.users.updateProfile({ displayName: trimmedDisplayName });
@@ -195,12 +202,89 @@ export default function TrackAPage() {
       <ProgressBar currentStep={1} totalSteps={6} />
 
       <div className="mt-8 space-y-8">
-        {user?.handle && (
-          <p className="text-atlas-text-secondary text-sm text-center">
-            Setting up voice for{" "}
-            <span className="text-atlas-teal">@{user.handle}</span>
-          </p>
-        )}
+        <section className="rounded-3xl border border-glass-border bg-glass p-6 backdrop-blur-xl sm:p-7">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="rounded-full border border-atlas-teal/30 bg-atlas-teal/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-atlas-teal">
+              Track A · Automated voice scan
+            </span>
+            <span className="rounded-full border border-glass-border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-atlas-text-secondary">
+              Step 1 · Connect X
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-5 sm:grid-cols-[1.15fr_0.85fr] sm:items-start">
+            <div>
+              <h1 className="font-heading text-3xl text-atlas-text">
+                Connect Your X Account
+              </h1>
+              <p className="mt-3 text-sm leading-6 text-atlas-text-secondary">
+                Atlas will scan your recent tweets to build your voice profile
+                automatically.
+              </p>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                {analysisSignals.map((signal) => (
+                  <span
+                    key={signal}
+                    className="rounded-full border border-glass-border bg-atlas-surface/60 px-3 py-1 text-xs text-atlas-text-secondary"
+                  >
+                    {signal}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-glass-border bg-atlas-surface/60 p-4">
+              <div className="flex items-center gap-2 text-sm text-atlas-text">
+                <Link2 className="h-4 w-4 text-atlas-teal" />
+                <span>
+                  {user?.handle
+                    ? `Signed in as @${user.handle}`
+                    : "Paste the handle Atlas should analyze"}
+                </span>
+              </div>
+
+              <label
+                htmlFor="x-handle"
+                className="mt-4 block text-xs text-atlas-text-secondary uppercase tracking-wide"
+              >
+                X handle
+              </label>
+              <div className="mt-2 flex gap-2">
+                <div className="relative flex-1">
+                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-atlas-text-secondary">
+                    <AtSign className="h-4 w-4" />
+                  </span>
+                  <input
+                    id="x-handle"
+                    type="text"
+                    value={xHandle}
+                    onChange={(event) => {
+                      setXHandle(event.target.value.replace(/^@/, ""));
+                      setIsHandleConfirmed(false);
+                    }}
+                    placeholder={user?.handle || "atlasanalyst"}
+                    className="w-full rounded-lg border border-glass-border bg-atlas-surface px-4 py-3 pl-10 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleConfirm}
+                  disabled={!normalizedXHandle}
+                  className="rounded-lg border border-atlas-teal/30 bg-atlas-teal/10 px-4 py-3 text-sm font-medium text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/15 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Analyze
+                </button>
+              </div>
+
+              <p className="mt-3 text-xs leading-5 text-atlas-text-muted">
+                {isHandleConfirmed && normalizedXHandle
+                  ? `Ready to analyze @${normalizedXHandle}. Atlas will use recent tweets to create your first draft voice profile.`
+                  : "Use your current handle or paste a different one to kick off automated voice analysis."}
+              </p>
+            </div>
+          </div>
+        </section>
 
         <section>
           <label
@@ -221,49 +305,47 @@ export default function TrackAPage() {
               }
             }}
             placeholder={user?.displayName || user?.handle || "Your display name"}
-            className="mt-2 w-full bg-atlas-surface rounded-lg px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary border border-glass-border focus:outline-none focus:border-atlas-teal"
+            className="mt-2 w-full rounded-lg border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
           />
           {displayNameError && (
-            <p className="text-red-400 text-sm mt-1">{displayNameError}</p>
+            <p className="mt-1 text-sm text-red-400">{displayNameError}</p>
           )}
         </section>
 
-        <section>
-          <h2 className="font-heading text-xl text-atlas-text mb-4">
-            This is what I think your writing voice is.
-          </h2>
-          <VoiceDimensionSections
-            values={dimensions}
-            interactive
-            onChange={(field, value) =>
-              setDimensions((current) => ({
-                ...current,
-                [field]: value,
-              }))
-            }
-          />
-          <p className="text-atlas-text-secondary text-sm italic mt-4">
-            Rate the examples below to help me dial it in. Thumbs up = more like
-            me, thumbs down = less. Every bar uses the same editable 0-10 scale
-            you&apos;ll keep after onboarding.
-          </p>
-          {dimensionsError && (
-            <p className="text-red-400 text-sm mt-1">{dimensionsError}</p>
-          )}
+        <section className="rounded-2xl border border-glass-border bg-atlas-surface/40 p-5">
+          <div className="flex items-start gap-3">
+            <div className="rounded-2xl border border-atlas-teal/20 bg-atlas-teal/10 p-3 text-atlas-teal">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-heading text-xl text-atlas-text">
+                Guide the first pass
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-atlas-text-secondary">
+                Atlas starts from your tweet history. If you want to steer the
+                automatic read, react to a few examples below and add any
+                reference accounts you want blended in.
+              </p>
+            </div>
+          </div>
         </section>
 
         <section>
           <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
-            Rate these examples to refine your voice.
+            Quick reactions for the auto-analysis
           </label>
+          <p className="mt-2 text-sm text-atlas-text-secondary">
+            Thumbs up means more like you. Thumbs down means less like you.
+          </p>
+
           <div className="mt-3 space-y-3">
             {sampleTweets.map((tweet, index) => (
               <div
                 key={tweet.text}
-                className="bg-atlas-surface rounded-2xl p-4 flex items-start justify-between gap-4"
+                className="flex items-start justify-between gap-4 rounded-2xl bg-atlas-surface p-4"
               >
-                <p className="text-sm text-atlas-text flex-1">{tweet.text}</p>
-                <div className="flex gap-2 shrink-0">
+                <p className="flex-1 text-sm text-atlas-text">{tweet.text}</p>
+                <div className="flex shrink-0 gap-2">
                   <button
                     type="button"
                     onClick={() => rateTweet(index, "up")}
@@ -274,7 +356,7 @@ export default function TrackAPage() {
                     }`}
                     title="More like me"
                   >
-                    <ThumbsUp className="w-4 h-4" />
+                    <ThumbsUp className="h-4 w-4" />
                   </button>
                   <button
                     type="button"
@@ -286,7 +368,7 @@ export default function TrackAPage() {
                     }`}
                     title="Less like me"
                   >
-                    <ThumbsDown className="w-4 h-4" />
+                    <ThumbsDown className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -304,9 +386,9 @@ export default function TrackAPage() {
             onChange={(event) => setTweetLinks(event.target.value)}
             placeholder="Paste one or more tweet URLs — one per line"
             rows={3}
-            className="mt-2 w-full bg-atlas-surface rounded-2xl px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary border border-dashed border-atlas-text-secondary/30 focus:outline-none focus:border-atlas-teal resize-none"
+            className="mt-2 w-full resize-none rounded-2xl border border-dashed border-atlas-text-secondary/30 bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
           />
-          <p className="text-atlas-text-muted text-xs mt-1">
+          <p className="mt-1 text-xs text-atlas-text-muted">
             You can also send these via Telegram later.
           </p>
         </section>
@@ -320,13 +402,13 @@ export default function TrackAPage() {
               <div
                 key={name}
                 onClick={() => toggleRef(name)}
-                className="flex flex-col items-center gap-1 cursor-pointer group"
+                className="group flex cursor-pointer flex-col items-center gap-1"
               >
                 <div
-                  className={`w-12 h-12 rounded-full bg-atlas-surface border flex items-center justify-center text-atlas-text-secondary transition-colors ${
+                  className={`flex h-12 w-12 items-center justify-center rounded-full border text-atlas-text-secondary transition-colors ${
                     selectedRefs.has(name)
                       ? "border-atlas-teal ring-1 ring-atlas-teal"
-                      : "border-glass-border group-hover:border-atlas-teal"
+                      : "border-glass-border bg-atlas-surface group-hover:border-atlas-teal"
                   }`}
                 >
                   {name[0]}
@@ -346,12 +428,12 @@ export default function TrackAPage() {
                   }}
                   placeholder="@handle"
                   autoFocus
-                  className="bg-atlas-surface rounded-lg px-3 py-2 text-sm text-atlas-text border border-glass-border focus:outline-none focus:border-atlas-teal w-32"
+                  className="w-32 rounded-lg border border-glass-border bg-atlas-surface px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={handleAddCustomHandle}
-                  className="text-atlas-teal text-xs"
+                  className="text-xs text-atlas-teal"
                 >
                   Add
                 </button>
@@ -359,10 +441,10 @@ export default function TrackAPage() {
             ) : (
               <div
                 onClick={() => setAddingHandle(true)}
-                className="flex flex-col items-center gap-1 cursor-pointer group"
+                className="group flex cursor-pointer flex-col items-center gap-1"
               >
-                <div className="w-12 h-12 rounded-full bg-atlas-surface border border-dashed border-atlas-text-secondary/30 flex items-center justify-center text-atlas-text-secondary group-hover:border-atlas-teal transition-colors">
-                  <Plus className="w-4 h-4" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-dashed border-atlas-text-secondary/30 bg-atlas-surface text-atlas-text-secondary transition-colors group-hover:border-atlas-teal">
+                  <Plus className="h-4 w-4" />
                 </div>
                 <span className="text-xs text-atlas-text-muted">Add</span>
               </div>
@@ -382,7 +464,7 @@ export default function TrackAPage() {
                 : ["Reference A", "Reference B"]),
             ].map((label, index) => (
               <div key={label} className="flex items-center gap-4">
-                <span className="text-sm text-atlas-text-secondary w-28 shrink-0">
+                <span className="w-28 shrink-0 text-sm text-atlas-text-secondary">
                   {label}
                 </span>
                 <input
@@ -395,21 +477,25 @@ export default function TrackAPage() {
                   }
                   className="flex-1 accent-atlas-teal"
                 />
-                <span className="text-sm text-atlas-text w-10 text-right">
+                <span className="w-10 text-right text-sm text-atlas-text">
                   {blendValues[index]}%
                 </span>
               </div>
             ))}
           </div>
-          <p className="text-atlas-text-muted text-xs mt-2">
+          <p className="mt-2 text-xs text-atlas-text-muted">
             Set your starting blend — you can always change this later.
           </p>
         </section>
 
-        <GradientButton fullWidth onClick={handleSaveAndContinue} disabled={saving}>
+        <GradientButton
+          fullWidth
+          onClick={handleSaveAndContinue}
+          disabled={saving}
+        >
           {saving ? (
             <span className="flex items-center justify-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" /> Saving your voice...
+              <Loader2 className="h-4 w-4 animate-spin" /> Saving your voice...
             </span>
           ) : (
             "Let's get started"
