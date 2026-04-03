@@ -34,6 +34,8 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [stats, setStats] = useState(defaultStats);
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
+  const [quickDraft, setQuickDraft] = useState("");
+  const [quickDrafting, setQuickDrafting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -122,6 +124,17 @@ export default function DashboardPage() {
   };
   const showStatsEmptyState = stats.drafts === 0 && stats.posts === 0;
 
+  const handleQuickDraftSubmit = () => {
+    const trimmedDraft = quickDraft.trim();
+
+    if (!trimmedDraft) {
+      return;
+    }
+
+    setQuickDrafting(true);
+    router.push(`/crafting?draft=${encodeURIComponent(trimmedDraft)}`);
+  };
+
   if (loading) {
     return (
       <AppShell>
@@ -154,7 +167,34 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-4">
+        <p className="mb-2 text-xs text-atlas-text-secondary">Quick Draft</p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={quickDraft}
+            onChange={(event) => setQuickDraft(event.target.value)}
+            placeholder="Drop a hot take or paste an article URL..."
+            aria-label="Quick Draft"
+            disabled={quickDrafting}
+            className="flex-1 rounded-lg border border-glass-border bg-atlas-bg px-3 py-2 text-sm text-atlas-text placeholder-atlas-text-muted focus:border-atlas-teal focus:outline-none"
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && quickDraft.trim()) {
+                handleQuickDraftSubmit();
+              }
+            }}
+          />
+          <GradientButton
+            size="sm"
+            onClick={handleQuickDraftSubmit}
+            disabled={quickDrafting || !quickDraft.trim()}
+          >
+            Draft
+          </GradientButton>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
           <div
             key={stat.label}

@@ -197,6 +197,23 @@ describe("DashboardPage", () => {
     expect(mockPush).toHaveBeenCalledWith("/crafting");
   });
 
+  it("routes to crafting with a prefilled draft from the quick draft input", async () => {
+    render(<DashboardPage />);
+
+    expect(await screen.findByText("Drafts this week")).toBeInTheDocument();
+
+    const quickDraftInput = screen.getByRole("textbox", { name: "Quick Draft" });
+    fireEvent.change(quickDraftInput, {
+      target: { value: "ETH looks ready for a momentum breakout" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Draft" }));
+
+    expect(mockPush).toHaveBeenCalledWith(
+      "/crafting?draft=ETH%20looks%20ready%20for%20a%20momentum%20breakout"
+    );
+  });
+
   it("falls back gracefully and shows a dismissible warning when an API call fails", async () => {
     mockedApi.analytics.summary.mockRejectedValueOnce(new Error("Summary request failed"));
 

@@ -54,39 +54,39 @@ describe("BriefingPage", () => {
       expect(screen.getByLabelText("Daily delivery time")).toHaveValue("07:30");
     });
 
-    const initialTopicCheckbox = screen.getByRole("checkbox", {
+    const initialTopicChip = screen.getByRole("button", {
       name: "Macro",
     });
-    const topicCheckbox = screen.getByRole("checkbox", {
+    const topicChip = screen.getByRole("button", {
       name: "AI & Crypto",
     });
-    const initialSourceCheckbox = screen.getByRole("checkbox", {
+    const initialSourceChip = screen.getByRole("button", {
       name: "Delphi Research",
     });
-    const sourceCheckbox = screen.getByRole("checkbox", {
+    const sourceChip = screen.getByRole("button", {
       name: "X/Twitter",
     });
-    const initialChannelRadio = screen.getByRole("radio", {
+    const initialChannelChip = screen.getByRole("radio", {
       name: "Portal + Telegram",
     });
-    const channelRadio = screen.getByRole("radio", {
+    const channelChip = screen.getByRole("radio", {
       name: "Portal + Email",
     });
 
-    expect(initialTopicCheckbox).toBeChecked();
-    expect(initialSourceCheckbox).toBeChecked();
-    expect(initialChannelRadio).toBeChecked();
+    expect(initialTopicChip).toHaveAttribute("aria-pressed", "true");
+    expect(initialSourceChip).toHaveAttribute("aria-pressed", "true");
+    expect(initialChannelChip).toHaveAttribute("aria-checked", "true");
 
-    await user.click(topicCheckbox);
-    await user.click(sourceCheckbox);
-    await user.click(channelRadio);
+    await user.click(topicChip);
+    await user.click(sourceChip);
+    await user.click(channelChip);
     await user.click(
       screen.getByRole("button", { name: "Save briefing preferences" })
     );
 
-    expect(topicCheckbox).toBeChecked();
-    expect(sourceCheckbox).toBeChecked();
-    expect(channelRadio).toBeChecked();
+    expect(topicChip).toHaveAttribute("aria-pressed", "true");
+    expect(sourceChip).toHaveAttribute("aria-pressed", "true");
+    expect(channelChip).toHaveAttribute("aria-checked", "true");
     expect(mockApi.briefing.getPreferences).toHaveBeenCalledTimes(1);
     expect(mockApi.briefing.updatePreferences).toHaveBeenCalledWith({
       deliveryTime: "07:30",
