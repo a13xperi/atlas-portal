@@ -26,7 +26,7 @@ export const fonts = {
 
 export const gradients = {
   cta: `linear-gradient(to right, ${colors.atlasTeal}, ${colors.atlasSteel})`,
-  onboardingBg: "linear-gradient(to bottom, #0a1a0a, #1a2e1a, #0d1f0d)",
+  onboardingBg: "linear-gradient(to bottom, #1a1a2e, #16213e, #1a1a2e)",
 } as const;
 
 export const shadows = {

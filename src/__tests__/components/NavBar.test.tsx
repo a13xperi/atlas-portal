@@ -104,4 +104,39 @@ describe("NavBar", () => {
       screen.queryByRole("navigation", { name: "Mobile navigation" })
     ).not.toBeInTheDocument();
   });
+
+  it("hides auth-only controls when no user is authenticated", () => {
+    mockUseAuth.mockReturnValue({
+      user: null,
+      loading: false,
+      login: jest.fn(),
+      register: jest.fn(),
+      logout: jest.fn(),
+    });
+
+    const { container } = render(<NavBar variant="onboarding" />);
+
+    expect(screen.getByRole("link", { name: "Atlas" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Alerts" })).not.toBeInTheDocument();
+    expect(container.querySelector('a[href="/profile"]')).not.toBeInTheDocument();
+  });
+
+  it("hides the mobile menu button when no user is authenticated", () => {
+    mockUseAuth.mockReturnValue({
+      user: null,
+      loading: false,
+      login: jest.fn(),
+      register: jest.fn(),
+      logout: jest.fn(),
+    });
+
+    render(<NavBar variant="app" />);
+
+    expect(
+      screen.queryByRole("button", { name: "Open sidebar" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("navigation", { name: "Mobile navigation" })
+    ).not.toBeInTheDocument();
+  });
 });
