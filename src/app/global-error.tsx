@@ -23,7 +23,7 @@ export default function GlobalError({
           <AlertTriangle className="w-16 h-16 text-red-400 mx-auto mb-6" />
 
           <h1 className="font-heading text-2xl text-atlas-text">
-            Something went wrong
+            {error.message || "An unexpected error occurred."}
           </h1>
 
           <code className="block text-xs text-atlas-text-secondary font-mono mt-2">

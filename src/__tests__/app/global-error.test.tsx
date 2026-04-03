@@ -18,7 +18,6 @@ describe("GlobalError", () => {
 
     render(<GlobalError error={new Error("Global boundary failed")} reset={reset} />);
 
-    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
     expect(screen.getByText("Global boundary failed")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
