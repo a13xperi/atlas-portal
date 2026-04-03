@@ -104,9 +104,6 @@ export default function ProfilePage() {
 
         {/* Quick Links */}
         <div className="mt-6 flex flex-wrap gap-3">
-          <GradientButton variant="outline-teal" onClick={() => router.push("/voice-profiles")}>
-            Voice Profiles
-          </GradientButton>
           <GradientButton variant="outline-teal" onClick={() => router.push("/dashboard")}>
             Back to Dashboard
           </GradientButton>
