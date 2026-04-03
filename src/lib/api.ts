@@ -74,7 +74,12 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
         }
         // Fall through to retry
       } else {
-        return res.json();
+        const json = await res.json();
+        // Auto-unwrap response envelope ({ ok, data, timestamp }) if present
+        if (json && typeof json === "object" && "ok" in json && "data" in json) {
+          return json.data as T;
+        }
+        return json as T;
       }
     } catch (e) {
       clearTimeout(timeout);
