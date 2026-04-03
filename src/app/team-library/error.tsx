@@ -15,7 +15,7 @@ export default function TeamLibraryError({
         <div className="flex gap-3 justify-center">
           <button
             onClick={reset}
-            className="px-4 py-2 text-sm font-bold text-atlas-bg bg-gradient-to-r from-atlas-teal to-atlas-steel rounded-xl hover:opacity-90 transition-opacity"
+            className="px-4 py-2 text-sm font-bold text-atlas-bg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 rounded-xl hover:opacity-90 transition-opacity"
           >
             Try again
           </button>

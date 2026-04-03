@@ -33,7 +33,7 @@ export default function GlobalError({
           <button
             type="button"
             onClick={reset}
-            className="mt-8 inline-flex items-center justify-center bg-gradient-to-r from-atlas-teal to-atlas-steel text-white rounded-lg px-6 py-3"
+            className="mt-8 inline-flex items-center justify-center bg-gradient-to-r from-delphi-teal to-delphi-teal/60 text-white rounded-lg px-6 py-3"
           >
             Try again
           </button>
