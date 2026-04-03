@@ -47,14 +47,23 @@ export default function ContentInput({
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!onTextSubmit) return;
 
-    const result = await onTextSubmit(text);
+    const result = onTextSubmit(text);
 
-    if (result !== false) {
-      setText("");
+    if (!(result instanceof Promise)) {
+      if (result !== false) {
+        setText("");
+      }
+      return;
     }
+
+    void result.then((resolved) => {
+      if (resolved !== false) {
+        setText("");
+      }
+    });
   };
 
   const describedBy = [
@@ -149,12 +158,12 @@ export default function ContentInput({
           {text.length}/2000
         </p>
         {sourceError ? (
-          <p id={sourceErrorId} className="text-sm text-atlas-error">
+          <p id={sourceErrorId} className="text-red-400 text-sm mt-1">
             {sourceError}
           </p>
         ) : null}
         {contentError ? (
-          <p id={contentErrorId} className="text-sm text-atlas-error">
+          <p id={contentErrorId} className="text-red-400 text-sm mt-1">
             {contentError}
           </p>
         ) : null}

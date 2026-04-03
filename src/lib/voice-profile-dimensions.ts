@@ -120,8 +120,18 @@ export function applyVoiceDimensionDelta(
   }, { ...current });
 }
 
+export function hasAnyVoiceDimension(dimensions: VoiceDimensions) {
+  return Object.values(dimensions).some((value) => value > 0);
+}
+
 export function formatVoiceDimensionValue(value: number) {
   return `${Math.round(clampVoiceDimension(value) / 10)}/10`;
+}
+
+export function hasAnyVoiceDimension(
+  values?: Partial<VoiceDimensions> | Partial<VoiceProfile> | null
+) {
+  return VOICE_DIMENSION_FIELDS.some((field) => (values?.[field] ?? 0) > 0);
 }
 
 export function styleToDimensions(style: string | null): VoiceDimensions {

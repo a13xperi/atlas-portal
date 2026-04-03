@@ -7,7 +7,9 @@ import AppShell from "@/components/layout/AppShell";
 import NewsMode from "@/components/crafting/NewsMode";
 import ContentInput from "@/components/ui/ContentInput";
 import GradientButton from "@/components/ui/GradientButton";
-import RefinementChips from "@/components/ui/RefinementChips";
+import RefinementChips, {
+  RefinementChipOption,
+} from "@/components/ui/RefinementChips";
 import {
   api,
   AnalyticsSummary,
@@ -50,10 +52,10 @@ function extractSourceUrl(draft: TweetDraft | null) {
     return null;
   }
 
-  const contentSourceUrl = draft.content.match(/source:\s*(https?:\/\/\S+)/i)?.[1];
+  const contentMatch = draft.content.match(/source:\s*(https?:\/\/\S+)/i);
 
-  if (contentSourceUrl) {
-    return contentSourceUrl;
+  if (contentMatch?.[1]) {
+    return contentMatch[1];
   }
 
   const trimmedSourceContent = draft.sourceContent?.trim();
@@ -86,6 +88,8 @@ export default function CraftingPage() {
   const [generatingImage, setGeneratingImage] = useState(false);
   const [refiningChip, setRefiningChip] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sourceError, setSourceError] = useState<string | null>(null);
+  const [contentError, setContentError] = useState<string | null>(null);
   const activeDraftInitialized = useRef(false);
 
   const loadDrafts = useCallback(async () => {
@@ -125,7 +129,7 @@ export default function CraftingPage() {
       const { topics } = await api.trending.topics();
       setTrendingTopics(topics);
     } catch {
-      // Trending is optional — do not block the page.
+      // Trending is optional and should not block the page.
     }
   }, []);
 
@@ -151,6 +155,13 @@ export default function CraftingPage() {
     activeDraftInitialized.current = true;
   };
 
+  const handleModeChange = (mode: CraftingMode) => {
+    setActiveMode(mode);
+    setError(null);
+    setSourceError(null);
+    setContentError(null);
+  };
+
   const handleFileDrop = async (files: FileList) => {
     if (!user || files.length === 0) return;
 
@@ -165,12 +176,14 @@ export default function CraftingPage() {
 
       setCreating(true);
       setError(null);
+      setSourceError(null);
+      setContentError(null);
 
-      const { draft } = await api.drafts.generate(
-        text.trim().slice(0, 10000),
-        "REPORT",
-        selectedBlendId || undefined
-      );
+      const { draft } = await api.drafts.generate({
+        sourceContent: text.trim().slice(0, 10000),
+        sourceType: "REPORT",
+        blendId: selectedBlendId || undefined,
+      });
       commitDraft(draft);
     } catch (fileDropError: unknown) {
       console.error("Failed to process file:", fileDropError);
@@ -183,24 +196,41 @@ export default function CraftingPage() {
   };
 
   const handleCreateDraft = async (text: string) => {
-    if (!user || !text.trim()) return;
+    if (!user) return false;
+
+    const trimmedText = text.trim();
+
+    if (!trimmedText) {
+      setContentError("Content is required.");
+      setSourceError("Select at least one source before generating.");
+      return false;
+    }
+
+    if (trimmedText.length > 2000) {
+      setContentError("Content must be under 2000 characters.");
+      setSourceError(null);
+      return false;
+    }
 
     setCreating(true);
     setError(null);
+    setSourceError(null);
+    setContentError(null);
 
     try {
       const sourceType =
         activeMode === "reply_to_tweet"
           ? "MANUAL"
-          : text.trim().startsWith("http")
+          : trimmedText.startsWith("http")
             ? "ARTICLE"
             : "MANUAL";
-      const { draft } = await api.drafts.generate(
-        text.trim(),
+      const { draft } = await api.drafts.generate({
+        sourceContent: trimmedText,
         sourceType,
-        selectedBlendId || undefined
-      );
+        blendId: selectedBlendId || undefined,
+      });
       commitDraft(draft);
+      return true;
     } catch (createDraftError: unknown) {
       console.error("Failed to generate draft:", createDraftError);
       setError(
@@ -208,6 +238,7 @@ export default function CraftingPage() {
           ? createDraftError.message
           : "Failed to generate draft"
       );
+      return false;
     } finally {
       setCreating(false);
     }
@@ -225,13 +256,12 @@ export default function CraftingPage() {
     setError(null);
 
     try {
-      const { draft } = await api.drafts.generate(
-        trimmedFallbackText || trimmedArticleUrl,
-        trimmedFallbackText ? "MANUAL" : "ARTICLE",
-        selectedBlendId || undefined
-      );
+      const { draft } = await api.drafts.generate({
+        sourceContent: trimmedFallbackText || trimmedArticleUrl,
+        sourceType: trimmedFallbackText ? "MANUAL" : "ARTICLE",
+        blendId: selectedBlendId || undefined,
+      });
       commitDraft(draft, trimmedArticleUrl);
-
       return { showFallback: Boolean(trimmedFallbackText) };
     } catch (generateNewsError: unknown) {
       console.error("Failed to generate news draft:", generateNewsError);
@@ -290,7 +320,7 @@ export default function CraftingPage() {
       const { draft } = await api.drafts.regenerate(activeDraft.id, feedback.trim());
       commitDraft(draft, sourceUrl ?? undefined);
       setFeedback("");
-    } catch (regenerateError) {
+    } catch {
       try {
         const sourceUrl = extractSourceUrl(activeDraft);
         const { draft } = await api.drafts.update(activeDraft.id, {
@@ -340,10 +370,10 @@ export default function CraftingPage() {
     }
   };
 
-  const handleRefine = async (instruction: string) => {
+  const handleRefine = async ({ label, instruction }: RefinementChipOption) => {
     if (!activeDraft) return;
 
-    setRefiningChip(instruction);
+    setRefiningChip(label);
     setError(null);
 
     try {
@@ -360,6 +390,7 @@ export default function CraftingPage() {
         )
       );
     } catch (refineError: unknown) {
+      console.error("Failed to refine draft:", refineError);
       setError(refineError instanceof Error ? refineError.message : "Refinement failed");
     } finally {
       setRefiningChip(null);
@@ -474,10 +505,7 @@ export default function CraftingPage() {
                 role="tab"
                 aria-selected={isActive}
                 tabIndex={isActive ? 0 : -1}
-                onClick={() => {
-                  setActiveMode(mode.id);
-                  setError(null);
-                }}
+                onClick={() => handleModeChange(mode.id)}
                 className={`text-sm transition-colors ${
                   isActive
                     ? "rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-steel px-4 py-2 text-white"
@@ -512,6 +540,23 @@ export default function CraftingPage() {
                     : "Paste a tweet idea or link…"
                 }
                 onTextSubmit={handleCreateDraft}
+                onTextChange={(value) => {
+                  if (sourceError && value.trim()) {
+                    setSourceError(null);
+                  }
+
+                  if (!contentError) {
+                    return;
+                  }
+
+                  if (!value.trim()) {
+                    return;
+                  }
+
+                  if (value.trim().length <= 2000) {
+                    setContentError(null);
+                  }
+                }}
                 onDrop={handleFileDrop}
                 onTrendingClick={() => {
                   const trendingSection = document.getElementById("trending-section");
@@ -520,6 +565,8 @@ export default function CraftingPage() {
                     trendingSection.scrollIntoView({ behavior: "smooth" });
                   }
                 }}
+                sourceError={sourceError ?? undefined}
+                contentError={contentError ?? undefined}
               />
               {creating ? (
                 <div className="mt-2 flex items-center gap-2 text-sm text-atlas-teal">
@@ -632,7 +679,7 @@ export default function CraftingPage() {
           <RefinementChips
             onRefine={handleRefine}
             disabled={!activeDraft || creating}
-            loading={refiningChip}
+            loadingChip={refiningChip}
           />
         </div>
       ) : null}

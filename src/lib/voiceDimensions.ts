@@ -5,6 +5,7 @@ export {
   VOICE_DIMENSION_SECTIONS,
   applyVoiceDimensionDelta,
   formatVoiceDimensionValue,
+  hasAnyVoiceDimension,
   pickVoiceDimensions,
   styleToDimensions,
   type VoiceDimensionField,

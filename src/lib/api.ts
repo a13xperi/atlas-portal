@@ -19,6 +19,10 @@ interface DraftGenerationRequest {
   angleInstruction?: string;
 }
 
+interface FetchTweetByUrlRequest {
+  url: string;
+}
+
 class ApiError extends Error {
   statusCode: number;
   constructor(message: string, statusCode: number) {
@@ -199,6 +203,14 @@ export const api = {
       request<{ subscription: AlertSubscription }>("/api/alerts/subscriptions", { method: "POST", body: { type, value, delivery } }),
   },
 
+  tweets: {
+    fetchByUrl: ({ url }: FetchTweetByUrlRequest) =>
+      request<{ tweet: FetchedTweet }>("/api/tweets/fetch", {
+        method: "POST",
+        body: { url },
+      }),
+  },
+
   images: {
     generate: (prompt: string, style?: string) =>
       request<{ image: GeneratedImage }>("/api/images/generate", { method: "POST", body: { prompt, style } }),
@@ -306,6 +318,15 @@ export interface TweetDraft {
   blendId?: string;
   feedback?: string;
   createdAt: string;
+}
+
+export interface FetchedTweet {
+  id: string;
+  text: string;
+  url: string;
+  authorHandle?: string;
+  authorName?: string;
+  createdAt?: string;
 }
 
 export interface TeamDraft extends TweetDraft {
