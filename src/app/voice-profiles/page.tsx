@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, Wand2 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import GradientButton from "@/components/ui/GradientButton";
@@ -49,6 +49,7 @@ export default function VoiceProfilesPage() {
   const [addingVoice, setAddingVoice] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingDimensions, setSavingDimensions] = useState(false);
+  const [calibrateHandle, setCalibrateHandle] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -210,6 +211,57 @@ export default function VoiceProfilesPage() {
       <h1 className="font-heading text-2xl text-atlas-text">
         Your Voice — Detailed Breakdown
       </h1>
+
+      {profile?.tweetsAnalyzed === 0 ? (
+        <div className="mt-6 rounded-2xl border border-atlas-teal/30 bg-atlas-teal/5 p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-atlas-teal/20">
+              <Wand2 className="h-5 w-5 text-atlas-teal" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-heading text-lg text-atlas-text">
+                Auto-calibrate your voice
+              </h3>
+              <p className="mt-1 text-sm text-atlas-text-secondary">
+                Connect your X account and Atlas will analyze your tweets to set
+                your voice dimensions automatically.
+              </p>
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <input
+                  aria-label="Calibration X handle"
+                  type="text"
+                  placeholder="Your X handle (e.g. @vitalik)"
+                  value={calibrateHandle}
+                  onChange={(event) => setCalibrateHandle(event.target.value)}
+                  className="w-full rounded-lg border border-glass-border bg-atlas-bg px-3 py-2 text-sm text-atlas-text placeholder-atlas-text-muted focus:border-atlas-teal focus:outline-none sm:w-64"
+                />
+                <GradientButton
+                  size="sm"
+                  onClick={() => {
+                    const trimmedHandle = calibrateHandle.trim().replace("@", "");
+
+                    if (!trimmedHandle) {
+                      return;
+                    }
+
+                    api.voice
+                      .calibrate(trimmedHandle)
+                      .then((response) => {
+                        setProfile(response.profile);
+                        setDraftDimensions(pickVoiceDimensions(response.profile));
+                        setCalibrateHandle("");
+                      })
+                      .catch(console.error);
+                  }}
+                  disabled={!calibrateHandle.trim()}
+                >
+                  Calibrate
+                </GradientButton>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface-glass p-8 backdrop-blur-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
