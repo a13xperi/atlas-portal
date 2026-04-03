@@ -82,10 +82,42 @@ function extractSourceUrl(draft: TweetDraft | null) {
   return null;
 }
 
+function normalizeDraftWithSource(draft: TweetDraft, sourceUrl?: string) {
+  return sourceUrl
+    ? { ...draft, content: appendSourceUrl(draft.content, sourceUrl) }
+    : draft;
+}
+
+function getDefaultCompareVersion(
+  versionDrafts: TweetDraft[],
+  activeVersion: number | null
+) {
+  const comparableDrafts = versionDrafts.filter(
+    (draft) => draft.version !== activeVersion
+  );
+
+  if (comparableDrafts.length === 0) {
+    return null;
+  }
+
+  if (activeVersion !== null) {
+    const previousDrafts = comparableDrafts.filter(
+      (draft) => draft.version < activeVersion
+    );
+
+    if (previousDrafts.length > 0) {
+      return previousDrafts[previousDrafts.length - 1].version;
+    }
+  }
+
+  return comparableDrafts[comparableDrafts.length - 1].version;
+}
+
 export default function CraftingPage() {
   const { user } = useAuth();
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [draftHistory, setDraftHistory] = useState<DraftHistoryItem[]>([]);
+  const [draftVersions, setDraftVersions] = useState<TweetDraft[]>([]);
   const [activeDraft, setActiveDraft] = useState<TweetDraft | null>(null);
   const [activeMode, setActiveMode] = useState<CraftingMode>("new_post");
   const [replyAngle, setReplyAngle] = useState<string | null>(null);
@@ -107,6 +139,8 @@ export default function CraftingPage() {
   const [contentError, setContentError] = useState("");
   const [copiedDraftId, setCopiedDraftId] = useState<string | null>(null);
   const [sourceError, setSourceError] = useState("");
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareVersion, setCompareVersion] = useState<number | null>(null);
   const activeDraftInitialized = useRef(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
 
@@ -117,6 +151,7 @@ export default function CraftingPage() {
 
       if (nextDrafts.length > 0 && !activeDraftInitialized.current) {
         setActiveDraft(nextDrafts[0]);
+        setDraftVersions([nextDrafts[0]]);
         activeDraftInitialized.current = true;
       }
     } catch (loadDraftsError) {
@@ -174,9 +209,7 @@ export default function CraftingPage() {
   };
 
   const prependDraftHistory = (draft: TweetDraft, sourceUrl?: string) => {
-    const normalizedDraft = sourceUrl
-      ? { ...draft, content: appendSourceUrl(draft.content, sourceUrl) }
-      : draft;
+    const normalizedDraft = normalizeDraftWithSource(draft, sourceUrl);
 
     setDraftHistory((previousHistory) => {
       const existingItem = previousHistory.find(
@@ -200,9 +233,7 @@ export default function CraftingPage() {
   };
 
   const updateDraftHistory = (draft: TweetDraft, sourceUrl?: string) => {
-    const normalizedDraft = sourceUrl
-      ? { ...draft, content: appendSourceUrl(draft.content, sourceUrl) }
-      : draft;
+    const normalizedDraft = normalizeDraftWithSource(draft, sourceUrl);
 
     setDraftHistory((previousHistory) =>
       previousHistory.map((historyItem) =>
@@ -241,12 +272,29 @@ export default function CraftingPage() {
   };
 
   const handleSelectDraft = (draft: TweetDraft) => {
+    const draftInVersionHistory = draftVersions.some(
+      (versionDraft) => versionDraft.version === draft.version
+    );
+
     setActiveDraft(draft);
     setVisualConcept(null);
+
+    if (!draftInVersionHistory) {
+      setDraftVersions([draft]);
+      setCompareMode(false);
+      setCompareVersion(null);
+    }
   };
 
-  const commitDraft = (draft: TweetDraft, sourceUrl?: string) => {
+  const commitDraft = (
+    draft: TweetDraft,
+    sourceUrl?: string,
+    previousVersion?: TweetDraft | null
+  ) => {
     const normalizedDraft = prependDraftHistory(draft, sourceUrl);
+    const normalizedPreviousVersion = previousVersion
+      ? normalizeDraftWithSource(previousVersion, sourceUrl)
+      : null;
 
     setDrafts((previousDrafts) => [
       normalizedDraft,
@@ -254,6 +302,31 @@ export default function CraftingPage() {
         (existingDraft) => existingDraft.id !== normalizedDraft.id
       ),
     ]);
+    setDraftVersions((previousVersions) => {
+      if (!normalizedPreviousVersion) {
+        return [normalizedDraft];
+      }
+
+      const nextVersionsByNumber = new Map(
+        previousVersions.map((versionDraft) => [versionDraft.version, versionDraft])
+      );
+
+      nextVersionsByNumber.set(
+        normalizedPreviousVersion.version,
+        normalizedPreviousVersion
+      );
+      nextVersionsByNumber.set(normalizedDraft.version, normalizedDraft);
+
+      return Array.from(nextVersionsByNumber.values()).sort(
+        (leftDraft, rightDraft) => leftDraft.version - rightDraft.version
+      );
+    });
+    if (normalizedPreviousVersion) {
+      setCompareVersion(normalizedPreviousVersion.version);
+    } else {
+      setCompareMode(false);
+      setCompareVersion(null);
+    }
     setActiveDraft(normalizedDraft);
     setVisualConcept(null);
     activeDraftInitialized.current = true;
@@ -447,7 +520,7 @@ export default function CraftingPage() {
     try {
       const sourceUrl = extractSourceUrl(activeDraft);
       const { draft } = await api.drafts.regenerate(activeDraft.id, feedback.trim());
-      commitDraft(draft, sourceUrl ?? undefined);
+      commitDraft(draft, sourceUrl ?? undefined, activeDraft);
       setFeedback("");
     } catch {
       try {
@@ -488,7 +561,7 @@ export default function CraftingPage() {
     try {
       const sourceUrl = extractSourceUrl(activeDraft);
       const { draft } = await api.drafts.regenerate(activeDraft.id);
-      commitDraft(draft, sourceUrl ?? undefined);
+      commitDraft(draft, sourceUrl ?? undefined, activeDraft);
     } catch (tryAgainError: unknown) {
       console.error("Failed to regenerate:", tryAgainError);
       setError(
@@ -508,7 +581,7 @@ export default function CraftingPage() {
     try {
       const sourceUrl = extractSourceUrl(activeDraft);
       const { draft } = await api.drafts.refine(activeDraft.id, instruction);
-      commitDraft(draft, sourceUrl ?? undefined);
+      commitDraft(draft, sourceUrl ?? undefined, activeDraft);
     } catch (refineError: unknown) {
       setError(refineError instanceof Error ? refineError.message : "Refinement failed");
     } finally {
@@ -575,12 +648,14 @@ export default function CraftingPage() {
       generatedAt: historyItem?.generatedAt ?? draft.createdAt,
     };
   });
-  const versionDrafts = draftHistoryItems
-    .slice(0, 3)
-    .map((historyItem) => historyItem.draft);
+  const versionDrafts = draftVersions;
   const activeVersion = versionDrafts.findIndex(
     (draft) => draft.id === activeDraft?.id
   );
+  const compareDraft =
+    compareVersion === null
+      ? null
+      : versionDrafts.find((draft) => draft.version === compareVersion) ?? null;
   const feedbackCount = summary?.feedbackGiven ?? 0;
   const draftsRefined = summary?.refinements ?? 0;
   const usagePercent = summary
@@ -589,6 +664,48 @@ export default function CraftingPage() {
         100
       )
     : 0;
+
+  useEffect(() => {
+    if (!compareMode) {
+      return;
+    }
+
+    if (!activeDraft || versionDrafts.length < 2) {
+      setCompareMode(false);
+      setCompareVersion(null);
+      return;
+    }
+
+    const hasValidCompareTarget =
+      compareVersion !== null &&
+      versionDrafts.some(
+        (draft) =>
+          draft.version === compareVersion &&
+          draft.version !== activeDraft.version
+      );
+
+    if (!hasValidCompareTarget) {
+      setCompareVersion(
+        getDefaultCompareVersion(versionDrafts, activeDraft.version)
+      );
+    }
+  }, [activeDraft, compareMode, compareVersion, versionDrafts]);
+
+  const handleToggleCompareMode = () => {
+    if (compareMode) {
+      setCompareMode(false);
+      setCompareVersion(null);
+      return;
+    }
+
+    const nextCompareVersion = getDefaultCompareVersion(
+      versionDrafts,
+      activeDraft?.version ?? null
+    );
+
+    setCompareVersion(nextCompareVersion);
+    setCompareMode(nextCompareVersion !== null);
+  };
 
   return (
     <AppShell>
@@ -934,21 +1051,88 @@ export default function CraftingPage() {
           ) : null}
 
           {versionDrafts.length > 0 ? (
-            <div className="mt-6 flex flex-wrap gap-2">
-              {versionDrafts.map((draft, index) => (
-                <button
-                  key={draft.id}
-                  type="button"
-                  onClick={() => handleSelectDraft(draft)}
-                  className={`rounded-lg px-4 py-2 text-sm transition-colors ${
-                    activeVersion === index
-                      ? "border-b-2 border-atlas-teal text-atlas-teal"
-                      : "text-atlas-text-secondary hover:text-atlas-text"
-                  }`}
-                >
-                  Version {index + 1}
-                </button>
-              ))}
+            <div className="mt-6 space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                {versionDrafts.map((draft, index) => (
+                  <button
+                    key={draft.version}
+                    type="button"
+                    onClick={() => handleSelectDraft(draft)}
+                    className={`rounded-lg px-4 py-2 text-sm transition-colors ${
+                      activeVersion === index
+                        ? "border-b-2 border-atlas-teal text-atlas-teal"
+                        : "text-atlas-text-secondary hover:text-atlas-text"
+                    }`}
+                  >
+                    Version {draft.version}
+                  </button>
+                ))}
+
+                {versionDrafts.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={handleToggleCompareMode}
+                    className={`rounded px-2 py-1 text-xs ${
+                      compareMode
+                        ? "bg-atlas-teal text-white"
+                        : "text-atlas-text-secondary hover:text-atlas-text"
+                    }`}
+                  >
+                    Compare
+                  </button>
+                ) : null}
+              </div>
+
+              {compareMode && versionDrafts.length > 1 ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <label
+                    htmlFor="compare-version"
+                    className="text-xs uppercase tracking-wide text-atlas-text-secondary"
+                  >
+                    Compare against
+                  </label>
+                  <select
+                    id="compare-version"
+                    value={compareVersion ?? ""}
+                    onChange={(event) =>
+                      setCompareVersion(
+                        event.target.value ? Number(event.target.value) : null
+                      )
+                    }
+                    className="rounded-lg border border-glass-border bg-atlas-surface px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none"
+                  >
+                    <option value="">Select a version</option>
+                    {versionDrafts
+                      .filter((draft) => draft.version !== activeDraft?.version)
+                      .map((draft) => (
+                        <option key={draft.version} value={draft.version}>
+                          Version {draft.version}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              ) : null}
+
+              {compareMode && activeDraft && compareDraft ? (
+                <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="rounded-xl border border-glass-border bg-atlas-surface p-4">
+                    <p className="mb-2 text-xs text-atlas-text-muted">
+                      Version {compareDraft.version}
+                    </p>
+                    <p className="whitespace-pre-wrap text-sm text-atlas-text">
+                      {compareDraft.content}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-atlas-teal/30 bg-atlas-surface p-4">
+                    <p className="mb-2 text-xs text-atlas-teal">
+                      Current (v{activeDraft.version})
+                    </p>
+                    <p className="whitespace-pre-wrap text-sm text-atlas-text">
+                      {activeDraft.content}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
