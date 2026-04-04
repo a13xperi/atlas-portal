@@ -435,17 +435,54 @@ export default function OracleChat() {
             />
           );
 
-        case "blend":
+        case "blend": {
+          const refNames = state.selectedRefs.map((id) => {
+            const acct = referenceAccountLookup.get(id);
+            return acct?.displayName || acct?.name || id;
+          });
           return (
-            <BlendRatioSlider
-              selfPercentage={state.selfPercentage}
-              onChange={(p) => dispatch({ type: "SET_BLEND", percentage: p })}
-              referenceNames={state.selectedRefs.map((id) => {
-                const acct = referenceAccountLookup.get(id);
-                return acct?.displayName || acct?.name || id;
-              })}
-            />
+            <div className="space-y-4">
+              <BlendRatioSlider
+                selfPercentage={state.selfPercentage}
+                onChange={(p) => dispatch({ type: "SET_BLEND", percentage: p })}
+                referenceNames={refNames}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const blendVoices = [
+                    { label: "My voice", percentage: state.selfPercentage },
+                    ...refNames.map((n) => ({
+                      label: n,
+                      percentage: Math.round((100 - state.selfPercentage) / refNames.length),
+                    })),
+                  ];
+                  api.oracle.message({
+                    track: state.track!,
+                    step: state.currentStep,
+                    action: "blend-preview",
+                    context: { dimensions: state.dimensions, blendVoices },
+                  }).then((r) => {
+                    if (r.llmGenerated && r.messages.length > 0) {
+                      dispatch({
+                        type: "ENQUEUE_MESSAGES",
+                        messages: r.messages.map((m, i) => ({
+                          id: `blend-preview-${Date.now()}-${i}`,
+                          role: "oracle" as const,
+                          content: `Here's what a tweet might sound like in this blend:\n\n\"${m.content}\"`,
+                          timestamp: Date.now(),
+                        })),
+                      });
+                    }
+                  }).catch(() => {});
+                }}
+                className="w-full rounded-lg border border-atlas-teal/30 bg-atlas-teal/10 px-4 py-2.5 text-sm font-medium text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/15"
+              >
+                Preview a tweet in this voice
+              </button>
+            </div>
           );
+        }
 
         case "topics":
           return (
