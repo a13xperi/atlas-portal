@@ -204,13 +204,16 @@ export default function QaTestRunnerPage() {
     if (!newRun?.id) {
       newRun = {
         id: `local-${Date.now()}`,
+        project: "atlas-portal",
         tester_name: testerName,
         tester_initials: testerInitials,
         tester_id: "local",
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         results: {},
-        summary: { pass: 0, fail: 0, skip: 0, blockers: 0, total: TOTAL_TESTS },
-      } as QaTestRun;
+        summary: { pass: 0, fail: 0, skip: 0, total: TOTAL_TESTS },
+        status: "in_progress" as const,
+      };
     }
     setRuns((prev) => [newRun, ...prev]);
     setActiveRunId(newRun.id);
