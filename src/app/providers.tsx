@@ -11,13 +11,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
       <ErrorBoundary>
-        <CommandPaletteProvider>
-          <AuthProvider>
-            <DemoModeProvider>
+        <DemoModeProvider>
+          <CommandPaletteProvider>
+            <AuthProvider>
               <AlertSocketProvider>{children}</AlertSocketProvider>
-            </DemoModeProvider>
-          </AuthProvider>
-        </CommandPaletteProvider>
+            </AuthProvider>
+          </CommandPaletteProvider>
+        </DemoModeProvider>
       </ErrorBoundary>
     </ToastProvider>
   );

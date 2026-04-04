@@ -8,7 +8,7 @@ const apiURL =
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: ["smoke.spec.ts", "investor-walkthrough.spec.ts"],
+  testMatch: ["smoke.spec.ts", "investor-walkthrough.spec.ts", "demo-mode.spec.ts"],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
