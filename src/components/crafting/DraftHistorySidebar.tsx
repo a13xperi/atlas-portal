@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { TweetDraft } from "@/lib/api";
 
 export interface DraftHistoryItem {
@@ -44,6 +46,25 @@ export default function DraftHistorySidebar({
   onSelectDraft,
   mobile = false,
 }: DraftHistorySidebarProps) {
+  const [collapsed, setCollapsed] = useState(false);
+
+  if (!mobile && collapsed) {
+    return (
+      <aside aria-label="Draft history" className="hidden shrink-0 lg:block">
+        <div className="sticky top-24">
+          <button
+            type="button"
+            onClick={() => setCollapsed(false)}
+            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-glass-border bg-glass/50 text-atlas-text-secondary backdrop-blur-xl transition-colors hover:border-atlas-teal hover:text-atlas-teal"
+            aria-label="Expand draft history"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        </div>
+      </aside>
+    );
+  }
+
   return (
     <aside
       aria-label="Draft history"
@@ -51,7 +72,19 @@ export default function DraftHistorySidebar({
     >
       <div className={mobile ? "space-y-4" : "sticky top-24 space-y-4"}>
         <div className="bg-glass/50 backdrop-blur-xl border border-glass-border rounded-2xl p-5">
-          <h2 className="font-heading font-semibold text-lg text-atlas-text">Draft History</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading font-semibold text-lg text-atlas-text">Draft History</h2>
+            {!mobile && (
+              <button
+                type="button"
+                onClick={() => setCollapsed(true)}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-atlas-text-muted transition-colors hover:text-atlas-teal"
+                aria-label="Collapse draft history"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            )}
+          </div>
           <p className="mt-1 font-body text-sm text-atlas-text-secondary">
             Session drafts appear here as you generate them.
           </p>
