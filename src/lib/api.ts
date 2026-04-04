@@ -269,6 +269,12 @@ export const api = {
       request<{ draft: TweetDraft }>(`/api/drafts/${id}/fetch-metrics`, { method: "POST" }),
     team: (limit = 50) =>
       request<{ drafts: TeamDraft[]; total: number }>(`/api/drafts/team?limit=${limit}`),
+    queue: () =>
+      request<{ queue: QueuedDraft[]; total: number; nextUp: QueuedDraft | null }>("/api/drafts/queue"),
+    enqueue: (id: string) =>
+      request<{ draft: TweetDraft }>(`/api/drafts/${id}/enqueue`, { method: "POST" }),
+    schedule: (id: string, scheduledAt: string) =>
+      request<{ draft: TweetDraft }>(`/api/drafts/${id}/schedule`, { method: "POST", body: { scheduledAt } }),
   },
 
   analytics: {
@@ -404,6 +410,23 @@ export const api = {
     }) =>
       request<{ text: string }>("/api/oracle/chat", { method: "POST", body }),
   },
+
+  campaigns: {
+    list: () =>
+      request<{ campaigns: Campaign[] }>("/api/campaigns"),
+    create: (name: string, description?: string) =>
+      request<{ campaign: Campaign }>("/api/campaigns", { method: "POST", body: { name, description } }),
+    get: (id: string) =>
+      request<{ campaign: Campaign }>(`/api/campaigns/${id}`),
+    update: (id: string, data: { name?: string; description?: string | null; status?: Campaign["status"] }) =>
+      request<{ campaign: Campaign }>(`/api/campaigns/${id}`, { method: "PATCH", body: data }),
+    delete: (id: string) =>
+      request<{ success: boolean }>(`/api/campaigns/${id}`, { method: "DELETE" }),
+    addDraft: (campaignId: string, draftId: string, sortOrder?: number) =>
+      request<{ success: boolean }>(`/api/campaigns/${campaignId}/drafts`, { method: "POST", body: { draftId, sortOrder } }),
+    removeDraft: (campaignId: string, draftId: string) =>
+      request<{ success: boolean }>(`/api/campaigns/${campaignId}/drafts/${draftId}`, { method: "DELETE" }),
+  },
 };
 
 // Types
@@ -478,7 +501,7 @@ export interface TweetDraft {
   id: string;
   content: string;
   version: number;
-  status: "DRAFT" | "APPROVED" | "POSTED" | "ARCHIVED";
+  status: "DRAFT" | "APPROVED" | "SCHEDULED" | "POSTED" | "ARCHIVED";
   confidence?: number;
   predictedEngagement?: number;
   actualEngagement?: number;
@@ -487,6 +510,21 @@ export interface TweetDraft {
   blendId?: string;
   feedback?: string;
   createdAt: string;
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  description?: string | null;
+  status: "DRAFT" | "ACTIVE" | "PAUSED" | "COMPLETED";
+  draftCount: number;
+  drafts?: TweetDraft[];
+  createdAt: string;
+}
+
+export interface QueuedDraft extends TweetDraft {
+  _score: number;
+  suggestedAt: string;
 }
 
 export interface TeamDraft extends TweetDraft {

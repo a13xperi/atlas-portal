@@ -33,6 +33,7 @@ const DRAFT_STATUS_VARIANTS: Record<
 > = {
   DRAFT: "draft",
   APPROVED: "feedback",
+  SCHEDULED: "feedback",
   POSTED: "posted",
   ARCHIVED: "draft",
 };
@@ -40,6 +41,7 @@ const DRAFT_STATUS_VARIANTS: Record<
 const DRAFT_STATUS_LABELS: Record<TweetDraft["status"], string> = {
   DRAFT: "Draft",
   APPROVED: "Approved",
+  SCHEDULED: "Scheduled",
   POSTED: "Posted",
   ARCHIVED: "Archived",
 };

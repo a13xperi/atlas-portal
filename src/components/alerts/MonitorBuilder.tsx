@@ -282,7 +282,7 @@ export default function MonitorBuilder({
             type="button"
             onClick={() => void handleCreate()}
             disabled={creating}
-            className="w-full rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-steel px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {creating ? "Creating..." : "Create Monitor"}
           </button>

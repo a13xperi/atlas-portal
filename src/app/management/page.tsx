@@ -109,65 +109,92 @@ export default function ManagementPage() {
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {team.map((member) => {
               const stats = getAnalystStats(member.id);
+              const vp = member.voiceProfile || stats?.voiceProfile;
+              const maturityLabel = vp?.maturity === "ADVANCED" ? "Advanced" : vp?.maturity === "INTERMEDIATE" ? "Intermediate" : "Beginner";
+              const maturityColor = vp?.maturity === "ADVANCED" ? "text-emerald-400" : vp?.maturity === "INTERMEDIATE" ? "text-amber-400" : "text-atlas-text-muted";
+              const totalActivity = (member._count.tweetDrafts || 0) + (member._count.sessions || 0) + (stats?._count.analyticsEvents || 0);
+              const activityLevel = totalActivity > 50 ? "High" : totalActivity > 20 ? "Medium" : "Low";
+              const activityDot = totalActivity > 50 ? "bg-emerald-400" : totalActivity > 20 ? "bg-amber-400" : "bg-red-400";
 
               return (
                 <div
                   key={member.id}
-                  className="rounded-2xl border border-glass-border bg-glass/50 p-5 backdrop-blur-xl"
+                  className="rounded-2xl border border-glass-border bg-atlas-surface p-5 transition-colors hover:border-atlas-teal/30"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-atlas-teal to-atlas-steel text-sm font-bold text-white">
-                      {(member.displayName || member.handle)[0]?.toUpperCase()}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-delphi-teal to-delphi-blue-500 text-sm font-bold text-white">
+                        {(member.displayName || member.handle)[0]?.toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate font-heading text-sm font-semibold text-atlas-text">
+                          {member.displayName || member.handle}
+                        </p>
+                        <p className="truncate text-xs text-atlas-text-muted">
+                          @{member.handle}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="truncate font-heading text-sm font-semibold text-atlas-text">
-                        {member.displayName || member.handle}
-                      </p>
-                      <p className="truncate text-xs text-atlas-text-muted">
-                        @{member.handle}
-                      </p>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`h-2 w-2 rounded-full ${activityDot}`} title={`${activityLevel} activity`} />
+                      <span className="text-[10px] text-atlas-text-muted">{activityLevel}</span>
                     </div>
                   </div>
 
-                  <div className="mt-4 flex items-center gap-1.5">
+                  <div className="mt-3 flex items-center gap-2">
                     <span
                       className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
                         member.role === "ADMIN"
                           ? "bg-atlas-teal/15 text-atlas-teal"
-                          : "bg-glass text-atlas-text-secondary"
+                          : member.role === "MANAGER"
+                          ? "bg-amber-400/15 text-amber-400"
+                          : "bg-atlas-nav text-atlas-text-secondary"
                       }`}
                     >
                       {member.role}
                     </span>
+                    {vp && (
+                      <span className={`text-[10px] font-medium ${maturityColor}`}>
+                        {maturityLabel}
+                      </span>
+                    )}
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-3 border-t border-glass-border/50 pt-4">
+                  {vp && (
+                    <div className="mt-3 space-y-1.5">
+                      {[
+                        { label: "Humor", value: vp.humor },
+                        { label: "Formality", value: vp.formality },
+                        { label: "Brevity", value: vp.brevity },
+                        { label: "Contrarian", value: vp.contrarianTone },
+                      ].map((dim) => (
+                        <div key={dim.label} className="flex items-center gap-2">
+                          <span className="w-16 text-[10px] text-atlas-text-muted">{dim.label}</span>
+                          <div className="h-1 flex-1 overflow-hidden rounded-full bg-atlas-nav">
+                            <div
+                              className="h-full rounded-full bg-atlas-teal/60"
+                              style={{ width: `${dim.value}%` }}
+                            />
+                          </div>
+                          <span className="w-6 text-right text-[10px] font-mono text-atlas-text-muted">{dim.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-3 grid grid-cols-3 gap-2 border-t border-glass-border/30 pt-3">
                     <div>
-                      <p className="text-[10px] uppercase tracking-wide text-atlas-text-muted">
-                        Drafts
-                      </p>
-                      <p className="mt-0.5 font-mono text-sm text-atlas-text">
-                        {member._count.tweetDrafts}
-                      </p>
+                      <p className="text-[10px] uppercase tracking-wide text-atlas-text-muted">Drafts</p>
+                      <p className="mt-0.5 font-mono text-sm font-semibold text-atlas-text">{member._count.tweetDrafts}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase tracking-wide text-atlas-text-muted">
-                        Sessions
-                      </p>
-                      <p className="mt-0.5 font-mono text-sm text-atlas-text">
-                        {member._count.sessions}
-                      </p>
+                      <p className="text-[10px] uppercase tracking-wide text-atlas-text-muted">Sessions</p>
+                      <p className="mt-0.5 font-mono text-sm font-semibold text-atlas-text">{member._count.sessions}</p>
                     </div>
-                    {stats && (
-                      <div className="col-span-2">
-                        <p className="text-[10px] uppercase tracking-wide text-atlas-text-muted">
-                          Events
-                        </p>
-                        <p className="mt-0.5 font-mono text-sm text-atlas-text">
-                          {stats._count.analyticsEvents}
-                        </p>
-                      </div>
-                    )}
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wide text-atlas-text-muted">Events</p>
+                      <p className="mt-0.5 font-mono text-sm font-semibold text-atlas-text">{stats?._count.analyticsEvents ?? "—"}</p>
+                    </div>
                   </div>
                 </div>
               );
