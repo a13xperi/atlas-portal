@@ -8,11 +8,15 @@ import { sections, TOTAL_TESTS, type TestCase, type TestSection } from "./test-d
 
 type TestStatus = "pending" | "pass" | "fail" | "skip";
 
+type Severity = "blocker" | "major" | "minor" | "cosmetic";
+
 interface TestResult {
   status: TestStatus;
   note: string;
   tester: string;
   timestamp: string;
+  severity?: Severity;
+  userFeedback?: string;
 }
 
 type ResultsMap = Record<string, TestResult>;
@@ -34,12 +38,16 @@ function computeSummary(results: ResultsMap) {
   let pass = 0;
   let fail = 0;
   let skip = 0;
+  let blockers = 0;
   for (const r of Object.values(results)) {
     if (r.status === "pass") pass++;
-    else if (r.status === "fail") fail++;
+    else if (r.status === "fail") {
+      fail++;
+      if (r.severity === "blocker") blockers++;
+    }
     else if (r.status === "skip") skip++;
   }
-  return { pass, fail, skip, total: TOTAL_TESTS };
+  return { pass, fail, skip, blockers, total: TOTAL_TESTS };
 }
 
 function sectionBadge(sectionTests: TestCase[], results: ResultsMap) {
