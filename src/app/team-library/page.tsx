@@ -71,7 +71,7 @@ export default function TeamLibraryPage() {
   const handleUseStyle = (item: TeamDraft) => {
     // Navigate to crafting with the draft content pre-loaded as inspiration
     const params = new URLSearchParams({ source: item.content });
-    if (item.blendName) params.set("blend", item.blendName);
+    if (item.blendName) params.set("voice", item.blendName);
     router.push(`/crafting?${params.toString()}`);
   };
 
