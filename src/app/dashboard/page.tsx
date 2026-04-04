@@ -180,8 +180,8 @@ export default function DashboardPage() {
               : "Your voice profile is set up. Head to the Crafting Station and turn some alpha into a tweet."
           }
           context="dashboard"
-          actionLabel={stats.drafts === 0 ? "Open Crafting Station" : undefined}
-          onAction={stats.drafts === 0 ? () => router.push("/crafting") : undefined}
+          actionLabel={stats.drafts > 0 && stats.posts === 0 ? "Pick one to ship" : "Draft your first post"}
+          onAction={() => router.push("/crafting")}
         />
       </div>
 
