@@ -156,7 +156,7 @@ describe("TrackBPage", () => {
 
     expect(await screen.findByText("Reference selector")).toBeInTheDocument();
     expect(mockOnboardingShell).toHaveBeenCalledWith({
-      maxWidth: "1120px",
+      maxWidth: "720px",
       step: 2,
       totalSteps: 3,
     });
