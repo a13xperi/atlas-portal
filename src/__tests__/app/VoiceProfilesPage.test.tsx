@@ -205,9 +205,9 @@ describe("VoiceProfilesPage", () => {
     expect(screen.getByText("New Voice")).toBeInTheDocument();
   });
 
-  it("shows Edit button in detail panel", async () => {
+  it("shows blend editor section", async () => {
     render(<VoiceProfilesPage />);
 
-    expect(await screen.findByText("Edit")).toBeInTheDocument();
+    expect(await screen.findByText("Create or Edit a Blend")).toBeInTheDocument();
   });
 });
