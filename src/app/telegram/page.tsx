@@ -1,7 +1,9 @@
 "use client";
 
 import AppShell from "@/components/layout/AppShell";
+import { useAuth } from "@/lib/auth";
 import {
+  CheckCircle2,
   ExternalLink,
   MessageCircle,
   Search,
@@ -24,18 +26,28 @@ const setupSteps = [
   {
     number: "3",
     title: "Start the Connection",
-    description: "Send /start to link your Atlas account",
+    description: "Send /start, then /link your-handle to connect your account",
     Icon: Send,
   },
 ] as const;
 
 export default function TelegramPage() {
+  const { user } = useAuth();
+  const isConnected = !!user?.telegramChatId;
+
   return (
     <AppShell>
       <div className="mx-auto flex max-w-2xl flex-col px-4 py-10 font-body sm:px-6">
-        <span className="mb-6 inline-block rounded-full bg-atlas-teal/20 px-4 py-1.5 text-sm font-medium text-atlas-teal">
-          Coming Soon
-        </span>
+        {isConnected ? (
+          <span className="mb-6 inline-flex items-center gap-1.5 rounded-full bg-green-500/20 px-4 py-1.5 text-sm font-medium text-green-400">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Connected
+          </span>
+        ) : (
+          <span className="mb-6 inline-block rounded-full bg-atlas-teal/20 px-4 py-1.5 text-sm font-medium text-atlas-teal">
+            Not Connected
+          </span>
+        )}
 
         <div className="mb-8 flex items-start gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-atlas-teal/20 text-atlas-teal">
@@ -50,6 +62,15 @@ export default function TelegramPage() {
             </p>
           </div>
         </div>
+
+        {isConnected && (
+          <div className="mb-6 rounded-2xl border border-green-500/30 bg-green-500/10 p-4">
+            <p className="text-sm text-green-400">
+              Your Telegram is linked to <span className="font-semibold">@{user?.handle}</span>.
+              You&apos;ll receive alerts automatically. Use <code className="rounded bg-atlas-surface px-1.5 py-0.5 text-xs">/alerts</code> in the bot to view recent signals.
+            </p>
+          </div>
+        )}
 
         <div>
           {setupSteps.map(({ number, title, description, Icon }) => (
