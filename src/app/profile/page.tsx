@@ -174,11 +174,26 @@ export default function ProfilePage() {
   if (!profile) {
     return (
       <AppShell>
-        <div className="mx-auto flex min-h-[60vh] w-full max-w-lg items-center justify-center">
-          <div
-            className="h-10 w-10 animate-spin rounded-full border-2 border-glass-border border-t-atlas-teal"
-            aria-label="Loading profile"
-          />
+        <div className="mx-auto flex min-h-[60vh] w-full max-w-lg flex-col items-center justify-center gap-4">
+          {error ? (
+            <>
+              <div role="alert" className="rounded-xl border border-atlas-error/30 bg-atlas-error/10 px-6 py-4 text-sm text-atlas-error text-center">
+                {error}
+              </div>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="text-sm text-atlas-teal hover:underline"
+              >
+                Try again
+              </button>
+            </>
+          ) : (
+            <div
+              className="h-10 w-10 animate-spin rounded-full border-2 border-glass-border border-t-atlas-teal"
+              aria-label="Loading profile"
+            />
+          )}
         </div>
       </AppShell>
     );
