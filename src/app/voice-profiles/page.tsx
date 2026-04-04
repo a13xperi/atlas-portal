@@ -638,7 +638,8 @@ export default function VoiceProfilesPage() {
                 onChange={(event) =>
                   updateBlend(index, Number(event.target.value))
                 }
-                className="flex-1 accent-atlas-teal"
+                className="flex-1"
+                style={{ "--range-progress": `${blendValues[index]}%` } as React.CSSProperties}
               />
               <span className="w-10 text-right text-sm text-atlas-text">
                 {blendValues[index]}%

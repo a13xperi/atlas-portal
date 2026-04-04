@@ -1487,7 +1487,8 @@ export default function CraftingPage() {
                 onChange={(event) => setBlendValue(Number(event.target.value))}
                 aria-labelledby={blendIntensityLabelId}
                 aria-valuetext={`${blendValue} percent`}
-                className="flex-1 accent-atlas-teal"
+                className="flex-1"
+                style={{ "--range-progress": `${blendValue}%` } as React.CSSProperties}
               />
               <span className="w-10 text-right text-sm text-atlas-text">{blendValue}%</span>
             </div>
