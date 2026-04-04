@@ -286,7 +286,7 @@ const smokeRoutes: SmokeRoute[] = [
   {
     name: "management",
     path: "/management",
-    ready: (page) => page.getByRole("heading", { name: /atlas arena/i }),
+    ready: (page) => page.getByRole("heading", { name: /atlas arena|team management/i }),
   },
   {
     name: "profile",
@@ -437,6 +437,12 @@ test.describe("Route smoke tests", () => {
       await context.addCookies([
         {
           name: "atlas_access_token",
+          value: "1",
+          domain: url.hostname,
+          path: "/",
+        },
+        {
+          name: "atlas_session",
           value: "1",
           domain: url.hostname,
           path: "/",

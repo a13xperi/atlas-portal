@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavBar from "@/components/ui/NavBar";
+import FloatingOracle from "@/components/oracle/FloatingOracle";
 import { useAuth } from "@/lib/auth";
 import { gradients } from "@/lib/tokens";
 
@@ -55,6 +56,7 @@ export default function AppShell({ children }: AppShellProps) {
           {children}
         </div>
       </main>
+      <FloatingOracle />
     </div>
   );
 }

@@ -3,6 +3,18 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { api, User, VoiceProfile, setAccessToken } from "./api";
 
+// Session flag cookie — tells the middleware the user has logged in.
+// The real auth token is cross-origin (HttpOnly on the backend domain),
+// so this lightweight flag on the frontend domain enables server-side redirects.
+function setSessionCookie(active: boolean) {
+  if (typeof document === "undefined") return;
+  if (active) {
+    document.cookie = "atlas_session=1; path=/; max-age=604800; SameSite=Lax";
+  } else {
+    document.cookie = "atlas_session=; path=/; max-age=0";
+  }
+}
+
 interface AuthState {
   user: (User & { voiceProfile?: VoiceProfile }) | null;
   loading: boolean;
@@ -26,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Check session on mount via cookie (HttpOnly — no localStorage needed)
   useEffect(() => {
     api.auth.me()
-      .then((res) => setUser(res.user))
+      .then((res) => { setUser(res.user); setSessionCookie(true); })
       .catch(async () => {
         // Token may be expired — try refresh
         try {
@@ -37,11 +49,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           const me = await api.auth.me();
           setUser(me.user);
+          setSessionCookie(true);
           return;
         } catch {
           // Refresh also failed — not authenticated
         }
         setUser(null);
+        setSessionCookie(false);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -54,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const me = await api.auth.me();
     setUser(me.user);
+    setSessionCookie(true);
   }, []);
 
   const register = useCallback(async (handle: string, email: string, password: string, onboardingTrack?: string) => {
@@ -63,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       document.cookie = "atlas_access_token=1; path=/; max-age=86400; SameSite=Lax";
       const me = await api.auth.me();
       setUser(me.user);
+      setSessionCookie(true);
     }
   }, []);
 
@@ -75,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(null);
     document.cookie = "atlas_access_token=; path=/; max-age=0";
     setUser(null);
+    setSessionCookie(false);
   }, []);
 
   return (
