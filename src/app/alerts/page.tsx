@@ -88,8 +88,8 @@ export default function AlertsPage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-4xl py-8" data-tour="signals-feed">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mx-auto max-w-4xl py-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between" data-tour="signals-feed">
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
               Signals Feed

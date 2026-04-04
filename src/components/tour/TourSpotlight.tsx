@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { TourStep } from "@/lib/tour";
 
@@ -13,14 +13,14 @@ interface TourSpotlightProps {
   onSkip: () => void;
 }
 
-interface TargetRect {
+interface ViewportRect {
   top: number;
   left: number;
   width: number;
   height: number;
 }
 
-const PADDING = 12;
+const PAD = 12;
 
 export default function TourSpotlight({
   step,
@@ -30,95 +30,86 @@ export default function TourSpotlight({
   onPrev,
   onSkip,
 }: TourSpotlightProps) {
-  const [rect, setRect] = useState<TargetRect | null>(null);
-  const bubbleRef = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<ViewportRect | null>(null);
   const isLastStep = stepIndex === totalSteps - 1;
 
-  // Find and track the target element
+  // Track target element position (viewport-relative for fixed overlay)
   useEffect(() => {
-    const findTarget = () => {
+    let raf: number;
+    const track = () => {
       const el = document.querySelector(step.targetSelector);
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      setRect({
-        top: r.top + window.scrollY - PADDING,
-        left: r.left + window.scrollX - PADDING,
-        width: r.width + PADDING * 2,
-        height: r.height + PADDING * 2,
-      });
-      // Scroll target into view
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (el) {
+        const r = el.getBoundingClientRect();
+        setRect({
+          top: r.top - PAD,
+          left: r.left - PAD,
+          width: r.width + PAD * 2,
+          height: r.height + PAD * 2,
+        });
+      }
+      raf = requestAnimationFrame(track);
     };
 
-    // Retry finding the element (it might not be mounted yet after navigation)
-    findTarget();
-    const retryInterval = setInterval(findTarget, 300);
-    const stop = setTimeout(() => clearInterval(retryInterval), 5000);
-
-    window.addEventListener("resize", findTarget);
-    window.addEventListener("scroll", findTarget, true);
+    // Scroll target into view first, then start tracking
+    const el = document.querySelector(step.targetSelector);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    // Small delay for scroll to settle
+    const t = setTimeout(() => { track(); }, 400);
 
     return () => {
-      clearInterval(retryInterval);
-      clearTimeout(stop);
-      window.removeEventListener("resize", findTarget);
-      window.removeEventListener("scroll", findTarget, true);
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
     };
   }, [step.targetSelector]);
 
-  // Compute bubble position relative to the target
+  // Position the Oracle bubble near the cutout
   const getBubbleStyle = (): React.CSSProperties => {
-    if (!rect) return { opacity: 0 };
+    if (!rect) return { opacity: 0, position: "fixed" as const };
 
-    const pos = step.position;
     const gap = 16;
+    const bubbleW = 400;
+    const bubbleH = 180; // approximate
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
 
-    if (pos === "bottom") {
+    // Try below first
+    if (rect.top + rect.height + gap + bubbleH < vh) {
       return {
-        position: "absolute",
+        position: "fixed",
         top: rect.top + rect.height + gap,
-        left: rect.left,
-        maxWidth: Math.min(420, rect.width),
+        left: Math.max(16, Math.min(rect.left, vw - bubbleW - 16)),
+        maxWidth: bubbleW,
       };
     }
-    if (pos === "top") {
+    // Try above
+    if (rect.top - gap - bubbleH > 0) {
       return {
-        position: "absolute",
-        bottom: window.innerHeight - rect.top + gap + window.scrollY,
-        left: rect.left,
-        maxWidth: 420,
+        position: "fixed",
+        top: rect.top - gap - bubbleH,
+        left: Math.max(16, Math.min(rect.left, vw - bubbleW - 16)),
+        maxWidth: bubbleW,
       };
     }
-    if (pos === "left") {
-      return {
-        position: "absolute",
-        top: rect.top,
-        right: window.innerWidth - rect.left + gap,
-        maxWidth: 360,
-      };
-    }
-    // right
+    // Fallback: center horizontally below
     return {
-      position: "absolute",
-      top: rect.top,
-      left: rect.left + rect.width + gap,
-      maxWidth: 360,
+      position: "fixed",
+      top: Math.min(rect.top + rect.height + gap, vh - bubbleH - 16),
+      left: Math.max(16, (vw - bubbleW) / 2),
+      maxWidth: bubbleW,
     };
   };
 
-  // SVG mask: full screen with a cutout for the target
-  const maskId = "tour-spotlight-mask";
+  const maskId = `tour-mask-${stepIndex}`;
 
   return (
-    <div className="fixed inset-0 z-[200]" style={{ pointerEvents: "none" }}>
-      {/* Dark overlay with cutout */}
+    <div className="fixed inset-0 z-[200]">
+      {/* Dark overlay with cutout — uses CSS clip-path for reliable positioning */}
       <svg
-        className="absolute inset-0 h-full w-full"
+        className="fixed inset-0 h-screen w-screen"
         style={{ pointerEvents: "auto" }}
-        onClick={(e) => {
-          // Clicking the overlay (not the cutout) does nothing — prevents accidental clicks
-          e.stopPropagation();
-        }}
+        onClick={(e) => e.stopPropagation()}
       >
         <defs>
           <mask id={maskId}>
@@ -138,16 +129,15 @@ export default function TourSpotlight({
         <rect
           width="100%"
           height="100%"
-          fill="rgba(0,0,0,0.65)"
+          fill="rgba(0,0,0,0.6)"
           mask={`url(#${maskId})`}
-          style={{ backdropFilter: "blur(2px)" }}
         />
       </svg>
 
-      {/* Cutout border glow */}
+      {/* Teal glow border around target */}
       {rect ? (
         <div
-          className="absolute rounded-xl border-2 border-atlas-teal/50 shadow-[0_0_20px_rgba(56,224,187,0.15)] transition-all duration-300"
+          className="fixed rounded-xl border-2 border-atlas-teal/50 shadow-[0_0_24px_rgba(56,224,187,0.2)] transition-all duration-300 ease-out"
           style={{
             top: rect.top,
             left: rect.left,
@@ -158,10 +148,10 @@ export default function TourSpotlight({
         />
       ) : null}
 
-      {/* Target area is interactive */}
+      {/* Make the target area clickable through the overlay */}
       {rect ? (
         <div
-          className="absolute"
+          className="fixed"
           style={{
             top: rect.top,
             left: rect.left,
@@ -174,12 +164,10 @@ export default function TourSpotlight({
 
       {/* Oracle message bubble */}
       <div
-        ref={bubbleRef}
-        className="transition-all duration-300"
-        style={{ ...getBubbleStyle(), pointerEvents: "auto" }}
+        className="transition-all duration-300 ease-out"
+        style={{ ...getBubbleStyle(), pointerEvents: "auto", zIndex: 201 }}
       >
         <div className="rounded-2xl border border-glass-border bg-atlas-nav/95 p-4 shadow-2xl backdrop-blur-xl">
-          {/* Oracle avatar + message */}
           <div className="flex gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-atlas-teal/20 text-sm">
               🔮
@@ -194,9 +182,7 @@ export default function TourSpotlight({
             </div>
           </div>
 
-          {/* Controls */}
           <div className="mt-4 flex items-center justify-between">
-            {/* Step indicator */}
             <div className="flex items-center gap-1">
               {Array.from({ length: totalSteps }, (_, i) => (
                 <div
@@ -236,26 +222,19 @@ export default function TourSpotlight({
                 onClick={onNext}
                 className="flex items-center gap-1 rounded-lg bg-atlas-teal/20 px-3 py-1.5 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/30"
               >
-                {isLastStep ? (
-                  "Done"
-                ) : (
-                  <>
-                    Next
-                    <ChevronRight className="h-3 w-3" />
-                  </>
-                )}
+                {isLastStep ? "Done" : <>Next <ChevronRight className="h-3 w-3" /></>}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Close button (top-right) */}
+      {/* Close X */}
       <button
         type="button"
         onClick={onSkip}
         className="fixed right-4 top-4"
-        style={{ pointerEvents: "auto" }}
+        style={{ pointerEvents: "auto", zIndex: 201 }}
         aria-label="Close tour"
       >
         <X className="h-5 w-5 text-white/50 transition-colors hover:text-white" />
