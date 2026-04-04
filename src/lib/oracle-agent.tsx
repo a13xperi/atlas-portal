@@ -205,9 +205,66 @@ export function OracleAgentProvider({
       const action = pendingActions.find((a) => a.id === actionId);
       if (!action) return;
       setPendingActions((prev) => prev.filter((a) => a.id !== actionId));
-      await executeActions([action]);
+      setIsThinking(true);
+
+      try {
+        const results = await executeActions([action]);
+
+        // Send results back to backend for continuation narration
+        const history = messagesRef.current
+          .slice(-20)
+          .map((m) => ({ role: m.role, content: m.text }));
+
+        try {
+          const continuation = await api.oracle.agent({
+            messages: [
+              ...history,
+              {
+                role: "user" as const,
+                content: `[User confirmed action: ${action.label}. Result: ${results[0]?.success ? "success" : "failed"}]`,
+              },
+            ],
+            page: pathname,
+            actionResults: results.map((r) => ({
+              actionId: r.actionId,
+              type: r.type,
+              success: r.success,
+              data: r.data,
+              error: r.error,
+            })),
+          });
+
+          if (continuation.text) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: msgId(),
+                role: "oracle" as const,
+                text: continuation.text,
+                timestamp: Date.now(),
+              },
+            ]);
+          }
+
+          // Handle follow-up actions from continuation
+          const followUp = (continuation.actions ?? []) as OracleAgentAction[];
+          const needsConfirm = followUp.filter((a) => a.requiresConfirmation);
+          const autoExec = followUp.filter((a) => !a.requiresConfirmation);
+
+          if (needsConfirm.length > 0) {
+            setPendingActions((prev) => [...prev, ...needsConfirm]);
+          }
+          if (autoExec.length > 0) {
+            await executeActions(autoExec);
+          }
+        } catch {
+          // Continuation failed — non-fatal
+        }
+      } finally {
+        setIsThinking(false);
+      }
     },
-    [pendingActions, executeActions],
+    [pendingActions, executeActions, pathname],
   );
 
   const rejectAction = useCallback((actionId: string) => {

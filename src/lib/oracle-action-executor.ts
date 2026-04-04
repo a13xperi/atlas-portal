@@ -99,6 +99,46 @@ export async function executeAction(
         }
       }
 
+      case "refine_draft": {
+        const result = await api.drafts.refine(
+          input.draftId as string,
+          input.instruction as string,
+        );
+        return ok(result.draft);
+      }
+
+      case "post_draft": {
+        const result = await api.drafts.postToX(input.draftId as string);
+        return ok(result);
+      }
+
+      case "schedule_draft": {
+        const result = await api.drafts.schedule(
+          input.draftId as string,
+          input.scheduledAt as string,
+        );
+        return ok(result.draft);
+      }
+
+      case "calibrate_voice": {
+        const result = await api.voice.calibrate(input.handle as string);
+        return ok(result);
+      }
+
+      case "update_voice_dimension": {
+        const dims = input.dimensions as Record<string, number>;
+        const result = await api.voice.updateProfile(dims);
+        return ok(result);
+      }
+
+      case "subscribe_signal": {
+        const result = await api.alerts.subscribe(
+          input.type as string,
+          input.value as string,
+        );
+        return ok(result);
+      }
+
       default:
         return fail(`Unknown action: ${type}`);
     }
@@ -137,6 +177,20 @@ export function summarizeResult(action: OracleAgentAction, result: OracleActionR
       const signals = (data as Record<string, unknown>).signals as unknown[] | undefined;
       return signals ? `${signals.length} signal${signals.length === 1 ? "" : "s"} in your feed.` : "No signals right now.";
     }
+    case "refine_draft": {
+      const refined = (data as Record<string, unknown>).content as string | undefined;
+      return refined ? `Refined: “${refined.slice(0, 100)}…”` : "Draft refined.";
+    }
+    case "post_draft":
+      return "Posted to X.";
+    case "schedule_draft":
+      return `Scheduled for ${((data as Record<string, unknown>).scheduledAt as string || "later").slice(0, 16)}.`;
+    case "calibrate_voice":
+      return "Voice calibrated from X account.";
+    case "update_voice_dimension":
+      return "Voice dimensions updated.";
+    case "subscribe_signal":
+      return "Subscribed to signals.";
     case "conduct_research":
       return "Research complete.";
     default:
