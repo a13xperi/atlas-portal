@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import DraftHistorySidebar, {
   DraftHistoryItem,
@@ -215,6 +216,7 @@ function buildVoiceVariationInstruction(
 }
 
 export default function CraftingPage() {
+  const searchParams = useSearchParams();
   const voiceModeLabelId = useId();
   const savedBlendLabelId = useId();
   const blendIntensityLabelId = useId();
@@ -333,6 +335,16 @@ export default function CraftingPage() {
     } catch {
       // Trending is optional — do not block the page.
     }
+
+  // Seed content from dashboard Quick Draft (?draft=...)
+  useEffect(() => {
+    const draftParam = searchParams.get("draft");
+    if (draftParam) {
+      handleDraftTextChange(draftParam);
+      setTimeout(() => { handleCreateDraftRef.current?.(draftParam); }, 500);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   }, []);
 
   useEffect(() => {
@@ -348,6 +360,16 @@ export default function CraftingPage() {
         window.clearTimeout(copyResetTimeoutRef.current);
       }
     };
+
+  // Seed content from dashboard Quick Draft (?draft=...)
+  useEffect(() => {
+    const draftParam = searchParams.get("draft");
+    if (draftParam) {
+      handleDraftTextChange(draftParam);
+      setTimeout(() => { handleCreateDraftRef.current?.(draftParam); }, 500);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   }, []);
 
   useEffect(() => {
