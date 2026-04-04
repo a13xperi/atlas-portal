@@ -95,7 +95,7 @@ export default function AnalyticsPage() {
     ? [
         { label: "Drafts", value: String(summary.draftsCreated) },
         { label: "Feedback", value: String(summary.feedbackGiven) },
-        { label: "Refinements", value: String(summary.refinements) },
+        { label: "Refinements", value: String(summary.refinements ?? 0) },
         { label: "Ingested", value: String(summary.reportsIngested) },
       ]
     : [
