@@ -331,22 +331,20 @@ export default function QaTestRunnerPage() {
             ))}
           </select>
 
-          <>
+          <button
+            onClick={createRun}
+            className="rounded-md border border-atlas-teal bg-atlas-teal/15 px-3 py-1 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/25"
+          >
+            + New Run
+          </button>
+          {activeRunId && isManager && (
             <button
-              onClick={createRun}
-              className="rounded-md border border-atlas-teal bg-atlas-teal/15 px-3 py-1 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/25"
+              onClick={() => deleteRun(activeRunId)}
+              className="rounded-md border border-red-500/30 px-3 py-1 text-xs text-red-400 transition-colors hover:bg-red-500/10"
             >
-              + New Run
+              Delete
             </button>
-            {activeRunId && isManager && (
-              <button
-                onClick={() => deleteRun(activeRunId)}
-                className="rounded-md border border-red-500/30 px-3 py-1 text-xs text-red-400 transition-colors hover:bg-red-500/10"
-              >
-                Delete
-              </button>
-            )}
-          </>
+          )}
 
           <div className="ml-auto flex items-center gap-2">
             {saving && (

@@ -1,7 +1,27 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// Public routes that don't require authentication
+const PUBLIC_PATHS = new Set(["/", "/auth/x/callback"]);
+
+function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.has(pathname) || pathname.startsWith("/_next") || pathname.startsWith("/api");
+}
+
 export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Auth redirect: if no token cookie and hitting a protected route, redirect to login
+  const hasToken = request.cookies.has("atlas_access_token");
+  if (!hasToken && !isPublicPath(pathname)) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  // If authenticated user hits login page, redirect to dashboard
+  if (hasToken && pathname === "/") {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
   const response = NextResponse.next();
 
   // Prevent clickjacking
