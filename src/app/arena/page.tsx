@@ -145,6 +145,7 @@ export default function ArenaPage() {
             <h1 className="font-heading font-extrabold tracking-tight text-2xl text-atlas-text">
               Atlas Arena
             </h1>
+          <p className="mt-2 text-atlas-text-secondary max-w-2xl">See how your content stacks up. The leaderboard ranks analysts by engagement, consistency, and voice maturity — friendly competition to sharpen everyone&#39;s edge.</p>
           </div>
           {myEntry && (
             <div className="flex items-center gap-2">

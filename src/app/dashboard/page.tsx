@@ -178,6 +178,7 @@ export default function DashboardPage() {
       <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
         Welcome back, {user?.handle || "Analyst"}
       </h1>
+          <p className="mt-2 text-atlas-text-secondary max-w-2xl">Your command center. See what&apos;s queued, track recent activity, and jump to any part of Atlas from here.</p>
 
       <div className="mt-4" data-tour="oracle-banner">
         <OracleWidget

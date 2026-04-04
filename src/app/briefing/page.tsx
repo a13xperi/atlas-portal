@@ -192,8 +192,9 @@ export default function BriefingPage() {
           <header className="space-y-3">
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-atlas-teal">Morning Briefing</p>
             <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text sm:text-4xl">
-              Set Up Your Daily Digest
+              Your Daily Briefing
             </h1>
+          <p className="mt-2 text-atlas-text-secondary max-w-2xl">Your personalized morning digest. Atlas surfaces the signals that matter most to your beat and suggests what to post about today.</p>
             <p className="text-sm text-atlas-text-secondary">
               Choose your topics, sources, and delivery preferences. After setup you&apos;ll see your briefings here.
             </p>

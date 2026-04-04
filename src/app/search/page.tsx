@@ -257,8 +257,9 @@ export default function SearchPage() {
       <div className="max-w-3xl mx-auto py-8">
         <div className="mb-8 text-center">
           <h1 className="font-heading font-extrabold tracking-tight text-2xl text-atlas-text sm:text-3xl">
-            Search drafts and voice profiles
+            Search Atlas
           </h1>
+          <p className="mt-2 text-atlas-text-secondary max-w-2xl">Find any draft, signal, or voice profile across your entire Atlas workspace. Filter by status, date, or content type.</p>
           <p className="mt-2 text-sm text-atlas-text-secondary sm:text-base">
             Filter saved drafts by content and quickly jump to the voice settings that shape your tone.
           </p>
