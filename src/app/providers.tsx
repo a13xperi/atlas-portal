@@ -6,6 +6,7 @@ import { DemoModeProvider } from "@/lib/demo-mode";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { CommandPaletteProvider } from "@/components/ui/CommandPalette";
 import { ToastProvider } from "@/components/ui/Toast";
+import { TourProvider } from "@/components/tour/TourProvider";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -14,7 +15,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <DemoModeProvider>
           <CommandPaletteProvider>
             <AuthProvider>
-              <AlertSocketProvider>{children}</AlertSocketProvider>
+              <TourProvider>
+                <AlertSocketProvider>{children}</AlertSocketProvider>
+              </TourProvider>
             </AuthProvider>
           </CommandPaletteProvider>
         </DemoModeProvider>

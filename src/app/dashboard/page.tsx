@@ -170,7 +170,7 @@ export default function DashboardPage() {
         Welcome back, {user?.handle || "Analyst"}
       </h1>
 
-      <div className="mt-4">
+      <div className="mt-4" data-tour="oracle-banner">
         <OracleWidget
           message={
             stats.drafts > 0

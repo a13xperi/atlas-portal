@@ -1301,7 +1301,7 @@ export default function CraftingPage() {
                     <p className="text-sm leading-relaxed text-atlas-text-secondary">{draftInputText}</p>
                   </div>
                 ) : null}
-                <div className="mt-3">
+                <div className="mt-3" data-tour="content-input">
                   <ContentInput
                     placeholder={
                       activeMode === "reply_to_tweet"
@@ -1337,7 +1337,7 @@ export default function CraftingPage() {
                     }}
                   />
                   {activeMode === "new_post" && !draftInputText ? (
-                    <div className="mt-3">
+                    <div className="mt-3" data-tour="content-input">
                       <p className="mb-2 text-[10px] text-atlas-text-muted">
                         Start from a template
                       </p>
@@ -1355,7 +1355,7 @@ export default function CraftingPage() {
                       </div>
                     </div>
                   ) : null}
-                  <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                  <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]" data-tour="generate-button">
                     <GradientButton
                       fullWidth
                       disabled={creating}

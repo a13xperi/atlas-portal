@@ -402,12 +402,14 @@ export default function VoiceProfilesPage() {
               })}
             </div>
           </div>
-          <VoiceDimensionSections
-            values={draftDimensions}
-            interactive
-            loading={loading}
-            onChange={updateDimension}
-          />
+          <div data-tour="dimension-sliders">
+            <VoiceDimensionSections
+              values={draftDimensions}
+              interactive
+              loading={loading}
+              onChange={updateDimension}
+            />
+          </div>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-4 text-sm text-atlas-text-secondary">
@@ -426,10 +428,12 @@ export default function VoiceProfilesPage() {
         />
       </div>
 
-      <ReferenceVoicesSection
-        references={references}
-        onReferencesChange={setReferences}
-      />
+      <div data-tour="reference-voices">
+        <ReferenceVoicesSection
+          references={references}
+          onReferencesChange={setReferences}
+        />
+      </div>
 
       <div className="mt-8">
         <p className="text-xs uppercase tracking-wide text-atlas-text-secondary">
