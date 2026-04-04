@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { DailyEngagement } from "@/lib/api";
 
 interface EngagementVelocityChartProps {
@@ -9,6 +10,7 @@ interface EngagementVelocityChartProps {
 export default function EngagementVelocityChart({
   engagementDays,
 }: EngagementVelocityChartProps) {
+  const chartDescriptionId = useId();
   const chartMax =
     engagementDays.length > 0
       ? Math.max(...engagementDays.flatMap((day) => [day.predicted, day.actual]), 1)
@@ -26,9 +28,13 @@ export default function EngagementVelocityChart({
             100
         )
       : null;
+  const chartSummary =
+    engagementDays.length > 0
+      ? `Engagement velocity over ${engagementDays.length} days. Highest value shown is ${chartMax}. Prediction accuracy is ${accuracyPct ?? 0} percent.`
+      : "No engagement data yet. Create and post drafts to compare predictions with actual engagement.";
 
   return (
-    <div className="bg-atlas-surface border border-glass-border rounded-xl p-6 sm:p-8 mb-6">
+    <section className="bg-atlas-surface border border-glass-border rounded-xl p-6 sm:p-8 mb-6">
       <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-heading font-bold tracking-tight text-xl text-atlas-text">
           Engagement Velocity
@@ -43,8 +49,13 @@ export default function EngagementVelocityChart({
         Actual performance against neural prediction models.
       </p>
 
-      <div className="relative">
-        <div className="min-w-[20rem]">
+      <div
+        role="img"
+        aria-label={chartSummary}
+        aria-describedby={chartDescriptionId}
+        className="relative"
+      >
+        <div aria-hidden="true" className="min-w-[20rem]">
           <div className="relative h-48">
             <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[10px] text-atlas-text-muted pr-2">
               <span>High</span>
@@ -86,16 +97,16 @@ export default function EngagementVelocityChart({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-6">
+      <div id={chartDescriptionId} className="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-6">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-sm bg-atlas-teal/60" />
+          <div aria-hidden="true" className="w-3 h-3 rounded-sm bg-atlas-teal/60" />
           <span className="text-xs text-atlas-text-secondary">Predicted</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-sm bg-atlas-success" />
+          <div aria-hidden="true" className="w-3 h-3 rounded-sm bg-atlas-success" />
           <span className="text-xs text-atlas-text-secondary">Actual</span>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

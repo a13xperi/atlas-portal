@@ -272,7 +272,7 @@ describe("CraftingPage", () => {
     render(<CraftingPage />);
 
     fireEvent.click(screen.getByRole("tab", { name: "News to Post" }));
-    fireEvent.change(screen.getByLabelText("Article URL input"), {
+    fireEvent.change(screen.getByLabelText("Paste an article URL"), {
       target: { value: "https://example.com/articles/preview-card" },
     });
 
@@ -314,7 +314,7 @@ describe("CraftingPage", () => {
     render(<CraftingPage />);
 
     fireEvent.click(screen.getByRole("tab", { name: "News to Post" }));
-    fireEvent.change(screen.getByLabelText("Article URL input"), {
+    fireEvent.change(screen.getByLabelText("Paste an article URL"), {
       target: { value: articleUrl },
     });
     fireEvent.click(screen.getByRole("button", { name: "Generate Post" }));
@@ -370,7 +370,7 @@ describe("CraftingPage", () => {
     render(<CraftingPage />);
 
     fireEvent.click(screen.getByRole("tab", { name: "News to Post" }));
-    fireEvent.change(screen.getByLabelText("Article URL input"), {
+    fireEvent.change(screen.getByLabelText("Paste an article URL"), {
       target: { value: articleUrl },
     });
     fireEvent.click(screen.getByRole("button", { name: "Generate Post" }));
@@ -379,7 +379,7 @@ describe("CraftingPage", () => {
       await screen.findByText("Could not fetch article. Paste the article text or key points.")
     ).toBeInTheDocument();
 
-    const fallbackInput = await screen.findByLabelText("Article text fallback");
+    const fallbackInput = await screen.findByLabelText("Article text or key points");
     fireEvent.change(fallbackInput, { target: { value: fallbackText } });
     fireEvent.click(screen.getByRole("button", { name: "Generate Post" }));
 

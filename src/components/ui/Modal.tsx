@@ -1,70 +1,86 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 
 interface ModalProps {
+  children: React.ReactNode;
+  description?: string;
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  description?: string;
-  children: ReactNode;
 }
 
 export default function Modal({
+  children,
+  description,
   isOpen,
   onClose,
   title,
-  description,
-  children,
 }: ModalProps) {
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", handleKey);
-      document.body.style.overflow = "";
-    };
-  }, [isOpen, onClose]);
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (isOpen) {
+      dialog.showModal();
+    } else {
+      dialog.close();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const handleClose = () => onClose();
+    dialog.addEventListener("close", handleClose);
+    return () => dialog.removeEventListener("close", handleClose);
+  }, [onClose]);
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDialogElement>) => {
+    if (e.target === dialogRef.current) onClose();
+  };
 
   if (!isOpen) return null;
 
   return (
-    <div
-      ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === overlayRef.current) onClose();
-      }}
+    <dialog
+      ref={dialogRef}
+      onClick={handleBackdropClick}
+      className="fixed inset-0 z-50 m-auto max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-[#0A1225] p-0 shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm open:flex open:flex-col"
+      aria-labelledby="modal-title"
+      aria-describedby={description ? "modal-description" : undefined}
     >
-      <div className="relative mx-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-glass-border bg-atlas-nav p-6 shadow-2xl">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="font-heading text-xl font-bold text-atlas-text">
-              {title}
-            </h2>
-            {description && (
-              <p className="mt-1 text-sm text-atlas-text-secondary">
-                {description}
-              </p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1 text-atlas-text-secondary transition-colors hover:text-atlas-text"
+      {/* Header */}
+      <div className="flex items-start justify-between border-b border-white/10 p-6">
+        <div>
+          <h2
+            id="modal-title"
+            className="text-lg font-semibold text-white"
           >
-            <X className="h-5 w-5" />
-          </button>
+            {title}
+          </h2>
+          {description && (
+            <p
+              id="modal-description"
+              className="mt-1 text-sm text-[#a0aec0]"
+            >
+              {description}
+            </p>
+          )}
         </div>
-        <div className="mt-4">{children}</div>
+        <button
+          onClick={onClose}
+          aria-label="Close modal"
+          className="ml-4 flex-shrink-0 rounded-lg p-1.5 text-[#718096] transition-colors hover:bg-white/10 hover:text-white"
+        >
+          <X size={18} />
+        </button>
       </div>
-    </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto p-6">{children}</div>
+    </dialog>
   );
 }
