@@ -75,6 +75,7 @@ type VoiceComparisonOption = {
 const DRAFT_STATUS_LABELS: Record<TweetDraft["status"], string> = {
   DRAFT: "Draft",
   APPROVED: "Approved",
+  SCHEDULED: "Scheduled",
   POSTED: "Posted",
   ARCHIVED: "Archived",
 };
@@ -82,6 +83,7 @@ const DRAFT_STATUS_LABELS: Record<TweetDraft["status"], string> = {
 const DRAFT_STATUS_PILL_STYLES: Record<TweetDraft["status"], string> = {
   DRAFT: "bg-atlas-surface text-atlas-text-secondary",
   APPROVED: "bg-atlas-teal/20 text-atlas-teal",
+  SCHEDULED: "bg-delphi-blue-500/20 text-delphi-blue-400",
   POSTED: "bg-atlas-success/20 text-atlas-success",
   ARCHIVED: "bg-atlas-text-muted/20 text-atlas-text-muted",
 };
@@ -89,6 +91,7 @@ const DRAFT_STATUS_PILL_STYLES: Record<TweetDraft["status"], string> = {
 const DRAFT_STATUS_HINTS: Record<TweetDraft["status"], string> = {
   DRAFT: "Review and approve when ready",
   APPROVED: "Ready to post",
+  SCHEDULED: "Scheduled for auto-posting",
   POSTED: "Published",
   ARCHIVED: "Archived",
 };
@@ -180,8 +183,29 @@ function getDefaultCompareVersion(
 function isTextFile(file: File) {
   return (
     file.type.startsWith("text/") ||
-    /\.(txt|md|csv|json|ya?ml|log)$/i.test(file.name)
+    file.type === "application/pdf" ||
+    /\.(txt|md|csv|json|ya?ml|log|pdf)$/i.test(file.name)
   );
+}
+
+async function extractPdfText(file: File): Promise<string> {
+  const pdfjsLib = await import("pdfjs-dist");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "";
+
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const pages: string[] = [];
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const text = content.items
+      .map((item) => ("str" in item ? (item as { str: string }).str : ""))
+      .join(" ");
+    if (text.trim()) pages.push(text.trim());
+  }
+
+  return pages.join("\n\n");
 }
 
 function clampVoiceValue(value?: number | null) {
@@ -620,16 +644,28 @@ export default function CraftingPage() {
 
   const handleTextFileInput = useCallback(async (file: File) => {
     if (!isTextFile(file)) {
-      setError("Only text files can be dropped into the content area.");
+      setError("Supported formats: PDF, TXT, MD, CSV, JSON, YAML");
       return;
     }
 
     try {
-      const text = await file.text();
+      let text: string;
+
+      if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+        text = await extractPdfText(file);
+      } else {
+        text = await file.text();
+      }
 
       if (!text.trim()) {
-        setError("The dropped file is empty.");
+        setError("The dropped file is empty or could not be read.");
         return;
+      }
+
+      // Truncate to 10k chars with a note
+      const maxLen = 10000;
+      if (text.length > maxLen) {
+        text = text.slice(0, maxLen) + "\n\n[Content truncated at 10,000 characters]";
       }
 
       setError(null);
@@ -639,7 +675,7 @@ export default function CraftingPage() {
       setError(
         fileDropError instanceof Error
           ? fileDropError.message
-          : "Failed to process file"
+          : "Failed to process file. Try pasting the content instead."
       );
     }
   }, [handleDraftTextChange]);
@@ -1487,7 +1523,8 @@ export default function CraftingPage() {
                 onChange={(event) => setBlendValue(Number(event.target.value))}
                 aria-labelledby={blendIntensityLabelId}
                 aria-valuetext={`${blendValue} percent`}
-                className="flex-1 accent-atlas-teal"
+                className="flex-1"
+                style={{ "--range-progress": `${blendValue}%` } as React.CSSProperties}
               />
               <span className="w-10 text-right text-sm text-atlas-text">{blendValue}%</span>
             </div>
