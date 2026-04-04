@@ -441,6 +441,12 @@ test.describe("Route smoke tests", () => {
           domain: url.hostname,
           path: "/",
         },
+        {
+          name: "atlas_session",
+          value: "1",
+          domain: url.hostname,
+          path: "/",
+        },
       ]);
 
       await stubApi(page);
