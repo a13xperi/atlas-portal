@@ -6,12 +6,9 @@ import OnboardingShell from "@/components/layout/OnboardingShell";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import GradientButton from "@/components/ui/GradientButton";
 import ReferenceVoiceSelector from "@/components/onboarding/ReferenceVoiceSelector";
-import {
-  Loader2,
-  PenLine,
-  SlidersHorizontal,
-  Sparkles,
-} from "lucide-react";
+import BlendRatioSlider from "@/components/onboarding/BlendRatioSlider";
+import TopicPicker from "@/components/onboarding/TopicPicker";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import {
@@ -21,7 +18,6 @@ import {
 } from "@/lib/voice-profile-dimensions";
 import {
   buildReferenceBlendVoices,
-  getEqualReferenceWeights,
   getReferenceAccountLookup,
   persistReferenceSelections,
   REFERENCE_ACCOUNT_FALLBACK,
@@ -33,32 +29,18 @@ const styleOptions = [
   { label: "Custom mix", description: "Blend it your way (recommended)" },
 ];
 
-const manualSetupSteps = [
-  {
-    icon: Sparkles,
-    title: "Choose a preset",
-    description: "Start with Fun, Serious, or a custom mix.",
-  },
-  {
-    icon: SlidersHorizontal,
-    title: "Tune all 12 dimensions",
-    description: "Dial the balance until the tone feels right.",
-  },
-  {
-    icon: PenLine,
-    title: "Save your baseline",
-    description: "Use it as your default voice inside Atlas.",
-  },
-];
 const referenceAccountLookup = getReferenceAccountLookup(
   REFERENCE_ACCOUNT_FALLBACK
 );
+
 export default function TrackBPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const currentStep = 1;
-  const totalSteps = 3;
-  const [selectedStyle, setSelectedStyle] = useState<string | null>("Custom mix");
+  const [step, setStep] = useState(1);
+  const totalSteps = 6;
+  const [selectedStyle, setSelectedStyle] = useState<string | null>(
+    "Custom mix"
+  );
   const [dimensions, setDimensions] = useState<VoiceDimensions>(() =>
     styleToDimensions("Custom mix")
   );
@@ -67,18 +49,18 @@ export default function TrackBPage() {
   const [displayName, setDisplayName] = useState("");
   const [displayNameError, setDisplayNameError] = useState("");
   const [dimensionsError, setDimensionsError] = useState("");
-  const [showRefSelector, setShowRefSelector] = useState(false);
   const [selectedRefIds, setSelectedRefIds] = useState<string[]>([]);
+  const [selfPercentage, setSelfPercentage] = useState(30);
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
 
   useEffect(() => {
     const fallbackDisplayName = user?.displayName || user?.handle;
-
     if (!fallbackDisplayName) return;
-
     setDisplayName((current) => current || fallbackDisplayName);
   }, [user?.displayName, user?.handle]);
 
-  const handleSaveAndContinue = async () => {
+  // Step 2 → 3: save profile + dimensions
+  const handleDimensionsContinue = async () => {
     const trimmedDisplayName = displayName.trim();
     const hasVoiceDimension = hasAnyVoiceDimension(dimensions);
     let isValid = true;
@@ -103,8 +85,7 @@ export default function TrackBPage() {
     try {
       await api.users.updateProfile({ displayName: trimmedDisplayName });
       await api.voice.updateProfile(dimensions);
-
-      setShowRefSelector(true);
+      setStep(3);
     } catch (e) {
       console.error("Failed to save voice config:", e);
     } finally {
@@ -112,241 +93,321 @@ export default function TrackBPage() {
     }
   };
 
-  if (showRefSelector) {
+  // Step 3 → 4: save reference selections
+  const handleRefSelectorContinue = async () => {
+    if (selectedRefIds.length < 2 || saving) return;
+    setSaving(true);
+    try {
+      await persistReferenceSelections({
+        userId: user?.id,
+        ids: selectedRefIds,
+        saveRemote: api.referenceAccounts.saveSelections,
+      });
+      for (const referenceId of selectedRefIds) {
+        const account = referenceAccountLookup.get(referenceId);
+        try {
+          await api.voice.addReference(
+            account?.displayName || account?.name || referenceId,
+            account?.handle || referenceId
+          );
+        } catch {
+          // Reference creation is optional during onboarding.
+        }
+      }
+      setStep(4);
+    } catch (error) {
+      console.error("Failed to save reference voices:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Step 4 → 5: create blend
+  const handleBlendContinue = async () => {
+    setSaving(true);
+    try {
+      await api.voice.createBlend(
+        "My starting blend",
+        buildReferenceBlendVoices(
+          selectedRefIds,
+          selfPercentage,
+          REFERENCE_ACCOUNT_FALLBACK
+        )
+      );
+    } catch {
+      // Blend creation is optional during onboarding.
+    } finally {
+      setSaving(false);
+    }
+    setStep(5);
+  };
+
+  // Step 5 → handoff: save topics
+  const handleTopicsContinue = async () => {
+    setSaving(true);
+    try {
+      await api.briefing.updatePreferences({
+        deliveryTime: "08:00",
+        topics: selectedTopics,
+        sources: [],
+        channel: "Portal Only",
+      });
+    } catch {
+      // Topic saving is optional during onboarding.
+    } finally {
+      setSaving(false);
+    }
+    router.push("/onboarding/handoff?step=6&total=6");
+  };
+
+  const referenceNames = selectedRefIds.map((id) => {
+    const account = referenceAccountLookup.get(id);
+    return account?.displayName || account?.name || id;
+  });
+
+  // ── Step 1: Welcome + Style Picker ──────────────────────────────
+  if (step === 1) {
     return (
-      <OnboardingShell maxWidth="720px" step={2} totalSteps={3}>
+      <OnboardingShell maxWidth="720px" step={1} totalSteps={totalSteps}>
+        <div className="mt-8 space-y-8">
+          {/* Welcome message */}
+          <section className="text-center space-y-3">
+            <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">
+              No worries, I got you.
+            </h1>
+            <p className="text-atlas-text-secondary text-sm leading-relaxed max-w-md mx-auto">
+              There&apos;s no wrong way to do this. Pick a starting style, paste
+              some tweets you like, and Atlas will learn your voice from there.
+            </p>
+          </section>
+
+          {/* Track badge */}
+          <div className="flex justify-center">
+            <span className="rounded-full border border-atlas-teal/30 bg-atlas-teal/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-atlas-teal">
+              Track B · Build from scratch
+            </span>
+          </div>
+
+          {/* Style picker */}
+          <section>
+            <h3 className="mb-3 font-heading font-semibold text-lg text-atlas-text">
+              What type of style do you like?
+            </h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {styleOptions.map(({ label, description }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => {
+                    setSelectedStyle(label);
+                    setDimensions(styleToDimensions(label));
+                  }}
+                  className={`rounded-2xl bg-atlas-surface p-4 text-center transition-all ${
+                    selectedStyle === label
+                      ? "border border-atlas-teal ring-1 ring-atlas-teal text-atlas-text"
+                      : "border border-glass-border text-atlas-text-secondary hover:border-atlas-text-secondary"
+                  }`}
+                >
+                  <span className="text-sm font-medium">{label}</span>
+                  <p className="mt-1 text-xs text-atlas-text-muted">
+                    {description}
+                  </p>
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs italic text-atlas-text-muted">
+              You can switch styles anytime — this is just a starting point, not
+              a permanent choice.
+            </p>
+          </section>
+
+          {/* Tweet links paste zone */}
+          <section>
+            <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
+              Paste tweet links you like{" "}
+              <span className="text-atlas-text-muted">(optional)</span>
+            </label>
+            <textarea
+              value={tweetLinks}
+              onChange={(event) => setTweetLinks(event.target.value)}
+              placeholder="Paste one or more tweet URLs — one per line"
+              rows={3}
+              className="mt-2 w-full resize-none rounded-2xl border border-dashed border-atlas-text-secondary/30 bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
+            />
+            <p className="mt-1 text-xs text-atlas-text-muted">
+              Atlas uses these as individual style signals.
+            </p>
+          </section>
+
+          <GradientButton fullWidth onClick={() => setStep(2)}>
+            Continue
+          </GradientButton>
+        </div>
+      </OnboardingShell>
+    );
+  }
+
+  // ── Step 2: Voice Dimensions ────────────────────────────────────
+  if (step === 2) {
+    return (
+      <OnboardingShell maxWidth="720px" step={2} totalSteps={totalSteps}>
+        <div className="mt-8 space-y-8">
+          <section className="text-center space-y-2">
+            <h2 className="font-heading font-bold text-xl text-atlas-text">
+              Fine-tune your voice dimensions
+            </h2>
+            <p className="text-sm text-atlas-text-secondary">
+              Adjust each slider until it feels right. Starting style:{" "}
+              <span className="text-atlas-teal">{selectedStyle}</span>
+            </p>
+          </section>
+
+          {user?.handle && (
+            <p className="text-center text-sm text-atlas-text-secondary">
+              Setting up voice for{" "}
+              <span className="text-atlas-teal">@{user.handle}</span>
+            </p>
+          )}
+
+          <section>
+            <label
+              htmlFor="display-name"
+              className="text-xs text-atlas-text-secondary uppercase tracking-wide"
+            >
+              Display name
+            </label>
+            <input
+              id="display-name"
+              type="text"
+              value={displayName}
+              onChange={(event) => {
+                const nextDisplayName = event.target.value;
+                setDisplayName(nextDisplayName);
+                if (displayNameError && nextDisplayName.trim().length >= 2) {
+                  setDisplayNameError("");
+                }
+              }}
+              placeholder={
+                user?.displayName || user?.handle || "Your display name"
+              }
+              className="mt-2 w-full rounded-lg border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
+            />
+            {displayNameError && (
+              <p className="mt-1 text-sm text-red-400">{displayNameError}</p>
+            )}
+          </section>
+
+          <section>
+            <VoiceDimensionSections
+              values={dimensions}
+              interactive
+              onChange={(field, value) => {
+                setSelectedStyle("Custom mix");
+                setDimensions((current) => ({
+                  ...current,
+                  [field]: value,
+                }));
+              }}
+            />
+            <p className="mt-3 text-xs italic text-atlas-text-muted">
+              You&apos;ll keep all 12 dimensions editable later in Voice
+              Profiles.
+            </p>
+            {dimensionsError && (
+              <p className="mt-1 text-sm text-red-400">{dimensionsError}</p>
+            )}
+          </section>
+
+          <GradientButton
+            fullWidth
+            onClick={handleDimensionsContinue}
+            disabled={saving}
+          >
+            {saving ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Saving your
+                voice...
+              </span>
+            ) : (
+              "Continue to reference voices"
+            )}
+          </GradientButton>
+        </div>
+      </OnboardingShell>
+    );
+  }
+
+  // ── Step 3: Reference Voices ────────────────────────────────────
+  if (step === 3) {
+    return (
+      <OnboardingShell maxWidth="720px" step={3} totalSteps={totalSteps}>
         <div className="mt-8">
           <ReferenceVoiceSelector
             accounts={REFERENCE_ACCOUNT_FALLBACK}
             selected={selectedRefIds}
             onSelectionChange={setSelectedRefIds}
-            onContinue={async () => {
-              if (selectedRefIds.length < 2 || saving) {
-                return;
-              }
-
-              setSaving(true);
-
-              try {
-                const referenceWeights = getEqualReferenceWeights(selectedRefIds);
-
-                await persistReferenceSelections({
-                  userId: user?.id,
-                  ids: selectedRefIds,
-                  weights: referenceWeights,
-                  saveRemote: api.referenceAccounts.saveSelections,
-                });
-
-                for (const referenceId of selectedRefIds) {
-                  const account = referenceAccountLookup.get(referenceId);
-
-                  try {
-                    await api.voice.addReference(
-                      account?.displayName || account?.name || referenceId,
-                      account?.handle || referenceId
-                    );
-                  } catch {
-                    // Reference creation is optional during onboarding.
-                  }
-                }
-
-                try {
-                  await api.voice.createBlend(
-                    "My starting blend",
-                    buildReferenceBlendVoices(
-                      selectedRefIds,
-                      30,
-                      REFERENCE_ACCOUNT_FALLBACK
-                    )
-                  );
-                } catch {
-                  // Blend creation optional.
-                }
-
-                router.push("/onboarding/handoff");
-              } catch (error) {
-                console.error("Failed to save reference voices:", error);
-              } finally {
-                setSaving(false);
-              }
-            }}
+            onContinue={handleRefSelectorContinue}
           />
         </div>
       </OnboardingShell>
     );
   }
 
-  return (
-    <OnboardingShell
-      maxWidth="720px"
-      step={currentStep}
-      totalSteps={totalSteps}
-    >
-      <div className="mt-8 space-y-8">
-        <section className="rounded-3xl border border-glass-border bg-atlas-surface/60 p-6 sm:p-7">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className="rounded-full border border-atlas-teal/30 bg-atlas-teal/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-atlas-teal">
-              Track B · Manual setup
-            </span>
-            <span className="rounded-full border border-glass-border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-atlas-text-secondary">
-              Step 1 · Shape your voice
-            </span>
-          </div>
-
-          <div className="mt-5 grid gap-4 sm:grid-cols-[1.1fr_0.9fr] sm:items-start">
-            <div>
-              <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">
-                Build Your Voice Manually
-              </h1>
-              <p className="mt-3 text-sm leading-6 text-atlas-text-secondary">
-                Pick a starting style, then fine-tune each dimension to match
-                how you write.
-              </p>
-            </div>
-
-            <div className="grid gap-3">
-              {manualSetupSteps.map(({ icon: Icon, title, description }) => (
-                <div
-                  key={title}
-                  className="rounded-2xl border border-glass-border bg-atlas-surface/70 p-4"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="rounded-xl border border-atlas-teal/20 bg-atlas-teal/10 p-2 text-atlas-teal">
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-atlas-text">{title}</p>
-                      <p className="mt-1 text-xs leading-5 text-atlas-text-secondary">
-                        {description}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {user?.handle && (
-          <p className="text-center text-sm text-atlas-text-secondary">
-            Setting up voice for{" "}
-            <span className="text-atlas-teal">@{user.handle}</span>
-          </p>
-        )}
-
-        <section>
-          <label
-            htmlFor="display-name"
-            className="text-xs text-atlas-text-secondary uppercase tracking-wide"
+  // ── Step 4: Blend Ratio ─────────────────────────────────────────
+  if (step === 4) {
+    return (
+      <OnboardingShell maxWidth="480px" step={4} totalSteps={totalSteps}>
+        <div className="mt-8 space-y-6">
+          <BlendRatioSlider
+            selfPercentage={selfPercentage}
+            onChange={setSelfPercentage}
+            referenceNames={referenceNames}
+          />
+          <GradientButton
+            fullWidth
+            onClick={handleBlendContinue}
+            disabled={saving}
           >
-            Display name
-          </label>
-          <input
-            id="display-name"
-            type="text"
-            value={displayName}
-            onChange={(event) => {
-              const nextDisplayName = event.target.value;
-              setDisplayName(nextDisplayName);
-              if (displayNameError && nextDisplayName.trim().length >= 2) {
-                setDisplayNameError("");
-              }
-            }}
-            placeholder={user?.displayName || user?.handle || "Your display name"}
-            className="mt-2 w-full rounded-lg border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
+            {saving ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Saving blend...
+              </span>
+            ) : (
+              "Continue"
+            )}
+          </GradientButton>
+        </div>
+      </OnboardingShell>
+    );
+  }
+
+  // ── Step 5: Topics ──────────────────────────────────────────────
+  if (step === 5) {
+    return (
+      <OnboardingShell maxWidth="480px" step={5} totalSteps={totalSteps}>
+        <div className="mt-8 space-y-6">
+          <TopicPicker
+            selected={selectedTopics}
+            onChange={setSelectedTopics}
           />
-          {displayNameError && (
-            <p className="mt-1 text-sm text-red-400">{displayNameError}</p>
-          )}
-        </section>
+          <GradientButton
+            fullWidth
+            onClick={handleTopicsContinue}
+            disabled={saving || selectedTopics.length < 1}
+          >
+            {saving ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Saving...
+              </span>
+            ) : (
+              "Continue"
+            )}
+          </GradientButton>
+        </div>
+      </OnboardingShell>
+    );
+  }
 
-        <section>
-          <h3 className="mb-3 font-heading font-semibold text-lg text-atlas-text">
-            Choose your starting style
-          </h3>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {styleOptions.map(({ label, description }) => (
-              <button
-                key={label}
-                type="button"
-                onClick={() => {
-                  setSelectedStyle(label);
-                  setDimensions(styleToDimensions(label));
-                  if (dimensionsError) {
-                    setDimensionsError("");
-                  }
-                }}
-                className={`rounded-2xl bg-atlas-surface p-4 text-center transition-all ${
-                  selectedStyle === label
-                    ? "border border-atlas-teal ring-1 ring-atlas-teal text-atlas-text"
-                    : "border border-glass-border text-atlas-text-secondary hover:border-atlas-text-secondary"
-                }`}
-              >
-                <span className="text-sm font-medium">{label}</span>
-                <p className="mt-1 text-xs text-atlas-text-muted">{description}</p>
-              </button>
-            ))}
-          </div>
-          <p className="mt-2 text-xs italic text-atlas-text-muted">
-            Your default tone — you can vary it post-by-post from the Crafting
-            Station.
-          </p>
-        </section>
-
-        <section>
-          <h3 className="mb-3 font-heading font-semibold text-lg text-atlas-text">
-            Fine-tune each voice dimension
-          </h3>
-          <VoiceDimensionSections
-            values={dimensions}
-            interactive
-            onChange={(field, value) => {
-              setSelectedStyle("Custom mix");
-              setDimensions((current) => ({
-                ...current,
-                [field]: value,
-              }));
-            }}
-          />
-          <p className="mt-3 text-xs italic text-atlas-text-muted">
-            You&apos;ll keep all 12 dimensions editable later in Voice Profiles.
-          </p>
-          {dimensionsError && (
-            <p className="mt-1 text-sm text-red-400">{dimensionsError}</p>
-          )}
-        </section>
-
-        <section>
-          <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
-            Paste tweet links you like{" "}
-            <span className="text-atlas-text-muted">(optional)</span>
-          </label>
-          <textarea
-            value={tweetLinks}
-            onChange={(event) => setTweetLinks(event.target.value)}
-            placeholder="Paste one or more tweet URLs — one per line"
-            rows={3}
-            className="mt-2 w-full resize-none rounded-2xl border border-dashed border-atlas-text-secondary/30 bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
-          />
-          <p className="mt-1 text-xs text-atlas-text-muted">
-            You can also send these via Telegram later.
-          </p>
-        </section>
-
-        <GradientButton
-          fullWidth
-          onClick={handleSaveAndContinue}
-          disabled={saving}
-        >
-          {saving ? (
-            <span className="flex items-center justify-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" /> Saving your voice...
-            </span>
-          ) : (
-            "Continue to reference voices"
-          )}
-        </GradientButton>
-      </div>
-    </OnboardingShell>
-  );
+  // Fallback — shouldn't reach here
+  return null;
 }

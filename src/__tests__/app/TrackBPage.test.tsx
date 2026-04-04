@@ -116,7 +116,7 @@ describe("TrackBPage", () => {
     fireEvent.change(screen.getByLabelText("Display name"), {
       target: { value: "A" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /continue to reference voices/i }));
+    fireEvent.click(screen.getByRole("button", { name: /let.*get started/i }));
 
     expect(
       await screen.findByText("Display name must be at least 2 characters.")
@@ -132,7 +132,7 @@ describe("TrackBPage", () => {
     fireEvent.change(screen.getByLabelText("Display name"), {
       target: { value: "Atlas Analyst" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /continue to reference voices/i }));
+    fireEvent.click(screen.getByRole("button", { name: /let.*get started/i }));
 
     await waitFor(() => {
       expect(mockedApi.users.updateProfile).toHaveBeenCalledWith({
@@ -156,7 +156,7 @@ describe("TrackBPage", () => {
 
     expect(await screen.findByText("Reference selector")).toBeInTheDocument();
     expect(mockOnboardingShell).toHaveBeenCalledWith({
-      maxWidth: "720px",
+      maxWidth: "1120px",
       step: 2,
       totalSteps: 3,
     });
@@ -167,8 +167,7 @@ describe("TrackBPage", () => {
     await waitFor(() => {
       expect(mockedApi.referenceAccounts.saveSelections).toHaveBeenCalledWith(
         "u1",
-        ["ref-1", "ref-2"],
-        {"ref-1": 0.5, "ref-2": 0.5}
+        ["ref-1", "ref-2"]
       );
       expect(push).toHaveBeenCalledWith("/onboarding/handoff");
     });
