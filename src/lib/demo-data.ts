@@ -486,16 +486,18 @@ const demoData: Record<string, unknown> = {
   "/api/briefing/preferences": briefingLatest,
 
   "/api/users/profile": {
-    id: "cmn8z3yn50000nz01y0xcyfgn",
-    handle: "a13xperi",
-    displayName: "Alex Peri",
-    email: "alex.e.peri@gmail.com",
-    role: "ANALYST",
-    bio: "Crypto analyst & builder. DeFi native. Building Atlas at Delphi Digital.",
-    timezone: "America/Los_Angeles",
-    notificationsEnabled: true,
-    telegramLinked: false,
-    createdAt: "2026-03-15T00:00:00Z",
+    user: {
+      id: "cmn8z3yn50000nz01y0xcyfgn",
+      handle: "a13xperi",
+      displayName: "Alex Peri",
+      email: "alex.e.peri@gmail.com",
+      role: "ANALYST",
+      bio: "Crypto analyst & builder. DeFi native. Building Atlas at Delphi Digital.",
+      timezone: "America/Los_Angeles",
+      notificationsEnabled: true,
+      telegramLinked: false,
+      createdAt: "2026-03-15T00:00:00Z",
+    },
   },
 
   "/api/trending/topics": {
