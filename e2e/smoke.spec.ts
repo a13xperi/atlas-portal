@@ -284,6 +284,11 @@ const smokeRoutes: SmokeRoute[] = [
       page.getByRole("heading", { name: /connect telegram/i }),
   },
   {
+    name: "campaigns",
+    path: "/campaigns",
+    ready: (page) => page.getByRole("heading", { name: /your posting queue/i }),
+  },
+  {
     name: "management",
     path: "/management",
     ready: (page) => page.getByRole("heading", { name: /atlas arena|team management/i }),
