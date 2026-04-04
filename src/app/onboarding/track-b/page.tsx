@@ -114,9 +114,10 @@ export default function TrackBPage() {
 
   if (showRefSelector) {
     return (
-      <OnboardingShell maxWidth="1120px" step={2} totalSteps={3}>
+      <OnboardingShell maxWidth="720px" step={2} totalSteps={3}>
         <div className="mt-8">
           <ReferenceVoiceSelector
+            accounts={REFERENCE_ACCOUNT_FALLBACK}
             selected={selectedRefIds}
             onSelectionChange={setSelectedRefIds}
             onContinue={async () => {
@@ -127,11 +128,39 @@ export default function TrackBPage() {
               setSaving(true);
 
               try {
-                if (user?.id) {
-                  await api.referenceAccounts.saveSelections(
-                    user.id,
-                    selectedRefIds
+                const referenceWeights = getEqualReferenceWeights(selectedRefIds);
+
+                await persistReferenceSelections({
+                  userId: user?.id,
+                  ids: selectedRefIds,
+                  weights: referenceWeights,
+                  saveRemote: api.referenceAccounts.saveSelections,
+                });
+
+                for (const referenceId of selectedRefIds) {
+                  const account = referenceAccountLookup.get(referenceId);
+
+                  try {
+                    await api.voice.addReference(
+                      account?.displayName || account?.name || referenceId,
+                      account?.handle || referenceId
+                    );
+                  } catch {
+                    // Reference creation is optional during onboarding.
+                  }
+                }
+
+                try {
+                  await api.voice.createBlend(
+                    "My starting blend",
+                    buildReferenceBlendVoices(
+                      selectedRefIds,
+                      30,
+                      REFERENCE_ACCOUNT_FALLBACK
+                    )
                   );
+                } catch {
+                  // Blend creation optional.
                 }
 
                 router.push("/onboarding/handoff");

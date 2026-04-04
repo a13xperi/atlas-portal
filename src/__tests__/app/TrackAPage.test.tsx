@@ -44,7 +44,7 @@ jest.mock("@/components/onboarding/ReferenceVoiceSelector", () => ({
     <div>
       <p>Reference selector</p>
       <p>{selected.join(",")}</p>
-      <button type="button" onClick={() => onSelectionChange(["ref-1", "ref-2"])}>
+      <button type="button" onClick={() => onSelectionChange(["hosseeb", "naval"])}>
         Select references
       </button>
       <button type="button" onClick={onContinue}>
@@ -61,6 +61,8 @@ jest.mock("@/lib/api", () => ({
     },
     voice: {
       updateProfile: jest.fn(),
+      addReference: jest.fn(),
+      createBlend: jest.fn(),
     },
     referenceAccounts: {
       saveSelections: jest.fn(),
@@ -75,6 +77,8 @@ const mockedApi = api as unknown as {
   users: { updateProfile: jest.Mock };
   voice: {
     updateProfile: jest.Mock;
+    addReference: jest.Mock;
+    createBlend: jest.Mock;
   };
   referenceAccounts: {
     saveSelections: jest.Mock;
@@ -90,12 +94,16 @@ describe("TrackAPage", () => {
     });
     mockedApi.users.updateProfile.mockReset();
     mockedApi.voice.updateProfile.mockReset();
+    mockedApi.voice.addReference.mockReset();
+    mockedApi.voice.createBlend.mockReset();
     mockedApi.referenceAccounts.saveSelections.mockReset();
     mockedApi.users.updateProfile.mockResolvedValue({ user: {} });
     mockedApi.voice.updateProfile.mockResolvedValue({ profile: {} });
+    mockedApi.voice.addReference.mockResolvedValue({ voice: {} });
+    mockedApi.voice.createBlend.mockResolvedValue({ blend: {} });
     mockedApi.referenceAccounts.saveSelections.mockResolvedValue({
       success: true,
-      ids: ["ref-1", "ref-2"],
+      ids: ["hosseeb", "naval"],
     });
   });
 
@@ -111,7 +119,9 @@ describe("TrackAPage", () => {
     fireEvent.change(screen.getByLabelText("Display name"), {
       target: { value: "A" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /get started/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /continue to reference voices/i })
+    );
 
     expect(
       await screen.findByText("Display name must be at least 2 characters.")
@@ -127,7 +137,9 @@ describe("TrackAPage", () => {
     fireEvent.change(screen.getByLabelText("Display name"), {
       target: { value: "Atlas Analyst" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /get started/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /continue to reference voices/i })
+    );
 
     await waitFor(() => {
       expect(mockedApi.users.updateProfile).toHaveBeenCalledWith({
@@ -151,7 +163,7 @@ describe("TrackAPage", () => {
 
     expect(await screen.findByText("Reference selector")).toBeInTheDocument();
     expect(mockOnboardingShell).toHaveBeenCalledWith({
-      maxWidth: "1120px",
+      maxWidth: "720px",
       step: 2,
       totalSteps: 3,
     });
@@ -162,7 +174,16 @@ describe("TrackAPage", () => {
     await waitFor(() => {
       expect(mockedApi.referenceAccounts.saveSelections).toHaveBeenCalledWith(
         "u1",
-        ["ref-1", "ref-2"]
+        ["hosseeb", "naval"],
+        { hosseeb: 0.5, naval: 0.5 }
+      );
+      expect(mockedApi.voice.createBlend).toHaveBeenCalledWith(
+        "Onboarding blend",
+        [
+          { label: "My voice", percentage: 50 },
+          { label: "Haseeb Qureshi", percentage: 25 },
+          { label: "Naval", percentage: 25 },
+        ]
       );
       expect(push).toHaveBeenCalledWith("/onboarding/handoff");
     });

@@ -41,7 +41,7 @@ export default function ReferenceVoicesSection({
     let ignore = false;
 
     api.referenceAccounts
-      .getReferenceAccounts()
+      .getAll()
       .then((response) => {
         if (ignore) {
           return;
