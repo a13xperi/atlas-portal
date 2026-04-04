@@ -22,6 +22,13 @@ type TopicOption = (typeof TOPIC_OPTIONS)[number];
 type SourceOption = (typeof SOURCE_OPTIONS)[number];
 type DeliveryChannel = (typeof DELIVERY_CHANNELS)[number];
 
+const BRIEF_TYPES = [
+  { id: "morning", label: "Morning Brief" },
+  { id: "sector", label: "Sector Deep Dive" },
+  { id: "alpha", label: "Alpha Scan" },
+  { id: "competitor", label: "Competitor Watch" },
+] as const;
+
 const chipClasses = (selected: boolean) =>
   `inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
     selected
@@ -109,6 +116,7 @@ export default function BriefingPage() {
   const [hasPreferences, setHasPreferences] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [briefType, setBriefType] = useState("morning");
   const [showSettings, setShowSettings] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -144,7 +152,7 @@ export default function BriefingPage() {
   const handleGenerate = async () => {
     setGenerating(true);
     try {
-      const res = await api.briefing.generate();
+      const res = await api.briefing.generate(briefType);
       setBriefings((prev) => [res.briefing, ...prev]);
       setExpandedId(res.briefing.id);
     } catch {
@@ -223,6 +231,15 @@ export default function BriefingPage() {
               <Settings className="h-3.5 w-3.5" />
               Settings
             </button>
+            <select
+              value={briefType}
+              onChange={(e) => setBriefType(e.target.value)}
+              className="rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-xs text-atlas-text outline-none focus:border-atlas-teal"
+            >
+              {BRIEF_TYPES.map((bt) => (
+                <option key={bt.id} value={bt.id}>{bt.label}</option>
+              ))}
+            </select>
             <GradientButton onClick={handleGenerate} disabled={generating}>
               {generating ? (
                 <span className="flex items-center gap-2">

@@ -319,8 +319,8 @@ export const api = {
       }),
     history: () =>
       request<{ briefings: Briefing[] }>("/api/briefing/history"),
-    generate: () =>
-      request<{ briefing: Briefing }>("/api/briefing/generate", { method: "POST" }),
+    generate: (briefType?: string) =>
+      request<{ briefing: Briefing }>("/api/briefing/generate", { method: "POST", body: { briefType } }),
   },
 
   images: {
