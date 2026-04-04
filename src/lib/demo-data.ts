@@ -522,6 +522,45 @@ const demoData: Record<string, unknown> = {
   },
 
   "/api/users/team": teamMembers,
+  "/api/campaigns": {
+    campaigns: [
+      {
+        id: "camp-1",
+        name: "ETH Staking Bull Case",
+        description: "Q2 thesis on ETH staking yield compression",
+        status: "ACTIVE",
+        draftCount: 3,
+        createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000).toISOString(),
+      },
+      {
+        id: "camp-2",
+        name: "AI x Crypto Weekly",
+        description: "Weekly thread series on AI agent narratives",
+        status: "DRAFT",
+        draftCount: 1,
+        createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
+        updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+      },
+    ],
+  },
+  "/api/briefing/history": {
+    briefings: [
+      {
+        id: "b1",
+        title: "Morning Brief — Friday, April 4",
+        summary: "ETH blob fees dropped 40% overnight as major L2s rolled out calldata compression upgrades. VanEck's amended SOL ETF filing has reignited the alt-ETF narrative.",
+        sections: [
+          { heading: "Ethereum & L2s", emoji: "🔵", bullets: ["Blob fees down 40% — L2 compression approach working", "Uniswap v4 hooks see first mainnet deployments"] },
+          { heading: "ETF & Institutions", emoji: "🏦", bullets: ["VanEck files amended S-1 for spot Solana ETF", "BlackRock BUIDL tokenized treasury fund crosses $1B AUM"] },
+          { heading: "Contrarian Take", emoji: "🔮", bullets: ["Blob fee compression signals maturity, not weakness — institutions watch infra costs before deploying"] },
+        ],
+        topics: ["DeFi", "L2", "ETF"],
+        sources: ["X/Twitter", "News"],
+        createdAt: new Date(Date.now() - 3600000).toISOString(),
+      },
+    ],
+  },
   "/api/briefing/latest": {
     id: "b1",
     date: "2026-04-04",
@@ -636,6 +675,32 @@ export function getDemoResponse(path: string, method: string = "GET"): unknown |
         { content: "Great question! Let me help you explore that. Atlas learns your voice over time — the more you draft, the better it gets at matching your style.", role: "oracle" },
       ],
       llmGenerated: false,
+    };
+  }
+
+  // Oracle chat — used by FloatingOracle widget
+  if (method === "POST" && cleanPath === "/api/oracle/chat") {
+    return {
+      text: "That's a sharp question. Based on your voice profile, I'd suggest leading with data — your contrarian edge works best when it's backed by on-chain evidence. Want me to help draft something?",
+    };
+  }
+
+  // Briefing generate
+  if (method === "POST" && cleanPath === "/api/briefing/generate") {
+    return {
+      briefing: {
+        id: `b-${Date.now()}`,
+        title: "Alpha Scan — Saturday, April 5",
+        summary: "Three undervalued narratives emerging: restaking derivatives, intent-based DEXs, and modular DA layers. Each has <$500M TVL but accelerating developer activity.",
+        sections: [
+          { heading: "Restaking Derivatives", emoji: "🔄", bullets: ["EigenLayer derivatives market forming — watch Pendle and Swell", "Risk: multi-AVS exposure creates correlated liquidation cascades"] },
+          { heading: "Intent DEXs", emoji: "🎯", bullets: ["CoW Protocol volume up 300% MoM — solver competition heating up", "UniswapX scaling intent-based routing across L2s"] },
+          { heading: "Contrarian", emoji: "🔮", bullets: ["Modular DA is overhyped short-term but underpriced long-term — EigenDA + Celestia will compress blob fees further"] },
+        ],
+        topics: ["DeFi", "L2"],
+        sources: ["X/Twitter", "News"],
+        createdAt: new Date().toISOString(),
+      },
     };
   }
 
