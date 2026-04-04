@@ -143,13 +143,35 @@ export default function FloatingOracle() {
         }
       }
 
-      // Fallback response
+      // Keyword-based smart responses
+      const smartResponses: { pattern: RegExp; text: string; action?: { label: string; href: string } }[] = [
+        { pattern: /help|what can you do|commands/, text: "Here's what I can do:\n\n• Navigate anywhere — \"take me to crafting\"\n• Quick actions — \"draft a tweet\", \"check analytics\"\n• Toggle demo mode — \"demo mode\"\n• Show signals — \"what's trending\"\n• Team info — \"show leaderboard\"\n\nOr just tell me what you need!" },
+        { pattern: /engag|metrics|performance|how.*(doing|going)/, text: "Check your engagement trends and prediction accuracy in Analytics. Your voice dimensions directly impact how well drafts land.", action: { label: "View Analytics", href: "/analytics" } },
+        { pattern: /draft|write|tweet|post|compose/, text: "Head to the Crafting Station to draft a new post. Drop in an article, report, or hot take and Atlas will match your voice.", action: { label: "Start Drafting", href: "/crafting" } },
+        { pattern: /team|who|people|colleague/, text: "The Arena shows your team's rankings, output, and engagement scores. See who's leading and where you stand.", action: { label: "View Arena", href: "/arena" } },
+        { pattern: /trend|hot|market|what.*happening/, text: "The Signals feed shows live market moves, competitor mentions, and trending topics you should post about.", action: { label: "View Signals", href: "/alerts" } },
+        { pattern: /voice|tone|style|blend/, text: "Your voice profile controls how Atlas writes for you. Adjust humor, formality, brevity, and contrarian tone to match your style.", action: { label: "Edit Voice", href: "/voice-profiles" } },
+        { pattern: /demo|mock|sample|test data/, text: "Toggling demo mode fills every page with realistic sample data. Use Cmd+K and search \"demo\" to toggle it.", action: { label: "Toggle via Cmd+K", href: "#" } },
+        { pattern: /telegram|bot|notif/, text: "Link your Telegram to get alerts pushed to your phone. It takes 30 seconds — just message @AtlasDelphiBot.", action: { label: "Setup Guide", href: "/telegram" } },
+      ];
+
+      for (const { pattern, text, action } of smartResponses) {
+        if (pattern.test(lower)) {
+          setMessages((prev) => [
+            ...prev,
+            { id: `smart-${Date.now()}`, role: "oracle", text, action },
+          ]);
+          return;
+        }
+      }
+
+      // Fallback
       setMessages((prev) => [
         ...prev,
         {
           id: `reply-${Date.now()}`,
           role: "oracle",
-          text: "I can help you navigate Atlas, draft tweets, check analytics, or tune your voice. Try asking me to do something specific!",
+          text: "I'm not sure about that yet, but I can help you navigate Atlas, draft tweets, check analytics, or tune your voice. Type \"help\" to see everything I can do.",
         },
       ]);
     },

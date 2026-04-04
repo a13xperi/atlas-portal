@@ -9,7 +9,11 @@
     "lint": "next lint",
     "test": "jest",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:extended": "playwright test --config=playwright-e2e.config.ts",
+    "test:e2e:a11y": "playwright test --config=playwright-e2e.config.ts --project=a11y",
+    "test:e2e:visual": "playwright test --config=playwright-e2e.config.ts --project=visual",
+    "test:e2e:visual:update": "playwright test --config=playwright-e2e.config.ts --project=visual --project=responsive --update-snapshots"
   },
   "dependencies": {
     "@next/bundle-analyzer": "^16.2.2",
