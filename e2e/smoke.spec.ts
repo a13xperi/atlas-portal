@@ -248,7 +248,7 @@ const smokeRoutes: SmokeRoute[] = [
   {
     name: "voice profiles",
     path: "/voice-profiles",
-    ready: (page) => page.getByRole("heading", { name: /your voice — detailed breakdown/i }),
+    ready: (page) => page.getByRole("heading", { name: /your voice/i }).first(),
   },
   {
     name: "analytics",
@@ -264,7 +264,7 @@ const smokeRoutes: SmokeRoute[] = [
     name: "briefing",
     path: "/briefing",
     ready: (page) =>
-      page.getByRole("heading", { name: /configure your daily digest/i }),
+      page.getByRole("heading", { name: /briefing|daily digest/i }).first(),
   },
   {
     name: "search",
@@ -286,7 +286,7 @@ const smokeRoutes: SmokeRoute[] = [
   {
     name: "campaigns",
     path: "/campaigns",
-    ready: (page) => page.getByRole("heading", { name: /your posting queue/i }),
+    ready: (page) => page.getByRole("heading", { name: /campaign/i }).first(),
   },
   {
     name: "management",

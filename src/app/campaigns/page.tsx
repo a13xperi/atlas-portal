@@ -98,7 +98,7 @@ function CampaignsTab() {
   const load = useCallback(async () => {
     if (!user) return;
     try {
-      const { campaigns: data } = await api.campaigns.list();
+      const { campaigns: data = [] } = await api.campaigns.list();
       setCampaigns(data);
     } catch { /* silent */ } finally { setLoading(false); }
   }, [user]);

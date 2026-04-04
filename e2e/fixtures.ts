@@ -184,6 +184,8 @@ async function stubDataEndpoints(page: Page) {
         return json(route, { voices: [] });
       case "/api/voice/reference-accounts":
         return json(route, { accounts: [] });
+      case "/api/campaigns":
+        return json(route, { campaigns: [] });
       default:
         // Catch-all for any remaining API calls (including briefing, etc.)
         if (route.request().method() === "GET") return json(route, {});

@@ -10,6 +10,7 @@ export default function DemoModeToggle() {
     <button
       type="button"
       onClick={toggleDemoMode}
+      title={isDemoMode ? "Switch to live data" : "Try demo mode — see Atlas with sample data"}
       aria-label={isDemoMode ? "Switch to live data" : "Switch to demo data"}
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider transition-all duration-200 ${
         isDemoMode

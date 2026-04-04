@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Settings, RefreshCw, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Settings, RefreshCw, Clock, ChevronDown, ChevronUp, PenTool } from "lucide-react";
 import GlassCard from "@/components/ui/GlassCard";
 import GradientButton from "@/components/ui/GradientButton";
 import AppShell from "@/components/layout/AppShell";
+import { useRouter } from "next/navigation";
 import { api, Briefing, BriefingSection } from "@/lib/api";
 
 const TOPIC_OPTIONS = [
@@ -28,7 +29,7 @@ const chipClasses = (selected: boolean) =>
       : "border-glass-border bg-atlas-surface text-atlas-text-secondary hover:border-atlas-teal/50 hover:text-atlas-text"
   }`;
 
-function BriefingCard({ briefing, expanded, onToggle }: { briefing: Briefing; expanded: boolean; onToggle: () => void }) {
+function BriefingCard({ briefing, expanded, onToggle, onCraft }: { briefing: Briefing; expanded: boolean; onToggle: () => void; onCraft: () => void }) {
   const date = new Date(briefing.createdAt);
   const timeAgo = getTimeAgo(date);
 
@@ -76,6 +77,16 @@ function BriefingCard({ briefing, expanded, onToggle }: { briefing: Briefing; ex
               </span>
             ))}
           </div>
+          <div className="flex justify-end border-t border-glass-border pt-4">
+            <button
+              type="button"
+              onClick={onCraft}
+              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:scale-[1.02] hover:shadow-lg"
+            >
+              <PenTool className="h-4 w-4" />
+              Take to Crafting Station
+            </button>
+          </div>
         </div>
       )}
     </GlassCard>
@@ -93,6 +104,7 @@ function getTimeAgo(date: Date): string {
 }
 
 export default function BriefingPage() {
+  const router = useRouter();
   const [briefings, setBriefings] = useState<Briefing[]>([]);
   const [hasPreferences, setHasPreferences] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
@@ -253,6 +265,10 @@ export default function BriefingPage() {
                 briefing={b}
                 expanded={expandedId === b.id}
                 onToggle={() => setExpandedId(expandedId === b.id ? null : b.id)}
+                onCraft={() => {
+                  const content = b.summary + "\n\n" + (b.sections as BriefingSection[]).map((s) => s.emoji + " " + s.heading + "\n" + s.bullets.join("\n")).join("\n\n");
+                  router.push("/crafting?content=" + encodeURIComponent(content));
+                }}
               />
             ))}
           </div>

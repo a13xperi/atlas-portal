@@ -214,12 +214,22 @@ export default function FloatingOracle() {
 
   return (
     <>
+      {/* Discovery bounce animation */}
+      <style jsx global>{`
+        @keyframes subtle-bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+      `}</style>
       {/* Floating bubble */}
       {!isOpen && (
         <button
           type="button"
-          onClick={() => setIsOpen(true)}
-          data-tour="oracle-widget" className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-atlas-nav border-2 border-atlas-teal/40 shadow-lg shadow-atlas-teal/20 transition-transform hover:scale-105 active:scale-95"
+          onClick={() => {
+            setIsOpen(true);
+            try { localStorage.setItem("atlas_discovered_oracle", "1"); } catch {}
+          }}
+          data-tour="oracle-widget" className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-atlas-nav border-2 border-atlas-teal/40 shadow-lg shadow-atlas-teal/20 transition-transform hover:scale-105 active:scale-95 animate-[subtle-bounce_3s_ease-in-out_infinite_2s]"
           aria-label="Open Oracle assistant"
         >
           {imgError ? (
