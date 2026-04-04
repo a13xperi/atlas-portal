@@ -108,97 +108,116 @@ const mockSubscriptions = { subscriptions: [] };
 
 /** Stub all auth endpoints so the app thinks we're logged in. */
 async function stubAuth(page: Page) {
-  await page.route(`${API_BASE}/api/auth/me`, (route) =>
+  await page.route('**/api/auth/me', (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ user: mockUser }) }),
   );
-  await page.route(`${API_BASE}/api/auth/login`, (route) =>
+  await page.route('**/api/auth/login', (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ user: mockUser, token: "fake-jwt", refresh_token: "fake-refresh" }),
     }),
   );
-  await page.route(`${API_BASE}/api/auth/refresh`, (route) =>
+  await page.route('**/api/auth/refresh', (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ token: "fake-jwt", refresh_token: "fake-refresh" }) }),
   );
-  await page.route(`${API_BASE}/api/auth/logout`, (route) =>
+  await page.route('**/api/auth/logout', (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ success: true }) }),
   );
 }
 
 /** Stub common data endpoints with realistic responses. */
 async function stubDataEndpoints(page: Page) {
-  await page.route(`${API_BASE}/api/analytics/summary`, (route) =>
+  await page.route('**/api/analytics/summary', (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockSummary) }),
   );
-  await page.route(`${API_BASE}/api/drafts`, (route) => {
+  await page.route('**/api/drafts', (route) => {
     if (route.request().method() === "GET") {
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockDrafts) });
     }
     return route.continue();
   });
-  await page.route(`${API_BASE}/api/analytics/engagement-daily`, (route) =>
+  await page.route('**/api/analytics/engagement-daily', (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockEngagementDaily) }),
   );
-  await page.route(`${API_BASE}/api/analytics/activity-daily`, (route) =>
+  await page.route('**/api/analytics/activity-daily', (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockActivityDaily) }),
   );
-  await page.route(`${API_BASE}/api/analytics/learning-log`, (route) => {
+  await page.route('**/api/analytics/learning-log', (route) => {
     if (route.request().method() === "GET") {
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockLearningLog) });
     }
     return route.continue();
   });
-  await page.route(`${API_BASE}/api/users/team`, (route) =>
+  await page.route('**/api/users/team', (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockTeam) }),
   );
-  await page.route(`${API_BASE}/api/analytics/team`, (route) =>
+  await page.route('**/api/analytics/team', (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockTeamAnalytics) }),
   );
-  await page.route(`${API_BASE}/api/analytics/team-engagement-daily`, (route) =>
+  await page.route('**/api/analytics/team-engagement-daily', (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockEngagementDaily) }),
   );
-  await page.route(`${API_BASE}/api/analytics/days-to-peak`, (route) =>
+  await page.route('**/api/analytics/days-to-peak', (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ peaks: [{ name: "Alice", days: 12, hasDrafts: true }, { name: "Bob", days: 28, hasDrafts: true }] }),
     }),
   );
-  await page.route(`${API_BASE}/api/voice/blends`, (route) =>
+  await page.route('**/api/voice/blends', (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockBlends) }),
   );
-  await page.route(`${API_BASE}/api/voice/profile`, (route) => {
+  await page.route('**/api/voice/profile', (route) => {
     if (route.request().method() === "GET") {
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockVoiceProfile) });
     }
     return route.continue();
   });
-  await page.route(`${API_BASE}/api/alerts/feed`, (route) =>
+  await page.route('**/api/alerts/feed', (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockAlerts) }),
   );
-  await page.route(`${API_BASE}/api/alerts/subscriptions`, (route) =>
+  await page.route('**/api/alerts/subscriptions', (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(mockSubscriptions) }),
   );
-  await page.route(`${API_BASE}/api/trending/topics`, (route) =>
+  await page.route('**/api/trending/topics', (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ topics: [] }) }),
   );
-  await page.route(`${API_BASE}/api/loop/state`, (route) =>
+  await page.route('**/api/loop/state', (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ loop: { status: "idle", currentIteration: 0, maxIterations: 0, iterations: [], bestIteration: null, evalType: "", startedAt: null, completedAt: null, taskId: "" } }) }),
   );
+  await page.route('**/api/users/profile', (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ user: mockUser }) }),
+  );
+  await page.route('**/api/voice/reference-accounts', (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ accounts: [] }) }),
+  );
+  await page.route('**/api/briefing/**', (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({}) }),
+  );
+  // Catch-all for any remaining API calls
+  await page.route('**/api/**', (route) => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({}) });
+    }
+    return route.continue();
+  });
 }
 
 /** Extended test fixture that provides an authenticated page. */
 export const test = base.extend<{ authedPage: Page }>({
-  authedPage: async ({ page }, use) => {
+  authedPage: async ({ page, context, baseURL }, use) => {
+    // Set auth cookie so middleware and client auth both see an active session
+    const url = new URL(baseURL ?? "http://localhost:3000");
+    await context.addCookies([
+      { name: "atlas_access_token", value: "1", domain: url.hostname, path: "/" },
+      { name: "atlas_session", value: "1", domain: url.hostname, path: "/" },
+    ]);
+
     await stubAuth(page);
     await stubDataEndpoints(page);
-    await page.goto("/");
-    // Fill login form and submit
-    await page.getByPlaceholder("you@example.com").fill("test@atlas.dev");
-    await page.getByPlaceholder("Min 6 characters").fill("password123");
-    await page.getByRole("button", { name: "Sign In" }).click();
-    // Wait for redirect to dashboard
+
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.waitForURL("**/dashboard");
     await use(page);
   },
