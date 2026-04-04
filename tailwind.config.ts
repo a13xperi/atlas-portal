@@ -44,6 +44,15 @@ const config: Config = {
         lg: "12px",
         xl: "12px",
       },
+      keyframes: {
+        "oracle-dot": {
+          "0%, 100%": { opacity: "0.3", transform: "translateY(0)" },
+          "50%": { opacity: "1", transform: "translateY(-4px)" },
+        },
+      },
+      animation: {
+        "oracle-dot": "oracle-dot 1.2s ease-in-out infinite",
+      },
     },
   },
   plugins: [],
