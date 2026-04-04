@@ -276,7 +276,13 @@ export default function CraftingPage() {
   const [voiceComparison, setVoiceComparison] = useState<{
     options: VoiceComparisonOption[];
   } | null>(null);
-  const [draftInputText, setDraftInputText] = useState("");
+  const [draftInputText, setDraftInputText] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("content") || "";
+    }
+    return "";
+  });
   const [isContentDragActive, setIsContentDragActive] = useState(false);
   const [urlPreview, setUrlPreview] = useState<{
     title?: string;
