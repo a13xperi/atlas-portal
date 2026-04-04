@@ -162,7 +162,7 @@ function CampaignsTab() {
           <Loader2 className="h-6 w-6 animate-spin text-atlas-teal" />
         </div>
       ) : campaigns.length === 0 ? (
-        <GlassCard className="p-10 text-center">
+        <GlassCard className="w-full max-w-2xl mx-auto p-10 text-center">
           <Megaphone className="mx-auto mb-3 h-10 w-10 text-atlas-text-muted" />
           <p className="text-sm text-atlas-text-secondary">
             No campaigns yet. Create one to define a narrative and group posts around it.
@@ -266,7 +266,7 @@ function QueueSection() {
       {loading ? (
         <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-atlas-teal" /></div>
       ) : drafts.length === 0 ? (
-        <GlassCard className="p-10 text-center">
+        <GlassCard className="w-full max-w-2xl mx-auto p-10 text-center">
           <Send className="mx-auto mb-3 h-10 w-10 text-atlas-text-muted" />
           <p className="text-sm text-atlas-text-secondary">
             {queueTab === "approved" ? "Queue is empty. Approve drafts from Crafting." : queueTab === "posted" ? "No posts yet." : "No drafts. Generate some in Crafting."}

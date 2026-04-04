@@ -240,7 +240,7 @@ export default function TeamLibraryPage() {
 
       {/* Footer count */}
       <p className="text-sm text-atlas-text-secondary mt-6 text-center">
-        {visibleItems.length} styles shown out of {totalCount}
+        {totalCount > 0 ? `${visibleItems.length} of ${totalCount} styles` : `${visibleItems.length} styles`}
       </p>
     </AppShell>
   );
