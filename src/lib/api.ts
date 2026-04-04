@@ -265,6 +265,8 @@ export const api = {
       request<{ thread: string[]; count: number }>(`/api/drafts/${draftId}/thread`, { method: "POST" }),
     recordEngagement: (id: string, data: { likes: number; retweets: number; impressions: number }) =>
       request<{ draft: TweetDraft }>(`/api/drafts/${id}/engagement`, { method: "POST", body: data }),
+    fetchMetrics: (id: string) =>
+      request<{ draft: TweetDraft }>(`/api/drafts/${id}/fetch-metrics`, { method: "POST" }),
     team: (limit = 50) =>
       request<{ drafts: TeamDraft[]; total: number }>(`/api/drafts/team?limit=${limit}`),
   },
