@@ -23,10 +23,10 @@ type SourceOption = (typeof SOURCE_OPTIONS)[number];
 type DeliveryChannel = (typeof DELIVERY_CHANNELS)[number];
 
 const BRIEF_TYPES = [
-  { id: "morning", label: "Morning Brief", desc: "Daily market overview" },
-  { id: "sector", label: "Sector Deep Dive", desc: "Single sector analysis" },
-  { id: "alpha", label: "Alpha Scan", desc: "Opportunities & contrarian takes" },
-  { id: "competitor", label: "Competitor Watch", desc: "What key accounts are posting" },
+  { id: "morning", label: "Morning Brief" },
+  { id: "sector", label: "Sector Deep Dive" },
+  { id: "alpha", label: "Alpha Scan" },
+  { id: "competitor", label: "Competitor Watch" },
 ] as const;
 
 const chipClasses = (selected: boolean) =>
