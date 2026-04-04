@@ -15,6 +15,7 @@ import {
   BookOpen,
   Users,
   Trophy,
+  Calendar,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -36,6 +37,7 @@ const navLinks = [
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Briefing", href: "/briefing", icon: Newspaper },
   { label: "Signals", href: "/alerts", icon: Zap },
+  { label: "Campaigns", href: "/campaigns", icon: Calendar },
   { label: "Library", href: "/team-library", icon: BookOpen },
   { label: "Arena", href: "/arena", icon: Trophy },
 ];

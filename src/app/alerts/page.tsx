@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Search, Settings } from "lucide-react";
+import { Activity, Loader2, Search, Settings } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import InlineDraftCard from "@/components/alerts/InlineDraftCard";
+import MonitorCard from "@/components/monitors/MonitorCard";
+import CreateMonitorForm from "@/components/monitors/CreateMonitorForm";
 import { Skeleton } from "@/components/ui/Skeleton";
 import GradientButton from "@/components/ui/GradientButton";
-import { Alert, AlertSubscription, api } from "@/lib/api";
+import { Alert, AlertSubscription, NlpMonitor, api } from "@/lib/api";
 
 function formatAlertType(type: string) {
   return type.replace(/_/g, " ");
@@ -27,6 +29,8 @@ export default function AlertsPage() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [subscriptions, setSubscriptions] = useState<AlertSubscription[]>([]);
   const [showSubscriptions, setShowSubscriptions] = useState(false);
+  const [monitors, setMonitors] = useState<NlpMonitor[]>([]);
+  const [showMonitors, setShowMonitors] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [researchingId, setResearchingId] = useState<string | null>(null);
@@ -86,6 +90,25 @@ export default function AlertsPage() {
     };
   }, []);
 
+  useEffect(() => {
+    api.monitors.list().then(({ monitors: m }) => setMonitors(m)).catch(() => {});
+  }, []);
+
+  const handleCreateMonitor = async (name: string, keywords: string[]) => {
+    const { monitor } = await api.monitors.create(name, keywords);
+    setMonitors((prev) => [monitor, ...prev]);
+  };
+
+  const handleToggleMonitor = async (id: string, isActive: boolean) => {
+    await api.monitors.update(id, { isActive });
+    setMonitors((prev) => prev.map((m) => (m.id === id ? { ...m, isActive } : m)));
+  };
+
+  const handleDeleteMonitor = async (id: string) => {
+    await api.monitors.delete(id);
+    setMonitors((prev) => prev.filter((m) => m.id !== id));
+  };
+
   return (
     <AppShell>
       <div className="mx-auto max-w-4xl py-8">
@@ -103,13 +126,22 @@ export default function AlertsPage() {
             </p>
           </div>
           <div className="flex flex-col items-start gap-3 sm:items-end">
-            <button
-              onClick={() => setShowSubscriptions(!showSubscriptions)}
-              className="flex items-center gap-1.5 rounded-lg border border-glass-border px-3 py-1.5 text-xs font-medium text-atlas-text-secondary transition-colors hover:text-atlas-text"
-            >
-              <Settings className="h-3.5 w-3.5" />
-              Subscriptions ({subscriptions.filter((sub) => sub.isActive).length})
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowMonitors(!showMonitors)}
+                className="flex items-center gap-1.5 rounded-lg border border-glass-border px-3 py-1.5 text-xs font-medium text-atlas-text-secondary transition-colors hover:text-atlas-text"
+              >
+                <Activity className="h-3.5 w-3.5" />
+                Monitors ({monitors.filter((m) => m.isActive).length})
+              </button>
+              <button
+                onClick={() => setShowSubscriptions(!showSubscriptions)}
+                className="flex items-center gap-1.5 rounded-lg border border-glass-border px-3 py-1.5 text-xs font-medium text-atlas-text-secondary transition-colors hover:text-atlas-text"
+              >
+                <Settings className="h-3.5 w-3.5" />
+                Subscriptions ({subscriptions.filter((sub) => sub.isActive).length})
+              </button>
+            </div>
             {!loading && alerts.length > 0 && (
               <p className="text-xs font-medium uppercase tracking-[0.2em] text-atlas-text-muted">
                 {alerts.length} live signals
@@ -146,6 +178,24 @@ export default function AlertsPage() {
                       {sub.isActive ? "Active" : "Paused"}
                     </span>
                   </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {showMonitors && (
+          <div className="mb-6 mt-6 space-y-4">
+            <CreateMonitorForm onSubmit={handleCreateMonitor} />
+            {monitors.length > 0 && (
+              <div className="space-y-3">
+                {monitors.map((monitor) => (
+                  <MonitorCard
+                    key={monitor.id}
+                    monitor={monitor}
+                    onToggle={handleToggleMonitor}
+                    onDelete={handleDeleteMonitor}
+                  />
                 ))}
               </div>
             )}

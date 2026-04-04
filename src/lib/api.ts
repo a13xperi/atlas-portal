@@ -267,6 +267,8 @@ export const api = {
       request<{ draft: TweetDraft }>(`/api/drafts/${id}/engagement`, { method: "POST", body: data }),
     team: (limit = 50) =>
       request<{ drafts: TeamDraft[]; total: number }>(`/api/drafts/team?limit=${limit}`),
+    schedule: (id: string, scheduledAt: string) =>
+      request<{ draft: TweetDraft }>(`/api/drafts/${id}/schedule`, { method: "POST", body: { scheduledAt } }),
   },
 
   analytics: {
@@ -392,6 +394,34 @@ export const api = {
         llmGenerated: boolean;
       }>("/api/oracle/message", { method: "POST", body }),
   },
+
+  monitors: {
+    list: () =>
+      request<{ monitors: NlpMonitor[] }>("/api/monitors"),
+    create: (name: string, keywords: string[], delivery?: string[]) =>
+      request<{ monitor: NlpMonitor }>("/api/monitors", { method: "POST", body: { name, keywords, delivery } }),
+    update: (id: string, data: { name?: string; keywords?: string[]; isActive?: boolean; delivery?: string[] }) =>
+      request<{ monitor: NlpMonitor }>(`/api/monitors/${id}`, { method: "PATCH", body: data }),
+    delete: (id: string) =>
+      request<{ success: boolean }>(`/api/monitors/${id}`, { method: "DELETE" }),
+  },
+
+  campaigns: {
+    list: () =>
+      request<{ campaigns: Campaign[] }>("/api/campaigns"),
+    create: (name: string, description?: string) =>
+      request<{ campaign: Campaign }>("/api/campaigns", { method: "POST", body: { name, description } }),
+    get: (id: string) =>
+      request<{ campaign: Campaign }>(`/api/campaigns/${id}`),
+    update: (id: string, data: { name?: string; description?: string | null; status?: Campaign["status"] }) =>
+      request<{ campaign: Campaign }>(`/api/campaigns/${id}`, { method: "PATCH", body: data }),
+    delete: (id: string) =>
+      request<{ success: boolean }>(`/api/campaigns/${id}`, { method: "DELETE" }),
+    addDraft: (campaignId: string, draftId: string, sortOrder?: number) =>
+      request<{ success: boolean }>(`/api/campaigns/${campaignId}/drafts`, { method: "POST", body: { draftId, sortOrder } }),
+    removeDraft: (campaignId: string, draftId: string) =>
+      request<{ success: boolean }>(`/api/campaigns/${campaignId}/drafts/${draftId}`, { method: "DELETE" }),
+  },
 };
 
 // Types
@@ -466,7 +496,7 @@ export interface TweetDraft {
   id: string;
   content: string;
   version: number;
-  status: "DRAFT" | "APPROVED" | "POSTED" | "ARCHIVED";
+  status: "DRAFT" | "APPROVED" | "SCHEDULED" | "POSTED" | "ARCHIVED";
   confidence?: number;
   predictedEngagement?: number;
   actualEngagement?: number;
@@ -474,6 +504,30 @@ export interface TweetDraft {
   sourceContent?: string;
   blendId?: string;
   feedback?: string;
+  scheduledAt?: string | null;
+  campaignId?: string | null;
+  sortOrder?: number | null;
+  createdAt: string;
+}
+
+export interface NlpMonitor {
+  id: string;
+  name: string;
+  keywords: string[];
+  minRelevance: number;
+  delivery: string[];
+  isActive: boolean;
+  matchCount: number;
+  createdAt: string;
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  description?: string | null;
+  status: "DRAFT" | "ACTIVE" | "COMPLETED" | "PAUSED";
+  draftCount: number;
+  drafts?: TweetDraft[];
   createdAt: string;
 }
 

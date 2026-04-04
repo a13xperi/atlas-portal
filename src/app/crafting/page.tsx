@@ -74,6 +74,7 @@ type VoiceComparisonOption = {
 const DRAFT_STATUS_LABELS: Record<TweetDraft["status"], string> = {
   DRAFT: "Draft",
   APPROVED: "Approved",
+  SCHEDULED: "Scheduled",
   POSTED: "Posted",
   ARCHIVED: "Archived",
 };
@@ -81,6 +82,7 @@ const DRAFT_STATUS_LABELS: Record<TweetDraft["status"], string> = {
 const DRAFT_STATUS_PILL_STYLES: Record<TweetDraft["status"], string> = {
   DRAFT: "bg-atlas-surface text-atlas-text-secondary",
   APPROVED: "bg-atlas-teal/20 text-atlas-teal",
+  SCHEDULED: "bg-atlas-warning/20 text-atlas-warning",
   POSTED: "bg-atlas-success/20 text-atlas-success",
   ARCHIVED: "bg-atlas-text-muted/20 text-atlas-text-muted",
 };
@@ -88,6 +90,7 @@ const DRAFT_STATUS_PILL_STYLES: Record<TweetDraft["status"], string> = {
 const DRAFT_STATUS_HINTS: Record<TweetDraft["status"], string> = {
   DRAFT: "Review and approve when ready",
   APPROVED: "Ready to post",
+  SCHEDULED: "Queued for posting",
   POSTED: "Published",
   ARCHIVED: "Archived",
 };
