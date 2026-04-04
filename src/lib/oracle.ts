@@ -9,7 +9,8 @@ const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
   TRACK_A_SCANNING: "TRACK_A_RESULT",
   TRACK_A_RESULT: "TRACK_A_RATE",
   TRACK_A_RATE: "REFERENCES",
-  TRACK_B_STYLE: "TRACK_B_DIMENSIONS",
+  TRACK_B_STYLE: "TRACK_B_CONTENT",
+  TRACK_B_CONTENT: "TRACK_B_DIMENSIONS",
   TRACK_B_DIMENSIONS: "REFERENCES",
   REFERENCES: "BLEND",
   BLEND: "TOPICS",
@@ -32,6 +33,8 @@ export function canAdvance(state: OracleState): boolean {
       return true;
     case "TRACK_B_STYLE":
       return state.selectedStyle !== null;
+    case "TRACK_B_CONTENT":
+      return true; // content signals are optional
     case "TRACK_B_DIMENSIONS":
       return state.displayName.trim().length >= 2;
     case "REFERENCES":
@@ -61,6 +64,7 @@ export function initialOracleState(): OracleState {
     selectedRefs: [],
     selfPercentage: 50,
     selectedTopics: [],
+    stepHistory: [],
   };
 }
 
@@ -102,6 +106,9 @@ export function oracleReducer(
             timestamp: Date.now(),
           }
         : null;
+      // Save snapshot for back-navigation (cap at 10)
+      const { stepHistory: _h, ...snapshot } = state;
+      const newHistory = [...state.stepHistory, { step: state.currentStep, messageCount: state.messages.length, snapshot: snapshot as Omit<typeof state, 'stepHistory'> }].slice(-10);
       return {
         ...state,
         currentStep: next,
@@ -109,6 +116,21 @@ export function oracleReducer(
           ? [...state.messages, userMsg]
           : state.messages,
         pendingMessages: prepareMessages(next),
+        stepHistory: newHistory,
+      };
+    }
+
+    case "GO_BACK": {
+      if (state.stepHistory.length === 0) return state;
+      const history = [...state.stepHistory];
+      const prev = history.pop()!;
+      return {
+        ...prev.snapshot,
+        // Truncate messages to what existed at that step
+        messages: state.messages.slice(0, prev.messageCount),
+        pendingMessages: [],
+        isTyping: false,
+        stepHistory: history,
       };
     }
 

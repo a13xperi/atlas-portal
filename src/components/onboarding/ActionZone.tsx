@@ -10,8 +10,10 @@ interface ActionZoneProps {
   showTextInput?: boolean;
   textInputPlaceholder?: string;
   disabled?: boolean;
+  canGoBack?: boolean;
   onAction: (value: string) => void;
   onTextSubmit?: (text: string) => void;
+  onGoBack?: () => void;
 }
 
 export default function ActionZone({
@@ -19,8 +21,10 @@ export default function ActionZone({
   showTextInput = false,
   textInputPlaceholder = "Type a message...",
   disabled = false,
+  canGoBack = false,
   onAction,
   onTextSubmit,
+  onGoBack,
 }: ActionZoneProps) {
   const [text, setText] = useState("");
 
@@ -57,7 +61,16 @@ export default function ActionZone({
           </button>
         </div>
       ) : actions && actions.length > 0 ? (
-        <div className="flex flex-wrap gap-2 justify-center">
+        <div className="flex flex-wrap gap-2 justify-center items-center">
+          {canGoBack && (
+            <button
+              type="button"
+              onClick={onGoBack}
+              className="rounded-lg px-3 py-2.5 text-sm text-atlas-text-secondary hover:text-atlas-text transition-colors"
+            >
+              ← Back
+            </button>
+          )}
           {actions.map((action) => (
             <GradientButton
               key={action.value}
