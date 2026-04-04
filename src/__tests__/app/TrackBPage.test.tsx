@@ -116,7 +116,7 @@ describe("TrackBPage", () => {
     fireEvent.change(screen.getByLabelText("Display name"), {
       target: { value: "A" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /let.*get started/i }));
+    fireEvent.click(screen.getByRole("button", { name: /continue to reference voices/i }));
 
     expect(
       await screen.findByText("Display name must be at least 2 characters.")
@@ -132,7 +132,7 @@ describe("TrackBPage", () => {
     fireEvent.change(screen.getByLabelText("Display name"), {
       target: { value: "Atlas Analyst" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /let.*get started/i }));
+    fireEvent.click(screen.getByRole("button", { name: /continue to reference voices/i }));
 
     await waitFor(() => {
       expect(mockedApi.users.updateProfile).toHaveBeenCalledWith({
