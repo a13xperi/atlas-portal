@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import { useAuth } from "@/lib/auth";
@@ -16,7 +17,11 @@ const TABS: { id: QueueTab; label: string; status: TweetDraft["status"] }[] = [
 
 export default function CampaignsPage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<QueueTab>("approved");
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams.get("tab") as QueueTab) || "approved";
+  const [activeTab, setActiveTab] = useState<QueueTab>(
+    TABS.some((t) => t.id === initialTab) ? initialTab : "approved"
+  );
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [threadDraftId, setThreadDraftId] = useState<string | null>(null);

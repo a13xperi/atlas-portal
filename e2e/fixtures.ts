@@ -180,6 +180,8 @@ async function stubDataEndpoints(page: Page) {
         return json(route, { loop: { status: "idle", currentIteration: 0, maxIterations: 0, iterations: [], bestIteration: null, evalType: "", startedAt: null, completedAt: null, taskId: "" } });
       case "/api/users/profile":
         return json(route, { user: mockUser });
+      case "/api/voice/references":
+        return json(route, { voices: [] });
       case "/api/voice/reference-accounts":
         return json(route, { accounts: [] });
       default:

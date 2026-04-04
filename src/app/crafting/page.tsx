@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import DraftHistorySidebar, {
   DraftHistoryItem,
@@ -215,6 +216,7 @@ function buildVoiceVariationInstruction(
 }
 
 export default function CraftingPage() {
+  const searchParams = useSearchParams();
   const voiceModeLabelId = useId();
   const savedBlendLabelId = useId();
   const blendIntensityLabelId = useId();
