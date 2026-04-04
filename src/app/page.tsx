@@ -81,10 +81,10 @@ export default function LoginPage() {
   return (
     <OnboardingShell maxWidth="480px">
       <div className="text-center">
-        <h1 className="font-heading text-[56px] font-bold tracking-[-1.5px] bg-gradient-to-r from-atlas-text via-atlas-teal to-atlas-text bg-clip-text text-transparent">
+        <h1 className="font-heading tracking-tight text-[56px] font-bold tracking-[-1.5px] bg-gradient-to-r from-atlas-text via-atlas-teal to-atlas-text bg-clip-text text-transparent">
           ATLAS
         </h1>
-        <p className="font-heading text-lg italic text-[#bcc9c7] mt-2">
+        <p className="font-heading font-medium text-lg italic text-[#bcc9c7] mt-2">
           If you are here, you&apos;re already in the right place
         </p>
         <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-atlas-teal/50 to-transparent" />

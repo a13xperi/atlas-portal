@@ -194,7 +194,7 @@ export default function ProfilePage() {
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
             Profile
           </p>
-          <h1 className="font-heading text-3xl text-atlas-text">
+          <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">
             Account settings
           </h1>
           <p className="max-w-2xl text-sm leading-6 text-atlas-text-secondary">
@@ -228,7 +228,7 @@ export default function ProfilePage() {
             className="h-fit bg-atlas-surface/60"
           >
             <div className="flex flex-col items-center text-center">
-              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-glass-border bg-gradient-to-r from-atlas-teal to-atlas-steel text-3xl font-heading text-white shadow-lg shadow-atlas-teal/20">
+              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-glass-border bg-gradient-to-r from-atlas-teal to-atlas-steel text-3xl font-heading font-extrabold text-white shadow-lg shadow-atlas-teal/20">
                 {profile.avatarUrl ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
@@ -241,7 +241,7 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              <h2 className="mt-5 font-heading text-3xl text-atlas-text">
+              <h2 className="mt-5 font-heading font-extrabold tracking-tight text-3xl text-atlas-text">
                 {displayName}
               </h2>
               <p className="mt-2 flex items-center gap-2 text-sm text-atlas-text-secondary">
@@ -290,7 +290,7 @@ export default function ProfilePage() {
                   <UserRound className="h-5 w-5 text-atlas-teal" />
                 </div>
                 <div>
-                  <h2 className="font-heading text-xl text-atlas-text">
+                  <h2 className="font-heading font-bold tracking-tight text-xl text-atlas-text">
                     Public profile
                   </h2>
                   <p className="mt-1 text-sm leading-6 text-atlas-text-secondary">

@@ -51,7 +51,7 @@ export default function DraftHistorySidebar({
     >
       <div className={mobile ? "space-y-4" : "sticky top-24 space-y-4"}>
         <div className="bg-glass/50 backdrop-blur-xl border border-glass-border rounded-2xl p-5">
-          <h2 className="font-heading text-lg text-atlas-text">Draft History</h2>
+          <h2 className="font-heading font-semibold text-lg text-atlas-text">Draft History</h2>
           <p className="mt-1 font-body text-sm text-atlas-text-secondary">
             Session drafts appear here as you generate them.
           </p>

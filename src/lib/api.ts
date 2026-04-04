@@ -144,6 +144,8 @@ export const api = {
       request<{ profile: VoiceProfile }>("/api/voice/profile"),
     updateProfile: (data: Partial<VoiceProfile>) =>
       request<{ profile: VoiceProfile }>("/api/voice/profile", { method: "PATCH", body: data }),
+    getReferenceAccounts: () =>
+      request<{ accounts: ReferenceAccount[] }>("/api/voice/reference-accounts"),
     getReferences: () =>
       request<{ voices: ReferenceVoice[] }>("/api/voice/references"),
     addReference: (name: string, handle?: string) =>
@@ -156,6 +158,27 @@ export const api = {
       request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/calibrate", {
         method: "POST", body: { handle },
       }),
+    getGlobalReferenceAccounts: () =>
+      request<{ accounts: (ReferenceVoice & { avatarUrl?: string })[] }>("/api/voice/reference-accounts"),
+  },
+
+  referenceAccounts: {
+    getAll: () =>
+      request<{ accounts: ReferenceAccount[] }>("/api/voice/reference-accounts"),
+    getReferenceAccounts: () =>
+      request<{ accounts: ReferenceAccount[] }>("/api/voice/reference-accounts"),
+    saveSelections: (
+      userId: string,
+      ids: string[],
+      weights?: Record<string, number>
+    ) =>
+      request<{ success: boolean; ids: string[] }>(
+        `/api/users/${userId}/reference-accounts`,
+        {
+          method: "POST",
+          body: { ids, weights },
+        }
+      ),
   },
 
   drafts: {
@@ -343,7 +366,18 @@ export interface ReferenceVoice {
   id: string;
   name: string;
   handle?: string;
+  avatarUrl?: string;
   isActive: boolean;
+}
+
+export interface ReferenceAccount {
+  id: string;
+  handle?: string;
+  displayName?: string;
+  category?: string;
+  profileImageUrl?: string | null;
+  name?: string;
+  avatarUrl?: string | null;
 }
 
 export interface SavedBlend {

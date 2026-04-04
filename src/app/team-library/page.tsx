@@ -65,7 +65,7 @@ export default function TeamLibraryPage() {
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="font-heading text-2xl sm:text-4xl text-atlas-text">
+        <h1 className="font-heading font-extrabold tracking-tight text-2xl sm:text-4xl text-atlas-text">
           Team Style Library
         </h1>
         <p className="text-atlas-text-secondary mt-2">

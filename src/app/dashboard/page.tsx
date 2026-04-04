@@ -145,7 +145,7 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <h1 className="font-heading text-2xl text-atlas-text">
+      <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
         Welcome back, {user?.handle || "Analyst"}
       </h1>
 
@@ -261,7 +261,7 @@ export default function DashboardPage() {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-atlas-teal/20 to-atlas-steel/20">
               <PenTool className="h-8 w-8 text-atlas-teal" aria-hidden="true" />
             </div>
-            <h3 className="mb-2 font-heading text-xl text-atlas-text">
+            <h3 className="mb-2 font-heading font-bold tracking-tight text-xl text-atlas-text">
               Ready to craft your first draft?
             </h3>
             <p className="mx-auto mb-6 max-w-md text-sm text-atlas-text-secondary">

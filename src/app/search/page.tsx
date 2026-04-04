@@ -254,7 +254,7 @@ export default function SearchPage() {
     <AppShell>
       <div className="max-w-3xl mx-auto py-8">
         <div className="mb-8 text-center">
-          <h1 className="font-heading text-2xl text-atlas-text sm:text-3xl">
+          <h1 className="font-heading font-extrabold tracking-tight text-2xl text-atlas-text sm:text-3xl">
             Search drafts and voice profiles
           </h1>
           <p className="mt-2 text-sm text-atlas-text-secondary sm:text-base">
@@ -364,7 +364,7 @@ export default function SearchPage() {
                           <p className="text-xs uppercase tracking-[0.24em] text-atlas-text-secondary">
                             Voice Profile
                           </p>
-                          <h2 className="mt-2 font-heading text-xl text-atlas-text">
+                          <h2 className="mt-2 font-heading font-bold tracking-tight text-xl text-atlas-text">
                             {deferredQuery ? "Voice profile match" : "Current voice profile"}
                           </h2>
                           <p className="mt-2 text-sm text-atlas-text-secondary">
@@ -435,7 +435,7 @@ export default function SearchPage() {
                     aria-label="No search results"
                     className="px-4 py-10 text-center sm:px-4 sm:py-10"
                   >
-                    <h2 className="font-heading text-xl text-atlas-text">
+                    <h2 className="font-heading font-bold tracking-tight text-xl text-atlas-text">
                       No results found
                     </h2>
                     <p className="mt-2 text-sm text-atlas-text-secondary">

@@ -35,6 +35,30 @@ jest.mock("@/components/voice-profiles/VoiceDimensionSections", () => ({
   default: () => <div>Voice dimensions</div>,
 }));
 
+jest.mock("@/components/onboarding/ReferenceVoiceSelector", () => ({
+  __esModule: true,
+  default: ({
+    selected,
+    onContinue,
+    onSelectionChange,
+  }: {
+    selected: string[];
+    onContinue: () => void;
+    onSelectionChange: (ids: string[]) => void;
+  }) => (
+    <div>
+      <p>Reference selector</p>
+      <p>{selected.join(",")}</p>
+      <button type="button" onClick={() => onSelectionChange(["ref-1", "ref-2"])}>
+        Select references
+      </button>
+      <button type="button" onClick={onContinue}>
+        Continue selector
+      </button>
+    </div>
+  ),
+}));
+
 jest.mock("@/lib/api", () => ({
   api: {
     users: {
@@ -42,8 +66,9 @@ jest.mock("@/lib/api", () => ({
     },
     voice: {
       updateProfile: jest.fn(),
-      addReference: jest.fn(),
-      createBlend: jest.fn(),
+    },
+    referenceAccounts: {
+      saveSelections: jest.fn(),
     },
   },
 }));
@@ -55,8 +80,9 @@ const mockedApi = api as unknown as {
   users: { updateProfile: jest.Mock };
   voice: {
     updateProfile: jest.Mock;
-    addReference: jest.Mock;
-    createBlend: jest.Mock;
+  };
+  referenceAccounts: {
+    saveSelections: jest.Mock;
   };
 };
 
@@ -65,16 +91,17 @@ describe("TrackBPage", () => {
     push.mockClear();
     mockOnboardingShell.mockClear();
     mockUseAuth.mockReturnValue({
-      user: { handle: "AtlasAnalyst", displayName: "" },
+      user: { id: "u1", handle: "AtlasAnalyst", displayName: "" },
     });
     mockedApi.users.updateProfile.mockReset();
     mockedApi.voice.updateProfile.mockReset();
-    mockedApi.voice.addReference.mockReset();
-    mockedApi.voice.createBlend.mockReset();
+    mockedApi.referenceAccounts.saveSelections.mockReset();
     mockedApi.users.updateProfile.mockResolvedValue({ user: {} });
     mockedApi.voice.updateProfile.mockResolvedValue({ profile: {} });
-    mockedApi.voice.addReference.mockResolvedValue({ voice: {} });
-    mockedApi.voice.createBlend.mockResolvedValue({ blend: {} });
+    mockedApi.referenceAccounts.saveSelections.mockResolvedValue({
+      success: true,
+      ids: ["ref-1", "ref-2"],
+    });
   });
 
   it("shows an inline display name validation error before saving", async () => {
@@ -89,22 +116,23 @@ describe("TrackBPage", () => {
     fireEvent.change(screen.getByLabelText("Display name"), {
       target: { value: "A" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /let.*get started/i }));
+    fireEvent.click(screen.getByRole("button", { name: /continue to reference voices/i }));
 
     expect(
       await screen.findByText("Display name must be at least 2 characters.")
     ).toBeInTheDocument();
     expect(mockedApi.users.updateProfile).not.toHaveBeenCalled();
     expect(mockedApi.voice.updateProfile).not.toHaveBeenCalled();
+    expect(mockedApi.referenceAccounts.saveSelections).not.toHaveBeenCalled();
   });
 
-  it("saves the display name and selected style as a full voice profile", async () => {
+  it("saves the first step, then persists selected reference voices", async () => {
     render(<TrackBPage />);
 
     fireEvent.change(screen.getByLabelText("Display name"), {
       target: { value: "Atlas Analyst" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /let.*get started/i }));
+    fireEvent.click(screen.getByRole("button", { name: /continue to reference voices/i }));
 
     await waitFor(() => {
       expect(mockedApi.users.updateProfile).toHaveBeenCalledWith({
@@ -124,6 +152,24 @@ describe("TrackBPage", () => {
         socialPosture: 50,
         selfPromotionalIntensity: 50,
       });
+    });
+
+    expect(await screen.findByText("Reference selector")).toBeInTheDocument();
+    expect(mockOnboardingShell).toHaveBeenCalledWith({
+      maxWidth: "720px",
+      step: 2,
+      totalSteps: 3,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Select references" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue selector" }));
+
+    await waitFor(() => {
+      expect(mockedApi.referenceAccounts.saveSelections).toHaveBeenCalledWith(
+        "u1",
+        ["ref-1", "ref-2"],
+        {"ref-1": 0.5, "ref-2": 0.5}
+      );
       expect(push).toHaveBeenCalledWith("/onboarding/handoff");
     });
   });

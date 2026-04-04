@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Wand2 } from "lucide-react";
+import { Wand2 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
+import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import GradientButton from "@/components/ui/GradientButton";
 import {
@@ -67,18 +68,13 @@ export default function VoiceProfilesPage() {
   const [references, setReferences] = useState<ReferenceVoice[]>([]);
   const [blends, setBlends] = useState<SavedBlend[]>([]);
   const [activeBlendId, setActiveBlendId] = useState<string | null>(null);
-  const [selectedVoices, setSelectedVoices] = useState<Set<string>>(new Set());
   const [blendValues, setBlendValues] = useState([40, 30, 20, 10]);
-  const [showAddVoice, setShowAddVoice] = useState(false);
   const [showNewBlend, setShowNewBlend] = useState(false);
   const [blendName, setBlendName] = useState("");
   const [blendVoices, setBlendVoices] = useState<
     { label: string; percentage: number; referenceVoiceId?: string }[]
   >([{ label: "Personal", percentage: 50 }]);
   const [savingBlend, setSavingBlend] = useState(false);
-  const [newVoiceName, setNewVoiceName] = useState("");
-  const [newVoiceHandle, setNewVoiceHandle] = useState("");
-  const [addingVoice, setAddingVoice] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingDimensions, setSavingDimensions] = useState(false);
   const [calibrateHandle, setCalibrateHandle] = useState("");
@@ -220,20 +216,6 @@ export default function VoiceProfilesPage() {
     await persistDimensions(presetValues, "Failed to apply voice preset");
   };
 
-  const toggleVoice = (id: string) => {
-    setSelectedVoices((previous) => {
-      const next = new Set(previous);
-
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-
-      return next;
-    });
-  };
-
   const updateBlend = (index: number, value: number) => {
     setBlendValues((current) => {
       const next = [...current];
@@ -282,7 +264,7 @@ export default function VoiceProfilesPage() {
       <p className="mb-2 text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
         Voice Studio
       </p>
-      <h1 className="font-heading text-2xl text-atlas-text">
+      <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
         Your Voice — Detailed Breakdown
       </h1>
 
@@ -293,7 +275,7 @@ export default function VoiceProfilesPage() {
               <Wand2 className="h-5 w-5 text-atlas-teal" />
             </div>
             <div className="flex-1">
-              <h3 className="font-heading text-lg text-atlas-text">
+              <h3 className="font-heading font-semibold text-lg text-atlas-text">
                 Auto-calibrate your voice
               </h3>
               <p className="mt-1 text-sm text-atlas-text-secondary">
@@ -438,116 +420,16 @@ export default function VoiceProfilesPage() {
       </div>
 
       <div className="mt-8">
-        <p className="text-xs uppercase tracking-wide text-atlas-text-secondary">
-          Reference Voices
-        </p>
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
-          {references.length === 0 ? (
-            <div className="col-span-full py-8 text-center">
-              <p className="text-sm text-atlas-text-muted">
-                No reference voices yet. Add Twitter handles to start building
-                your unique style.
-              </p>
-            </div>
-          ) : (
-            references.map((voice) => {
-              const isSelected = selectedVoices.has(voice.id);
-
-              return (
-                <button
-                  key={voice.id}
-                  type="button"
-                  onClick={() => toggleVoice(voice.id)}
-                  aria-pressed={isSelected}
-                  className={`flex items-center gap-3 rounded-2xl bg-atlas-surface p-3 transition-all ${
-                    isSelected
-                      ? "border border-atlas-teal"
-                      : "border border-glass-border"
-                  }`}
-                >
-                  <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-atlas-nav text-sm text-atlas-text-secondary">
-                    {voice.name[0]}
-                    {isSelected ? (
-                      <div className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-atlas-teal">
-                        <Check className="h-2.5 w-2.5 text-atlas-bg" />
-                      </div>
-                    ) : null}
-                  </div>
-                  <span className="text-sm text-atlas-text-secondary">
-                    {voice.name}
-                  </span>
-                </button>
-              );
-            })
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowAddVoice(true)}
-          className="mt-3 text-sm text-atlas-teal hover:underline"
-        >
-          + Add your own
-        </button>
-        {showAddVoice ? (
-          <div className="mt-3 space-y-3 rounded-xl border border-glass-border bg-atlas-surface p-4">
-            <input
-              aria-label="Reference voice name"
-              type="text"
-              placeholder="Voice name (e.g. Hasu)"
-              value={newVoiceName}
-              onChange={(event) => setNewVoiceName(event.target.value)}
-              className="w-full rounded-lg border border-glass-border bg-atlas-bg px-3 py-2 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
-            />
-            <input
-              aria-label="Reference voice handle"
-              type="text"
-              placeholder="X handle (optional)"
-              value={newVoiceHandle}
-              onChange={(event) => setNewVoiceHandle(event.target.value)}
-              className="w-full rounded-lg border border-glass-border bg-atlas-bg px-3 py-2 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
-            />
-            <div className="flex gap-2">
-              <GradientButton
-                size="sm"
-                onClick={async () => {
-                  if (!newVoiceName.trim()) {
-                    return;
-                  }
-
-                  setAddingVoice(true);
-
-                  try {
-                    await api.voice.addReference(
-                      newVoiceName.trim(),
-                      newVoiceHandle.trim() || undefined
-                    );
-                    setNewVoiceName("");
-                    setNewVoiceHandle("");
-                    setShowAddVoice(false);
-
-                    const response = await api.voice.getReferences();
-                    setReferences(response.voices);
-                  } catch (addVoiceError) {
-                    console.error(addVoiceError);
-                  } finally {
-                    setAddingVoice(false);
-                  }
-                }}
-                disabled={addingVoice || !newVoiceName.trim()}
-              >
-                {addingVoice ? "Adding..." : "Add Voice"}
-              </GradientButton>
-              <button
-                type="button"
-                onClick={() => setShowAddVoice(false)}
-                className="text-sm text-atlas-text-secondary hover:text-atlas-text"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : null}
+        <ReferenceVoicesSection
+          references={references}
+          onReferencesChange={setReferences}
+        />
       </div>
+
+      <ReferenceVoicesSection
+        references={references}
+        onReferencesChange={setReferences}
+      />
 
       <div className="mt-8">
         <p className="text-xs uppercase tracking-wide text-atlas-text-secondary">
@@ -729,7 +611,7 @@ export default function VoiceProfilesPage() {
       </div>
 
       <div className="mt-8 rounded-2xl border border-glass-border bg-atlas-surface-glass p-8 backdrop-blur-sm">
-        <h3 className="font-heading text-lg text-atlas-text">
+        <h3 className="font-heading font-semibold text-lg text-atlas-text">
           Create or Edit a Blend
         </h3>
         <div className="mt-4 space-y-4">
@@ -767,7 +649,7 @@ export default function VoiceProfilesPage() {
           </p>
         </div>
         <p className="mt-2 text-xs text-atlas-text-muted">
-          Add more voices from Reference Voices above.
+          Add more voices from your library above.
         </p>
         <div className="mt-4 flex gap-3">
           <GradientButton>Save blend</GradientButton>

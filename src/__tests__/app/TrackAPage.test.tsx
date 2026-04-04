@@ -30,9 +30,28 @@ jest.mock("@/components/layout/OnboardingShell", () => ({
   },
 }));
 
-jest.mock("@/components/voice-profiles/VoiceDimensionSections", () => ({
+jest.mock("@/components/onboarding/ReferenceVoiceSelector", () => ({
   __esModule: true,
-  default: () => <div>Voice dimensions</div>,
+  default: ({
+    selected,
+    onContinue,
+    onSelectionChange,
+  }: {
+    selected: string[];
+    onContinue: () => void;
+    onSelectionChange: (ids: string[]) => void;
+  }) => (
+    <div>
+      <p>Reference selector</p>
+      <p>{selected.join(",")}</p>
+      <button type="button" onClick={() => onSelectionChange(["hosseeb", "naval"])}>
+        Select references
+      </button>
+      <button type="button" onClick={onContinue}>
+        Continue selector
+      </button>
+    </div>
+  ),
 }));
 
 jest.mock("@/lib/api", () => ({
@@ -44,6 +63,9 @@ jest.mock("@/lib/api", () => ({
       updateProfile: jest.fn(),
       addReference: jest.fn(),
       createBlend: jest.fn(),
+    },
+    referenceAccounts: {
+      saveSelections: jest.fn(),
     },
   },
 }));
@@ -58,6 +80,9 @@ const mockedApi = api as unknown as {
     addReference: jest.Mock;
     createBlend: jest.Mock;
   };
+  referenceAccounts: {
+    saveSelections: jest.Mock;
+  };
 };
 
 describe("TrackAPage", () => {
@@ -65,16 +90,21 @@ describe("TrackAPage", () => {
     push.mockClear();
     mockOnboardingShell.mockClear();
     mockUseAuth.mockReturnValue({
-      user: { handle: "AtlasAnalyst", displayName: "" },
+      user: { id: "u1", handle: "AtlasAnalyst", displayName: "" },
     });
     mockedApi.users.updateProfile.mockReset();
     mockedApi.voice.updateProfile.mockReset();
     mockedApi.voice.addReference.mockReset();
     mockedApi.voice.createBlend.mockReset();
+    mockedApi.referenceAccounts.saveSelections.mockReset();
     mockedApi.users.updateProfile.mockResolvedValue({ user: {} });
     mockedApi.voice.updateProfile.mockResolvedValue({ profile: {} });
     mockedApi.voice.addReference.mockResolvedValue({ voice: {} });
     mockedApi.voice.createBlend.mockResolvedValue({ blend: {} });
+    mockedApi.referenceAccounts.saveSelections.mockResolvedValue({
+      success: true,
+      ids: ["hosseeb", "naval"],
+    });
   });
 
   it("shows an inline display name validation error before saving", async () => {
@@ -89,22 +119,27 @@ describe("TrackAPage", () => {
     fireEvent.change(screen.getByLabelText("Display name"), {
       target: { value: "A" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /get started/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /continue to reference voices/i })
+    );
 
     expect(
       await screen.findByText("Display name must be at least 2 characters.")
     ).toBeInTheDocument();
     expect(mockedApi.users.updateProfile).not.toHaveBeenCalled();
     expect(mockedApi.voice.updateProfile).not.toHaveBeenCalled();
+    expect(mockedApi.referenceAccounts.saveSelections).not.toHaveBeenCalled();
   });
 
-  it("saves the display name and voice profile when the form is valid", async () => {
+  it("saves the first step, then persists selected reference voices", async () => {
     render(<TrackAPage />);
 
     fireEvent.change(screen.getByLabelText("Display name"), {
       target: { value: "Atlas Analyst" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /get started/i }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /continue to reference voices/i })
+    );
 
     await waitFor(() => {
       expect(mockedApi.users.updateProfile).toHaveBeenCalledWith({
@@ -124,6 +159,32 @@ describe("TrackAPage", () => {
         socialPosture: 48,
         selfPromotionalIntensity: 18,
       });
+    });
+
+    expect(await screen.findByText("Reference selector")).toBeInTheDocument();
+    expect(mockOnboardingShell).toHaveBeenCalledWith({
+      maxWidth: "720px",
+      step: 2,
+      totalSteps: 3,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Select references" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue selector" }));
+
+    await waitFor(() => {
+      expect(mockedApi.referenceAccounts.saveSelections).toHaveBeenCalledWith(
+        "u1",
+        ["hosseeb", "naval"],
+        { hosseeb: 0.5, naval: 0.5 }
+      );
+      expect(mockedApi.voice.createBlend).toHaveBeenCalledWith(
+        "Onboarding blend",
+        [
+          { label: "My voice", percentage: 50 },
+          { label: "Haseeb Qureshi", percentage: 25 },
+          { label: "Naval", percentage: 25 },
+        ]
+      );
       expect(push).toHaveBeenCalledWith("/onboarding/handoff");
     });
   });

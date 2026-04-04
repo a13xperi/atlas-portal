@@ -3,7 +3,7 @@ import GlassCard from "@/components/ui/GlassCard";
 
 export interface OnboardingShellProps {
   children: React.ReactNode;
-  maxWidth?: "480px" | "640px" | "720px";
+  maxWidth?: "480px" | "640px" | "720px" | "1120px";
   step?: number;
   totalSteps?: number;
 }
@@ -20,7 +20,7 @@ export default function OnboardingShell({
       : null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-atlas-bg via-[#16213e] to-atlas-bg">
+    <div className="min-h-screen bg-gradient-to-b from-atlas-bg via-atlas-nav to-atlas-bg">
       <NavBar variant="onboarding" />
       <main
         aria-label="Page content"
