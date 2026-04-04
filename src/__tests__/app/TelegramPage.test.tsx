@@ -31,7 +31,7 @@ describe("TelegramPage", () => {
     render(<TelegramPage />);
 
     expect(
-      screen.getByRole("heading", { name: /telegram alerts/i })
+      screen.getByRole("heading", { name: /connect telegram/i })
     ).toBeInTheDocument();
     expect(
       screen.getByText(/get atlas alerts delivered straight to telegram/i)

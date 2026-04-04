@@ -195,7 +195,7 @@ describe("api.referenceAccounts", () => {
     await api.referenceAccounts.getAll();
 
     expect(fetch).toHaveBeenCalledWith(
-      `${API_URL}/api/reference-accounts`,
+      `${API_URL}/api/voice/reference-accounts`,
       expect.objectContaining({
         method: "GET",
         credentials: "include",

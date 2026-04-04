@@ -1,11 +1,12 @@
 import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 
 const push = jest.fn();
 const mockUseAuth = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
+  usePathname: () => "/onboarding/track-a",
 }));
 
 jest.mock("@/lib/auth", () => ({
@@ -14,16 +15,10 @@ jest.mock("@/lib/auth", () => ({
 
 jest.mock("framer-motion", () => ({
   motion: {
-    div: ({ children, ...props }: { children: React.ReactNode }) => (
-      <div {...props}>{children}</div>
-    ),
-    span: ({ children, ...props }: { children: React.ReactNode }) => (
-      <span {...props}>{children}</span>
-    ),
+    div: ({ children, ...props }: { children: React.ReactNode; [k: string]: unknown }) => <div {...props}>{children}</div>,
+    span: ({ children, ...props }: { children: React.ReactNode; [k: string]: unknown }) => <span {...props}>{children}</span>,
   },
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => (
-    <>{children}</>
-  ),
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 jest.mock("@/components/onboarding/ReferenceVoiceSelector", () => ({
@@ -39,37 +34,39 @@ jest.mock("@/components/voice-profiles/VoiceDimensionSections", () => ({
 jest.mock("@/lib/api", () => ({
   api: {
     users: { updateProfile: jest.fn() },
-    voice: {
-      updateProfile: jest.fn(),
-      calibrate: jest.fn(),
-      addReference: jest.fn(),
-      createBlend: jest.fn(),
-    },
+    voice: { updateProfile: jest.fn(), calibrate: jest.fn(), addReference: jest.fn(), createBlend: jest.fn() },
     referenceAccounts: { saveSelections: jest.fn() },
     briefing: { updatePreferences: jest.fn() },
   },
 }));
 
+beforeAll(() => { window.HTMLElement.prototype.scrollIntoView = jest.fn(); });
+
 const TrackAPage = require("@/app/onboarding/track-a/page").default;
 
 describe("TrackAPage", () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     push.mockClear();
     mockUseAuth.mockReturnValue({
       user: { id: "u1", handle: "AtlasAnalyst", displayName: "" },
     });
   });
 
-  it("renders OracleChat and auto-selects Track A", () => {
-    render(<TrackAPage />);
-    // The Oracle welcome message should appear, and Track A should be auto-selected
-    // which means the handle input should eventually show
-    expect(screen.getByText(/scan your tweets/i)).toBeInTheDocument();
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
-  it("shows the NavBar in onboarding mode", () => {
+  it("renders Oracle welcome message initially", () => {
     render(<TrackAPage />);
-    // NavBar renders for onboarding
-    expect(document.querySelector("nav")).toBeInTheDocument();
+    expect(screen.getByText(/how you write/i)).toBeInTheDocument();
+  });
+
+  it("auto-selects Track A after typing delay", async () => {
+    render(<TrackAPage />);
+    jest.advanceTimersByTime(1000);
+    await waitFor(() => {
+      expect(screen.getByText(/scan your tweets/i)).toBeInTheDocument();
+    });
   });
 });

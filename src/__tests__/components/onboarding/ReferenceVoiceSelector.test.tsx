@@ -3,12 +3,12 @@ import { useState } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import ReferenceVoiceSelector from "@/components/onboarding/ReferenceVoiceSelector";
 
-const mockGetReferenceAccounts = jest.fn();
+const mockGetAll = jest.fn();
 
 jest.mock("@/lib/api", () => ({
   api: {
     referenceAccounts: {
-      getReferenceAccounts: () => mockGetReferenceAccounts(),
+      getAll: () => mockGetAll(),
     },
   },
 }));
@@ -34,36 +34,42 @@ function SelectorHarness({
 
 describe("ReferenceVoiceSelector", () => {
   beforeEach(() => {
-    mockGetReferenceAccounts.mockReset();
+    mockGetAll.mockReset();
   });
 
-  it("shows loading skeletons before accounts resolve", () => {
-    mockGetReferenceAccounts.mockReturnValue(new Promise(() => {}));
+  it("shows the heading and description", () => {
+    mockGetAll.mockReturnValue(new Promise(() => {}));
 
-    const { container } = render(<SelectorHarness />);
+    render(<SelectorHarness />);
 
-    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(3);
+    expect(screen.getByText("Pick your reference voices")).toBeInTheDocument();
+    expect(
+      screen.getByText(/choose at least 2 accounts/i)
+    ).toBeInTheDocument();
   });
 
-  it("loads accounts, renders letter fallbacks, and filters by category", async () => {
-    mockGetReferenceAccounts.mockResolvedValue({
+  it("loads accounts from API and renders them with handles", async () => {
+    mockGetAll.mockResolvedValue({
       accounts: [
         {
           id: "hosseeb",
           name: "Haseeb",
           handle: "hosseeb",
+          category: "Crypto/VC",
           profileImageUrl: null,
         },
         {
           id: "DefiIgnas",
           name: "Ignas",
           handle: "DefiIgnas",
+          category: "DeFi",
           avatarUrl: "https://example.com/ignas.png",
         },
         {
           id: "naval",
           name: "Naval",
           handle: "naval",
+          category: "Philosophy",
           profileImageUrl: null,
         },
       ],
@@ -87,11 +93,11 @@ describe("ReferenceVoiceSelector", () => {
   it("keeps selection in the parent and enables continue after the minimum is met", async () => {
     const onContinue = jest.fn();
 
-    mockGetReferenceAccounts.mockResolvedValue({
+    mockGetAll.mockResolvedValue({
       accounts: [
-        { id: "hosseeb", name: "Haseeb", handle: "hosseeb" },
-        { id: "DefiIgnas", name: "Ignas", handle: "DefiIgnas" },
-        { id: "naval", name: "Naval", handle: "naval" },
+        { id: "hosseeb", name: "Haseeb", handle: "hosseeb", category: "Crypto/VC" },
+        { id: "DefiIgnas", name: "Ignas", handle: "DefiIgnas", category: "DeFi" },
+        { id: "naval", name: "Naval", handle: "naval", category: "Philosophy" },
       ],
     });
 
@@ -104,10 +110,10 @@ describe("ReferenceVoiceSelector", () => {
     expect(continueButton).toBeDisabled();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Toggle reference voice Haseeb" })
+      screen.getByRole("button", { name: "Toggle Haseeb" })
     );
     fireEvent.click(
-      screen.getByRole("button", { name: "Toggle reference voice Ignas" })
+      screen.getByRole("button", { name: "Toggle Ignas" })
     );
 
     await waitFor(() => {
@@ -121,12 +127,13 @@ describe("ReferenceVoiceSelector", () => {
   });
 
   it("falls back to the hardcoded list when the fetch fails", async () => {
-    mockGetReferenceAccounts.mockRejectedValue(new Error("boom"));
+    mockGetAll.mockRejectedValue(new Error("boom"));
 
     render(<SelectorHarness />);
 
-    expect(await screen.findByText("hosseeb")).toBeInTheDocument();
+    // REFERENCE_ACCOUNT_FALLBACK has displayName "Haseeb Qureshi" and handle "hosseeb"
+    expect(await screen.findByText("Haseeb Qureshi")).toBeInTheDocument();
     expect(screen.getByText("@hosseeb")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Crypto" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Crypto/VC" })).toBeInTheDocument();
   });
 });
