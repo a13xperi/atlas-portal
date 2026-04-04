@@ -335,16 +335,6 @@ export default function CraftingPage() {
     } catch {
       // Trending is optional — do not block the page.
     }
-
-  // Seed content from dashboard Quick Draft (?draft=...)
-  useEffect(() => {
-    const draftParam = searchParams.get("draft");
-    if (draftParam) {
-      handleDraftTextChange(draftParam);
-      setTimeout(() => { handleCreateDraftRef.current?.(draftParam); }, 500);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   }, []);
 
   useEffect(() => {
@@ -360,16 +350,6 @@ export default function CraftingPage() {
         window.clearTimeout(copyResetTimeoutRef.current);
       }
     };
-
-  // Seed content from dashboard Quick Draft (?draft=...)
-  useEffect(() => {
-    const draftParam = searchParams.get("draft");
-    if (draftParam) {
-      handleDraftTextChange(draftParam);
-      setTimeout(() => { handleCreateDraftRef.current?.(draftParam); }, 500);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   }, []);
 
   useEffect(() => {

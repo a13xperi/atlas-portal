@@ -7,9 +7,8 @@ import AppShell from "@/components/layout/AppShell";
 import StatusPill from "@/components/ui/StatusPill";
 import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
-import { api, TweetDraft } from "@/lib/api";
+import { api, TweetDraft, TrendingTopic } from "@/lib/api";
 import { PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users, TrendingUp, X } from "lucide-react";
-import LoopPanel from "@/components/ui/LoopPanel";
 import DashboardSkeleton from "@/components/skeletons/DashboardSkeleton";
 import OracleWidget from "@/components/oracle/OracleWidget";
 
@@ -40,6 +39,7 @@ export default function DashboardPage() {
   const [engagementDraftId, setEngagementDraftId] = useState<string | null>(null);
   const [engagementForm, setEngagementForm] = useState({ likes: "", retweets: "", impressions: "" });
   const [engagementSaving, setEngagementSaving] = useState(false);
+  const [trending, setTrending] = useState<TrendingTopic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,6 +75,13 @@ export default function DashboardPage() {
         }
       };
 
+      const loadTrending = async () => {
+        try {
+          const response = await api.trending.topics();
+          if (!cancelled) setTrending(response.topics?.slice(0, 3) ?? []);
+        } catch {}
+      };
+
       const loadDrafts = async () => {
         try {
           const response = await api.drafts.list();
@@ -93,7 +100,7 @@ export default function DashboardPage() {
         }
       };
 
-      await Promise.all([loadStats(), loadDrafts()]);
+      await Promise.all([loadStats(), loadDrafts(), loadTrending()]);
 
       if (cancelled) {
         return;
@@ -255,9 +262,46 @@ export default function DashboardPage() {
         </p>
       )}
 
-      <div className="mt-6">
-        <LoopPanel />
-      </div>
+      {trending.length > 0 && (
+        <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-5">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-teal">
+              Trending Now
+            </p>
+            <Link
+              href="/alerts"
+              className="text-xs text-atlas-text-muted hover:text-atlas-teal transition-colors"
+            >
+              View all signals &rarr;
+            </Link>
+          </div>
+          <div className="mt-3 space-y-2">
+            {trending.map((topic) => (
+              <Link
+                key={topic.id}
+                href="/crafting"
+                className="flex items-center justify-between rounded-xl bg-atlas-bg/40 px-4 py-3 group card-interactive"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-atlas-text truncate group-hover:text-atlas-teal transition-colors">
+                    {topic.headline || topic.topic}
+                  </p>
+                  {topic.sentiment && (
+                    <p className={`mt-0.5 text-[10px] uppercase tracking-wide ${
+                      topic.sentiment === "bullish" ? "text-atlas-success" : topic.sentiment === "bearish" ? "text-atlas-error" : "text-atlas-text-muted"
+                    }`}>
+                      {topic.sentiment}
+                    </p>
+                  )}
+                </div>
+                <span className="ml-3 shrink-0 text-[10px] text-atlas-text-muted group-hover:text-atlas-teal transition-colors">
+                  Draft &rarr;
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {navCards.map((card) => (
