@@ -29,6 +29,7 @@ import DraftHistorySidebar, {
 } from "@/components/crafting/DraftHistorySidebar";
 import NewsMode from "@/components/crafting/NewsMode";
 import ContentInput from "@/components/ui/ContentInput";
+import { useVoiceRecorder } from "@/lib/useVoiceRecorder";
 import GradientButton from "@/components/ui/GradientButton";
 import ReplyAngleSelector from "@/components/ui/ReplyAngleSelector";
 import RefinementChips, {
@@ -260,6 +261,9 @@ export default function CraftingPage() {
   } | null>(null);
   const activeDraftInitialized = useRef(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
+  const voiceRecorder = useVoiceRecorder(useCallback((text: string) => {
+    handleDraftTextChange(text);
+  }, []));
   const draftInputValueRef = useRef("");
   const handleCreateDraftRef = useRef<
     ((text?: string) => Promise<boolean | void>) | null
@@ -1315,6 +1319,16 @@ export default function CraftingPage() {
                     }}
                     sourceError={sourceError}
                     contentError={contentError}
+                    recordingState={voiceRecorder.state}
+                    recordingDuration={voiceRecorder.duration}
+                    recordingError={voiceRecorder.error}
+                    onMicClick={() => {
+                      if (voiceRecorder.state === "recording") {
+                        voiceRecorder.stopRecording();
+                      } else if (voiceRecorder.state === "idle") {
+                        voiceRecorder.startRecording();
+                      }
+                    }}
                   />
                   {activeMode === "new_post" && !draftInputText ? (
                     <div className="mt-3">
