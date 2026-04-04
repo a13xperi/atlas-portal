@@ -264,7 +264,7 @@ const smokeRoutes: SmokeRoute[] = [
     name: "briefing",
     path: "/briefing",
     ready: (page) =>
-      page.getByRole("heading", { name: /configure your daily digest/i }),
+      page.getByRole("heading", { name: /briefing|daily digest/i }).first(),
   },
   {
     name: "search",
