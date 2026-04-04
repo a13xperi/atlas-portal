@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import OnboardingShell from "@/components/layout/OnboardingShell";
 import GradientButton from "@/components/ui/GradientButton";
 import ReferenceVoiceSelector from "@/components/onboarding/ReferenceVoiceSelector";
+import BlendRatioSlider from "@/components/onboarding/BlendRatioSlider";
+import TopicPicker from "@/components/onboarding/TopicPicker";
 import {
   AtSign,
   Link2,
@@ -23,7 +25,6 @@ import {
 } from "@/lib/voice-profile-dimensions";
 import {
   buildReferenceBlendVoices,
-  getEqualReferenceWeights,
   getReferenceAccountLookup,
   persistReferenceSelections,
   REFERENCE_ACCOUNT_FALLBACK,
@@ -85,8 +86,8 @@ const referenceAccountLookup = getReferenceAccountLookup(
 export default function TrackAPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const currentStep = 1;
-  const totalSteps = 3;
+  const [step, setStep] = useState(1);
+  const totalSteps = 5;
   const [dimensions, setDimensions] = useState<VoiceDimensions>(
     TRACK_A_INITIAL_DIMENSIONS
   );
@@ -101,8 +102,9 @@ export default function TrackAPage() {
   const [calibrationResult, setCalibrationResult] = useState<{ analysis: string; tweetsAnalyzed: number } | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [displayNameError, setDisplayNameError] = useState("");
-  const [showRefSelector, setShowRefSelector] = useState(false);
   const [selectedRefIds, setSelectedRefIds] = useState<string[]>([]);
+  const [selfPercentage, setSelfPercentage] = useState(50);
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
 
   useEffect(() => {
     const fallbackDisplayName = user?.displayName || user?.handle;
@@ -151,7 +153,7 @@ export default function TrackAPage() {
       await api.users.updateProfile({ displayName: trimmedDisplayName });
       await api.voice.updateProfile(dimensions);
 
-      setShowRefSelector(true);
+      setStep(2);
     } catch (e) {
       console.error("Failed to save:", e);
     } finally {
@@ -160,25 +162,16 @@ export default function TrackAPage() {
   };
 
   const handleRefSelectorContinue = async () => {
-    if (selectedRefIds.length < 2 || saving) {
-      return;
-    }
-
+    if (selectedRefIds.length < 2 || saving) return;
     setSaving(true);
-
     try {
-      const referenceWeights = getEqualReferenceWeights(selectedRefIds);
-
       await persistReferenceSelections({
         userId: user?.id,
         ids: selectedRefIds,
-        weights: referenceWeights,
         saveRemote: api.referenceAccounts.saveSelections,
       });
-
       for (const referenceId of selectedRefIds) {
         const account = referenceAccountLookup.get(referenceId);
-
         try {
           await api.voice.addReference(
             account?.displayName || account?.name || referenceId,
@@ -188,21 +181,7 @@ export default function TrackAPage() {
           // Reference creation is optional during onboarding.
         }
       }
-
-      try {
-        await api.voice.createBlend(
-          "Onboarding blend",
-          buildReferenceBlendVoices(
-            selectedRefIds,
-            50,
-            REFERENCE_ACCOUNT_FALLBACK
-          )
-        );
-      } catch {
-        // Blend creation is optional during onboarding.
-      }
-
-      router.push("/onboarding/handoff");
+      setStep(3);
     } catch (error) {
       console.error("Failed to save reference voices:", error);
     } finally {
@@ -210,9 +189,46 @@ export default function TrackAPage() {
     }
   };
 
-  if (showRefSelector) {
+  const handleBlendContinue = async () => {
+    setSaving(true);
+    try {
+      await api.voice.createBlend(
+        "Onboarding blend",
+        buildReferenceBlendVoices(selectedRefIds, selfPercentage, REFERENCE_ACCOUNT_FALLBACK)
+      );
+    } catch {
+      // Blend creation is optional during onboarding.
+    } finally {
+      setSaving(false);
+    }
+    setStep(4);
+  };
+
+  const handleTopicsContinue = async () => {
+    setSaving(true);
+    try {
+      await api.briefing.updatePreferences({
+        deliveryTime: "08:00",
+        topics: selectedTopics,
+        sources: [],
+        channel: "Portal Only",
+      });
+    } catch {
+      // Topic saving is optional during onboarding.
+    } finally {
+      setSaving(false);
+    }
+    router.push(`/onboarding/handoff?step=5&total=5`);
+  };
+
+  const referenceNames = selectedRefIds.map((id) => {
+    const account = referenceAccountLookup.get(id);
+    return account?.displayName || account?.name || id;
+  });
+
+  if (step === 2) {
     return (
-      <OnboardingShell maxWidth="720px" step={2} totalSteps={3}>
+      <OnboardingShell maxWidth="720px" step={2} totalSteps={totalSteps}>
         <div className="mt-8">
           <ReferenceVoiceSelector
             accounts={REFERENCE_ACCOUNT_FALLBACK}
@@ -225,12 +241,53 @@ export default function TrackAPage() {
     );
   }
 
+  if (step === 3) {
+    return (
+      <OnboardingShell maxWidth="480px" step={3} totalSteps={totalSteps}>
+        <div className="mt-8 space-y-6">
+          <BlendRatioSlider
+            selfPercentage={selfPercentage}
+            onChange={setSelfPercentage}
+            referenceNames={referenceNames}
+          />
+          <GradientButton fullWidth onClick={handleBlendContinue} disabled={saving}>
+            {saving ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Saving blend...
+              </span>
+            ) : "Continue"}
+          </GradientButton>
+        </div>
+      </OnboardingShell>
+    );
+  }
+
+  if (step === 4) {
+    return (
+      <OnboardingShell maxWidth="480px" step={4} totalSteps={totalSteps}>
+        <div className="mt-8 space-y-6">
+          <TopicPicker
+            selected={selectedTopics}
+            onChange={setSelectedTopics}
+          />
+          <GradientButton
+            fullWidth
+            onClick={handleTopicsContinue}
+            disabled={saving || selectedTopics.length < 1}
+          >
+            {saving ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Saving...
+              </span>
+            ) : "Continue"}
+          </GradientButton>
+        </div>
+      </OnboardingShell>
+    );
+  }
+
   return (
-    <OnboardingShell
-      maxWidth="720px"
-      step={currentStep}
-      totalSteps={totalSteps}
-    >
+    <OnboardingShell maxWidth="720px" step={1} totalSteps={totalSteps}>
       <div className="mt-8 space-y-8">
         <section className="rounded-3xl border border-glass-border bg-glass p-6 backdrop-blur-xl sm:p-7">
           <div className="flex flex-wrap items-center justify-between gap-3">

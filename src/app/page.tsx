@@ -62,8 +62,8 @@ export default function LoginPage() {
         await login(email.trim(), password);
         router.push("/dashboard");
       } else {
-        await register(handle.trim(), email.trim(), password, "A");
-        router.push("/onboarding/track-a");
+        await register(handle.trim(), email.trim(), password);
+        router.push("/onboarding");
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
