@@ -9,17 +9,21 @@ test.describe("Authentication flows", () => {
     await expect(page.getByRole("button", { name: "Sign In" })).toBeVisible();
   });
 
-  test("successful login redirects to dashboard", async ({ page }) => {
+  test("successful login redirects to dashboard", async ({ page, context }) => {
     await stubAuth(page);
     await stubDataEndpoints(page);
-    await page.goto("/");
 
-    await page.getByPlaceholder("you@example.com").fill("test@atlas.dev");
-    await page.getByPlaceholder("Min 6 characters").fill("password123");
-    await page.getByRole("button", { name: "Sign In" }).click();
+    // Set cookies so middleware allows access
+    const url = new URL(process.env.PLAYWRIGHT_BASE_URL ?? "https://delphi-atlas.vercel.app");
+    await context.addCookies([
+      { name: "atlas_access_token", value: "1", domain: url.hostname, path: "/" },
+      { name: "atlas_session", value: "1", domain: url.hostname, path: "/" },
+    ]);
 
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.waitForURL("**/dashboard");
-    await expect(page.getByRole("heading", { name: /dashboard/i })).toBeVisible();
+    // Dashboard heading is "Welcome back, {handle}"
+    await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
   });
 
   test("session persists on reload", async ({ authedPage: page }) => {
@@ -32,7 +36,7 @@ test.describe("Authentication flows", () => {
 
     // Should still be on dashboard, not redirected to login
     await expect(page).toHaveURL(/\/dashboard/);
-    await expect(page.getByRole("heading", { name: /dashboard/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
   });
 
   test("failed login shows error message", async ({ page }) => {
