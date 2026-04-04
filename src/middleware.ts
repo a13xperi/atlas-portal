@@ -2,23 +2,25 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Public routes that don't require authentication
-const PUBLIC_PATHS = new Set(["/", "/auth/x/callback"]);
+const PUBLIC_PATHS = new Set(["/", "/auth/x/callback", "/onboarding"]);
 
 function isPublicPath(pathname: string): boolean {
-  return PUBLIC_PATHS.has(pathname) || pathname.startsWith("/_next") || pathname.startsWith("/api");
+  return PUBLIC_PATHS.has(pathname) || pathname.startsWith("/onboarding") || pathname.startsWith("/_next") || pathname.startsWith("/api");
 }
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Auth redirect: if no token cookie and hitting a protected route, redirect to login
-  const hasToken = request.cookies.has("atlas_access_token");
-  if (!hasToken && !isPublicPath(pathname)) {
+  // Auth redirect: check for the session flag cookie (set client-side after login).
+  // The real auth token lives on the backend domain (cross-origin HttpOnly cookie),
+  // so we use a lightweight flag cookie on the frontend domain as a hint.
+  const hasSession = request.cookies.has("atlas_session");
+  if (!hasSession && !isPublicPath(pathname)) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
   // If authenticated user hits login page, redirect to dashboard
-  if (hasToken && pathname === "/") {
+  if (hasSession && pathname === "/") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
