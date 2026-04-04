@@ -264,6 +264,7 @@ export default function CraftingPage() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [voiceBanner, setVoiceBanner] = useState<string | null>(null);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
   const [visualConcept, setVisualConcept] = useState<GeneratedImage | null>(null);
@@ -348,6 +349,22 @@ export default function CraftingPage() {
       console.error("Failed to load summary:", loadSummaryError);
     }
   }, []);
+
+  useEffect(() => {
+    const voiceName = searchParams.get("voice");
+    if (!voiceName || blends.length === 0) return;
+    const match = blends.find((b) => b.name.toLowerCase() === voiceName.toLowerCase());
+    if (match) {
+      setVoiceMode("blended");
+      setSelectedBlendId(match.id);
+      setVoiceBanner(voiceName);
+      setTimeout(() => setVoiceBanner(null), 6000);
+    } else if (voiceName.toLowerCase() === "personal voice") {
+      setVoiceMode("my_voice");
+      setVoiceBanner("Personal Voice");
+      setTimeout(() => setVoiceBanner(null), 6000);
+    }
+  }, [blends, searchParams]);
 
   const loadBlends = useCallback(async () => {
     try {
@@ -1167,6 +1184,28 @@ export default function CraftingPage() {
 
   return (
     <AppShell>
+      {voiceBanner && (
+        <div className="mb-4 flex items-center justify-between rounded-2xl border border-atlas-teal/30 bg-atlas-teal/5 px-5 py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-atlas-teal/20">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-atlas-teal" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-atlas-teal">
+                Now crafting with <span className="text-atlas-text">{voiceBanner}</span>
+              </p>
+              <p className="text-[10px] text-atlas-text-muted">
+                All generated drafts will use this voice. Change it below.
+              </p>
+            </div>
+          </div>
+          <button type="button" onClick={() => setVoiceBanner(null)} className="text-atlas-text-muted hover:text-atlas-text transition-colors" aria-label="Dismiss">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       <div className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:gap-0 sm:rounded-3xl sm:px-6">
         <div className="flex items-center gap-4 sm:gap-6">
           <svg

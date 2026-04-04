@@ -73,9 +73,9 @@ export default function VoiceProfilesPage() {
   const selectedIsPersonal = selectedVoiceId === PERSONAL_VOICE_ID;
   const selectedBlend = blends.find((b) => b.id === selectedVoiceId);
 
-  const handleUseVoice = (id: string) => {
+  const handleUseVoice = (id: string, name: string) => {
     setActiveVoiceId(id);
-    router.push("/crafting");
+    router.push(`/crafting?voice=${encodeURIComponent(name)}`);
   };
 
   const handleSaveVoice = async (name: string, dimensions: VoiceDimensions) => {
@@ -141,7 +141,7 @@ export default function VoiceProfilesPage() {
             isSelected={selectedVoiceId === PERSONAL_VOICE_ID}
             dimensions={personalDimensions}
             onSelect={() => setSelectedVoiceId(PERSONAL_VOICE_ID)}
-            onUse={() => handleUseVoice(PERSONAL_VOICE_ID)}
+            onUse={() => handleUseVoice(PERSONAL_VOICE_ID, "Personal Voice")}
           />
           {blends.map((blend) => (
             <VoiceCard
@@ -152,7 +152,7 @@ export default function VoiceProfilesPage() {
               isSelected={selectedVoiceId === blend.id}
               dimensions={DEFAULT_VOICE_DIMENSIONS}
               onSelect={() => setSelectedVoiceId(blend.id)}
-              onUse={() => handleUseVoice(blend.id)}
+              onUse={() => handleUseVoice(blend.id, blend.name)}
             />
           ))}
           <button
