@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import AppShell from "@/components/layout/AppShell";
@@ -93,16 +94,16 @@ export default function AnalyticsPage() {
 
   const usageStats = summary
     ? [
-        { label: "Drafts", value: String(summary.draftsCreated) },
-        { label: "Feedback", value: String(summary.feedbackGiven) },
-        { label: "Refinements", value: String(summary.refinements ?? 0) },
-        { label: "Ingested", value: String(summary.reportsIngested) },
+        { label: "Drafts", value: String(summary.draftsCreated), href: "/crafting" },
+        { label: "Feedback", value: String(summary.feedbackGiven), href: "/crafting" },
+        { label: "Refinements", value: String(summary.refinements ?? 0), href: "/voice-profiles" },
+        { label: "Ingested", value: String(summary.reportsIngested), href: "/alerts" },
       ]
     : [
-        { label: "Drafts", value: "0" },
-        { label: "Feedback", value: "0" },
-        { label: "Refinements", value: "0" },
-        { label: "Ingested", value: "0" },
+        { label: "Drafts", value: "0", href: "/crafting" },
+        { label: "Feedback", value: "0", href: "/crafting" },
+        { label: "Refinements", value: "0", href: "/voice-profiles" },
+        { label: "Ingested", value: "0", href: "/alerts" },
       ];
 
   const allZero = usageStats.every((s) => s.value === "0");
@@ -171,14 +172,18 @@ export default function AnalyticsPage() {
                   </div>
                 ))
               : usageStats.map((stat) => (
-                  <div key={stat.label} className="text-center">
-                    <p className="text-xs text-atlas-text-secondary uppercase tracking-wide">
+                  <Link
+                    key={stat.label}
+                    href={stat.href}
+                    className="text-center rounded-xl p-3 -m-3 transition-colors hover:bg-white/[0.04] cursor-pointer group"
+                  >
+                    <p className="text-xs text-atlas-text-secondary uppercase tracking-wide group-hover:text-atlas-teal transition-colors">
                       {stat.label}
                     </p>
-                    <p className="font-heading font-extrabold text-3xl text-atlas-text mt-1">
+                    <p className="font-heading font-extrabold text-3xl text-atlas-text mt-1 group-hover:text-atlas-teal transition-colors">
                       {stat.value}
                     </p>
-                  </div>
+                  </Link>
                 ))}
           </div>
           {/* Sparkline */}
