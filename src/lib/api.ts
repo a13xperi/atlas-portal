@@ -391,6 +391,12 @@ export const api = {
         messages: Array<{ content: string; role: "oracle" }>;
         llmGenerated: boolean;
       }>("/api/oracle/message", { method: "POST", body }),
+
+    chat: (body: {
+      messages: Array<{ role: "user" | "oracle"; content: string }>;
+      page?: string;
+    }) =>
+      request<{ text: string }>("/api/oracle/chat", { method: "POST", body }),
   },
 };
 

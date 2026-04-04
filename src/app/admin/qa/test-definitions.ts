@@ -900,6 +900,201 @@ export const sections: TestSection[] = [
       },
     ],
   },
+  {
+    id: "voice-capture",
+    icon: "mic",
+    title: "16. Voice Capture",
+    tests: [
+      {
+        id: "VC-01",
+        name: "Mic button visible in Crafting Station",
+        category: "functional",
+        priority: "high",
+        steps: [
+          "Go to /crafting",
+          "Look below the Generate Draft button",
+          "Verify mic icon button with 'or speak your idea' label is visible",
+        ],
+        expected: "Mic button renders as a circle with microphone icon. Label text visible beside it.",
+      },
+      {
+        id: "VC-02",
+        name: "Voice recording starts and stops",
+        category: "functional",
+        priority: "critical",
+        steps: [
+          "Click the mic button",
+          "Speak a sentence (e.g. 'Bitcoin ETF inflows are accelerating')",
+          "Click the stop button (square icon replaces mic)",
+          "Wait for transcription to complete",
+        ],
+        expected: "Button turns red with pulsing animation while recording. Interim text shows as you speak. On stop, text populates the input and a draft is generated with sourceType VOICE_NOTE.",
+      },
+      {
+        id: "VC-03",
+        name: "Unsupported browser fallback",
+        category: "ux",
+        priority: "medium",
+        steps: [
+          "Open in Firefox (Web Speech API not supported)",
+          "Go to /crafting",
+          "Check if mic button is hidden",
+        ],
+        expected: "Mic button does not render in unsupported browsers. No errors in console.",
+      },
+    ],
+  },
+  {
+    id: "monitor-builder",
+    icon: "radar",
+    title: "17. NLP Monitor Builder",
+    tests: [
+      {
+        id: "MON-01",
+        name: "Open monitor builder panel",
+        category: "functional",
+        priority: "high",
+        steps: [
+          "Go to /alerts",
+          "Click Monitors button in top-right",
+          "Click '+ New Monitor'",
+        ],
+        expected: "Monitor builder panel expands with type selector, value input, sentiment filter, and delivery options.",
+      },
+      {
+        id: "MON-02",
+        name: "Create keyword monitor",
+        category: "functional",
+        priority: "critical",
+        steps: [
+          "Select 'Keyword' monitor type",
+          "Type 'ETH' and press Enter",
+          "Type 'staking' and press Enter",
+          "Select sentiment: bullish",
+          "Select delivery: In-App + Telegram",
+          "Click Create Monitor",
+        ],
+        expected: "Keywords appear as teal chips. Monitor is created and appears in the list below. Panel closes.",
+      },
+      {
+        id: "MON-03",
+        name: "Create NLP topic monitor with suggestion",
+        category: "functional",
+        priority: "high",
+        steps: [
+          "Select 'NLP Topic' type",
+          "Click 'Ethereum L2' from suggested topics",
+          "Click Create Monitor",
+        ],
+        expected: "Topic input auto-fills. Monitor created successfully.",
+      },
+    ],
+  },
+  {
+    id: "campaigns",
+    icon: "calendar",
+    title: "18. Campaign Orchestration",
+    tests: [
+      {
+        id: "CMP-01",
+        name: "Campaigns page loads with queue",
+        category: "functional",
+        priority: "high",
+        steps: [
+          "Navigate to /campaigns (or use Cmd+K → Campaigns)",
+          "Verify Queue tab is active by default",
+          "Check that approved drafts appear with numbered queue positions",
+        ],
+        expected: "Page shows 'Your posting queue' heading. Queue tab active. Approved drafts listed with sequence numbers.",
+      },
+      {
+        id: "CMP-02",
+        name: "Generate thread from queued draft",
+        category: "functional",
+        priority: "critical",
+        steps: [
+          "On an approved draft card, click 'Generate Thread'",
+          "Wait for thread generation to complete",
+        ],
+        expected: "Loading spinner shows 'Threading...'. Thread appears below draft as numbered posts (1/N, 2/N, etc.).",
+      },
+      {
+        id: "CMP-03",
+        name: "Post to X from queue",
+        category: "functional",
+        priority: "critical",
+        steps: [
+          "Click 'Post to X' on a queued draft",
+          "Verify posting state and result",
+        ],
+        expected: "Button shows 'Posting...' with spinner. On success, draft moves to Posted tab. Action message confirms.",
+      },
+      {
+        id: "CMP-04",
+        name: "Move draft to queue",
+        category: "functional",
+        priority: "high",
+        steps: [
+          "Switch to Drafts tab",
+          "Click 'Add to Queue' on a draft",
+        ],
+        expected: "Draft moves to Queue tab. Action message confirms move.",
+      },
+      {
+        id: "CMP-05",
+        name: "Archive draft",
+        category: "functional",
+        priority: "medium",
+        steps: [
+          "Click Archive on any draft",
+          "Verify it disappears from the list",
+        ],
+        expected: "Draft removed from view. Action message says 'Draft archived.'",
+      },
+    ],
+  },
+  {
+    id: "management-page",
+    icon: "users",
+    title: "19. Team Management Page",
+    tests: [
+      {
+        id: "MGT-01",
+        name: "Management page loads team grid",
+        category: "functional",
+        priority: "high",
+        steps: [
+          "Navigate to /management",
+          "Verify team members displayed as cards",
+        ],
+        expected: "Page shows 'Team Management' heading with member count. Cards show avatar initial, name, handle, role badge, draft count, session count.",
+      },
+      {
+        id: "MGT-02",
+        name: "Push Top Profiles action",
+        category: "functional",
+        priority: "medium",
+        steps: [
+          "Click 'Push Top Profiles' button",
+          "Verify action feedback",
+        ],
+        expected: "Button shows loading state. Action message appears with affected count.",
+      },
+      {
+        id: "MGT-03",
+        name: "Send Nudge + Push Style actions",
+        category: "functional",
+        priority: "medium",
+        steps: [
+          "Click 'Send Nudge'",
+          "Verify result message",
+          "Click 'Push Style'",
+          "Verify result message",
+        ],
+        expected: "Each action shows result with affected count. Only one action runs at a time (buttons disabled during action).",
+      },
+    ],
+  },
 ];
 
 /** Total number of individual tests across all sections */

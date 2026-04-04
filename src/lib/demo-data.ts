@@ -15,6 +15,7 @@ import type {
   Alert,
   AlertSubscription,
   DailyActivity,
+  TeamMember,
 } from "./api";
 
 const now = new Date().toISOString();
@@ -455,6 +456,20 @@ const referenceAccounts = {
 
 // ── Path Map ─────────────────────────────────────────────────────────────────
 
+
+// ── Team Members (Management) ─────────────────────────────────────────────────
+
+const teamMembers: { team: TeamMember[] } = {
+  team: [
+    { id: "u1", handle: "DegenSpartan", displayName: "Degen Spartan", role: "ANALYST", _count: { tweetDrafts: 23, sessions: 14 } },
+    { id: "u2", handle: "CryptoHayes", displayName: "Arthur Hayes", role: "ANALYST", _count: { tweetDrafts: 18, sessions: 9 } },
+    { id: "u3", handle: "inversebrah", displayName: "inversebrah", role: "ANALYST", _count: { tweetDrafts: 31, sessions: 22 } },
+    { id: "u4", handle: "punk6529", displayName: "punk6529", role: "ANALYST", _count: { tweetDrafts: 15, sessions: 7 } },
+    { id: "u5", handle: "Pentosh1", displayName: "Pentosh1", role: "ANALYST", _count: { tweetDrafts: 8, sessions: 4 } },
+    { id: "u6", handle: "a13xperi", displayName: "Alex Peri", role: "ADMIN", _count: { tweetDrafts: 47, sessions: 31 } },
+  ],
+};
+
 const demoData: Record<string, unknown> = {
   "/api/analytics/summary": analyticsSummary,
   "/api/drafts": drafts,
@@ -504,6 +519,7 @@ const demoData: Record<string, unknown> = {
     total: 5,
   },
 
+  "/api/users/team": teamMembers,
   "/api/briefing/latest": {
     id: "b1",
     date: "2026-04-04",
@@ -624,6 +640,19 @@ export function getDemoResponse(path: string, method: string = "GET"): unknown |
   // Trending scan
   if (method === "POST" && cleanPath === "/api/trending/scan") {
     return { alerts: [] };
+  }
+
+  // Thread generation
+  if (method === "POST" && /^\/api\/drafts\/[^/]+\/thread$/.test(cleanPath)) {
+    return {
+      thread: [
+        "1/ Blob fees are cratering. Here's why that's actually the most bullish signal for Ethereum right now. 🧵",
+        "2/ L2s just shipped calldata compression. Translation: posting data to Ethereum is getting cheaper, faster.",
+        "3/ This is the flywheel: cheaper → more activity → more fees → repeat. The blob fee drop IS the adoption signal.",
+        "4/ Don't confuse price compression with value destruction. This is infrastructure maturing. And mature infra attracts institutions.",
+      ],
+      count: 4,
+    };
   }
 
   // Draft create/update passthrough
