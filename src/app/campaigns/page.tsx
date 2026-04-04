@@ -328,7 +328,7 @@ function QueueSection() {
                         catch { setActionMessage("Post failed."); }
                         finally { setPostingId(null); }
                       }}
-                      className="rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-steel px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+                      className="rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
                       {postingId === draft.id ? <span className="flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Posting…</span> : "Post to X"}
                     </button>
                   </>
