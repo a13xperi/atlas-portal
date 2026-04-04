@@ -22,6 +22,7 @@ import NotificationDropdown from "@/components/ui/NotificationDropdown";
 import { useAuth } from "@/lib/auth";
 import { useAlertSocket } from "@/lib/alertSocket";
 import { useCommandPalette } from "@/components/ui/CommandPalette";
+import { getCachedTier } from "@/lib/arena-tier-cache";
 
 export interface NavBarProps {
   variant: "app" | "onboarding";
@@ -87,6 +88,7 @@ export default function NavBar({ variant }: NavBarProps) {
   const initial = user?.handle?.[0]?.toUpperCase() || user?.displayName?.[0]?.toUpperCase() || "A";
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const cachedTier = typeof window !== "undefined" ? getCachedTier() : null;
 
   useEffect(() => {
     setMobileOpen(false);
@@ -188,12 +190,15 @@ export default function NavBar({ variant }: NavBarProps) {
               </div>
               <Link
                 href="/profile"
-                aria-label="Open profile"
-                className={`w-8 h-8 rounded-full bg-atlas-surface border flex items-center justify-center text-xs transition-colors ${
-                  pathname === "/profile"
-                    ? "border-atlas-teal text-atlas-teal"
-                    : "border-glass-border text-atlas-text-secondary hover:border-atlas-text-secondary"
+                aria-label={cachedTier ? `Open profile — ${cachedTier.tier.name} (#${cachedTier.rank})` : "Open profile"}
+                className={`w-8 h-8 rounded-full bg-atlas-surface border-2 flex items-center justify-center text-xs font-medium transition-colors ${
+                  cachedTier
+                    ? `${cachedTier.tier.borderColor} ${cachedTier.tier.color}`
+                    : pathname === "/profile"
+                      ? "border-atlas-teal text-atlas-teal"
+                      : "border-glass-border text-atlas-text-secondary hover:border-atlas-text-secondary"
                 }`}
+                title={cachedTier ? `${cachedTier.tier.name} · #${cachedTier.rank} · ${cachedTier.score} pts` : undefined}
               >
                 {initial}
               </Link>

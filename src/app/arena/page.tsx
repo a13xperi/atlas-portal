@@ -10,6 +10,7 @@ import { rankTeam, RankedAnalyst, TIERS } from "@/lib/atlas-score";
 import { Trophy, TrendingUp, Flame, Minus, Zap, BarChart3, Loader2, AlertTriangle, Send, Volume2, ChevronUp, ChevronDown } from "lucide-react";
 import { getSuperlatives } from "@/lib/arena-superlatives";
 import { saveSnapshot, getPositionChange, isSnapshotStale } from "@/lib/arena-history";
+import { cacheMyTier } from "@/lib/arena-tier-cache";
 
 const SCORE_LABELS: Record<string, string> = {
   output: "Output",
@@ -117,6 +118,13 @@ export default function ArenaPage() {
   const inactiveAnalysts = ranked.filter(
     (r) => r.analyst._count.sessions === 0 && r.analyst._count.tweetDrafts === 0
   );
+
+  // Cache user's tier for NavBar badge
+  useEffect(() => {
+    if (myEntry) {
+      cacheMyTier(myEntry.tier.name, myEntry.score.total, myEntry.rank);
+    }
+  }, [myEntry]);
 
   // Save snapshot for position tracking (refresh every 6 hours)
   useEffect(() => {
