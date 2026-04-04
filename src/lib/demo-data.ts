@@ -639,5 +639,31 @@ export function getDemoResponse(path: string, method: string = "GET"): unknown |
     return { subscription: { id: "demo-sub-new", type: "TOPIC", value: "New Topic", isActive: true, delivery: ["in_app"] } };
   }
 
+  // Manager actions (Arena page)
+  if (method === "POST" && cleanPath === "/api/users/push-top-profiles") {
+    return { message: "Top voice profiles pushed to 4 analysts", affected: 4 };
+  }
+  if (method === "POST" && cleanPath === "/api/users/send-nudge") {
+    return { message: "Nudge sent to 2 inactive analysts", affected: 2 };
+  }
+  if (method === "POST" && cleanPath === "/api/users/push-style") {
+    return { message: "Style pushed to all analysts", affected: 6 };
+  }
+
+  // Voice profile update
+  if ((method === "PUT" || method === "PATCH") && cleanPath === "/api/voice/profile") {
+    return { profile: voiceProfile.profile };
+  }
+
+  // Briefing preferences update
+  if (method === "PUT" && cleanPath === "/api/briefing/preferences") {
+    return { preference: briefingLatest.preference };
+  }
+
+  // Catch-all for any other POST/PUT/PATCH in demo mode
+  if (method !== "GET") {
+    return {};
+  }
+
   return demoData[cleanPath] ?? null;
 }

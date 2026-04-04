@@ -286,7 +286,7 @@ const smokeRoutes: SmokeRoute[] = [
   {
     name: "management",
     path: "/management",
-    ready: (page) => page.getByRole("heading", { name: /team management/i }),
+    ready: (page) => page.getByRole("heading", { name: /atlas arena|team management/i }),
   },
   {
     name: "profile",
