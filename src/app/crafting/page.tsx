@@ -28,9 +28,10 @@ import DraftHistorySidebar, {
   DraftHistoryItem,
 } from "@/components/crafting/DraftHistorySidebar";
 import NewsMode from "@/components/crafting/NewsMode";
+import VoiceCapture from "@/components/crafting/VoiceCapture";
 import ContentInput from "@/components/ui/ContentInput";
 import GradientButton from "@/components/ui/GradientButton";
-import ReplyAngleSelector from "@/components/ui/ReplyAngleSelector";
+import ReplyAngleSelector, { type ReplyAngle } from "@/components/ui/ReplyAngleSelector";
 import RefinementChips, {
   RefinementChipOption,
 } from "@/components/ui/RefinementChips";
@@ -62,7 +63,7 @@ const NEWS_SOURCE_PREFIX = "source:";
 const VOICE_COMPARISON_DELTA = { humor: 20 } as const;
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
-type DraftSourceType = "REPORT" | "ARTICLE" | "MANUAL";
+type DraftSourceType = "REPORT" | "ARTICLE" | "MANUAL" | "VOICE_NOTE";
 type VoiceComparisonOption = {
   draft: TweetDraft;
   label: string;
@@ -253,6 +254,7 @@ export default function CraftingPage() {
     options: VoiceComparisonOption[];
   } | null>(null);
   const [draftInputText, setDraftInputText] = useState("");
+  const [replySourceText, setReplySourceText] = useState<string | null>(null);
   const [isContentDragActive, setIsContentDragActive] = useState(false);
   const [urlPreview, setUrlPreview] = useState<{
     title?: string;
@@ -703,7 +705,16 @@ export default function CraftingPage() {
   const handleCreateDraft = async (text = draftInputValueRef.current) => {
     const { content, hasSource, sourceType } = getDraftGenerationInput(text);
     const angle = activeMode === "reply_to_tweet" ? replyAngle : null;
+    if (activeMode === "reply_to_tweet" && content.trim()) {
+      setReplySourceText(content.trim());
+    }
     return createDraftFromSource(content, sourceType, hasSource, angle);
+  };
+
+  const handleVoiceTranscript = (transcript: string) => {
+    draftInputValueRef.current = transcript;
+    setDraftInputText(transcript);
+    void createDraftFromSource(transcript, "VOICE_NOTE", true, null);
   };
 
   handleCreateDraftRef.current = handleCreateDraft;
@@ -1286,7 +1297,7 @@ export default function CraftingPage() {
                 {activeMode === "reply_to_tweet" ? (
                   <div className="mb-2 mt-4">
                     <ReplyAngleSelector
-                      selectedAngle={replyAngle as "Direct" | "Curious" | "Concise"}
+                      selectedAngle={replyAngle as ReplyAngle}
                       onAngleChange={setReplyAngle}
                     />
                   </div>
@@ -1370,6 +1381,15 @@ export default function CraftingPage() {
                     <p className="mt-1 text-center text-[10px] text-atlas-text-muted sm:col-span-2">
                       ⌘↩ to generate
                     </p>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <VoiceCapture
+                      onTranscript={handleVoiceTranscript}
+                      disabled={creating}
+                    />
+                    <span className="text-[10px] text-atlas-text-muted">
+                      or speak your idea
+                    </span>
                   </div>
                   {error ? (
                     <div
@@ -1528,6 +1548,16 @@ export default function CraftingPage() {
             </div>
           ) : activeDraft ? (
             <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6">
+              {replySourceText && activeMode === "reply_to_tweet" ? (
+                <div className="mb-4 rounded-xl border-l-2 border-atlas-text-muted/40 bg-atlas-bg/40 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-atlas-text-muted">
+                    Replying to
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-atlas-text-secondary line-clamp-4">
+                    {replySourceText}
+                  </p>
+                </div>
+              ) : null}
               <textarea
                 value={activeDraft.content}
                 readOnly
@@ -1569,9 +1599,11 @@ export default function CraftingPage() {
                             className={
                               activeDraft.content.length > 280
                                 ? "text-atlas-error"
-                                : activeDraft.content.length > 250
+                                : activeDraft.content.length > 259
                                   ? "text-atlas-warning"
-                                  : "text-atlas-teal"
+                                  : activeDraft.content.length > 219
+                                    ? "text-yellow-500"
+                                    : "text-atlas-teal"
                             }
                           />
                         </svg>
@@ -1580,9 +1612,11 @@ export default function CraftingPage() {
                         className={`text-xs font-mono ${
                           activeDraft.content.length > 280
                             ? "text-atlas-error"
-                            : activeDraft.content.length > 250
+                            : activeDraft.content.length > 259
                               ? "text-atlas-warning"
-                              : "text-atlas-text-secondary"
+                              : activeDraft.content.length > 219
+                                ? "text-yellow-500"
+                                : "text-atlas-text-secondary"
                         }`}
                       >
                         {activeDraft.content.length}/280

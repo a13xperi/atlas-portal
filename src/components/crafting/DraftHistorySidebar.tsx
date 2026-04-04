@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { TweetDraft } from "@/lib/api";
 
 export interface DraftHistoryItem {
@@ -44,20 +45,47 @@ export default function DraftHistorySidebar({
   onSelectDraft,
   mobile = false,
 }: DraftHistorySidebarProps) {
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
     <aside
       aria-label="Draft history"
-      className={mobile ? "w-full" : "hidden w-64 shrink-0 lg:block"}
+      className={mobile ? "w-full" : `hidden shrink-0 lg:block ${collapsed ? "w-12" : "w-64"} transition-all duration-200`}
     >
       <div className={mobile ? "space-y-4" : "sticky top-24 space-y-4"}>
         <div className="bg-glass/50 backdrop-blur-xl border border-glass-border rounded-2xl p-5">
-          <h2 className="font-heading font-semibold text-lg text-atlas-text">Draft History</h2>
-          <p className="mt-1 font-body text-sm text-atlas-text-secondary">
-            Session drafts appear here as you generate them.
-          </p>
+          <div className="flex items-center justify-between">
+            {!collapsed && (
+              <h2 className="font-heading font-semibold text-lg text-atlas-text">Draft History</h2>
+            )}
+            {!mobile && (
+              <button
+                type="button"
+                onClick={() => setCollapsed(!collapsed)}
+                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                className="rounded-lg p-1 text-atlas-text-secondary transition-colors hover:text-atlas-teal"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className={`h-4 w-4 transition-transform ${collapsed ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                </svg>
+              </button>
+            )}
+          </div>
+          {!collapsed && (
+            <p className="mt-1 font-body text-sm text-atlas-text-secondary">
+              Session drafts appear here as you generate them.
+            </p>
+          )}
         </div>
 
-        {drafts.length === 0 ? (
+        {collapsed ? null : drafts.length === 0 ? (
           <div className="bg-glass/50 backdrop-blur-xl border border-glass-border rounded-2xl p-4">
             <p className="font-body text-sm text-atlas-text-secondary">
               No drafts yet. Generate your first tweet above.

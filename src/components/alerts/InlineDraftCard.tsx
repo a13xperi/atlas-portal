@@ -28,6 +28,7 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
   const [draft, setDraft] = useState<TweetDraft | null>(null);
   const [draftText, setDraftText] = useState(initialDraftText);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   const alertSource = useMemo(() => buildAlertSource(alert), [alert]);
   const hasDraft = draftText.trim().length > 0;
@@ -49,7 +50,7 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
       const response =
         shouldRegenerate && draft?.id
           ? await api.drafts.regenerate(draft.id)
-          : await api.drafts.generate(alertSource, "MANUAL");
+          : await api.drafts.generate(alertSource, "ALERT");
 
       setDraft(response.draft);
       setDraftText(response.draft.content);
@@ -72,6 +73,24 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
 
   const handleRegenerate = () => {
     void generateDraft(Boolean(draft?.id));
+  };
+
+  const handleSave = async () => {
+    if (!draftText.trim()) return;
+
+    try {
+      if (draft?.id) {
+        await api.drafts.update(draft.id, { content: draftText });
+      } else {
+        const response = await api.drafts.create(draftText, "ALERT", alertSource);
+        setDraft(response.draft);
+      }
+      setSaved(true);
+      setError(null);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      setError("Failed to save draft.");
+    }
   };
 
   const handleCopy = async () => {
@@ -164,6 +183,14 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
                   className="rounded-lg border border-glass-border px-3 py-2 text-xs font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Copy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSave()}
+                  disabled={!draftText.trim()}
+                  className="rounded-lg border border-atlas-teal/40 bg-atlas-teal/10 px-3 py-2 text-xs font-semibold text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/15 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {saved ? "Saved!" : "Save Draft"}
                 </button>
                 <button
                   type="button"
