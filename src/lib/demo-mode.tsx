@@ -45,6 +45,8 @@ export function DemoModeProvider({ children }: { children: React.ReactNode }) {
       const next = !prev;
       sessionStorage.setItem(STORAGE_KEY, String(next));
       setApiDemoMode(next);
+      // Reload so all pages refetch with new mode
+      window.location.reload();
       return next;
     });
   }, []);
