@@ -11,6 +11,7 @@ import { api, TweetDraft } from "@/lib/api";
 import { PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users } from "lucide-react";
 import LoopPanel from "@/components/ui/LoopPanel";
 import DashboardSkeleton from "@/components/skeletons/DashboardSkeleton";
+import OracleWidget from "@/components/oracle/OracleWidget";
 
 const navCards = [
   { label: "Crafting Station", href: "/crafting", icon: PenTool },
@@ -148,6 +149,19 @@ export default function DashboardPage() {
       <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
         Welcome back, {user?.handle || "Analyst"}
       </h1>
+
+      <div className="mt-4">
+        <OracleWidget
+          message={
+            stats.drafts > 0
+              ? `You've crafted ${stats.drafts} draft${stats.drafts === 1 ? "" : "s"} this month — ${stats.posts > 0 ? `${stats.posts} made it to X. Your voice is sharpening.` : "time to post one and see how it lands."}`
+              : "Your voice profile is set up. Head to the Crafting Station and turn some alpha into a tweet."
+          }
+          context="dashboard"
+          actionLabel={stats.drafts === 0 ? "Open Crafting Station" : undefined}
+          onAction={stats.drafts === 0 ? () => router.push("/crafting") : undefined}
+        />
+      </div>
 
       {error && (
         <div
