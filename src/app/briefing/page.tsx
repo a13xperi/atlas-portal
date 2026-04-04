@@ -337,7 +337,7 @@ export default function BriefingPage() {
             </div>
 
             <button
-              className="rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-steel px-6 py-3 font-body text-sm font-semibold text-white transition-all duration-200 hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-atlas-teal/40"
+              className="rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-6 py-3 font-body text-sm font-semibold text-white transition-all duration-200 hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-atlas-teal/40"
               type="submit"
             >
               Save briefing preferences

@@ -36,8 +36,8 @@ describe("tokens.gradients", () => {
     }
   );
 
-  it("builds the CTA gradient from the teal and steel brand colors", () => {
+  it("builds the CTA gradient from the teal brand colors", () => {
     expect(gradients.cta).toContain(colors.atlasTeal);
-    expect(gradients.cta).toContain(colors.atlasSteel);
+    expect(gradients.cta).toContain(colors.delphiTeal);
   });
 });

@@ -1,0 +1,79 @@
+import type { VoiceDimensions } from "./voice-profile-dimensions";
+
+// ── Steps ──────────────────────────────────────────────────────────
+export type OracleStep =
+  | "WELCOME"
+  | "TRACK_A_HANDLE"
+  | "TRACK_A_SCANNING"
+  | "TRACK_A_RESULT"
+  | "TRACK_A_RATE"
+  | "TRACK_B_STYLE"
+  | "TRACK_B_DIMENSIONS"
+  | "REFERENCES"
+  | "BLEND"
+  | "TOPICS"
+  | "HANDOFF";
+
+// ── Inline component types ─────────────────────────────────────────
+export type InlineComponentType =
+  | "handle-input"
+  | "scan-progress"
+  | "dimensions"
+  | "tweet-ratings"
+  | "style-picker"
+  | "references"
+  | "blend"
+  | "topics"
+  | "handoff-telegram";
+
+// ── Messages ───────────────────────────────────────────────────────
+export interface ChatMessage {
+  id: string;
+  role: "oracle" | "user" | "system";
+  content: string;
+  component?: {
+    type: InlineComponentType;
+    props?: Record<string, unknown>;
+  };
+  actions?: Array<{
+    label: string;
+    value: string;
+    variant: "primary" | "secondary" | "ghost";
+  }>;
+  timestamp: number;
+}
+
+// ── State ──────────────────────────────────────────────────────────
+export interface OracleState {
+  currentStep: OracleStep;
+  track: "a" | "b" | null;
+  messages: ChatMessage[];
+  pendingMessages: ChatMessage[];
+  isTyping: boolean;
+
+  // Accumulated onboarding data
+  xHandle: string;
+  calibrationResult: { analysis: string; tweetsAnalyzed: number } | null;
+  dimensions: VoiceDimensions;
+  displayName: string;
+  selectedStyle: string | null;
+  selectedRefs: string[];
+  selfPercentage: number;
+  selectedTopics: string[];
+}
+
+// ── Actions ────────────────────────────────────────────────────────
+export type OracleAction =
+  | { type: "SET_TRACK"; track: "a" | "b" }
+  | { type: "ADVANCE"; payload?: string }
+  | { type: "SET_HANDLE"; handle: string }
+  | { type: "SET_CALIBRATION"; result: OracleState["calibrationResult"] }
+  | { type: "SET_DIMENSIONS"; dimensions: VoiceDimensions }
+  | { type: "SET_DISPLAY_NAME"; name: string }
+  | { type: "SET_STYLE"; style: string }
+  | { type: "SET_REFS"; ids: string[] }
+  | { type: "SET_BLEND"; percentage: number }
+  | { type: "SET_TOPICS"; topics: string[] }
+  | { type: "ENQUEUE_MESSAGES"; messages: ChatMessage[] }
+  | { type: "DEQUEUE_MESSAGE" }
+  | { type: "SET_TYPING"; isTyping: boolean };

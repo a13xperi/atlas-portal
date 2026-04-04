@@ -228,7 +228,7 @@ export default function ProfilePage() {
             className="h-fit bg-atlas-surface/60"
           >
             <div className="flex flex-col items-center text-center">
-              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-glass-border bg-gradient-to-r from-atlas-teal to-atlas-steel text-3xl font-heading font-extrabold text-white shadow-lg shadow-atlas-teal/20">
+              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-glass-border bg-gradient-to-r from-delphi-blue-500 to-atlas-teal text-3xl font-heading font-extrabold text-white shadow-lg shadow-atlas-teal/20">
                 {profile.avatarUrl ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img

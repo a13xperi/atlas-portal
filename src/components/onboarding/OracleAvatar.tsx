@@ -1,24 +1,35 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 
 interface OracleAvatarProps {
-  size?: number;
+  size?: "sm" | "md";
 }
 
-export default function OracleAvatar({ size = 48 }: OracleAvatarProps) {
+export default function OracleAvatar({ size = "md" }: OracleAvatarProps) {
+  const [imgError, setImgError] = useState(false);
+  const px = size === "sm" ? 32 : 48;
+
   return (
     <div
-      className="shrink-0 rounded-full overflow-hidden border border-atlas-teal/30 shadow-[0_0_12px_rgba(78,205,196,0.15)]"
-      style={{ width: size, height: size }}
+      className="shrink-0 rounded-full overflow-hidden ring-2 ring-atlas-teal/40 shadow-[0_0_12px_rgba(78,205,196,0.3)]"
+      style={{ width: px, height: px }}
     >
-      <Image
-        src="/images/oracle-avatar.jpg"
-        alt="The Oracle"
-        width={size}
-        height={size}
-        className="object-cover"
-      />
+      {imgError ? (
+        <div className="flex h-full w-full items-center justify-center bg-atlas-surface text-atlas-teal text-lg font-bold">
+          O
+        </div>
+      ) : (
+        <Image
+          src="/images/oracle-avatar.png"
+          alt="The Oracle"
+          width={px}
+          height={px}
+          className="object-cover"
+          onError={() => setImgError(true)}
+        />
+      )}
     </div>
   );
 }

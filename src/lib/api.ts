@@ -349,6 +349,28 @@ export const api = {
     deleteRun: (id: string) =>
       request<{ success: boolean }>(`/api/qa/runs/${id}`, { method: 'DELETE' }),
   },
+
+  oracle: {
+    message: (body: {
+      track: "a" | "b";
+      step: string;
+      action: string;
+      context?: {
+        dimensions?: Record<string, number>;
+        selectedRefs?: string[];
+        blendRatio?: number;
+        blendVoices?: Array<{ label: string; percentage: number }>;
+        topics?: string[];
+        calibrationResult?: { analysis: string; tweetsAnalyzed: number };
+        handle?: string;
+        freeText?: string;
+      };
+    }) =>
+      request<{
+        messages: Array<{ content: string; role: "oracle" }>;
+        llmGenerated: boolean;
+      }>("/api/oracle/message", { method: "POST", body }),
+  },
 };
 
 // Types

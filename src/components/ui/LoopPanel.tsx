@@ -184,7 +184,7 @@ export default function LoopPanel() {
                   <div className="flex-1 relative">
                     <div
                       className={`h-6 rounded-r-lg flex items-center justify-end pr-2 transition-all duration-300 ${
-                        isBest ? "bg-atlas-teal" : "bg-atlas-steel/40"
+                        isBest ? "bg-atlas-teal" : "bg-delphi-blue-400/40"
                       }`}
                       style={{ width: `${widthPct}%` }}
                     >
@@ -235,7 +235,7 @@ export default function LoopPanel() {
                 <button
                   onClick={handleCreatePR}
                   disabled={status !== "completed" || prCreating}
-                  className="w-full py-2 rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-steel text-white text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg transition-all"
+                  className="w-full py-2 rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 text-white text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg transition-all"
                 >
                   {prCreating ? "Creating..." : "Create PR"}
                 </button>

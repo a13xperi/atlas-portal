@@ -37,40 +37,38 @@ describe("ReferenceVoiceSelector", () => {
     mockGetAll.mockReset();
   });
 
-  it("shows the heading and description", () => {
+  it("shows fallback accounts immediately while fetch is pending", () => {
     mockGetAll.mockReturnValue(new Promise(() => {}));
 
     render(<SelectorHarness />);
 
-    expect(screen.getByText("Pick your reference voices")).toBeInTheDocument();
-    expect(
-      screen.getByText(/choose at least 2 accounts/i)
-    ).toBeInTheDocument();
+    // Fallback list renders immediately — no loading spinner
+    expect(screen.getByText("Haseeb Qureshi")).toBeInTheDocument();
+    expect(screen.getByText("@hosseeb")).toBeInTheDocument();
   });
 
-  it("loads accounts from API and renders them with handles", async () => {
+  it("loads accounts, renders letter fallbacks, and filters by category", async () => {
     mockGetAll.mockResolvedValue({
       accounts: [
         {
           id: "hosseeb",
           name: "Haseeb",
           handle: "hosseeb",
-          category: "Crypto/VC",
           profileImageUrl: null,
         },
         {
           id: "DefiIgnas",
           name: "Ignas",
           handle: "DefiIgnas",
-          category: "DeFi",
           avatarUrl: "https://example.com/ignas.png",
+          category: "DeFi",
         },
         {
           id: "naval",
           name: "Naval",
           handle: "naval",
-          category: "Philosophy",
           profileImageUrl: null,
+          category: "Philosophy",
         },
       ],
     });
@@ -95,9 +93,9 @@ describe("ReferenceVoiceSelector", () => {
 
     mockGetAll.mockResolvedValue({
       accounts: [
-        { id: "hosseeb", name: "Haseeb", handle: "hosseeb", category: "Crypto/VC" },
-        { id: "DefiIgnas", name: "Ignas", handle: "DefiIgnas", category: "DeFi" },
-        { id: "naval", name: "Naval", handle: "naval", category: "Philosophy" },
+        { id: "hosseeb", name: "Haseeb", handle: "hosseeb" },
+        { id: "DefiIgnas", name: "Ignas", handle: "DefiIgnas" },
+        { id: "naval", name: "Naval", handle: "naval" },
       ],
     });
 
@@ -131,7 +129,6 @@ describe("ReferenceVoiceSelector", () => {
 
     render(<SelectorHarness />);
 
-    // REFERENCE_ACCOUNT_FALLBACK has displayName "Haseeb Qureshi" and handle "hosseeb"
     expect(await screen.findByText("Haseeb Qureshi")).toBeInTheDocument();
     expect(screen.getByText("@hosseeb")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Crypto/VC" })).toBeInTheDocument();
