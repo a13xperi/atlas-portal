@@ -116,7 +116,7 @@ export default function ManagementPage() {
                   className="rounded-2xl border border-glass-border bg-glass/50 p-5 backdrop-blur-xl"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-atlas-teal to-atlas-steel text-sm font-bold text-white">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-delphi-teal to-delphi-blue-500 text-sm font-bold text-white">
                       {(member.displayName || member.handle)[0]?.toUpperCase()}
                     </div>
                     <div className="min-w-0">

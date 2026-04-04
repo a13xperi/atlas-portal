@@ -197,7 +197,7 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
                   type="button"
                   onClick={handleSaveDraft}
                   disabled={!draftText.trim() || isSaving || !!savedDraftId}
-                  className="rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-steel px-3 py-2 text-xs font-semibold text-atlas-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-3 py-2 text-xs font-semibold text-atlas-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {savedDraftId ? "Saved ✓" : isSaving ? "Saving..." : "Save Draft"}
                 </button>
