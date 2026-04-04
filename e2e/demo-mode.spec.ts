@@ -203,7 +203,7 @@ test.describe("Demo Mode", () => {
       // Demo data populates trending topics and draft history
       await expect(page.getByText("blob fee").first()).toBeVisible({ timeout: 5_000 });
       // Draft history sidebar shows demo drafts
-      await expect(page.getByText("Draft History")).toBeVisible();
+      await expect(page.getByText("Session drafts").first()).toBeVisible();
     });
 
     test("alerts shows mock feed in demo mode", async ({ authedPage: page }) => {

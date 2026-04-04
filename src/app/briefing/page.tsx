@@ -216,11 +216,14 @@ export default function BriefingPage() {
     <AppShell>
       <div className="mx-auto max-w-3xl py-8 space-y-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-1">
+          <div className="space-y-2">
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-atlas-teal">Morning Briefing</p>
             <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text sm:text-4xl">
               Your Briefings
             </h1>
+            <p className="max-w-xl text-sm leading-relaxed text-atlas-text-secondary">
+              Your personalized daily digest. Atlas scans your topics, sources, and the latest market activity to generate a concise briefing you can read in under 2 minutes. Hit Generate Now to create one on demand, or set a delivery time to get them automatically.
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -269,9 +272,10 @@ export default function BriefingPage() {
         )}
 
         {briefings.length === 0 ? (
-          <GlassCard maxWidth="full" className="py-12 text-center">
-            <p className="text-sm text-atlas-text-secondary">
-              No briefings yet. Hit <strong className="text-atlas-text">Generate Now</strong> to create your first one.
+          <GlassCard maxWidth="full" className="py-16 text-center space-y-3">
+            <p className="font-heading text-lg font-semibold text-atlas-text">No briefings yet</p>
+            <p className="mx-auto max-w-md text-sm leading-relaxed text-atlas-text-secondary">
+              Hit <strong className="text-atlas-text">Generate Now</strong> above to create your first briefing. Atlas will pull the latest signals from your selected topics and sources, then summarize them into a quick-read digest tailored to your interests.
             </p>
           </GlassCard>
         ) : (

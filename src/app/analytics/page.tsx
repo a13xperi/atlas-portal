@@ -151,12 +151,12 @@ export default function AnalyticsPage() {
         )}
 
         {/* SECTION 1: Header */}
-        <div className="mb-6">
+        <div className="mb-8">
           <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">
             Your Analytics
           </h1>
-          <p className="text-atlas-text-secondary mt-1">
-            Deep performance metrics and predictive intelligence.
+          <p className="text-atlas-text-secondary mt-2 max-w-2xl text-sm leading-relaxed">
+            Track how Atlas learns your voice over time. The charts below show how accurately Atlas predicts your tweet engagement, how your writing style is evolving, and where your best-performing content comes from. The more you draft and give feedback, the sharper these predictions get.
           </p>
         </div>
 

@@ -24,11 +24,10 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
     ),
     msg(
       "oracle",
-      "How would you like to get started?",
+      "First things first — let\'s connect your X account. I\'ll scan your tweets, analyze your voice, and pull your follows so you can pick reference voices.",
       {
         actions: [
           { label: "Connect X", value: "track-a", variant: "primary" },
-          { label: "Set up manually", value: "track-b", variant: "secondary" },
         ],
       }
     ),
@@ -37,7 +36,7 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
   TRACK_A_HANDLE: [
     msg(
       "oracle",
-      "What's your X handle? I'll scan your recent tweets to figure out how you write.",
+      "What's your X handle? I'll pull your tweets, analyze your writing voice, and check who you follow so we can set up reference voices.",
       {
         component: { type: "handle-input" },
       }
