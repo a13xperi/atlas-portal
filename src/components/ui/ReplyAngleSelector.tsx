@@ -36,7 +36,7 @@ export default function ReplyAngleSelector({
               onClick={() => onAngleChange(angle)}
               className={`text-sm transition-colors ${
                 isActive
-                  ? "rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-steel px-4 py-2 text-white"
+                  ? "rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-4 py-2 text-white"
                   : "px-4 py-2 text-atlas-text-secondary hover:text-white"
               }`}
             >

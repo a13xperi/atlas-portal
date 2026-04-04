@@ -1221,7 +1221,7 @@ export default function CraftingPage() {
                     onClick={() => handleModeChange(mode.id)}
                     className={`text-sm transition-colors ${
                       isActive
-                        ? "rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-steel px-4 py-2 text-white"
+                        ? "rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-4 py-2 text-white"
                         : "px-4 py-2 text-atlas-text-secondary hover:text-white"
                     }`}
                   >
@@ -1518,7 +1518,7 @@ export default function CraftingPage() {
                     <button
                       type="button"
                       onClick={() => handlePickVoiceWinner(option.draft)}
-                      className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-atlas-teal to-atlas-steel px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                      className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-4 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
                     >
                       {option.ctaLabel}
                     </button>
@@ -1745,7 +1745,7 @@ export default function CraftingPage() {
                         type="button"
                         onClick={() => void handleUpdateDraftStatus("POSTED")}
                         disabled={statusUpdating}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-steel px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {statusUpdating ? (
                           <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />

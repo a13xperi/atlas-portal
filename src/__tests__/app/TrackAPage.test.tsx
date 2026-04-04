@@ -1,72 +1,23 @@
 import "@testing-library/jest-dom";
-import { render, screen, waitFor } from "@testing-library/react";
 
-const push = jest.fn();
-const mockUseAuth = jest.fn();
+const mockRedirect = jest.fn();
 
 jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push }),
-  usePathname: () => "/onboarding/track-a",
-}));
-
-jest.mock("@/lib/auth", () => ({
-  useAuth: () => mockUseAuth(),
-}));
-
-jest.mock("framer-motion", () => ({
-  motion: {
-    div: ({ children, ...props }: { children: React.ReactNode; [k: string]: unknown }) => <div {...props}>{children}</div>,
-    span: ({ children, ...props }: { children: React.ReactNode; [k: string]: unknown }) => <span {...props}>{children}</span>,
-  },
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
-
-jest.mock("@/components/onboarding/ReferenceVoiceSelector", () => ({
-  __esModule: true,
-  default: () => <div>Reference selector</div>,
-}));
-
-jest.mock("@/components/voice-profiles/VoiceDimensionSections", () => ({
-  __esModule: true,
-  default: () => <div>Voice dimensions</div>,
-}));
-
-jest.mock("@/lib/api", () => ({
-  api: {
-    users: { updateProfile: jest.fn() },
-    voice: { updateProfile: jest.fn(), calibrate: jest.fn(), addReference: jest.fn(), createBlend: jest.fn() },
-    referenceAccounts: { saveSelections: jest.fn() },
-    briefing: { updatePreferences: jest.fn() },
+  redirect: (...args: unknown[]) => {
+    mockRedirect(...args);
+    throw new Error("NEXT_REDIRECT");
   },
 }));
-
-beforeAll(() => { window.HTMLElement.prototype.scrollIntoView = jest.fn(); });
 
 const TrackAPage = require("@/app/onboarding/track-a/page").default;
 
-describe("TrackAPage", () => {
+describe("TrackARedirect", () => {
   beforeEach(() => {
-    jest.useFakeTimers();
-    push.mockClear();
-    mockUseAuth.mockReturnValue({
-      user: { id: "u1", handle: "AtlasAnalyst", displayName: "" },
-    });
+    mockRedirect.mockClear();
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
-  it("renders Oracle welcome message initially", () => {
-    render(<TrackAPage />);
-    expect(screen.getByText(/how you write/i)).toBeInTheDocument();
-  });
-
-  it("auto-selects Track A after typing delay", async () => {
-    render(<TrackAPage />);
-    jest.advanceTimersByTime(1000);
-    await waitFor(() => {
-      expect(screen.getByText(/scan your tweets/i)).toBeInTheDocument();
-    });
+  it("redirects to /onboarding", () => {
+    expect(() => TrackAPage()).toThrow("NEXT_REDIRECT");
+    expect(mockRedirect).toHaveBeenCalledWith("/onboarding");
   });
 });

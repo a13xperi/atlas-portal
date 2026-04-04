@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delphi Digital + Atlas — Unified Design System</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    /* Foundation — Delphi Blue Scale */
+    --base:          #010411;
+    --surface-0:     #060B1A;
+    --surface-1:     #0A1628;
+    --surface-2:     #0D216B;
+    --nav:           #0A1225;
+
+    /* Blue Spectrum — Primary */
+    --blue-900:      #0D216B;
+    --blue-700:      #1E3A8A;
+    --blue-500:      #3B82F6;
+    --blue-400:      #60A5FA;
+    --blue-300:      #93C5FD;
+
+    /* Teal — Interactive Accent */
+    --teal:          #4ECDC4;
+    --teal-muted:    rgba(78, 205, 196, 0.6);
+    --teal-ghost:    rgba(78, 205, 196, 0.12);
+    --teal-glow:     rgba(78, 205, 196, 0.20);
+
+    /* Status */
+    --success:       #48BB78;
+    --warning:       #ECC94B;
+    --error:         #FC8181;
+
+    /* Text */
+    --text-primary:  #FFFFFF;
+    --text-secondary:#A0AEC0;
+    --text-muted:    #718096;
+
+    /* Glass — Atlas Tool Layer */
+    --glass:         rgba(255, 255, 255, 0.05);
+    --glass-border:  rgba(255, 255, 255, 0.10);
+    --glass-hover:   rgba(255, 255, 255, 0.08);
+
+    /* Radii */
+    --r-sm:  4px;
+    --r-md:  8px;
+    --r-lg:  12px;
+    --r-xl:  16px;
+    --r-full:9999px;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--base);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 32px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Page header */
+  .page-header {
+    max-width: 1500px;
+    margin: 0 auto 24px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+  .page-header h1 {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .page-header .tag {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--teal);
+    background: var(--teal-ghost);
+    padding: 3px 10px;
+    border-radius: var(--r-full);
+  }
+  .page-header .subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+
+  .tile {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 0;
+    max-width: 1500px;
+    margin: 0 auto;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    background: var(--surface-0);
+  }
+
+  .col {
+    border-right: 1px solid rgba(255,255,255,0.06);
+  }
+  .col:last-child { border-right: none; }
+
+  .section {
+    padding: 24px 28px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .section:last-child { border-bottom: none; }
+
+  .section-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+  .section-subtitle {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    font-style: italic;
+  }
+
+  /* Swatch rows */
+  .color-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .swatch { text-align: center; }
+  .swatch-box {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: var(--r-md);
+    border: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 4px;
+  }
+  .swatch-hex { font-size: 9px; color: var(--text-muted); font-family: 'Inter', monospace; }
+  .swatch-name { font-size: 8px; color: var(--text-muted); }
+
+  /* Buttons */
+  .btn {
+    padding: 8px 20px;
+    border-radius: var(--r-md);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+  }
+  .btn-primary-blue {
+    background: linear-gradient(135deg, var(--blue-500), var(--blue-400));
+    color: #fff;
+  }
+  .btn-primary-teal {
+    background: linear-gradient(135deg, var(--teal), var(--teal-muted));
+    color: #fff;
+  }
+  .btn-outline-blue {
+    background: transparent;
+    border: 1px solid var(--blue-400);
+    color: var(--blue-400);
+  }
+  .btn-outline-teal {
+    background: transparent;
+    border: 1px solid var(--teal);
+    color: var(--teal);
+  }
+  .btn-ghost {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+  }
+  .btn-label {
+    font-size: 9px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 6px;
+  }
+
+  /* Pills */
+  .pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: var(--r-full);
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  /* Cards */
+  .card-solid {
+    background: var(--surface-1);
+    border: 1px solid rgba(59,130,246,0.12);
+    border-radius: var(--r-xl);
+    padding: 20px;
+    transition: all 0.15s ease;
+  }
+  .card-solid:hover {
+    border-color: rgba(59,130,246,0.25);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+
+  .card-glass {
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-xl);
+    padding: 20px;
+    transition: all 0.15s ease;
+  }
+  .card-glass:hover {
+    background: var(--glass-hover);
+    border-color: rgba(255,255,255,0.15);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  }
+
+  /* Dim bar */
+  .dim-bar { margin-bottom: 10px; }
+  .dim-bar-header { display: flex; justify-content: space-between; margin-bottom: 3px; }
+  .dim-bar-label { font-size: 12px; color: var(--text-secondary); }
+  .dim-bar-value { font-size: 12px; color: var(--text-primary); }
+  .dim-bar-track { height: 4px; background: rgba(160,174,192,0.2); border-radius: var(--r-full); position: relative; }
+  .dim-bar-fill { height: 100%; border-radius: var(--r-full); }
+  .dim-bar-thumb { width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--base); position: absolute; top: 50%; transform: translateY(-50%); }
+
+  /* Toast */
+  .toast {
+    border-radius: var(--r-lg);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+
+  /* Progress */
+  .progress-track {
+    height: 4px;
+    background: rgba(160,174,192,0.15);
+    border-radius: var(--r-full);
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: var(--r-full);
+  }
+
+  /* Icon row */
+  .icon-row {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .icon-row svg {
+    width: 22px;
+    height: 22px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Type samples */
+  .type-sample {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 10px;
+  }
+  .type-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    min-width: 60px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Layer badge */
+  .layer-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: var(--r-full);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .layer-badge.delphi {
+    color: var(--blue-400);
+    background: rgba(59,130,246,0.1);
+    border: 1px solid rgba(59,130,246,0.2);
+  }
+  .layer-badge.atlas {
+    color: var(--teal);
+    background: var(--teal-ghost);
+    border: 1px solid rgba(78,205,196,0.2);
+  }
+  .layer-badge .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  /* Nav preview */
+  .nav-preview {
+    background: var(--nav);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-lg);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .nav-logo-mark {
+    width: 24px;
+    height: 24px;
+    background: var(--base);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+    color: var(--teal);
+  }
+  .nav-logo-text {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .nav-links {
+    display: flex;
+    gap: 16px;
+  }
+  .nav-links a {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .nav-links a.active {
+    color: var(--text-primary);
+  }
+  .nav-icons {
+    display: flex;
+    gap: 10px;
+    color: var(--text-secondary);
+  }
+  .nav-icons svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .nav-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    border: 1px solid var(--glass-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--blue-400);
+  }
+
+  /* Comparison strip */
+  .compare-strip {
+    display: flex;
+    gap: 0;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .compare-strip > div {
+    flex: 1;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Delphi Digital</h1>
+  <span class="tag">+ Atlas Unified</span>
+  <span class="subtitle">Design System v1 — April 2026</span>
+</div>
+
+<div class="tile">
+
+  <!-- ============================================ -->
+  <!-- COLUMN 1: Foundation — Colors & Surfaces     -->
+  <!-- ============================================ -->
+  <div class="col">
+    <div class="section">
+      <div class="section-title">Brand Identity</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <div style="width:48px;height:48px;background:var(--base);border-radius:12px;border:1px solid rgba(59,130,246,0.2);display:flex;align-items:center;justify-content:center;">
+          <svg viewBox="0 0 48 48" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:30px;height:30px;">
+            <circle cx="18" cy="16" r="6"/><circle cx="30" cy="16" r="6"/><circle cx="12" cy="28" r="6"/><circle cx="24" cy="28" r="6"/><circle cx="36" cy="28" r="6"/><circle cx="18" cy="38" r="5"/><circle cx="30" cy="38" r="5"/>
+          </svg>
+        </div>
+        <div>
+          <div style="font-size:14px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;">Delphi Digital</div>
+          <div style="font-size:9px;color:var(--blue-400);letter-spacing:0.12em;text-transform:uppercase;">delphidigital.io</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:48px;height:48px;background:var(--base);border-radius:12px;border:1px solid rgba(78,205,196,0.2);display:flex;align-items:center;justify-content:center;">
+          <span style="font-family:'Inter',serif;font-weight:800;font-size:22px;color:var(--teal);">A</span>
+        </div>
+        <div>
+          <div style="font-size:14px;font-weight:700;">Atlas</div>
+          <div style="font-size:9px;color:var(--teal);letter-spacing:0.12em;text-transform:uppercase;">Content Crafting Platform</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Blue Spectrum — Primary</div>
+      <div class="section-subtitle">Delphi foundation, used across all products</div>
+      <div class="color-row">
+        <div class="swatch">
+          <div class="swatch-box" style="background:#010411;border-color:rgba(255,255,255,0.2);"></div>
+          <div class="swatch-hex">#010411</div>
+          <div class="swatch-name">Base</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-box" style="background:#0A1628;"></div>
+          <div class="swatch-hex">#0A1628</div>
+          <div class="swatch-name">Surface</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-box" style="background:#0D216B;"></div>
+          <div class="swatch-hex">#0D216B</div>
+          <div class="swatch-name">Deep</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-box" style="background:#1E3A8A;"></div>
+          <div class="swatch-hex">#1E3A8A</div>
+          <div class="swatch-name">Mid</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-box" style="background:#3B82F6;"></div>
+          <div class="swatch-hex">#3B82F6</div>
+          <div class="swatch-name">Primary</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-box" style="background:#60A5FA;"></div>
+          <div class="swatch-hex">#60A5FA</div>
+          <div class="swatch-name">Light</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Teal — Interactive Accent</div>
+      <div class="section-subtitle">Atlas tool layer, actions & interactive states</div>
+      <div class="color-row">
+        <div class="swatch">
+          <div class="swatch-box" style="background:var(--teal);"></div>
+          <div class="swatch-hex">#4ECDC4</div>
+          <div class="swatch-name">Teal</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-box" style="background:var(--teal-muted);"></div>
+          <div class="swatch-hex">60%</div>
+          <div class="swatch-name">Muted</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-box" style="background:var(--teal-ghost);border-color:rgba(78,205,196,0.2);"></div>
+          <div class="swatch-hex">12%</div>
+          <div class="swatch-name">Ghost</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Status</div>
+      <div class="color-row">
+        <div class="swatch">
+          <div class="swatch-box" style="background:var(--success);"></div>
+          <div class="swatch-hex">#48BB78</div>
+          <div class="swatch-name">Success</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-box" style="background:var(--warning);"></div>
+          <div class="swatch-hex">#ECC94B</div>
+          <div class="swatch-name">Warning</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-box" style="background:var(--error);"></div>
+          <div class="swatch-hex">#FC8181</div>
+          <div class="swatch-name">Error</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Text Hierarchy</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:16px;height:16px;background:#fff;border-radius:3px;flex-shrink:0;"></div>
+          <span style="font-size:12px;">#FFFFFF</span>
+          <span style="font-size:10px;color:var(--text-muted);">Primary</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:16px;height:16px;background:var(--text-secondary);border-radius:3px;flex-shrink:0;"></div>
+          <span style="font-size:12px;color:var(--text-secondary);">#A0AEC0</span>
+          <span style="font-size:10px;color:var(--text-muted);">Secondary</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:16px;height:16px;background:var(--text-muted);border-radius:3px;flex-shrink:0;"></div>
+          <span style="font-size:12px;color:var(--text-muted);">#718096</span>
+          <span style="font-size:10px;color:var(--text-muted);">Muted</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:16px;height:16px;background:var(--blue-400);border-radius:3px;flex-shrink:0;"></div>
+          <span style="font-size:12px;color:var(--blue-400);">#60A5FA</span>
+          <span style="font-size:10px;color:var(--text-muted);">Brand Link</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:16px;height:16px;background:var(--teal);border-radius:3px;flex-shrink:0;"></div>
+          <span style="font-size:12px;color:var(--teal);">#4ECDC4</span>
+          <span style="font-size:10px;color:var(--text-muted);">Action Link</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- COLUMN 2: Typography & Gradients             -->
+  <!-- ============================================ -->
+  <div class="col">
+    <div class="section">
+      <div class="section-title">Typography</div>
+      <div class="section-subtitle">Inter is the single type family across all products</div>
+
+      <div style="font-size:28px;font-weight:700;letter-spacing:-0.5px;margin-bottom:16px;">Inter</div>
+
+      <div style="margin-bottom:20px;">
+        <div style="font-weight:800;font-size:14px;">Extra Bold — 800</div>
+        <div style="font-weight:700;font-size:14px;">Bold — 700</div>
+        <div style="font-weight:600;font-size:14px;">Semibold — 600</div>
+        <div style="font-weight:500;font-size:14px;color:var(--text-secondary);">Medium — 500</div>
+        <div style="font-weight:400;font-size:14px;color:var(--text-muted);">Regular — 400</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Type Scale</div>
+      <div class="type-sample">
+        <span class="type-label">Display</span>
+        <span style="font-size:48px;font-weight:800;letter-spacing:-1.5px;line-height:1;">Delphi</span>
+      </div>
+      <div class="type-sample">
+        <span class="type-label">H1</span>
+        <span style="font-size:32px;font-weight:700;letter-spacing:-1px;line-height:1.1;">Headline</span>
+      </div>
+      <div class="type-sample">
+        <span class="type-label">H2</span>
+        <span style="font-size:22px;font-weight:700;">Subhead</span>
+      </div>
+      <div class="type-sample">
+        <span class="type-label">H3</span>
+        <span style="font-size:16px;font-weight:600;">Section Title</span>
+      </div>
+      <div class="type-sample">
+        <span class="type-label">Body</span>
+        <span style="font-size:14px;color:var(--text-secondary);">Delphi Digital body text sample</span>
+      </div>
+      <div class="type-sample">
+        <span class="type-label">Small</span>
+        <span style="font-size:12px;color:var(--text-secondary);">Secondary body text</span>
+      </div>
+      <div class="type-sample">
+        <span class="type-label">Caption</span>
+        <span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.15em;">Label / Caption</span>
+      </div>
+      <div class="type-sample">
+        <span class="type-label">Button</span>
+        <span style="font-size:13px;font-weight:600;">Button Text</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Gradients</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div>
+          <div style="height:28px;border-radius:var(--r-md);background:linear-gradient(135deg, #3B82F6, #60A5FA);margin-bottom:4px;"></div>
+          <div style="font-size:9px;color:var(--text-muted);">Brand — Blue 500 → 400</div>
+        </div>
+        <div>
+          <div style="height:28px;border-radius:var(--r-md);background:linear-gradient(135deg, var(--teal), var(--teal-muted));margin-bottom:4px;"></div>
+          <div style="font-size:9px;color:var(--text-muted);">Action — Teal → Teal Muted</div>
+        </div>
+        <div>
+          <div style="height:28px;border-radius:var(--r-md);background:linear-gradient(135deg, #3B82F6, var(--teal));margin-bottom:4px;"></div>
+          <div style="font-size:9px;color:var(--text-muted);">Bridge — Blue → Teal (cross-product)</div>
+        </div>
+        <div>
+          <div style="height:28px;border-radius:var(--r-md);background:linear-gradient(180deg, #010411, #0A1628, #010411);border:1px solid rgba(255,255,255,0.05);margin-bottom:4px;"></div>
+          <div style="font-size:9px;color:var(--text-muted);">App BG — Base vertical</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Surfaces — Layered</div>
+      <div style="position:relative;padding:8px;background:var(--base);border-radius:var(--r-lg);border:1px solid rgba(255,255,255,0.05);">
+        <div style="font-size:8px;color:var(--text-muted);margin-bottom:4px;padding:0 4px;">BASE #010411</div>
+        <div style="padding:8px;background:var(--surface-1);border-radius:var(--r-md);border:1px solid rgba(59,130,246,0.08);">
+          <div style="font-size:8px;color:var(--text-muted);margin-bottom:4px;">SOLID SURFACE #0A1628</div>
+          <div style="padding:8px;background:var(--glass);backdrop-filter:blur(12px);border-radius:6px;border:1px solid var(--glass-border);">
+            <div style="font-size:8px;color:var(--text-muted);">GLASS LAYER — 5% white + blur(12px)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- COLUMN 3: UI Components                       -->
+  <!-- ============================================ -->
+  <div class="col">
+    <div class="section">
+      <div class="section-title">Buttons</div>
+
+      <div class="layer-badge delphi"><div class="dot" style="background:var(--blue-400);"></div>Delphi Brand</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <div style="text-align:center;">
+          <button class="btn btn-primary-blue">Read Report</button>
+          <div class="btn-label">Primary</div>
+        </div>
+        <div style="text-align:center;">
+          <button class="btn btn-outline-blue">Details</button>
+          <div class="btn-label">Outline</div>
+        </div>
+      </div>
+
+      <div class="layer-badge atlas"><div class="dot" style="background:var(--teal);"></div>Atlas Tool</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="text-align:center;">
+          <button class="btn btn-primary-teal">Craft Tweet</button>
+          <div class="btn-label">Action CTA</div>
+        </div>
+        <div style="text-align:center;">
+          <button class="btn btn-outline-teal">Edit Voice</button>
+          <div class="btn-label">Outline</div>
+        </div>
+        <div style="text-align:center;">
+          <button class="btn btn-ghost">Cancel</button>
+          <div class="btn-label">Ghost</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Status Pills</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        <span class="pill" style="background:rgba(72,187,120,0.15);color:var(--success);">Posted</span>
+        <span class="pill" style="background:var(--teal-ghost);color:var(--teal);">Draft</span>
+        <span class="pill" style="background:rgba(236,201,75,0.15);color:var(--warning);">Pending</span>
+        <span class="pill" style="background:rgba(252,129,129,0.15);color:var(--error);">Error</span>
+        <span class="pill" style="background:rgba(59,130,246,0.12);color:var(--blue-400);">Published</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Dimension Bar</div>
+      <div class="dim-bar">
+        <div class="dim-bar-header">
+          <span class="dim-bar-label">Humor</span>
+          <span class="dim-bar-value">72</span>
+        </div>
+        <div class="dim-bar-track">
+          <div class="dim-bar-fill" style="width:72%;background:var(--teal);"></div>
+          <div class="dim-bar-thumb" style="left:72%;background:var(--teal);"></div>
+        </div>
+      </div>
+      <div class="dim-bar">
+        <div class="dim-bar-header">
+          <span class="dim-bar-label">Formality</span>
+          <span class="dim-bar-value">45</span>
+        </div>
+        <div class="dim-bar-track">
+          <div class="dim-bar-fill" style="width:45%;background:var(--teal);"></div>
+          <div class="dim-bar-thumb" style="left:45%;background:var(--teal);"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Progress</div>
+      <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">Onboarding 3 of 5</div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width:60%;background:linear-gradient(90deg, var(--blue-500), var(--teal));"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Toasts</div>
+      <div class="toast" style="border:1px solid rgba(78,205,196,0.25);background:rgba(78,205,196,0.08);color:var(--teal);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Voice profile saved
+      </div>
+      <div class="toast" style="border:1px solid rgba(252,129,129,0.25);background:rgba(252,129,129,0.08);color:var(--error);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Failed to publish
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Icons — Lucide</div>
+      <div class="icon-row" style="color:var(--text-secondary);">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Border Radius</div>
+      <div style="display:flex;gap:10px;align-items:end;">
+        <div style="text-align:center;">
+          <div style="width:36px;height:36px;border:1.5px solid var(--blue-500);border-radius:var(--r-sm);"></div>
+          <div style="font-size:9px;color:var(--text-muted);margin-top:3px;">4px</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="width:36px;height:36px;border:1.5px solid var(--blue-500);border-radius:var(--r-md);"></div>
+          <div style="font-size:9px;color:var(--text-muted);margin-top:3px;">8px<br>Input</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="width:36px;height:36px;border:1.5px solid var(--blue-500);border-radius:var(--r-lg);"></div>
+          <div style="font-size:9px;color:var(--text-muted);margin-top:3px;">12px<br>Toast</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="width:36px;height:36px;border:1.5px solid var(--blue-500);border-radius:var(--r-xl);"></div>
+          <div style="font-size:9px;color:var(--text-muted);margin-top:3px;">16px<br>Card</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="width:36px;height:20px;border:1.5px solid var(--blue-500);border-radius:var(--r-full);"></div>
+          <div style="font-size:9px;color:var(--text-muted);margin-top:3px;">Full<br>Pill</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- COLUMN 4: Composition & Integration           -->
+  <!-- ============================================ -->
+  <div class="col">
+    <div class="section">
+      <div class="section-title">Nav Bar — Unified</div>
+      <div class="nav-preview">
+        <div class="nav-logo">
+          <div class="nav-logo-mark">A</div>
+          <div class="nav-logo-text" style="font-size:10px;">Atlas</div>
+        </div>
+        <div class="nav-links">
+          <a href="#" class="active">Dashboard</a>
+          <a href="#">Crafting</a>
+          <a href="#">Library</a>
+        </div>
+        <div class="nav-icons" style="display:flex;align-items:center;gap:8px;">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <div class="nav-avatar">AP</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Card — Solid (Delphi)</div>
+      <div class="card-solid">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <div style="width:24px;height:24px;border-radius:6px;background:var(--base);border:1px solid rgba(59,130,246,0.2);display:flex;align-items:center;justify-content:center;">
+            <svg viewBox="0 0 48 48" fill="none" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><circle cx="18" cy="16" r="6"/><circle cx="30" cy="16" r="6"/><circle cx="12" cy="28" r="6"/><circle cx="24" cy="28" r="6"/><circle cx="36" cy="28" r="6"/></svg>
+          </div>
+          <span class="pill" style="background:rgba(59,130,246,0.12);color:var(--blue-400);font-size:9px;padding:2px 8px;">Report</span>
+        </div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:2px;">Delphi Digital Report</div>
+        <p style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Market analysis and macro outlook for Q2 2026.</p>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;">
+          <span style="font-size:10px;color:var(--blue-400);">April 4, 2026</span>
+          <button class="btn btn-outline-blue" style="padding:4px 12px;font-size:11px;">Read Report</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Card — Glass (Atlas Tool)</div>
+      <div class="card-glass">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <div style="width:24px;height:24px;border-radius:6px;background:var(--base);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--teal);">A</div>
+          <span class="pill" style="background:var(--teal-ghost);color:var(--teal);font-size:9px;padding:2px 8px;">Draft</span>
+        </div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:2px;">Voice Profile Update</div>
+        <p style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Your voice shows high conviction. Optimized for crypto-native audiences.</p>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;">
+          <span style="font-size:10px;color:var(--teal);">April 4, 2026</span>
+          <button class="btn btn-outline-teal" style="padding:4px 12px;font-size:11px;">Edit Voice</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Shadows & Effects</div>
+      <div style="display:flex;gap:10px;">
+        <div style="text-align:center;">
+          <div style="width:56px;height:32px;background:var(--surface-1);border-radius:var(--r-lg);box-shadow:0 0 20px rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.15);margin-bottom:4px;"></div>
+          <div style="font-size:9px;color:var(--text-muted);">Blue Glow</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="width:56px;height:32px;background:var(--surface-1);border-radius:var(--r-lg);box-shadow:0 0 20px var(--teal-glow);border:1px solid rgba(78,205,196,0.15);margin-bottom:4px;"></div>
+          <div style="font-size:9px;color:var(--text-muted);">Teal Glow</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="width:56px;height:32px;background:var(--surface-1);border-radius:var(--r-lg);box-shadow:0 8px 24px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.05);margin-bottom:4px;"></div>
+          <div style="font-size:9px;color:var(--text-muted);">Depth</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Layer Model</div>
+      <div class="compare-strip">
+        <div style="background:var(--blue-500);color:#fff;">DELPHI</div>
+        <div style="background:linear-gradient(90deg, var(--blue-500), var(--teal));color:#fff;">BRIDGE</div>
+        <div style="background:var(--teal);color:#fff;">ATLAS</div>
+      </div>
+      <div style="font-size:10px;color:var(--text-muted);line-height:1.5;">
+        Blue = brand, content, navigation<br>
+        Teal = tools, actions, interactive states<br>
+        Glass = Atlas tool layer over solid Delphi surfaces
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -26,6 +26,19 @@ interface BriefingPreferenceInput {
   channel: string;
 }
 
+export interface QaTestRun {
+  id: string;
+  project: string;
+  tester_id: string;
+  tester_name: string;
+  tester_initials: string;
+  created_at: string;
+  updated_at: string;
+  results: Record<string, { status: string; note: string; tester: string; timestamp: string }>;
+  summary: { pass: number; fail: number; skip: number; total: number };
+  status: 'in_progress' | 'completed' | 'abandoned';
+}
+
 class ApiError extends Error {
   statusCode: number;
   constructor(message: string, statusCode: number) {
@@ -322,6 +335,41 @@ export const api = {
       request<{ message: string; affected: number }>("/api/users/send-nudge", { method: "POST" }),
     pushStyle: (blendId?: string) =>
       request<{ message: string; affected: number }>("/api/users/push-style", { method: "POST", body: { blendId } }),
+  },
+
+  qa: {
+    listRuns: () =>
+      request<{ runs: QaTestRun[] }>('/api/qa/runs'),
+    getRun: (id: string) =>
+      request<{ run: QaTestRun }>(`/api/qa/runs/${id}`),
+    createRun: (data: { tester_name: string; tester_initials: string }) =>
+      request<{ run: QaTestRun }>('/api/qa/runs', { method: 'POST', body: data }),
+    updateRun: (id: string, data: { results?: Record<string, unknown>; summary?: Record<string, unknown>; status?: string }) =>
+      request<{ run: QaTestRun }>(`/api/qa/runs/${id}`, { method: 'PATCH', body: data }),
+    deleteRun: (id: string) =>
+      request<{ success: boolean }>(`/api/qa/runs/${id}`, { method: 'DELETE' }),
+  },
+
+  oracle: {
+    message: (body: {
+      track: "a" | "b";
+      step: string;
+      action: string;
+      context?: {
+        dimensions?: Record<string, number>;
+        selectedRefs?: string[];
+        blendRatio?: number;
+        blendVoices?: Array<{ label: string; percentage: number }>;
+        topics?: string[];
+        calibrationResult?: { analysis: string; tweetsAnalyzed: number };
+        handle?: string;
+        freeText?: string;
+      };
+    }) =>
+      request<{
+        messages: Array<{ content: string; role: "oracle" }>;
+        llmGenerated: boolean;
+      }>("/api/oracle/message", { method: "POST", body }),
   },
 };
 

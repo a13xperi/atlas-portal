@@ -1,6 +1,5 @@
 export const colors = {
   atlasTeal: "#4ecdc4",
-  atlasSteel: "#7b8fa1",
   atlasSurface: "#0A1628",
   atlasBg: "#010411",
   atlasNav: "#0A1225",
@@ -33,7 +32,7 @@ export const fonts = {
 } as const;
 
 export const gradients = {
-  cta: `linear-gradient(to right, ${colors.atlasTeal}, ${colors.atlasSteel})`,
+  cta: `linear-gradient(to right, ${colors.atlasTeal}, ${colors.delphiTeal})`,
   onboardingBg: `linear-gradient(to bottom, ${colors.atlasBg}, ${colors.atlasNav}, ${colors.atlasBg})`,
   appBg: `linear-gradient(to bottom, ${colors.atlasBg}, ${colors.atlasSurface}, ${colors.atlasBg})`,
   // Delphi unified design system

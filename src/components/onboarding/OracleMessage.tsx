@@ -1,49 +1,86 @@
 "use client";
 
-import { motion } from "framer-motion";
 import type { ReactNode } from "react";
+import type { ChatMessage } from "@/lib/oracle-types";
 import OracleAvatar from "./OracleAvatar";
+import GradientButton from "@/components/ui/GradientButton";
 
 interface OracleMessageProps {
-  role: "oracle" | "user" | "system";
-  content: string;
-  children?: ReactNode; // inline component slot
+  message: ChatMessage;
+  isLast?: boolean;
+  renderComponent?: (
+    type: string,
+    props?: Record<string, unknown>
+  ) => ReactNode;
+  onAction?: (value: string) => void;
 }
 
 export default function OracleMessage({
-  role,
-  content,
-  children,
+  message,
+  isLast = false,
+  renderComponent,
+  onAction,
 }: OracleMessageProps) {
-  if (role === "user") {
+  if (message.role === "system") {
     return (
-      <motion.div
-        className="flex justify-end"
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
-      >
-        <div className="max-w-[80%] rounded-2xl rounded-br-md bg-atlas-teal/15 border border-atlas-teal/30 px-4 py-3">
-          <p className="text-sm text-atlas-text">{content}</p>
-        </div>
-      </motion.div>
+      <div className="text-center py-2">
+        <span className="text-xs text-atlas-text-muted">{message.content}</span>
+      </div>
     );
   }
 
-  return (
-    <motion.div
-      className="flex items-start gap-3"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      <OracleAvatar size={36} />
-      <div className="flex-1 min-w-0 space-y-3">
-        <div className="rounded-2xl rounded-bl-md bg-glass border border-atlas-teal/20 backdrop-blur-xl px-4 py-3">
-          <p className="text-sm text-atlas-text leading-relaxed">{content}</p>
+  if (message.role === "user") {
+    return (
+      <div className="flex justify-end">
+        <div className="max-w-[80%] bg-atlas-teal/10 border border-atlas-teal/20 rounded-2xl rounded-tr-sm px-4 py-3">
+          <p className="text-sm text-atlas-text whitespace-pre-line">
+            {message.content}
+          </p>
         </div>
-        {children && <div className="ml-0">{children}</div>}
       </div>
-    </motion.div>
+    );
+  }
+
+  // Oracle message
+  return (
+    <div className="flex items-start gap-3">
+      <OracleAvatar size="sm" />
+      <div className="flex-1 min-w-0 space-y-3">
+        <div className="bg-glass border border-glass-border border-l-2 border-l-atlas-teal/40 rounded-2xl rounded-tl-sm px-4 py-3">
+          <p className="text-sm text-atlas-text leading-relaxed whitespace-pre-line">
+            {message.content}
+          </p>
+        </div>
+
+        {/* Inline component */}
+        {message.component && renderComponent && (
+          <div className="ml-0">
+            {renderComponent(message.component.type, message.component.props)}
+          </div>
+        )}
+
+        {/* Action buttons (only on the last Oracle message) */}
+        {isLast && message.actions && message.actions.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {message.actions.map((action) => (
+              <GradientButton
+                key={action.value}
+                variant={
+                  action.variant === "primary"
+                    ? "primary"
+                    : action.variant === "secondary"
+                      ? "outline"
+                      : "outline"
+                }
+                size="sm"
+                onClick={() => onAction?.(action.value)}
+              >
+                {action.label}
+              </GradientButton>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
