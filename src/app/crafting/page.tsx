@@ -1866,6 +1866,76 @@ export default function CraftingPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Engagement Recording — shown for POSTED drafts */}
+              {activeDraft.status === "POSTED" ? (
+                <div className="mt-4 rounded-xl border border-glass-border bg-atlas-surface/60 p-4">
+                  <p className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-atlas-text-muted">
+                    <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
+                    Record Engagement
+                  </p>
+                  {activeDraft.actualEngagement ? (
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="text-atlas-text-secondary">Recorded:</span>
+                      <span className="font-semibold text-atlas-text">
+                        {activeDraft.actualEngagement.toLocaleString()} impressions
+                      </span>
+                      {activeDraft.predictedEngagement ? (
+                        <span className={`text-xs ${
+                          activeDraft.actualEngagement >= activeDraft.predictedEngagement
+                            ? "text-atlas-success"
+                            : "text-atlas-warning"
+                        }`}>
+                          {activeDraft.actualEngagement >= activeDraft.predictedEngagement ? "↑" : "↓"}{" "}
+                          {Math.abs(
+                            Math.round(
+                              ((activeDraft.actualEngagement - activeDraft.predictedEngagement) /
+                                activeDraft.predictedEngagement) *
+                                100,
+                            ),
+                          )}
+                          % vs predicted
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <form
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        const fd = new FormData(e.currentTarget);
+                        const likes = Number(fd.get("likes")) || 0;
+                        const retweets = Number(fd.get("retweets")) || 0;
+                        const impressions = Number(fd.get("impressions")) || 0;
+                        if (impressions === 0) return;
+                        try {
+                          const result = await api.drafts.recordEngagement(activeDraft.id, { likes, retweets, impressions });
+                          setActiveDraft(result.draft);
+                          syncDraftReferences(result.draft);
+                        } catch {
+                          setError("Failed to record engagement");
+                        }
+                      }}
+                      className="flex flex-wrap items-end gap-3"
+                    >
+                      <label className="flex flex-col gap-1">
+                        <span className="text-[10px] uppercase tracking-wider text-atlas-text-muted">Likes</span>
+                        <input name="likes" type="number" min={0} defaultValue={0} className="w-20 rounded-lg border border-glass-border bg-atlas-bg px-2 py-1.5 text-sm text-atlas-text outline-none focus:border-atlas-teal" />
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="text-[10px] uppercase tracking-wider text-atlas-text-muted">Retweets</span>
+                        <input name="retweets" type="number" min={0} defaultValue={0} className="w-20 rounded-lg border border-glass-border bg-atlas-bg px-2 py-1.5 text-sm text-atlas-text outline-none focus:border-atlas-teal" />
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="text-[10px] uppercase tracking-wider text-atlas-text-muted">Impressions</span>
+                        <input name="impressions" type="number" min={0} required placeholder="0" className="w-24 rounded-lg border border-glass-border bg-atlas-bg px-2 py-1.5 text-sm text-atlas-text outline-none focus:border-atlas-teal" />
+                      </label>
+                      <button type="submit" className="rounded-lg bg-atlas-teal/20 px-3 py-1.5 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/30">
+                        Save
+                      </button>
+                    </form>
+                  )}
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6 text-center text-atlas-text-secondary">
