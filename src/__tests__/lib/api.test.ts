@@ -188,6 +188,46 @@ describe("api.drafts.generate", () => {
   });
 });
 
+describe("api.referenceAccounts", () => {
+  it("loads the reference account catalog from the new endpoint", async () => {
+    mockFetch({ accounts: [] });
+
+    await api.referenceAccounts.getAll();
+
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/api/reference-accounts`,
+      expect.objectContaining({
+        method: "GET",
+        credentials: "include",
+      })
+    );
+  });
+
+  it("saves selected reference account ids and weights for a user", async () => {
+    mockFetch({ success: true, ids: ["hosseeb", "naval"] });
+
+    await api.referenceAccounts.saveSelections("user_1", ["hosseeb", "naval"], {
+      hosseeb: 0.5,
+      naval: 0.5,
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/api/users/user_1/reference-accounts`,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          ids: ["hosseeb", "naval"],
+          weights: {
+            hosseeb: 0.5,
+            naval: 0.5,
+          },
+        }),
+        credentials: "include",
+      })
+    );
+  });
+});
+
 describe("api.briefing.updatePreferences", () => {
   it("sends PATCH with the briefing preferences payload", async () => {
     const data = {

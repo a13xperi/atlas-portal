@@ -31,6 +31,19 @@ const mockProfile = {
 };
 
 const mockApi = {
+  referenceAccounts: {
+    getAll: jest.fn().mockResolvedValue({
+      accounts: [
+        {
+          id: "hasufl",
+          handle: "hasufl",
+          displayName: "Hasu",
+          category: "Crypto/VC",
+        },
+      ],
+    }),
+    saveSelections: jest.fn().mockResolvedValue({ success: true, ids: [] }),
+  },
   voice: {
     getProfile: jest.fn().mockResolvedValue({ profile: mockProfile }),
     getReferences: jest.fn().mockResolvedValue({
@@ -59,6 +72,21 @@ jest.mock("@/components/layout/AppShell", () => ({
   default: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
+jest.mock("@/components/voice-profiles/ReferenceVoicesSection", () => ({
+  __esModule: true,
+  default: ({
+    references,
+  }: {
+    references: Array<{ id: string; name: string }>;
+  }) => (
+    <div>
+      {references.map((reference) => (
+        <span key={reference.id}>{reference.name}</span>
+      ))}
+    </div>
+  ),
+}));
+
 jest.mock("@/lib/api", () => ({
   api: mockApi,
 }));
@@ -70,6 +98,16 @@ describe("VoiceProfilesPage", () => {
     jest.clearAllMocks();
     localStorage.clear();
     mockApi.voice.getProfile.mockResolvedValue({ profile: mockProfile });
+    mockApi.referenceAccounts.getAll.mockResolvedValue({
+      accounts: [
+        {
+          id: "hasufl",
+          handle: "hasufl",
+          displayName: "Hasu",
+          category: "Crypto/VC",
+        },
+      ],
+    });
     mockApi.voice.getReferences.mockResolvedValue({
       voices: [{ id: "r1", name: "Hasu", handle: "hasufl", isActive: true }],
     });

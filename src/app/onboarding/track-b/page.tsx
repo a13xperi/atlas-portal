@@ -5,11 +5,10 @@ import { useRouter } from "next/navigation";
 import OnboardingShell from "@/components/layout/OnboardingShell";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import GradientButton from "@/components/ui/GradientButton";
+import ReferenceVoiceSelector from "@/components/onboarding/ReferenceVoiceSelector";
 import {
-  Check,
   Loader2,
   PenLine,
-  Plus,
   SlidersHorizontal,
   Sparkles,
 } from "lucide-react";
@@ -20,20 +19,18 @@ import {
   styleToDimensions,
   VoiceDimensions,
 } from "@/lib/voice-profile-dimensions";
+import {
+  buildReferenceBlendVoices,
+  getEqualReferenceWeights,
+  getReferenceAccountLookup,
+  persistReferenceSelections,
+  REFERENCE_ACCOUNT_FALLBACK,
+} from "@/lib/reference-accounts";
 
 const styleOptions = [
   { label: "Fun", description: "Playful, witty, meme-friendly" },
   { label: "Serious", description: "Professional, data-driven" },
   { label: "Custom mix", description: "Blend it your way (recommended)" },
-];
-
-const referenceVoices = [
-  "Cobie",
-  "Hsaka",
-  "Ansem",
-  "Hasu",
-  "DegenSpartan",
-  "Mando",
 ];
 
 const manualSetupSteps = [
@@ -53,7 +50,9 @@ const manualSetupSteps = [
     description: "Use it as your default voice inside Atlas.",
   },
 ];
-
+const referenceAccountLookup = getReferenceAccountLookup(
+  REFERENCE_ACCOUNT_FALLBACK
+);
 export default function TrackBPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -63,15 +62,13 @@ export default function TrackBPage() {
   const [dimensions, setDimensions] = useState<VoiceDimensions>(() =>
     styleToDimensions("Custom mix")
   );
-  const [selectedVoices, setSelectedVoices] = useState<Set<string>>(new Set());
-  const [blendValues, setBlendValues] = useState([40, 35, 25]);
   const [saving, setSaving] = useState(false);
-  const [addingHandle, setAddingHandle] = useState(false);
-  const [newHandle, setNewHandle] = useState("");
   const [tweetLinks, setTweetLinks] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [displayNameError, setDisplayNameError] = useState("");
   const [dimensionsError, setDimensionsError] = useState("");
+  const [showRefSelector, setShowRefSelector] = useState(false);
+  const [selectedRefIds, setSelectedRefIds] = useState<string[]>([]);
 
   useEffect(() => {
     const fallbackDisplayName = user?.displayName || user?.handle;
@@ -80,29 +77,6 @@ export default function TrackBPage() {
 
     setDisplayName((current) => current || fallbackDisplayName);
   }, [user?.displayName, user?.handle]);
-
-  const toggleVoice = (voice: string) => {
-    setSelectedVoices((prev) => {
-      const next = new Set(prev);
-      if (next.has(voice)) next.delete(voice);
-      else next.add(voice);
-      return next;
-    });
-  };
-
-  const updateBlend = (index: number, value: number) => {
-    const newValues = [...blendValues];
-    newValues[index] = value;
-    setBlendValues(newValues);
-  };
-
-  const handleAddCustomHandle = () => {
-    if (!newHandle.trim()) return;
-    const clean = newHandle.trim().replace(/^@/, "");
-    setSelectedVoices((prev) => new Set(prev).add(clean));
-    setNewHandle("");
-    setAddingHandle(false);
-  };
 
   const handleSaveAndContinue = async () => {
     const trimmedDisplayName = displayName.trim();
@@ -130,34 +104,48 @@ export default function TrackBPage() {
       await api.users.updateProfile({ displayName: trimmedDisplayName });
       await api.voice.updateProfile(dimensions);
 
-      const voices = Array.from(selectedVoices);
-      for (const voice of voices) {
-        try {
-          await api.voice.addReference(voice, voice);
-        } catch {
-          // Voice may already exist — skip
-        }
-      }
-
-      if (voices.length > 0) {
-        const blendVoices = voices.slice(0, 3).map((v, i) => ({
-          label: v,
-          percentage: blendValues[i] || Math.round(100 / voices.length),
-        }));
-        try {
-          await api.voice.createBlend("My starting blend", blendVoices);
-        } catch {
-          // Blend creation optional
-        }
-      }
-
-      router.push("/onboarding/handoff");
+      setShowRefSelector(true);
     } catch (e) {
       console.error("Failed to save voice config:", e);
     } finally {
       setSaving(false);
     }
   };
+
+  if (showRefSelector) {
+    return (
+      <OnboardingShell maxWidth="1120px" step={2} totalSteps={3}>
+        <div className="mt-8">
+          <ReferenceVoiceSelector
+            selected={selectedRefIds}
+            onSelectionChange={setSelectedRefIds}
+            onContinue={async () => {
+              if (selectedRefIds.length < 2 || saving) {
+                return;
+              }
+
+              setSaving(true);
+
+              try {
+                if (user?.id) {
+                  await api.referenceAccounts.saveSelections(
+                    user.id,
+                    selectedRefIds
+                  );
+                }
+
+                router.push("/onboarding/handoff");
+              } catch (error) {
+                console.error("Failed to save reference voices:", error);
+              } finally {
+                setSaving(false);
+              }
+            }}
+          />
+        </div>
+      </OnboardingShell>
+    );
+  }
 
   return (
     <OnboardingShell
@@ -301,84 +289,6 @@ export default function TrackBPage() {
 
         <section>
           <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
-            Pick voices you admire.
-          </label>
-          <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-6">
-            {[
-              ...referenceVoices,
-              ...Array.from(selectedVoices).filter(
-                (voice) => !referenceVoices.includes(voice)
-              ),
-            ].map((voice) => {
-              const isSelected = selectedVoices.has(voice);
-              return (
-                <button
-                  key={voice}
-                  type="button"
-                  onClick={() => toggleVoice(voice)}
-                  className={`flex flex-col items-center gap-2 rounded-2xl bg-atlas-surface p-3 transition-all ${
-                    isSelected
-                      ? "border border-atlas-teal"
-                      : "border border-glass-border"
-                  }`}
-                >
-                  <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-atlas-teal/20 text-sm font-medium text-atlas-teal">
-                    {voice[0]}
-                    {isSelected && (
-                      <div className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-atlas-teal">
-                        <Check className="h-2.5 w-2.5 text-atlas-bg" />
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-xs text-atlas-text-secondary">
-                    {voice}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {addingHandle ? (
-            <div className="mt-3 flex items-center gap-2">
-              <input
-                type="text"
-                value={newHandle}
-                onChange={(event) => setNewHandle(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") handleAddCustomHandle();
-                }}
-                placeholder="@twitterhandle"
-                autoFocus
-                className="flex-1 rounded-lg border border-glass-border bg-atlas-surface px-4 py-2 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={handleAddCustomHandle}
-                className="rounded-lg border border-atlas-teal/30 bg-atlas-teal/10 px-3 py-2 text-sm text-atlas-teal"
-              >
-                Add
-              </button>
-              <button
-                type="button"
-                onClick={() => setAddingHandle(false)}
-                className="px-3 py-2 text-sm text-atlas-text-secondary"
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setAddingHandle(true)}
-              className="mt-3 flex items-center gap-1 text-sm text-atlas-teal hover:underline"
-            >
-              <Plus className="h-3 w-3" /> Add your own — paste a Twitter handle
-            </button>
-          )}
-        </section>
-
-        <section>
-          <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
             Paste tweet links you like{" "}
             <span className="text-atlas-text-muted">(optional)</span>
           </label>
@@ -394,42 +304,6 @@ export default function TrackBPage() {
           </p>
         </section>
 
-        <section>
-          <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
-            Adjust your voice blend
-          </label>
-          <div className="mt-3 space-y-4">
-            {[
-              "My voice",
-              ...(Array.from(selectedVoices).slice(0, 2).length > 0
-                ? Array.from(selectedVoices).slice(0, 2)
-                : ["Reference A", "Reference B"]),
-            ].map((label, index) => (
-              <div key={label} className="flex items-center gap-4">
-                <span className="w-28 shrink-0 text-sm text-atlas-text-secondary">
-                  {label}
-                </span>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={blendValues[index]}
-                  onChange={(event) =>
-                    updateBlend(index, Number(event.target.value))
-                  }
-                  className="flex-1 accent-atlas-teal"
-                />
-                <span className="w-10 text-right text-sm text-atlas-text">
-                  {blendValues[index]}%
-                </span>
-              </div>
-            ))}
-          </div>
-          <p className="mt-2 text-xs text-atlas-text-muted">
-            You can always adjust this later from Voice Profiles.
-          </p>
-        </section>
-
         <GradientButton
           fullWidth
           onClick={handleSaveAndContinue}
@@ -440,7 +314,7 @@ export default function TrackBPage() {
               <Loader2 className="h-4 w-4 animate-spin" /> Saving your voice...
             </span>
           ) : (
-            "Let's get started"
+            "Continue to reference voices"
           )}
         </GradientButton>
       </div>

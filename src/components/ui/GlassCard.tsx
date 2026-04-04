@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 export interface GlassCardProps {
   children: ReactNode;
   className?: string;
-  maxWidth?: "480px" | "640px" | "720px" | "full";
+  maxWidth?: "480px" | "640px" | "720px" | "1120px" | "full";
   "aria-label"?: string;
 }
 
