@@ -9,7 +9,8 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import { Search, LayoutDashboard, PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users, Star, StarOff } from "lucide-react";
+import { Search, LayoutDashboard, PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users, Star, StarOff, FlaskConical } from "lucide-react";
+import { useDemoMode } from "@/lib/demo-mode";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ function saveFavorites(ids: Set<string>) {
 
 export function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const { isDemoMode, toggleDemoMode } = useDemoMode();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -117,6 +119,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
     { id: "team-library", label: "Team Library", description: "Approved style cards", icon: BookOpen, action: () => navigate("/team-library"), keywords: "library styles" },
     { id: "management", label: "Team Management", description: "Manage analysts", icon: Users, action: () => navigate("/management"), keywords: "team kpi leaderboard" },
     { id: "telegram", label: "Telegram Setup", description: "Bot configuration guide", icon: Send, action: () => navigate("/telegram"), keywords: "bot notifications" },
+    { id: "demo-mode", label: "Toggle Demo Mode", description: isDemoMode ? "Switch to live data" : "Switch to demo data", icon: FlaskConical, action: () => { toggleDemoMode(); closePalette(); }, keywords: "demo mock sample live toggle" },
   ];
 
   const toggleFavorite = useCallback((id: string, e: React.MouseEvent) => {

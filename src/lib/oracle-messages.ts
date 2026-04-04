@@ -88,6 +88,17 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
     ),
   ],
 
+  TRACK_B_CONTENT: [
+    msg(
+      "oracle",
+      "Got any tweets or articles that match the style you want? Drop them here — I'll use them as individual style signals.",
+      {
+        component: { type: "content-signals" },
+        actions: [{ label: "Skip for now", value: "skip-content", variant: "ghost" }],
+      }
+    ),
+  ],
+
   TRACK_B_DIMENSIONS: [
     msg(
       "oracle",
