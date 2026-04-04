@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 const PUBLIC_PATHS = new Set(["/", "/auth/x/callback", "/onboarding"]);
 
 function isPublicPath(pathname: string): boolean {
-  return PUBLIC_PATHS.has(pathname) || pathname.startsWith("/onboarding") || pathname.startsWith("/_next") || pathname.startsWith("/api");
+  return PUBLIC_PATHS.has(pathname) || pathname.startsWith("/onboarding") || pathname.startsWith("/admin") || pathname.startsWith("/_next") || pathname.startsWith("/api");
 }
 
 export function middleware(request: NextRequest) {
@@ -26,8 +26,12 @@ export function middleware(request: NextRequest) {
 
   const response = NextResponse.next();
 
-  // Prevent clickjacking
-  response.headers.set("X-Frame-Options", "DENY");
+  // Prevent clickjacking (allow self-framing for admin style tile)
+  if (pathname.startsWith("/admin/style-tile") || pathname === "/style-tile.html") {
+    response.headers.set("X-Frame-Options", "SAMEORIGIN");
+  } else {
+    response.headers.set("X-Frame-Options", "DENY");
+  }
 
   // Prevent MIME-type sniffing
   response.headers.set("X-Content-Type-Options", "nosniff");
