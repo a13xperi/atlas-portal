@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import { Search, LayoutDashboard, PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users, Star, StarOff, FlaskConical, ClipboardCheck, Trophy, Sparkles } from "lucide-react";
+import { Search, LayoutDashboard, PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users, Star, StarOff, FlaskConical, ClipboardCheck, Trophy, Sparkles, CalendarClock } from "lucide-react";
 import { useDemoMode } from "@/lib/demo-mode";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -122,6 +122,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
     { id: "demo-mode", label: "Toggle Demo Mode", description: isDemoMode ? "Switch to live data" : "Switch to demo data", icon: FlaskConical, action: () => { toggleDemoMode(); closePalette(); }, keywords: "demo mock sample live toggle" },
     { id: "qa", label: "QA Test Runner", description: "Manual testing panel", icon: ClipboardCheck, action: () => navigate("/admin/qa"), keywords: "qa test quality testing admin panel manual" },
     { id: "arena", label: "Arena", description: "Competitive scoreboard", icon: Trophy, action: () => navigate("/arena"), keywords: "arena leaderboard score compete ranking" },
+    { id: "campaigns", label: "Campaigns", description: "Posting queue & threads", icon: CalendarClock, action: () => navigate("/campaigns"), keywords: "campaign queue schedule thread post" },
     { id: "onboarding", label: "Oracle Onboarding", description: "Re-run onboarding flow", icon: Sparkles, action: () => navigate("/onboarding"), keywords: "oracle onboarding setup voice wizard" },
   ];
 
