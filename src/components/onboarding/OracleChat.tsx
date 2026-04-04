@@ -26,6 +26,7 @@ import TopicPicker from "./TopicPicker";
 import ReferenceVoiceSelector from "./ReferenceVoiceSelector";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import GradientButton from "@/components/ui/GradientButton";
+import ContentInput from "@/components/ui/ContentInput";
 import { AtSign, Loader2 } from "lucide-react";
 
 const referenceAccountLookup = getReferenceAccountLookup(
@@ -492,6 +493,21 @@ export default function OracleChat() {
                 dispatch({ type: "SET_TOPICS", topics })
               }
             />
+          );
+
+        case "content-signals":
+          return (
+            <div className="space-y-3">
+              <ContentInput
+                placeholder="Paste tweet URLs or drop a report/article..."
+                showMic={false}
+                onTextChange={() => {}}
+                onTextSubmit={() => true}
+              />
+              <p className="text-xs text-atlas-text-muted">
+                You can also send these via Telegram later.
+              </p>
+            </div>
           );
 
         case "handoff-telegram":
