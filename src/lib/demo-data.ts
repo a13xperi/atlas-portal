@@ -533,7 +533,10 @@ export function getDemoResponse(path: string, method: string = "GET"): unknown |
 
   // Dynamic path matchers
   if (method === "GET" && /^\/api\/drafts\/[^/]+$/.test(cleanPath)) {
-    return { draft: drafts.drafts[0] };
+    // Don't intercept /api/drafts/team — it has its own entry in the path map
+    if (cleanPath !== "/api/drafts/team") {
+      return { draft: drafts.drafts[0] };
+    }
   }
 
   if (method === "POST" && cleanPath === "/api/drafts/generate") {
