@@ -16,6 +16,7 @@ import {
   Users,
   Trophy,
   CalendarClock,
+  Rss,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -32,9 +33,10 @@ export interface NavBarProps {
 }
 
 const navLinks = [
+  { label: "Feed", href: "/feed", icon: Rss },
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Crafting", href: "/crafting", icon: PenTool },
-  { label: "Voice", href: "/voice-profiles", icon: Mic2 },
+  { label: "Voices", href: "/voice-profiles", icon: Mic2 },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Briefing", href: "/briefing", icon: Newspaper },
   { label: "Signals", href: "/alerts", icon: Zap },
