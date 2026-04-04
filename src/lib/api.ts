@@ -409,6 +409,29 @@ export const api = {
       page?: string;
     }) =>
       request<{ text: string }>("/api/oracle/chat", { method: "POST", body }),
+
+    agent: (body: {
+      messages: Array<{ role: "user" | "oracle"; content: string }>;
+      page?: string;
+      actionResults?: Array<{
+        actionId: string;
+        type: string;
+        success: boolean;
+        data?: unknown;
+        error?: string;
+      }>;
+    }) =>
+      request<{
+        text: string;
+        actions: Array<{
+          id: string;
+          type: string;
+          input: Record<string, unknown>;
+          requiresConfirmation: boolean;
+          label: string;
+        }>;
+        serverResults?: Array<{ toolCallId: string; result: unknown }>;
+      }>("/api/oracle/agent", { method: "POST", body }),
   },
 
   campaigns: {
