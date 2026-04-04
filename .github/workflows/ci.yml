@@ -34,6 +34,8 @@ jobs:
       - run: npm ci
       - run: npx playwright install chromium --with-deps
       - run: npm run test:e2e
+        env:
+          VERCEL_PROTECTION_BYPASS: ${{ secrets.VERCEL_PROTECTION_BYPASS }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
