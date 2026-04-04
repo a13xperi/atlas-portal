@@ -52,7 +52,9 @@ export default function TeamLibraryPage() {
 
   function formatEngagement(item: TeamDraft) {
     const engagement = item.predictedEngagement ?? item.actualEngagement;
-    return engagement ? `${(engagement / 1000).toFixed(1)}k` : "—";
+    if (!engagement) return "—";
+    if (engagement >= 1000) return `${(engagement / 1000).toFixed(1)}k`;
+    return `${engagement.toFixed(1)}k`;
   }
 
   return (
@@ -122,7 +124,7 @@ export default function TeamLibraryPage() {
         {visibleItems.map((item) => (
           <div
             key={item.id}
-            className="card-interactive flex flex-col rounded-2xl border border-glass-border bg-atlas-surface p-8"
+            className="card-interactive flex flex-col rounded-2xl border border-glass-border bg-atlas-surface p-8 break-inside-avoid"
           >
             <p className="text-lg text-atlas-text leading-relaxed">{item.content}</p>
             {item.feedback && (
