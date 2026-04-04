@@ -7,8 +7,9 @@ import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
 import { api, TeamAnalyst } from "@/lib/api";
 import { rankTeam, RankedAnalyst, TIERS } from "@/lib/atlas-score";
-import { Trophy, TrendingUp, Flame, Minus, Zap, BarChart3, Loader2, AlertTriangle, Send, Volume2 } from "lucide-react";
+import { Trophy, TrendingUp, Flame, Minus, Zap, BarChart3, Loader2, AlertTriangle, Send, Volume2, ChevronUp, ChevronDown } from "lucide-react";
 import { getSuperlatives } from "@/lib/arena-superlatives";
+import { saveSnapshot, getPositionChange, isSnapshotStale } from "@/lib/arena-history";
 
 const SCORE_LABELS: Record<string, string> = {
   output: "Output",
@@ -116,6 +117,15 @@ export default function ArenaPage() {
   const inactiveAnalysts = ranked.filter(
     (r) => r.analyst._count.sessions === 0 && r.analyst._count.tweetDrafts === 0
   );
+
+  // Save snapshot for position tracking (refresh every 6 hours)
+  useEffect(() => {
+    if (ranked.length > 0 && isSnapshotStale()) {
+      // Delay save so we can show changes from previous snapshot first
+      const timer = setTimeout(() => saveSnapshot(ranked), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [ranked]);
 
   return (
     <AppShell>
@@ -282,9 +292,26 @@ export default function ArenaPage() {
                         {entry.score.total}
                       </span>
 
-                      {/* Placeholder for position change — needs historical data */}
+                      {/* Position change from last snapshot */}
                       <span className="w-6 text-center">
-                        <Minus className="h-3 w-3 text-atlas-text-muted mx-auto" />
+                        {(() => {
+                          const change = getPositionChange(entry.analyst.id, entry.rank);
+                          if (change > 0)
+                            return (
+                              <span className="flex items-center justify-center text-atlas-success text-xs font-medium">
+                                <ChevronUp className="h-3 w-3" />
+                                {change}
+                              </span>
+                            );
+                          if (change < 0)
+                            return (
+                              <span className="flex items-center justify-center text-atlas-error text-xs font-medium">
+                                <ChevronDown className="h-3 w-3" />
+                                {Math.abs(change)}
+                              </span>
+                            );
+                          return <Minus className="h-3 w-3 text-atlas-text-muted mx-auto" />;
+                        })()}
                       </span>
                     </button>
                   );
