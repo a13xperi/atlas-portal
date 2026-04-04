@@ -5,11 +5,13 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useDemoMode } from "@/lib/demo-mode";
 import { TOUR_STEPS } from "@/lib/tour";
 import TourSpotlight from "./TourSpotlight";
 
@@ -78,8 +80,13 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
 
   const completeTour = useCallback(() => {
     setActive(false);
+    // Restore demo mode if we turned it on for the tour
+    if (demoWasOff.current) {
+      toggleDemoMode();
+      demoWasOff.current = false;
+    }
     api.users.updateProfile({ tourCompleted: true, tourStep: TOUR_STEPS.length }).catch(() => {});
-  }, []);
+  }, [toggleDemoMode]);
 
   const nextStep = useCallback(() => {
     if (currentStep >= TOUR_STEPS.length - 1) {
@@ -97,10 +104,18 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     completeTour();
   }, [completeTour]);
 
+  const { isDemoMode, toggleDemoMode } = useDemoMode();
+  const demoWasOff = useRef(false);
+
   const startTour = useCallback(() => {
+    // Auto-enable demo mode so every page has data during the tour
+    if (!isDemoMode) {
+      demoWasOff.current = true;
+      toggleDemoMode();
+    }
     setCurrentStep(0);
     setActive(true);
-  }, []);
+  }, [isDemoMode, toggleDemoMode]);
 
   return (
     <TourContext.Provider
