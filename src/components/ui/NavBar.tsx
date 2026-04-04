@@ -15,6 +15,7 @@ import {
   BookOpen,
   Users,
   Trophy,
+  CalendarClock,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -38,6 +39,7 @@ const navLinks = [
   { label: "Signals", href: "/alerts", icon: Zap },
   { label: "Library", href: "/team-library", icon: BookOpen },
   { label: "Arena", href: "/arena", icon: Trophy },
+  { label: "Campaigns", href: "/campaigns", icon: CalendarClock },
 ];
 
 function DelphiLogo() {
