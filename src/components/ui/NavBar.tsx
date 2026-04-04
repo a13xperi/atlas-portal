@@ -48,7 +48,7 @@ function DelphiLogo() {
       fill="none"
       aria-hidden="true"
       focusable="false"
-      className="text-atlas-teal"
+      className="text-delphi-blue-400"
     >
       <circle
         cx="14"

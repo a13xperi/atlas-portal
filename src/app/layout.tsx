@@ -52,7 +52,7 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content={colors.atlasTeal} />
+        <meta name="theme-color" content={colors.delphiBlue500} />
       </head>
       <body className="font-body bg-atlas-bg text-atlas-text min-h-screen">
         <RouteProgress />
