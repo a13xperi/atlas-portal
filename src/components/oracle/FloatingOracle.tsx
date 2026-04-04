@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import { X, Send, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
 
 interface NudgeMessage {
   text: string;
@@ -73,6 +74,7 @@ export default function FloatingOracle() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [imgError, setImgError] = useState(false);
   const [hasUnread, setHasUnread] = useState(true);
+  const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -165,17 +167,35 @@ export default function FloatingOracle() {
         }
       }
 
-      // Fallback
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `reply-${Date.now()}`,
-          role: "oracle",
-          text: "I'm not sure about that yet, but I can help you navigate Atlas, draft tweets, check analytics, or tune your voice. Type \"help\" to see everything I can do.",
-        },
-      ]);
+      // No keyword match — call Oracle API
+      setIsThinking(true);
+      const history = messages
+        .filter((m) => m.role === "user" || m.role === "oracle")
+        .slice(-10)
+        .map((m) => ({ role: m.role as "user" | "oracle", content: m.text }));
+      history.push({ role: "user", content: text });
+
+      api.oracle
+        .chat({ messages: history, page: pathname.replace("/", "") || "dashboard" })
+        .then((res) => {
+          setMessages((prev) => [
+            ...prev,
+            { id: `ai-${Date.now()}`, role: "oracle", text: res.text },
+          ]);
+        })
+        .catch(() => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `err-${Date.now()}`,
+              role: "oracle",
+              text: "I'm having trouble connecting right now. Try asking again, or type \"help\" to see what I can do locally.",
+            },
+          ]);
+        })
+        .finally(() => setIsThinking(false));
     },
-    [router],
+    [router, messages, pathname],
   );
 
   const handleSend = useCallback(() => {
@@ -283,6 +303,13 @@ export default function FloatingOracle() {
                 </div>
               </div>
             ))}
+            {isThinking && (
+              <div className="flex justify-start">
+                <div className="max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm bg-atlas-surface text-atlas-text-muted">
+                  <span className="inline-flex gap-1"><span className="animate-pulse">·</span><span className="animate-pulse" style={{animationDelay: "0.2s"}}>·</span><span className="animate-pulse" style={{animationDelay: "0.4s"}}>·</span></span>
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
@@ -316,7 +343,7 @@ export default function FloatingOracle() {
             <button
               type="button"
               onClick={handleSend}
-              disabled={!input.trim()}
+              disabled={!input.trim() || isThinking}
               className="text-atlas-teal disabled:text-atlas-text-muted disabled:opacity-40"
               aria-label="Send message"
             >
