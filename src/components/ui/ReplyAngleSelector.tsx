@@ -1,6 +1,6 @@
 "use client";
 
-export const REPLY_ANGLES = ["Direct", "Curious", "Concise"] as const;
+export const REPLY_ANGLES = ["Direct", "Curious", "Concise", "Contrarian", "Technical"] as const;
 
 export type ReplyAngle = (typeof REPLY_ANGLES)[number];
 
