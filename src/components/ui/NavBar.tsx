@@ -21,6 +21,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import NotificationDropdown from "@/components/ui/NotificationDropdown";
 import DemoModeToggle from "@/components/ui/DemoModeToggle";
+import TourToggle from "@/components/tour/TourToggle";
 import { useAuth } from "@/lib/auth";
 import { useAlertSocket } from "@/lib/alertSocket";
 import { useCommandPalette } from "@/components/ui/CommandPalette";
@@ -161,7 +162,12 @@ export default function NavBar({ variant }: NavBarProps) {
               </kbd>
             </button>
           )}
-          {variant === "app" && user && <DemoModeToggle />}
+          {variant === "app" && user && (
+            <>
+              <TourToggle />
+              <DemoModeToggle />
+            </>
+          )}
           {user && (
             <>
               <div className="relative">
