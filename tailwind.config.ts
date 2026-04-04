@@ -10,7 +10,6 @@ const config: Config = {
     extend: {
       colors: {
         "atlas-teal": "#4ecdc4",
-        "atlas-steel": "#7b8fa1",
         "atlas-surface": "#0A1628",
         "atlas-bg": "#010411",
         "atlas-nav": "#0A1225",

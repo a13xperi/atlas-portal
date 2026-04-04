@@ -258,7 +258,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="rounded-2xl border border-glass-border bg-atlas-surface-glass p-8 text-center backdrop-blur-sm">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-atlas-teal/20 to-atlas-steel/20">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-atlas-teal/20 to-atlas-teal/20">
               <PenTool className="h-8 w-8 text-atlas-teal" aria-hidden="true" />
             </div>
             <h3 className="mb-2 font-heading font-bold tracking-tight text-xl text-atlas-text">

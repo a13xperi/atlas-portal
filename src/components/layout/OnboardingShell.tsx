@@ -40,7 +40,7 @@ export default function OnboardingShell({
                   aria-valuemax={totalSteps}
                   aria-valuemin={1}
                   aria-valuenow={step}
-                  className="h-1.5 rounded-full bg-gradient-to-r from-atlas-teal to-atlas-steel transition-all duration-500"
+                  className="h-1.5 rounded-full bg-gradient-to-r from-delphi-blue-500 to-atlas-teal transition-all duration-500"
                   role="progressbar"
                   style={{ width: `${progressPercentage}%` }}
                 />

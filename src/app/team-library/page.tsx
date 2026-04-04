@@ -130,7 +130,7 @@ export default function TeamLibraryPage() {
             )}
             <div className="mt-auto pt-4 border-t border-glass-border">
               <div className="flex items-center gap-2 mt-3">
-                <div className="h-6 w-6 rounded-full bg-gradient-to-r from-atlas-teal to-atlas-steel flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
+                <div className="h-6 w-6 rounded-full bg-gradient-to-r from-delphi-blue-500 to-atlas-teal flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
                   {item.user?.handle?.[0]?.toUpperCase() || item.user?.displayName?.[0]?.toUpperCase() || "?"}
                 </div>
                 <span className="text-xs text-atlas-text-secondary truncate">
