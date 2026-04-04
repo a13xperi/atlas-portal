@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type DragEventHandler } from "react";
+import { useId, useRef, useState, type DragEventHandler } from "react";
 import { Mic, FileText, MessageSquare, TrendingUp } from "lucide-react";
 
 export interface ContentInputProps {
@@ -38,10 +38,20 @@ export default function ContentInput({
   onContentDragLeave,
   onContentDrop,
 }: ContentInputProps) {
+  const contentInputId = useId();
+  const contentErrorId = useId();
+  const sourceErrorId = useId();
+  const contentHintId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const [internalText, setInternalText] = useState("");
   const text = value ?? internalText;
+  const contentDescriptionIds = [
+    contentHintId,
+    contentError ? contentErrorId : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const handleDrop = (event: React.DragEvent) => {
     event.preventDefault();
@@ -98,6 +108,7 @@ export default function ContentInput({
       <input
         ref={fileInputRef}
         aria-label="Upload report file"
+        aria-describedby={sourceError ? sourceErrorId : undefined}
         type="file"
         accept={acceptFileTypes}
         onChange={handleFileSelect}
@@ -110,39 +121,30 @@ export default function ContentInput({
         className="rounded-2xl border-2 border-dashed border-atlas-text-secondary/30 bg-atlas-surface p-6 text-center transition-colors hover:border-atlas-teal/50 sm:p-8"
       >
         <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-8">
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Upload a report file"
+          <button
+            type="button"
             onClick={() => fileInputRef.current?.click()}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click(); }}
             className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-glass-border bg-atlas-nav px-4 py-4 text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal"
           >
             <FileText className="w-8 h-8" aria-hidden="true" />
             <span className="text-xs">Drop a report</span>
-          </div>
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Paste a tweet idea"
+          </button>
+          <button
+            type="button"
             onClick={() => textInputRef.current?.focus()}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") textInputRef.current?.focus(); }}
             className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-glass-border bg-atlas-nav px-4 py-4 text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal"
           >
             <MessageSquare className="w-8 h-8" aria-hidden="true" />
             <span className="text-xs">Paste a tweet idea</span>
-          </div>
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Pick a trending alert"
+          </button>
+          <button
+            type="button"
             onClick={() => onTrendingClick?.()}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onTrendingClick?.(); }}
             className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-glass-border bg-atlas-nav px-4 py-4 text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal"
           >
             <TrendingUp className="w-8 h-8" aria-hidden="true" />
             <span className="text-xs">Pick a trending alert</span>
-          </div>
+          </button>
         </div>
         <p className="text-atlas-text-muted text-xs">
           Drag and drop files or click an option above
@@ -150,7 +152,7 @@ export default function ContentInput({
       </div>
 
       {sourceError ? (
-        <p role="alert" className="text-sm text-atlas-error">
+        <p id={sourceErrorId} role="alert" className="text-sm text-atlas-error">
           {sourceError}
         </p>
       ) : null}
@@ -162,9 +164,15 @@ export default function ContentInput({
         className="relative"
       >
         <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-start">
+          <label htmlFor={contentInputId} className="sr-only">
+            Tweet idea or source text
+          </label>
           <textarea
+            id={contentInputId}
+            name="content"
             ref={textInputRef}
-            aria-label="Content input"
+            aria-describedby={contentDescriptionIds || undefined}
+            aria-invalid={Boolean(contentError)}
             placeholder={placeholder}
             value={text}
             rows={3}
@@ -198,7 +206,7 @@ export default function ContentInput({
         ) : null}
       </div>
 
-      <p className="text-[11px] text-atlas-text-muted">
+      <p id={contentHintId} className="text-[11px] text-atlas-text-muted">
         Press{" "}
         <kbd className="rounded border border-glass-border px-1 py-0.5 text-[10px] font-mono">
           Enter
@@ -207,7 +215,7 @@ export default function ContentInput({
       </p>
 
       {contentError ? (
-        <p role="alert" className="text-sm text-atlas-error">
+        <p id={contentErrorId} role="alert" className="text-sm text-atlas-error">
           {contentError}
         </p>
       ) : null}
