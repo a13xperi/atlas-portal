@@ -71,7 +71,7 @@ export default function DraftHistorySidebar({
       className={mobile ? "w-full" : "hidden w-64 shrink-0 lg:block"}
     >
       <div className={mobile ? "space-y-4" : "sticky top-24 space-y-4"}>
-        <div className="border border-glass-border bg-atlas-surface rounded-2xl p-5">
+        <div className="border border-glass-border bg-atlas-bg/40 rounded-2xl p-5">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-heading font-bold text-lg text-atlas-text">Draft History</h2>
@@ -93,7 +93,7 @@ export default function DraftHistorySidebar({
         </div>
 
         {drafts.length === 0 ? (
-          <div className="border border-glass-border bg-atlas-surface rounded-2xl p-4">
+          <div className="border border-glass-border bg-atlas-bg/40 rounded-2xl p-4">
             <p className="font-body text-xs text-atlas-text-muted">
               No drafts yet. Generate your first tweet above.
             </p>
@@ -108,7 +108,7 @@ export default function DraftHistorySidebar({
                   key={draft.id}
                   type="button"
                   onClick={() => onSelectDraft(draft)}
-                  className={`w-full rounded-2xl border bg-atlas-surface p-4 text-left transition-all ${
+                  className={`w-full rounded-2xl border bg-atlas-bg/40 p-4 text-left transition-all ${
                     isActive
                       ? "border-atlas-teal/50 ring-1 ring-atlas-teal/30"
                       : "border-glass-border hover:border-atlas-text-muted/30"
