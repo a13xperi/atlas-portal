@@ -274,7 +274,7 @@ export default function DashboardPage() {
             </div>
             <div className="mt-3 space-y-2">
               {trending.map((topic) => (
-                <Link key={topic.id} href="/crafting" className="flex items-center justify-between rounded-xl bg-atlas-bg/40 px-4 py-3 group card-interactive">
+                <Link key={topic.id} href={`/crafting?content=${encodeURIComponent(topic.headline || topic.topic)}`} className="flex items-center justify-between rounded-xl bg-atlas-bg/40 px-4 py-3 group card-interactive">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-atlas-text truncate group-hover:text-atlas-teal transition-colors">{topic.headline || topic.topic}</p>
                     {topic.sentiment && (
