@@ -40,7 +40,7 @@ describe("DraftHistorySidebar", () => {
       />
     );
 
-    expect(screen.getByText("Drafts")).toBeInTheDocument();
+    expect(screen.getByText("Draft History")).toBeInTheDocument();
     expect(
       screen.getByText("No drafts yet. Generate your first tweet above.")
     ).toBeInTheDocument();
