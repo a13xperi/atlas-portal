@@ -281,32 +281,23 @@ const smokeRoutes: SmokeRoute[] = [
     name: "telegram",
     path: "/telegram",
     ready: (page) =>
-      page.getByRole("heading", { name: /telegram alerts/i }),
+      page.getByRole("heading", { name: /connect telegram/i }),
   },
   {
     name: "management",
     path: "/management",
-    ready: (page) => page.getByRole("heading", { name: /team management/i }),
+    ready: (page) => page.getByRole("heading", { name: /atlas arena/i }),
   },
   {
     name: "profile",
     path: "/profile",
     ready: (page) => page.getByRole("heading", { name: /atlas analyst/i }),
   },
-  // The app tree currently exposes onboarding entry pages under /onboarding/track-*.
+  // Onboarding now uses the conversational Oracle chat UI at /onboarding
   {
-    name: "onboarding entrypoint",
-    path: "/onboarding/track-a",
-    ready: (page) =>
-      page.getByRole("heading", {
-        name: /connect your x account/i,
-      }),
-  },
-  {
-    name: "onboarding track b",
-    path: "/onboarding/track-b",
-    ready: (page) =>
-      page.getByRole("heading", { name: /build your voice manually/i }),
+    name: "onboarding",
+    path: "/onboarding",
+    ready: (page) => page.locator('[data-testid="oracle-chat"], [class*="chat"], img[alt*="Oracle"], img[alt*="avatar"]').first(),
   },
 ];
 
@@ -438,7 +429,20 @@ async function expectHealthyPage(
 
 test.describe("Route smoke tests", () => {
   for (const smokeRoute of smokeRoutes) {
-    test(`renders ${smokeRoute.name}`, async ({ page }) => {
+    test(`renders ${smokeRoute.name}`, async ({ page, context }) => {
+      // Set auth cookie so the app treats the session as authenticated
+      const baseURL =
+        process.env.PLAYWRIGHT_BASE_URL ?? "https://delphi-atlas.vercel.app";
+      const url = new URL(baseURL);
+      await context.addCookies([
+        {
+          name: "atlas_access_token",
+          value: "1",
+          domain: url.hostname,
+          path: "/",
+        },
+      ]);
+
       await stubApi(page);
 
       const { consoleErrors, pageErrors } = monitorClientErrors(page);
