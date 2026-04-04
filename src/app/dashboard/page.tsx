@@ -37,6 +37,7 @@ export default function DashboardPage() {
   const [quickDraft, setQuickDraft] = useState("");
   const [quickDrafting, setQuickDrafting] = useState(false);
   const [engagementDraftId, setEngagementDraftId] = useState<string | null>(null);
+  const [expandedDraftId, setExpandedDraftId] = useState<string | null>(null);
   const [engagementForm, setEngagementForm] = useState({ likes: "", retweets: "", impressions: "" });
   const [engagementSaving, setEngagementSaving] = useState(false);
   const [trending, setTrending] = useState<TrendingTopic[]>([]);
@@ -321,10 +322,14 @@ export default function DashboardPage() {
         {drafts.length > 0 ? (
           <div className="bg-atlas-surface border border-glass-border rounded-2xl divide-y divide-glass-border">
             {drafts.map((draft) => (
-              <div key={draft.id} className="px-4 py-3 sm:px-6 sm:py-4">
-                <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="min-w-0 text-xs text-atlas-text sm:text-sm">
-                    {draft.content.slice(0, 60)}...
+              <div key={draft.id} className="px-4 py-3 sm:px-6 sm:py-4 transition-colors hover:bg-white/[0.02]">
+                <button
+                  type="button"
+                  onClick={() => setExpandedDraftId(expandedDraftId === draft.id ? null : draft.id)}
+                  className="flex w-full flex-col items-start gap-2 text-left sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <span className="min-w-0 text-xs text-atlas-text sm:text-sm group-hover:text-white">
+                    {expandedDraftId === draft.id ? draft.content : `${draft.content.slice(0, 60)}...`}
                   </span>
                   <div className="flex items-center gap-2">
                     {draft.status === "POSTED" && !draft.actualEngagement && (
@@ -341,7 +346,23 @@ export default function DashboardPage() {
                     )}
                     <StatusPill label={draft.status} variant={statusMap[draft.status] || "draft"} />
                   </div>
-                </div>
+                </button>
+                {expandedDraftId === draft.id && (
+                  <div className="mt-3 rounded-xl border border-glass-border bg-atlas-bg/80 p-4">
+                    <p className="text-sm leading-relaxed text-atlas-text">{draft.content}</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-atlas-text-muted">
+                      {draft.sourceType && <span className="rounded bg-atlas-nav px-2 py-0.5">{draft.sourceType.replace("_", " ")}</span>}
+                      {draft.confidence != null && <span>Confidence: {Math.round(draft.confidence * 100)}%</span>}
+                      {draft.predictedEngagement != null && <span>Predicted: {draft.predictedEngagement.toLocaleString()} eng.</span>}
+                      <span>{new Date(draft.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <button onClick={() => router.push(`/crafting?draft=${draft.id}`)} className="rounded-lg bg-atlas-teal/10 px-3 py-1.5 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/20">
+                        Open in Crafting
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {engagementDraftId === draft.id && (
                   <div className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-glass-border bg-atlas-bg p-3">
                     <div>
