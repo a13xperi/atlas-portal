@@ -55,8 +55,9 @@ export default function TelegramPage() {
           </div>
           <div>
             <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">
-              Connect Telegram
+              Telegram Integration
             </h1>
+          <p className="mt-2 text-atlas-text-secondary max-w-2xl">Connect your Telegram account to get Atlas alerts, draft tweets, and manage your content queue from the chat you already live in.</p>
             <p className="mt-2 text-base text-atlas-text-secondary">
               Get Atlas alerts delivered to your Telegram
             </p>
