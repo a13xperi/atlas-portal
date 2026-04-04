@@ -114,10 +114,10 @@ export default function DashboardPage() {
   }, []);
 
   const statCards = [
-    { label: "Drafts this week", value: String(stats.drafts) },
-    { label: "Posts", value: String(stats.posts) },
-    { label: "Feedback given", value: String(stats.feedback) },
-    { label: "Reports ingested", value: String(stats.reports) },
+    { label: "Drafts this week", value: String(stats.drafts), href: "/crafting" },
+    { label: "Posts", value: String(stats.posts), href: "/campaigns?tab=posted" },
+    { label: "Feedback given", value: String(stats.feedback), href: "/analytics" },
+    { label: "Reports ingested", value: String(stats.reports), href: "/crafting" },
   ];
 
   const statusMap: Record<string, "draft" | "posted" | "feedback"> = {
@@ -237,15 +237,16 @@ export default function DashboardPage() {
 
       <dl className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
-          <div
+          <Link
             key={stat.label}
-            className="bg-atlas-surface border border-glass-border rounded-2xl p-6"
+            href={stat.href}
+            className="bg-atlas-surface border border-glass-border rounded-2xl p-6 card-interactive group"
           >
-            <dt className="text-atlas-text-secondary text-sm">{stat.label}</dt>
+            <dt className="text-atlas-text-secondary text-sm group-hover:text-atlas-teal transition-colors">{stat.label}</dt>
             <dd className="text-[30px] font-semibold mt-1 text-atlas-text">
               {stat.value}
             </dd>
-          </div>
+          </Link>
         ))}
       </dl>
       {showStatsEmptyState && (
