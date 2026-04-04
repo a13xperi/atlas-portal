@@ -127,13 +127,13 @@ export default function ContentInput({
       <div
         onDrop={handleDrop}
         onDragOver={(event) => event.preventDefault()}
-        className="rounded-2xl border-2 border-dashed border-atlas-text-secondary/30 bg-atlas-surface p-6 text-center transition-colors hover:border-atlas-teal/50 sm:p-8"
+        className="rounded-2xl border border-dashed border-glass-border bg-atlas-bg/30 p-6 text-center transition-colors hover:border-atlas-teal/30 sm:p-8"
       >
         <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-8">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-glass-border bg-atlas-nav px-4 py-4 text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal"
+            className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-glass-border/50 bg-atlas-surface/50 px-4 py-4 text-atlas-text-muted transition-colors hover:border-atlas-teal/50 hover:text-atlas-teal"
           >
             <FileText className="w-8 h-8" aria-hidden="true" />
             <span className="text-xs">Drop a report</span>
@@ -141,7 +141,7 @@ export default function ContentInput({
           <button
             type="button"
             onClick={() => textInputRef.current?.focus()}
-            className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-glass-border bg-atlas-nav px-4 py-4 text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal"
+            className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-glass-border/50 bg-atlas-surface/50 px-4 py-4 text-atlas-text-muted transition-colors hover:border-atlas-teal/50 hover:text-atlas-teal"
           >
             <MessageSquare className="w-8 h-8" aria-hidden="true" />
             <span className="text-xs">Paste a tweet idea</span>
@@ -149,7 +149,7 @@ export default function ContentInput({
           <button
             type="button"
             onClick={() => onTrendingClick?.()}
-            className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-glass-border bg-atlas-nav px-4 py-4 text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal"
+            className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-glass-border/50 bg-atlas-surface/50 px-4 py-4 text-atlas-text-muted transition-colors hover:border-atlas-teal/50 hover:text-atlas-teal"
           >
             <TrendingUp className="w-8 h-8" aria-hidden="true" />
             <span className="text-xs">Pick a trending alert</span>
