@@ -20,6 +20,12 @@ jest.mock("next/link", () => ({
   ),
 }));
 
+jest.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+  usePathname: () => "/crafting",
+}));
+
 jest.mock("@/lib/api", () => ({
   api: {
     auth: {
