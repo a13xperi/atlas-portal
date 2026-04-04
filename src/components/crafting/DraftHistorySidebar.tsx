@@ -71,11 +71,10 @@ export default function DraftHistorySidebar({
       className={mobile ? "w-full" : "hidden w-64 shrink-0 lg:block"}
     >
       <div className={mobile ? "space-y-4" : "sticky top-24 space-y-4"}>
-        <div className="bg-glass/50 backdrop-blur-xl border border-glass-border rounded-2xl p-5">
+        <div className="border border-glass-border bg-atlas-surface rounded-2xl p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-atlas-teal">Session</p>
-              <h2 className="font-heading font-bold text-lg text-atlas-text">Drafts</h2>
+              <h2 className="font-heading font-bold text-lg text-atlas-text">Draft History</h2>
             </div>
             {!mobile && (
               <button
@@ -88,14 +87,14 @@ export default function DraftHistorySidebar({
               </button>
             )}
           </div>
-          <p className="mt-1 font-body text-sm text-atlas-text-secondary">
+          <p className="mt-1 font-body text-xs text-atlas-text-muted">
             Session drafts appear here as you generate them.
           </p>
         </div>
 
         {drafts.length === 0 ? (
-          <div className="bg-glass/50 backdrop-blur-xl border border-glass-border rounded-2xl p-4">
-            <p className="font-body text-sm text-atlas-text-secondary">
+          <div className="border border-glass-border bg-atlas-surface rounded-2xl p-4">
+            <p className="font-body text-xs text-atlas-text-muted">
               No drafts yet. Generate your first tweet above.
             </p>
           </div>
@@ -109,10 +108,10 @@ export default function DraftHistorySidebar({
                   key={draft.id}
                   type="button"
                   onClick={() => onSelectDraft(draft)}
-                  className={`w-full rounded-2xl border border-glass-border bg-glass/50 p-4 text-left backdrop-blur-xl ${
+                  className={`w-full rounded-2xl border bg-atlas-surface p-4 text-left transition-all ${
                     isActive
-                      ? "border-atlas-teal ring-1 ring-atlas-teal"
-                      : "card-interactive"
+                      ? "border-atlas-teal/50 ring-1 ring-atlas-teal/30"
+                      : "border-glass-border hover:border-atlas-text-muted/30"
                   }`}
                 >
                   <p className="font-body text-sm leading-5 text-atlas-text">
