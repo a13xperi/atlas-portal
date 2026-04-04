@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { getDemoResponse } from "./demo-data";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
@@ -47,6 +48,17 @@ class ApiError extends Error {
   }
 }
 
+// Demo mode flag — when true, GET requests return mock data
+const DEMO_KEY = "atlas_demo_mode";
+let _demoMode: boolean = typeof window !== "undefined" ? sessionStorage.getItem(DEMO_KEY) === "true" : false;
+
+export function setDemoMode(on: boolean) {
+  _demoMode = on;
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem(DEMO_KEY, String(on));
+  }
+}
+
 // Token store — fallback when HttpOnly cookies don't reach cross-origin
 // Uses sessionStorage for persistence across client-side navigations
 const TOKEN_KEY = "atlas_access_token";
@@ -63,6 +75,13 @@ export function getAccessToken() { return _accessToken; }
 
 async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const { method = "GET", body } = opts;
+
+  // Demo mode interception — return mock data for GET requests
+  if (_demoMode && method === "GET") {
+    const demoResponse = getDemoResponse(path);
+    if (demoResponse !== null) return demoResponse as T;
+  }
+
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (_accessToken) {
     headers["Authorization"] = `Bearer ${_accessToken}`;
