@@ -27,7 +27,7 @@ export function canAdvance(state: OracleState): boolean {
     case "TRACK_A_SCANNING":
       return state.calibrationResult !== null;
     case "TRACK_A_RESULT":
-      return true;
+      return state.displayName.trim().length >= 2;
     case "TRACK_A_RATE":
       return true;
     case "TRACK_B_STYLE":

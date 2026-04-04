@@ -218,11 +218,24 @@ export default function OracleChat() {
             selfPromotionalIntensity: profile.selfPromotionalIntensity ?? 50,
           },
         });
-        // Auto-advance after calibration
+        // Auto-advance after calibration, then add personalized commentary
         dispatch({
           type: "ADVANCE",
           payload: `Calibrated from ${calibration.tweetsAnalyzed} tweets`,
         });
+        if (calibration.analysis) {
+          dispatch({
+            type: "ENQUEUE_MESSAGES",
+            messages: [
+              {
+                id: `calibration-commentary-${Date.now()}`,
+                role: "oracle",
+                content: calibration.analysis,
+                timestamp: Date.now(),
+              },
+            ],
+          });
+        }
       } catch (err) {
         console.error("Calibration failed:", err);
         // Still advance so user isn't stuck
@@ -289,7 +302,8 @@ export default function OracleChat() {
                   })
                 }
               />
-              {state.currentStep === "TRACK_B_DIMENSIONS" && (
+              {(state.currentStep === "TRACK_A_RESULT" ||
+                state.currentStep === "TRACK_B_DIMENSIONS") && (
                 <div className="mt-4">
                   <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
                     Display name
@@ -310,6 +324,43 @@ export default function OracleChat() {
               )}
             </div>
           );
+
+        case "tweet-ratings": {
+          const sampleTweets = [
+            "ETH staking yields are compressing fast. The easy alpha is gone — now it's about execution risk and DVT adoption.",
+            "Everyone's talking about L2 fees but nobody's asking why L1 gas is still this high during a bear market.",
+            "Hot take: most DeFi governance is theater. Token holders vote, whales decide.",
+            "The merge was 18 months ago and we're still arguing about MEV. Builders are the new miners.",
+          ];
+          return (
+            <div className="space-y-3">
+              {sampleTweets.map((tweet, i) => (
+                <div
+                  key={i}
+                  className="flex items-start justify-between gap-4 rounded-2xl bg-atlas-surface p-4"
+                >
+                  <p className="flex-1 text-sm text-atlas-text">{tweet}</p>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      className="text-atlas-text-secondary hover:text-atlas-teal transition-colors"
+                      title="More like me"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z" /></svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="text-atlas-text-secondary hover:text-atlas-error transition-colors"
+                      title="Less like me"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z" /></svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        }
 
         case "style-picker":
           return (
