@@ -87,6 +87,27 @@ jest.mock("@/components/voice-profiles/ReferenceVoicesSection", () => ({
   ),
 }));
 
+jest.mock("@/components/voice-profiles/VoiceCard", () => ({
+  __esModule: true,
+  default: ({ name, isActive, onSelect, onUse }: { name: string; isActive: boolean; isSelected: boolean; isPersonal: boolean; onSelect: () => void; onUse: () => void; dimensions?: Record<string, number> }) => (
+    <div>
+      <span>{name}</span>
+      <button onClick={onSelect}>{name}</button>
+      <button onClick={onUse}>{isActive ? "Active" : "Use This Voice"}</button>
+    </div>
+  ),
+}));
+
+jest.mock("@/components/voice-profiles/VoiceEditorModal", () => ({
+  __esModule: true,
+  default: ({ isOpen }: { isOpen: boolean }) => isOpen ? <div>Editor Modal</div> : null,
+}));
+
+jest.mock("@/components/voice-profiles/VoiceDimensionSections", () => ({
+  __esModule: true,
+  default: () => <div>Dimension Sliders</div>,
+}));
+
 jest.mock("@/lib/api", () => ({
   api: mockApi,
 }));
@@ -157,7 +178,9 @@ describe("VoiceProfilesPage", () => {
 
     expect(await screen.findByText("Research-heavy")).toBeInTheDocument();
 
-    const useButton = screen.getByText("Use This Voice");
+    // Presets are now pill buttons — find any preset button
+    const presetButtons = screen.getAllByRole("button");
+    const useButton = presetButtons.find(b => b.textContent?.includes("Analyst") || b.textContent?.includes("Degen")) ?? presetButtons[0];
     fireEvent.click(useButton);
 
     expect(await screen.findByText("Active")).toBeInTheDocument();
