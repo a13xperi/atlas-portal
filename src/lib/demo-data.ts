@@ -539,24 +539,31 @@ const demoData: Record<string, unknown> = {
     campaigns: [
       {
         id: "camp-1",
-        name: "ETH Staking Bull Case",
-        description: "Q2 thesis on ETH staking yield compression",
-        status: "ACTIVE",
-        draftCount: 3,
-        createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-        updatedAt: new Date(Date.now() - 86400000).toISOString(),
+        name: "Pair Trading in Crypto",
+        description: "Promote the new Delphi Digital research report on pair trading strategies. Generate tweets covering statistical arbitrage, funding rate arb, and cross-exchange spreads.",
+        status: "ACTIVE" as const,
+        draftCount: 4,
+        createdAt: daysAgo(2),
       },
       {
         id: "camp-2",
-        name: "AI x Crypto Weekly",
-        description: "Weekly thread series on AI agent narratives",
-        status: "DRAFT",
-        draftCount: 1,
-        createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
-        updatedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+        name: "ETH Staking Thesis",
+        description: "Build narrative around institutional ETH staking yields compressing — what it means for the network and why it's actually bullish.",
+        status: "DRAFT" as const,
+        draftCount: 2,
+        createdAt: daysAgo(5),
+      },
+      {
+        id: "camp-3",
+        name: "L2 Fee Wars — March Recap",
+        description: "Weekly recap thread on L2 fee compression. Blob fees, calldata optimization, and rollup economics.",
+        status: "COMPLETED" as const,
+        draftCount: 6,
+        createdAt: daysAgo(10),
       },
     ],
   },
+
   "/api/briefing/history": {
     briefings: [
       {
