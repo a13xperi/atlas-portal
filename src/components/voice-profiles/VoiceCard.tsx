@@ -87,7 +87,7 @@ export default function VoiceCard({
             : "border border-glass-border text-atlas-text-secondary hover:border-atlas-teal hover:text-atlas-teal"
         }`}
       >
-        {isActive ? "Active" : "Use This Voice"}
+        {isActive ? "Active" : "Craft with this voice"}
       </button>
     </div>
   );

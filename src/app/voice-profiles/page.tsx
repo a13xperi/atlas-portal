@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Wand2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Plus, Wand2 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
-import GradientButton from "@/components/ui/GradientButton";
+import VoiceCard from "@/components/voice-profiles/VoiceCard";
+import VoiceEditorModal from "@/components/voice-profiles/VoiceEditorModal";
 import {
   api,
   ReferenceVoice,
@@ -15,651 +17,227 @@ import {
 import {
   DEFAULT_VOICE_DIMENSIONS,
   pickVoiceDimensions,
-  VoiceDimensionField,
   VoiceDimensions,
-  VOICE_DIMENSION_FIELDS,
 } from "@/lib/voice-profile-dimensions";
 
-const VOICE_PRESETS: Array<{
-  label: string;
-  values: VoiceDimensions;
-}> = [
-  {
-    label: "CT Degen",
-    values: {
-      ...DEFAULT_VOICE_DIMENSIONS,
-      humor: 80,
-      formality: 20,
-      brevity: 90,
-      contrarianTone: 70,
-    },
-  },
-  {
-    label: "Research Analyst",
-    values: {
-      ...DEFAULT_VOICE_DIMENSIONS,
-      humor: 20,
-      formality: 80,
-      brevity: 30,
-      contrarianTone: 30,
-    },
-  },
-  {
-    label: "Balanced",
-    values: {
-      ...DEFAULT_VOICE_DIMENSIONS,
-    },
-  },
-];
+const PERSONAL_VOICE_ID = "__personal__";
+
+type EditorMode = "create" | "edit-personal" | "edit-blend" | null;
 
 function formatMaturityLabel(maturity?: VoiceProfile["maturity"]) {
-  if (!maturity) {
-    return "Beginner";
-  }
-
+  if (!maturity) return "Beginner";
   return `${maturity.charAt(0)}${maturity.slice(1).toLowerCase()}`;
 }
 
 export default function VoiceProfilesPage() {
+  const router = useRouter();
   const [profile, setProfile] = useState<VoiceProfile | null>(null);
-  const [draftDimensions, setDraftDimensions] = useState<VoiceDimensions>(
-    DEFAULT_VOICE_DIMENSIONS
-  );
   const [references, setReferences] = useState<ReferenceVoice[]>([]);
   const [blends, setBlends] = useState<SavedBlend[]>([]);
-  const [activeBlendId, setActiveBlendId] = useState<string | null>(null);
-  const [blendValues, setBlendValues] = useState([40, 30, 20, 10]);
-  const [showNewBlend, setShowNewBlend] = useState(false);
-  const [blendName, setBlendName] = useState("");
-  const [blendVoices, setBlendVoices] = useState<
-    { label: string; percentage: number; referenceVoiceId?: string }[]
-  >([{ label: "Personal", percentage: 50 }]);
-  const [savingBlend, setSavingBlend] = useState(false);
+  const [activeVoiceId, setActiveVoiceId] = useState<string>(PERSONAL_VOICE_ID);
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string>(PERSONAL_VOICE_ID);
+  const [editorMode, setEditorMode] = useState<EditorMode>(null);
   const [loading, setLoading] = useState(true);
-  const [savingDimensions, setSavingDimensions] = useState(false);
-  const [calibrateHandle, setCalibrateHandle] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [calibrateHandle, setCalibrateHandle] = useState("");
 
   useEffect(() => {
     const saved = localStorage.getItem("atlas_active_blend");
     if (saved) {
-      setActiveBlendId(saved);
+      setActiveVoiceId(saved);
+      setSelectedVoiceId(saved);
     }
   }, []);
 
   useEffect(() => {
-    if (activeBlendId) {
-      localStorage.setItem("atlas_active_blend", activeBlendId);
-    } else {
+    if (activeVoiceId === PERSONAL_VOICE_ID) {
       localStorage.removeItem("atlas_active_blend");
+    } else {
+      localStorage.setItem("atlas_active_blend", activeVoiceId);
     }
-  }, [activeBlendId]);
+  }, [activeVoiceId]);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-
     Promise.all([
-      api.voice.getProfile().then((response) => {
-        setProfile(response.profile);
-        setDraftDimensions(pickVoiceDimensions(response.profile));
-      }),
-      api.voice.getReferences().then((response) => setReferences(response.voices)),
-      api.voice.getBlends().then((response) => setBlends(response.blends)),
+      api.voice.getProfile().then((r) => setProfile(r.profile)),
+      api.voice.getReferences().then((r) => setReferences(r.voices)),
+      api.voice.getBlends().then((r) => setBlends(r.blends)),
     ])
-      .catch((loadError: Error) => {
-        setError(loadError.message || "Failed to load voice profiles");
-      })
+      .catch((e: Error) => setError(e.message || "Failed to load voice data"))
       .finally(() => setLoading(false));
   }, []);
 
-  const persistedDimensions = pickVoiceDimensions(profile);
-  const hasUnsavedChanges = VOICE_DIMENSION_FIELDS.some(
-    (field) => draftDimensions[field] !== persistedDimensions[field]
-  );
+  const personalDimensions = pickVoiceDimensions(profile);
+  const selectedIsPersonal = selectedVoiceId === PERSONAL_VOICE_ID;
+  const selectedBlend = blends.find((b) => b.id === selectedVoiceId);
+
+  const handleUseVoice = (id: string) => {
+    setActiveVoiceId(id);
+    router.push("/crafting");
+  };
+
+  const handleSaveVoice = async (name: string, dimensions: VoiceDimensions) => {
+    if (editorMode === "edit-personal") {
+      const response = await api.voice.updateProfile(dimensions);
+      setProfile(response.profile);
+    } else {
+      await api.voice.createBlend(name, [{ label: "Personal", percentage: 100 }]);
+      const response = await api.voice.getBlends();
+      setBlends(response.blends);
+    }
+  };
+
+  const handleCalibrate = async () => {
+    const handle = calibrateHandle.trim().replace("@", "");
+    if (!handle) return;
+    try {
+      const response = await api.voice.calibrate(handle);
+      setProfile(response.profile);
+      setCalibrateHandle("");
+    } catch {
+      setError("Calibration failed. Check the handle and try again.");
+    }
+  };
 
   if (loading) {
     return (
       <AppShell>
-        <div className="mx-auto max-w-4xl animate-pulse space-y-8 px-4 py-8">
-          <div className="space-y-2">
-            <div className="h-4 w-24 rounded bg-atlas-surface" />
-            <div className="h-8 w-72 rounded bg-atlas-surface" />
-          </div>
-
-          <div className="space-y-4 rounded-2xl border border-glass-border bg-atlas-surface p-6">
-            <div className="h-5 w-32 rounded bg-atlas-bg" />
-            {[1, 2, 3, 4].map((item) => (
-              <div key={item} className="space-y-2">
-                <div className="flex justify-between">
-                  <div className="h-3 w-24 rounded bg-atlas-bg" />
-                  <div className="h-3 w-8 rounded bg-atlas-bg" />
-                </div>
-                <div className="h-2 w-full rounded-full bg-atlas-bg" />
-              </div>
+        <div className="mx-auto max-w-4xl animate-pulse space-y-6 px-4 py-8">
+          <div className="h-4 w-24 rounded bg-atlas-surface" />
+          <div className="h-8 w-48 rounded bg-atlas-surface" />
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-40 rounded-2xl bg-atlas-surface" />
             ))}
-          </div>
-
-          <div className="space-y-3 rounded-2xl border border-glass-border bg-atlas-surface p-6">
-            <div className="h-5 w-40 rounded bg-atlas-bg" />
-            <div className="flex gap-3">
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="h-10 w-28 rounded-lg bg-atlas-bg" />
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-3 rounded-2xl border border-glass-border bg-atlas-surface p-6">
-            <div className="h-5 w-32 rounded bg-atlas-bg" />
-            <div className="grid grid-cols-2 gap-3">
-              {[1, 2].map((item) => (
-                <div key={item} className="h-24 rounded-xl bg-atlas-bg" />
-              ))}
-            </div>
           </div>
         </div>
       </AppShell>
     );
   }
 
-  const updateDimension = (field: VoiceDimensionField, value: number) => {
-    setDraftDimensions((current) => ({
-      ...current,
-      [field]: value,
-    }));
-  };
-
-  const persistDimensions = async (
-    dimensions: VoiceDimensions,
-    fallbackMessage: string
-  ) => {
-    setSavingDimensions(true);
-    setError(null);
-
-    try {
-      const response = await api.voice.updateProfile(dimensions);
-      setProfile(response.profile);
-      setDraftDimensions(pickVoiceDimensions(response.profile));
-      return response.profile;
-    } catch (saveError: unknown) {
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : fallbackMessage
-      );
-      return null;
-    } finally {
-      setSavingDimensions(false);
-    }
-  };
-
-  const saveDimensions = async () => {
-    if (!hasUnsavedChanges) {
-      return;
-    }
-
-    await persistDimensions(draftDimensions, "Failed to save voice profile");
-  };
-
-  const handleResetDimensions = async () => {
-    if (!window.confirm("Reset all voice dimensions to defaults?")) {
-      return;
-    }
-
-    await persistDimensions(
-      DEFAULT_VOICE_DIMENSIONS,
-      "Failed to reset voice profile"
-    );
-  };
-
-  const handlePresetSelect = async (presetValues: VoiceDimensions) => {
-    await persistDimensions(presetValues, "Failed to apply voice preset");
-  };
-
-  const updateBlend = (index: number, value: number) => {
-    setBlendValues((current) => {
-      const next = [...current];
-      next[index] = value;
-      return next;
-    });
-  };
-
-  const getBlendedDimensions = () => {
-    if (!activeBlendId || !profile) {
-      return null;
-    }
-
-    const blend = blends.find((item) => item.id === activeBlendId);
-
-    if (!blend) {
-      return null;
-    }
-
-    return blend.voices.map((voice) => ({
-      label: voice.label,
-      percentage: voice.percentage,
-    }));
-  };
-
-  const displayBlends = blends.map((blend) => ({
-    id: blend.id,
-    name: blend.name,
-    mix: blend.voices.map((voice) => `${voice.percentage}% ${voice.label}`).join(" + "),
-    isTemplate:
-      (blend as SavedBlend & { isTemplate?: boolean }).isTemplate === true,
-  }));
-  const blendedDimensions = getBlendedDimensions();
-
   return (
     <AppShell>
-      {error ? (
-        <div
-          role="alert"
-          className="mb-6 rounded-xl border border-atlas-error/30 bg-atlas-error/10 px-4 py-3 text-sm text-atlas-error"
-        >
-          {error}
-        </div>
-      ) : null}
-
-      <p className="mb-2 text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
-        Voice Studio
-      </p>
-      <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
-        Your Voice — Detailed Breakdown
-      </h1>
-
-      {profile?.tweetsAnalyzed === 0 ? (
-        <div className="mt-6 rounded-2xl border border-atlas-teal/30 bg-atlas-teal/5 p-6">
-          <div className="flex items-start gap-4">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-atlas-teal/20">
-              <Wand2 className="h-5 w-5 text-atlas-teal" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-heading font-semibold text-lg text-atlas-text">
-                Auto-calibrate your voice
-              </h3>
-              <p className="mt-1 text-sm text-atlas-text-secondary">
-                Connect your X account and Atlas will analyze your tweets to set
-                your voice dimensions automatically.
-              </p>
-              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <input
-                  aria-label="Calibration X handle"
-                  type="text"
-                  placeholder="Your X handle (e.g. @vitalik)"
-                  value={calibrateHandle}
-                  onChange={(event) => setCalibrateHandle(event.target.value)}
-                  className="w-full rounded-lg border border-glass-border bg-atlas-bg px-3 py-2 text-sm text-atlas-text placeholder-atlas-text-muted focus:border-atlas-teal focus:outline-none sm:w-64"
-                />
-                <GradientButton
-                  size="sm"
-                  onClick={() => {
-                    const trimmedHandle = calibrateHandle.trim().replace("@", "");
-
-                    if (!trimmedHandle) {
-                      return;
-                    }
-
-                    api.voice
-                      .calibrate(trimmedHandle)
-                      .then((response) => {
-                        setProfile(response.profile);
-                        setDraftDimensions(pickVoiceDimensions(response.profile));
-                        setCalibrateHandle("");
-                      })
-                      .catch(console.error);
-                  }}
-                  disabled={!calibrateHandle.trim()}
-                >
-                  Calibrate
-                </GradientButton>
-              </div>
-            </div>
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+        {error && (
+          <div role="alert" className="mb-6 rounded-xl border border-atlas-error/30 bg-atlas-error/10 px-4 py-3 text-sm text-atlas-error">
+            {error}
           </div>
-        </div>
-      ) : null}
+        )}
 
-      <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface-glass p-8 backdrop-blur-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="flex-1">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs uppercase tracking-[0.18em] text-atlas-text-secondary">
-                Voice dimensions
-              </p>
-              <button
-                type="button"
-                onClick={handleResetDimensions}
-                disabled={loading || savingDimensions}
-                className="text-xs text-atlas-text-muted transition-colors hover:text-atlas-warning disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Reset to defaults
+        <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">Voice Studio</p>
+        <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight text-atlas-text">Your Voices</h1>
+        <p className="mt-1 text-sm text-atlas-text-secondary">
+          Pick a voice and start crafting. Each voice shapes how Atlas writes for you.
+        </p>
+
+        {/* Voice Library Grid */}
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <VoiceCard
+            name="Personal Voice"
+            isActive={activeVoiceId === PERSONAL_VOICE_ID}
+            isPersonal
+            isSelected={selectedVoiceId === PERSONAL_VOICE_ID}
+            dimensions={personalDimensions}
+            onSelect={() => setSelectedVoiceId(PERSONAL_VOICE_ID)}
+            onUse={() => handleUseVoice(PERSONAL_VOICE_ID)}
+          />
+          {blends.map((blend) => (
+            <VoiceCard
+              key={blend.id}
+              name={blend.name}
+              isActive={activeVoiceId === blend.id}
+              isPersonal={false}
+              isSelected={selectedVoiceId === blend.id}
+              dimensions={DEFAULT_VOICE_DIMENSIONS}
+              onSelect={() => setSelectedVoiceId(blend.id)}
+              onUse={() => handleUseVoice(blend.id)}
+            />
+          ))}
+          <button
+            type="button"
+            onClick={() => setEditorMode("create")}
+            className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-glass-border p-5 text-atlas-text-muted transition-colors hover:border-atlas-teal/40 hover:text-atlas-teal"
+          >
+            <Plus className="h-6 w-6" />
+            <span className="text-xs font-semibold">New Voice</span>
+          </button>
+        </div>
+
+        {/* Detail Panel */}
+        <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6 sm:p-8">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-heading text-lg font-semibold text-atlas-text">
+                {selectedIsPersonal ? "Personal Voice" : selectedBlend?.name ?? "Voice"} — Detail
+              </h2>
+              {selectedIsPersonal && (
+                <p className="mt-1 text-xs text-atlas-text-muted">
+                  {formatMaturityLabel(profile?.maturity)} &middot; {profile?.tweetsAnalyzed ?? 0} tweets analyzed
+                </p>
+              )}
+              {!selectedIsPersonal && selectedBlend && (
+                <p className="mt-1 text-xs text-atlas-text-secondary">
+                  {selectedBlend.voices.map((v) => `${v.percentage}% ${v.label}`).join(" + ")}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              {selectedIsPersonal && profile?.tweetsAnalyzed === 0 && (
+                <div className="flex items-center gap-2">
+                  <input type="text" placeholder="@handle" value={calibrateHandle} onChange={(e) => setCalibrateHandle(e.target.value)}
+                    className="w-32 rounded-lg border border-glass-border bg-atlas-bg px-2 py-1.5 text-xs text-atlas-text placeholder-atlas-text-muted focus:border-atlas-teal focus:outline-none" />
+                  <button type="button" onClick={() => void handleCalibrate()} disabled={!calibrateHandle.trim()}
+                    className="flex items-center gap-1 rounded-lg border border-atlas-teal/40 bg-atlas-teal/10 px-3 py-1.5 text-xs font-semibold text-atlas-teal transition-colors hover:border-atlas-teal disabled:opacity-50">
+                    <Wand2 className="h-3 w-3" />
+                    Calibrate
+                  </button>
+                </div>
+              )}
+              <button type="button" onClick={() => setEditorMode(selectedIsPersonal ? "edit-personal" : "edit-blend")}
+                className="rounded-lg border border-glass-border px-4 py-1.5 text-xs font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal">
+                Edit
               </button>
             </div>
-            <p className="text-sm italic text-atlas-text-muted">
-              SignalSocial-style depth, but still fully adjustable whenever your
-              voice evolves.
-            </p>
           </div>
 
-          <GradientButton
-            onClick={saveDimensions}
-            disabled={loading || savingDimensions || !hasUnsavedChanges}
-          >
-            {savingDimensions ? "Saving..." : "Save voice profile"}
-          </GradientButton>
-        </div>
+          {selectedIsPersonal && (
+            <div className="mt-6" data-tour="dimension-sliders">
+              <VoiceDimensionSections values={personalDimensions} interactive={false} />
+            </div>
+          )}
 
-        <div className="mt-6">
-          {activeBlendId && blendedDimensions ? (
-            <div className="mb-4 rounded-xl border border-atlas-teal/30 bg-atlas-teal/5 p-3">
-              <p className="mb-2 text-xs font-medium text-atlas-teal">
-                Active Blend
+          {!selectedIsPersonal && selectedBlend && (
+            <div className="mt-6">
+              <p className="text-xs text-atlas-text-muted">
+                This voice blends {selectedBlend.voices.length} source{selectedBlend.voices.length !== 1 ? "s" : ""}. The AI mixes them when generating drafts.
               </p>
-              <div className="flex items-center gap-2">
-                {blendedDimensions.map((voice, index) => (
-                  <span
-                    key={`${voice.label}-${voice.percentage}`}
-                    className="text-xs text-atlas-text"
-                  >
-                    {voice.percentage}% {voice.label}
-                    {index < blendedDimensions.length - 1 ? (
-                      <span className="mx-1 text-atlas-text-muted">+</span>
-                    ) : null}
-                  </span>
+              <div className="mt-4 space-y-2">
+                {selectedBlend.voices.map((voice) => (
+                  <div key={voice.label} className="flex items-center justify-between rounded-xl bg-atlas-bg/40 px-4 py-3">
+                    <span className="text-sm text-atlas-text">{voice.label}</span>
+                    <span className="font-mono text-sm text-atlas-teal">{voice.percentage}%</span>
+                  </div>
                 ))}
               </div>
-              <p className="mt-1 text-[10px] text-atlas-text-muted">
-                Drafts will use this blend&apos;s voice mix
-              </p>
             </div>
-          ) : null}
-          <div className="mb-4">
-            <p className="mb-2 text-xs uppercase tracking-[0.18em] text-atlas-text-secondary">
-              Quick presets
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {VOICE_PRESETS.map((preset) => {
-                const isActive = VOICE_DIMENSION_FIELDS.every(
-                  (field) => draftDimensions[field] === preset.values[field]
-                );
-
-                return (
-                  <button
-                    key={preset.label}
-                    type="button"
-                    onClick={() => handlePresetSelect(preset.values)}
-                    disabled={loading || savingDimensions}
-                    aria-pressed={isActive}
-                    className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
-                      isActive
-                        ? "border-atlas-teal bg-atlas-teal/10 text-atlas-teal"
-                        : "border-glass-border bg-atlas-surface text-atlas-text-secondary hover:border-atlas-teal/40 hover:text-atlas-text"
-                    } disabled:cursor-not-allowed disabled:opacity-50`}
-                  >
-                    {preset.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div data-tour="dimension-sliders">
-            <VoiceDimensionSections
-              values={draftDimensions}
-              interactive
-              loading={loading}
-              onChange={updateDimension}
-            />
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-4 text-sm text-atlas-text-secondary">
-          <span>Maturity: {formatMaturityLabel(profile?.maturity)}</span>
-          <span>Based on {profile?.tweetsAnalyzed ?? 0} tweets analyzed.</span>
-          {!loading && hasUnsavedChanges ? (
-            <span className="text-atlas-teal">Unsaved slider changes</span>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="mt-8">
-        <ReferenceVoicesSection
-          references={references}
-          onReferencesChange={setReferences}
-        />
-      </div>
-
-      <div data-tour="reference-voices">
-        <ReferenceVoicesSection
-          references={references}
-          onReferencesChange={setReferences}
-        />
-      </div>
-
-      <div className="mt-8">
-        <p className="text-xs uppercase tracking-wide text-atlas-text-secondary">
-          Your Saved Blends
-        </p>
-        <div className="mt-3 space-y-3">
-          {displayBlends.length === 0 ? (
-            <div className="col-span-full py-8 text-center">
-              <p className="text-sm text-atlas-text-muted">
-                No saved blends yet. Create your first blend using the sliders
-                above.
-              </p>
-            </div>
-          ) : (
-            displayBlends.map((blend) => (
-              <div
-                key={blend.id}
-                className={`flex items-center justify-between rounded-2xl border p-4 ${
-                  activeBlendId === blend.id
-                    ? "border-atlas-teal bg-atlas-teal/5"
-                    : "border-glass-border bg-atlas-surface"
-                }`}
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-atlas-text">
-                      {blend.name}
-                    </p>
-                    {blend.isTemplate ? (
-                      <span className="rounded bg-atlas-text-secondary/10 px-1.5 py-0.5 text-[10px] text-atlas-text-secondary">
-                        Template
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="mt-1 text-xs text-atlas-text-secondary">
-                    {blend.mix}
-                  </p>
-                </div>
-                <GradientButton
-                  aria-label={
-                    activeBlendId === blend.id
-                      ? `Deactivate saved blend ${blend.name}`
-                      : `Use saved blend ${blend.name}`
-                  }
-                  size="sm"
-                  variant={activeBlendId === blend.id ? "solid" : "outline"}
-                  onClick={() => {
-                    setActiveBlendId(activeBlendId === blend.id ? null : blend.id);
-                  }}
-                >
-                  {activeBlendId === blend.id ? "Active" : "Use"}
-                </GradientButton>
-              </div>
-            ))
           )}
         </div>
-        <button
-          type="button"
-          className="mt-3 text-sm text-atlas-teal hover:underline"
-          onClick={() => setShowNewBlend(true)}
-        >
-          + New blend
-        </button>
-        {showNewBlend ? (
-          <div className="mt-3 space-y-3 rounded-xl border border-glass-border bg-atlas-surface p-4">
-            <input
-              aria-label="Blend name"
-              type="text"
-              placeholder="Blend name"
-              value={blendName}
-              onChange={(event) => setBlendName(event.target.value)}
-              className="w-full rounded-lg border border-glass-border bg-atlas-bg px-3 py-2 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
-            />
-            <p className="text-xs text-atlas-text-muted">
-              Add voices and adjust percentages (must total 100%)
-            </p>
-            {blendVoices.map((voice, index) => (
-              <div key={`${voice.label}-${index}`} className="flex items-center gap-2">
-                <select
-                  aria-label={`Voice ${index + 1} in the blend`}
-                  value={voice.label}
-                  onChange={(event) => {
-                    const referenceVoice = references.find(
-                      (reference) => reference.name === event.target.value
-                    );
 
-                    setBlendVoices((current) => {
-                      const updated = [...current];
-                      updated[index] = {
-                        ...updated[index],
-                        label: event.target.value,
-                        referenceVoiceId: referenceVoice?.id,
-                      };
-                      return updated;
-                    });
-                  }}
-                  className="flex-1 rounded-lg border border-glass-border bg-atlas-bg px-3 py-2 text-sm text-atlas-text"
-                >
-                  <option value="Personal">Personal</option>
-                  {references.map((reference) => (
-                    <option key={reference.id} value={reference.name}>
-                      {reference.name}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  aria-label={`Percentage for voice ${index + 1} in the blend`}
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={voice.percentage}
-                  onChange={(event) => {
-                    const nextPercentage = Number(event.target.value);
-
-                    setBlendVoices((current) => {
-                      const updated = [...current];
-                      updated[index] = {
-                        ...updated[index],
-                        percentage: nextPercentage,
-                      };
-                      return updated;
-                    });
-                  }}
-                  className="w-20 rounded-lg border border-glass-border bg-atlas-bg px-3 py-2 text-center text-sm text-atlas-text"
-                />
-                <span className="text-xs text-atlas-text-muted">%</span>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() =>
-                setBlendVoices([
-                  ...blendVoices,
-                  { label: "Personal", percentage: 0 },
-                ])
-              }
-              className="text-xs text-atlas-teal hover:underline"
-            >
-              + Add voice
-            </button>
-            <div className="flex gap-2 pt-2">
-              <GradientButton
-                size="sm"
-                onClick={async () => {
-                  if (!blendName.trim()) {
-                    return;
-                  }
-
-                  setSavingBlend(true);
-
-                  try {
-                    await api.voice.createBlend(blendName.trim(), blendVoices);
-                    setBlendName("");
-                    setBlendVoices([{ label: "Personal", percentage: 50 }]);
-                    setShowNewBlend(false);
-
-                    const response = await api.voice.getBlends();
-                    setBlends(response.blends);
-                  } catch (saveBlendError) {
-                    console.error(saveBlendError);
-                  } finally {
-                    setSavingBlend(false);
-                  }
-                }}
-                disabled={savingBlend || !blendName.trim()}
-              >
-                {savingBlend ? "Saving..." : "Save Blend"}
-              </GradientButton>
-              <button
-                type="button"
-                onClick={() => setShowNewBlend(false)}
-                className="text-sm text-atlas-text-secondary hover:text-atlas-text"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </div>
-
-      <div className="mt-8 rounded-2xl border border-glass-border bg-atlas-surface-glass p-8 backdrop-blur-sm">
-        <h3 className="font-heading font-semibold text-lg text-atlas-text">
-          Create or Edit a Blend
-        </h3>
-        <div className="mt-4 space-y-4">
-          {[
-            "My voice",
-            ...(references.length > 0
-              ? references.slice(0, 3).map((reference) => reference.name)
-              : ["Reference A", "Reference B", "Reference C"]),
-          ].map((label, index) => (
-            <div key={label} className="flex items-center gap-4">
-              <span className="w-28 shrink-0 truncate text-sm text-atlas-text-secondary">
-                {label}
-              </span>
-              <input
-                aria-label={`${label} blend percentage`}
-                type="range"
-                min={0}
-                max={100}
-                value={blendValues[index]}
-                onChange={(event) =>
-                  updateBlend(index, Number(event.target.value))
-                }
-                className="flex-1"
-                style={{ "--range-progress": `${blendValues[index]}%` } as React.CSSProperties}
-              />
-              <span className="w-10 text-right text-sm text-atlas-text">
-                {blendValues[index]}%
-              </span>
-            </div>
-          ))}
+        {/* Reference Voices */}
+        <div className="mt-8" data-tour="reference-voices">
+          <ReferenceVoicesSection references={references} onReferencesChange={setReferences} />
         </div>
-        <div className="mt-4 rounded-2xl bg-atlas-nav p-4">
-          <p className="text-sm italic text-atlas-text-secondary">
-            Preview will generate once you save a blend and craft your first
-            draft with it.
-          </p>
-        </div>
-        <p className="mt-2 text-xs text-atlas-text-muted">
-          Add more voices from your library above.
-        </p>
-        <div className="mt-4 flex gap-3">
-          <GradientButton>Save blend</GradientButton>
-          <GradientButton variant="outline-teal">Share with team</GradientButton>
-        </div>
+
+        <VoiceEditorModal
+          isOpen={editorMode !== null}
+          mode={editorMode ?? "create"}
+          initialName={editorMode === "edit-blend" ? selectedBlend?.name : ""}
+          initialDimensions={editorMode === "edit-personal" ? personalDimensions : undefined}
+          onSave={handleSaveVoice}
+          onClose={() => setEditorMode(null)}
+        />
       </div>
     </AppShell>
   );
