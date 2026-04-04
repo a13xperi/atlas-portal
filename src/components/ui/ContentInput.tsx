@@ -1,7 +1,8 @@
 "use client";
 
 import { useId, useRef, useState, type DragEventHandler } from "react";
-import { Mic, FileText, MessageSquare, TrendingUp } from "lucide-react";
+import { Mic, MicOff, Loader2, FileText, MessageSquare, TrendingUp } from "lucide-react";
+import type { RecordingState } from "@/lib/useVoiceRecorder";
 
 export interface ContentInputProps {
   placeholder?: string;
@@ -20,6 +21,10 @@ export interface ContentInputProps {
   onContentDragOver?: DragEventHandler<HTMLDivElement>;
   onContentDragLeave?: DragEventHandler<HTMLDivElement>;
   onContentDrop?: DragEventHandler<HTMLDivElement>;
+  recordingState?: RecordingState;
+  recordingDuration?: number;
+  onMicClick?: () => void;
+  recordingError?: string | null;
 }
 
 export default function ContentInput({
@@ -37,6 +42,10 @@ export default function ContentInput({
   onContentDragOver,
   onContentDragLeave,
   onContentDrop,
+  recordingState = "idle",
+  recordingDuration = 0,
+  onMicClick,
+  recordingError,
 }: ContentInputProps) {
   const contentInputId = useId();
   const contentErrorId = useId();
@@ -190,10 +199,27 @@ export default function ContentInput({
           {showMic ? (
             <button
               type="button"
-              aria-label="Record voice note"
-              className="flex w-full items-center justify-center rounded-lg border border-glass-border bg-atlas-surface p-3 text-atlas-text-secondary transition-colors hover:text-atlas-teal sm:w-auto sm:self-stretch"
+              aria-label={recordingState === "recording" ? "Stop recording" : recordingState === "transcribing" ? "Transcribing…" : "Record voice note"}
+              onClick={onMicClick}
+              disabled={recordingState === "transcribing"}
+              className={`flex w-full items-center justify-center gap-2 rounded-lg border p-3 transition-colors sm:w-auto sm:self-stretch ${
+                recordingState === "recording"
+                  ? "border-atlas-error bg-atlas-error/10 text-atlas-error animate-pulse"
+                  : recordingState === "transcribing"
+                    ? "border-atlas-teal/50 bg-atlas-teal/10 text-atlas-teal"
+                    : "border-glass-border bg-atlas-surface text-atlas-text-secondary hover:text-atlas-teal"
+              } disabled:cursor-not-allowed`}
             >
-              <Mic className="w-4 h-4" aria-hidden="true" />
+              {recordingState === "recording" ? (
+                <>
+                  <MicOff className="w-4 h-4" aria-hidden="true" />
+                  <span className="text-xs font-mono">{Math.floor(recordingDuration / 60)}:{String(recordingDuration % 60).padStart(2, "0")}</span>
+                </>
+              ) : recordingState === "transcribing" ? (
+                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Mic className="w-4 h-4" aria-hidden="true" />
+              )}
             </button>
           ) : null}
         </div>
@@ -217,6 +243,12 @@ export default function ContentInput({
       {contentError ? (
         <p id={contentErrorId} role="alert" className="text-sm text-atlas-error">
           {contentError}
+        </p>
+      ) : null}
+
+      {recordingError ? (
+        <p role="alert" className="text-sm text-atlas-error">
+          {recordingError}
         </p>
       ) : null}
     </div>
