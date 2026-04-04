@@ -1291,6 +1291,12 @@ export default function CraftingPage() {
                     />
                   </div>
                 ) : null}
+                {activeMode === "reply_to_tweet" && draftInputText.trim() && activeDraft ? (
+                  <div className="mt-3 rounded-xl border border-glass-border bg-atlas-surface/50 px-4 py-3">
+                    <p className="mb-1 text-[10px] uppercase tracking-wide text-atlas-text-muted">Replying to</p>
+                    <p className="text-sm leading-relaxed text-atlas-text-secondary">{draftInputText}</p>
+                  </div>
+                ) : null}
                 <div className="mt-3">
                   <ContentInput
                     placeholder={
@@ -1571,7 +1577,9 @@ export default function CraftingPage() {
                                 ? "text-atlas-error"
                                 : activeDraft.content.length > 250
                                   ? "text-atlas-warning"
-                                  : "text-atlas-teal"
+                                  : activeDraft.content.length > 200
+                                    ? "text-yellow-400"
+                                    : "text-atlas-teal"
                             }
                           />
                         </svg>
@@ -1582,7 +1590,9 @@ export default function CraftingPage() {
                             ? "text-atlas-error"
                             : activeDraft.content.length > 250
                               ? "text-atlas-warning"
-                              : "text-atlas-text-secondary"
+                              : activeDraft.content.length > 200
+                                ? "text-yellow-400"
+                                : "text-atlas-text-secondary"
                         }`}
                       >
                         {activeDraft.content.length}/280

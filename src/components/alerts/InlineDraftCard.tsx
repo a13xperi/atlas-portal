@@ -28,14 +28,20 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
   const [draft, setDraft] = useState<TweetDraft | null>(null);
   const [draftText, setDraftText] = useState(initialDraftText);
   const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedDraftId, setSavedDraftId] = useState<string | null>(null);
 
   const alertSource = useMemo(() => buildAlertSource(alert), [alert]);
   const hasDraft = draftText.trim().length > 0;
   const characterCount = draftText.length;
   const characterCountClassName =
     characterCount > POST_CHARACTER_LIMIT
-      ? "text-atlas-warning"
-      : "text-atlas-text-secondary";
+      ? "text-atlas-error"
+      : characterCount > 250
+        ? "text-atlas-warning"
+        : characterCount > 200
+          ? "text-yellow-400"
+          : "text-atlas-text-secondary";
 
   const generateDraft = async (shouldRegenerate = false) => {
     if (isGenerating) {
@@ -84,6 +90,20 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
       setError(null);
     } catch {
       setError("Copy failed. Please try again.");
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!draftText.trim() || isSaving) return;
+    setIsSaving(true);
+    setError(null);
+    try {
+      const { draft: created } = await api.drafts.create(draftText, "TRENDING_TOPIC");
+      setSavedDraftId(created.id);
+    } catch {
+      setError("Failed to save draft. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -172,6 +192,14 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
                   className="rounded-lg border border-atlas-teal/40 bg-atlas-teal/10 px-3 py-2 text-xs font-semibold text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/15 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isGenerating ? "Regenerating..." : "Regenerate"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveDraft}
+                  disabled={!draftText.trim() || isSaving || !!savedDraftId}
+                  className="rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-steel px-3 py-2 text-xs font-semibold text-atlas-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {savedDraftId ? "Saved ✓" : isSaving ? "Saving..." : "Save Draft"}
                 </button>
               </div>
             </div>
