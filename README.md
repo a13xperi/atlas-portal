@@ -61,7 +61,7 @@ npm run test
 - Use `src/lib/api.ts` typed client — don't create new fetch calls
 - Auth via `useAuth()` from `src/lib/auth.tsx`
 - Glass cards: `bg-glass backdrop-blur-xl border border-glass-border rounded-2xl`
-- CTAs: `bg-gradient-to-r from-atlas-teal to-atlas-steel`
+- CTAs: `bg-gradient-to-r from-delphi-teal to-delphi-teal/60`
 - Server components by default; `'use client'` only when needed
 - Run `next build` after every change to verify zero errors
 

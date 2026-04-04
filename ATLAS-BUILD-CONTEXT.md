@@ -65,7 +65,7 @@ Use useAuth() from src/lib/auth.tsx — provides { user, token, login, register,
 ## DESIGN SYSTEM
 Colors: src/lib/tokens.ts (never hardcode hex)
 Glass cards: bg-glass backdrop-blur-xl border border-glass-border rounded-2xl
-CTAs: bg-gradient-to-r from-atlas-teal to-atlas-steel
+CTAs: bg-gradient-to-r from-delphi-teal to-delphi-teal/60
 Headings: font-heading (Playfair Display), Body: font-body (Inter)
 API client: src/lib/api.ts (typed — use it, don't create new fetch calls)
 
