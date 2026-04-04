@@ -73,7 +73,10 @@ export default function DraftHistorySidebar({
       <div className={mobile ? "space-y-4" : "sticky top-24 space-y-4"}>
         <div className="bg-glass/50 backdrop-blur-xl border border-glass-border rounded-2xl p-5">
           <div className="flex items-center justify-between">
-            <h2 className="font-heading font-semibold text-lg text-atlas-text">Draft History</h2>
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-atlas-teal">Session</p>
+              <h2 className="font-heading font-bold text-lg text-atlas-text">Drafts</h2>
+            </div>
             {!mobile && (
               <button
                 type="button"
