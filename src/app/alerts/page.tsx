@@ -90,9 +90,9 @@ export default function AlertsPage() {
   return (
     <AppShell>
       <div className="mx-auto max-w-4xl py-8">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between" data-tour="signals-feed">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between" >
           <div>
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
+            <p data-tour="signals-feed" className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
               Signals Feed
             </p>
             <h1 className="mt-3 font-heading font-extrabold tracking-tight text-3xl text-atlas-text sm:text-4xl">
@@ -233,7 +233,7 @@ export default function AlertsPage() {
         ) : (
           <div className="flex min-h-[calc(100vh-14rem)] items-center justify-center">
             <section className="bg-glass w-full max-w-2xl rounded-2xl border border-glass-border p-10 text-center backdrop-blur-xl sm:p-12">
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
+              <p data-tour="signals-feed" className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
                 Signals
               </p>
               <h2 className="mt-4 font-heading font-extrabold tracking-tight text-3xl text-atlas-text sm:text-4xl">

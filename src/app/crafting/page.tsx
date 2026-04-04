@@ -282,7 +282,7 @@ export default function CraftingPage() {
   const [draftInputText, setDraftInputText] = useState(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      return params.get("content") || "";
+      return params.get("content") || params.get("source") || params.get("draft") || "";
     }
     return "";
   });
