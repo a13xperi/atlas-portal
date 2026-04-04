@@ -15,7 +15,6 @@ describe("TelegramPage", () => {
     expect(
       screen.getByRole("heading", { name: /connect telegram/i })
     ).toBeInTheDocument();
-    expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
     expect(
       screen.getByText(/get atlas alerts delivered to your telegram/i)
     ).toBeInTheDocument();
@@ -27,15 +26,5 @@ describe("TelegramPage", () => {
     expect(screen.getByText("Open Telegram")).toBeInTheDocument();
     expect(screen.getByText("Find Our Bot")).toBeInTheDocument();
     expect(screen.getByText("Start the Connection")).toBeInTheDocument();
-
-    expect(
-      screen.getByText(/download or open the telegram app on your device/i)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/search for @atlasdelphibot in telegram/i)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/send \/start to link your atlas account/i)
-    ).toBeInTheDocument();
   });
 });

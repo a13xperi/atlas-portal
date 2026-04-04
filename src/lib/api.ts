@@ -360,6 +360,7 @@ export interface User {
   email?: string;
   bio?: string;
   avatarUrl?: string | null;
+  telegramChatId?: string | null;
 }
 
 export interface VoiceProfile {

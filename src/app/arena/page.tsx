@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import AppShell from "@/components/layout/AppShell";
 import GlassCard from "@/components/ui/GlassCard";
+import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
 import { api, TeamAnalyst } from "@/lib/api";
 import { rankTeam, RankedAnalyst, TIERS } from "@/lib/atlas-score";
-import { Trophy, TrendingUp, Flame, Minus, Zap, BarChart3 } from "lucide-react";
+import { Trophy, TrendingUp, Flame, Minus, Zap, BarChart3, Loader2, AlertTriangle, Send, Volume2 } from "lucide-react";
 import { getSuperlatives } from "@/lib/arena-superlatives";
 
 const SCORE_LABELS: Record<string, string> = {
@@ -58,23 +59,63 @@ export default function ArenaPage() {
   const [analysts, setAnalysts] = useState<TeamAnalyst[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAnalyst, setSelectedAnalyst] = useState<RankedAnalyst | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  const isManager = user?.role === "MANAGER" || user?.role === "ADMIN";
+
+  const loadData = useCallback(async () => {
+    try {
+      const { analysts: data } = await api.analytics.team();
+      setAnalysts(data);
+    } catch (e) {
+      console.error("Failed to load team:", e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const { analysts: data } = await api.analytics.team();
-        setAnalysts(data);
-      } catch (e) {
-        console.error("Failed to load team:", e);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+    if (!actionFeedback) return;
+    const timer = setTimeout(() => setActionFeedback(null), 5000);
+    return () => clearTimeout(timer);
+  }, [actionFeedback]);
+
+  const handleManagerAction = async (action: "pushTopProfiles" | "sendNudge" | "pushStyle") => {
+    if (!user || actionLoading) return;
+    const confirmMsg =
+      action === "sendNudge" ? "Send a nudge to all inactive analysts?" :
+      action === "pushStyle" ? "Push this voice style to all analysts?" :
+      "Push top-performing voice profiles to the team?";
+    if (!confirm(confirmMsg)) return;
+
+    setActionLoading(action);
+    setActionFeedback(null);
+    try {
+      const res =
+        action === "pushTopProfiles" ? await api.users.pushTopProfiles() :
+        action === "sendNudge" ? await api.users.sendNudge() :
+        await api.users.pushStyle();
+      setActionFeedback({ message: res.message || `Done (${res.affected} affected)`, type: "success" });
+      loadData();
+    } catch (e: unknown) {
+      setActionFeedback({
+        message: e instanceof Error ? e.message : "Action failed",
+        type: "error",
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const ranked = rankTeam(analysts);
   const myEntry = ranked.find((r) => r.analyst.id === user?.id);
   const viewEntry = selectedAnalyst || myEntry;
+  const inactiveAnalysts = ranked.filter(
+    (r) => r.analyst._count.sessions === 0 && r.analyst._count.tweetDrafts === 0
+  );
 
   return (
     <AppShell>
@@ -372,6 +413,110 @@ export default function ArenaPage() {
                 })}
               </div>
             </GlassCard>
+
+            {/* Manager Controls */}
+            {isManager && (
+              <GlassCard maxWidth="full">
+                <h3 className="font-heading font-bold text-sm text-atlas-text mb-3">
+                  Manager Tools
+                </h3>
+
+                {actionFeedback && (
+                  <div
+                    className={`mb-3 rounded-lg px-3 py-2 text-xs ${
+                      actionFeedback.type === "success"
+                        ? "bg-atlas-success/10 text-atlas-success"
+                        : "bg-atlas-error/10 text-atlas-error"
+                    }`}
+                  >
+                    {actionFeedback.message}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <GradientButton
+                    fullWidth
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleManagerAction("sendNudge")}
+                    disabled={actionLoading !== null}
+                  >
+                    {actionLoading === "sendNudge" ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Sending...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Send className="h-3 w-3" /> Nudge Inactive
+                      </span>
+                    )}
+                  </GradientButton>
+
+                  <GradientButton
+                    fullWidth
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleManagerAction("pushStyle")}
+                    disabled={actionLoading !== null}
+                  >
+                    {actionLoading === "pushStyle" ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Pushing...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Volume2 className="h-3 w-3" /> Push Voice Style
+                      </span>
+                    )}
+                  </GradientButton>
+
+                  <GradientButton
+                    fullWidth
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleManagerAction("pushTopProfiles")}
+                    disabled={actionLoading !== null}
+                  >
+                    {actionLoading === "pushTopProfiles" ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Pushing...
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <TrendingUp className="h-3 w-3" /> Push Top Profiles
+                      </span>
+                    )}
+                  </GradientButton>
+                </div>
+
+                {/* Inactive Analysts */}
+                {inactiveAnalysts.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-glass-border">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <AlertTriangle className="h-3 w-3 text-atlas-warning" />
+                      <p className="text-xs text-atlas-warning font-medium">
+                        Inactive ({inactiveAnalysts.length})
+                      </p>
+                    </div>
+                    <div className="space-y-1.5">
+                      {inactiveAnalysts.slice(0, 5).map((entry) => (
+                        <div
+                          key={entry.analyst.id}
+                          className="flex items-center justify-between text-xs"
+                        >
+                          <span className="text-atlas-text-secondary truncate">
+                            @{entry.analyst.handle}
+                          </span>
+                          <span className="text-atlas-text-muted shrink-0">
+                            {entry.tier.name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </GlassCard>
+            )}
           </div>
         </div>
       </div>
