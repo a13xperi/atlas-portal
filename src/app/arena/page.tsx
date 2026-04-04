@@ -6,7 +6,8 @@ import GlassCard from "@/components/ui/GlassCard";
 import { useAuth } from "@/lib/auth";
 import { api, TeamAnalyst } from "@/lib/api";
 import { rankTeam, RankedAnalyst, TIERS } from "@/lib/atlas-score";
-import { Trophy, TrendingUp, Flame, ChevronUp, ChevronDown, Minus } from "lucide-react";
+import { Trophy, TrendingUp, Flame, Minus, Zap, BarChart3 } from "lucide-react";
+import { getSuperlatives } from "@/lib/arena-superlatives";
 
 const SCORE_LABELS: Record<string, string> = {
   output: "Output",
@@ -132,6 +133,41 @@ export default function ArenaPage() {
             </GlassCard>
           </div>
         )}
+
+        {/* Superlatives */}
+        {ranked.length > 0 && (() => {
+          const superlatives = getSuperlatives(ranked);
+          const ICONS = {
+            climb: TrendingUp,
+            streak: Flame,
+            engage: BarChart3,
+            output: Zap,
+          };
+          return superlatives.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {superlatives.map((s) => {
+                const Icon = ICONS[s.icon];
+                return (
+                  <div
+                    key={s.label}
+                    className="flex items-center gap-3 rounded-2xl border border-glass-border bg-glass px-4 py-3"
+                  >
+                    <Icon className="h-4 w-4 text-atlas-teal shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs text-atlas-text-muted">{s.label}</p>
+                      <p className="text-sm text-atlas-text font-medium truncate">
+                        @{s.handle}{" "}
+                        <span className="text-atlas-text-secondary font-normal">
+                          — {s.value}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null;
+        })()}
 
         <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
           {/* Leaderboard */}

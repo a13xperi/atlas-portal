@@ -14,6 +14,7 @@ import {
   Zap,
   BookOpen,
   Users,
+  Trophy,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -34,7 +35,7 @@ const navLinks = [
   { label: "Briefing", href: "/briefing", icon: Newspaper },
   { label: "Signals", href: "/alerts", icon: Zap },
   { label: "Library", href: "/team-library", icon: BookOpen },
-  { label: "Team", href: "/management", icon: Users },
+  { label: "Arena", href: "/arena", icon: Trophy },
 ];
 
 function DelphiLogo() {
