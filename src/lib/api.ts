@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { getDemoResponse } from "./demo-data";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://api-production-9bef.up.railway.app";
 
 const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
 const MAX_RETRIES = 3;
@@ -265,6 +265,8 @@ export const api = {
       request<{ thread: string[]; count: number }>(`/api/drafts/${draftId}/thread`, { method: "POST" }),
     recordEngagement: (id: string, data: { likes: number; retweets: number; impressions: number }) =>
       request<{ draft: TweetDraft }>(`/api/drafts/${id}/engagement`, { method: "POST", body: data }),
+    fetchMetrics: (id: string) =>
+      request<{ draft: TweetDraft }>(`/api/drafts/${id}/fetch-metrics`, { method: "POST" }),
     team: (limit = 50) =>
       request<{ drafts: TeamDraft[]; total: number }>(`/api/drafts/team?limit=${limit}`),
   },

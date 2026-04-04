@@ -1867,72 +1867,70 @@ export default function CraftingPage() {
                 </div>
               </div>
 
-              {/* Engagement Recording — shown for POSTED drafts */}
+              {/* Engagement Metrics — shown for POSTED drafts */}
               {activeDraft.status === "POSTED" ? (
                 <div className="mt-4 rounded-xl border border-glass-border bg-atlas-surface/60 p-4">
-                  <p className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-atlas-text-muted">
-                    <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
-                    Record Engagement
-                  </p>
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-atlas-text-muted">
+                      <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
+                      Engagement
+                    </p>
+                    {activeDraft.actualEngagement ? (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const result = await api.drafts.fetchMetrics(activeDraft.id);
+                            setActiveDraft(result.draft);
+                            syncDraftReferences(result.draft);
+                          } catch { /* silently fail */ }
+                        }}
+                        className="text-[10px] text-atlas-text-muted hover:text-atlas-teal transition-colors"
+                      >
+                        ↻ Refresh
+                      </button>
+                    ) : null}
+                  </div>
                   {activeDraft.actualEngagement ? (
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="text-atlas-text-secondary">Recorded:</span>
-                      <span className="font-semibold text-atlas-text">
-                        {activeDraft.actualEngagement.toLocaleString()} impressions
-                      </span>
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+                      <div>
+                        <span className="text-atlas-text-muted text-xs">Impressions</span>
+                        <p className="font-semibold text-atlas-text">{activeDraft.actualEngagement.toLocaleString()}</p>
+                      </div>
                       {activeDraft.predictedEngagement ? (
-                        <span className={`text-xs ${
-                          activeDraft.actualEngagement >= activeDraft.predictedEngagement
-                            ? "text-atlas-success"
-                            : "text-atlas-warning"
-                        }`}>
-                          {activeDraft.actualEngagement >= activeDraft.predictedEngagement ? "↑" : "↓"}{" "}
-                          {Math.abs(
-                            Math.round(
-                              ((activeDraft.actualEngagement - activeDraft.predictedEngagement) /
-                                activeDraft.predictedEngagement) *
-                                100,
-                            ),
-                          )}
-                          % vs predicted
-                        </span>
+                        <div className="ml-auto">
+                          <span className="text-atlas-text-muted text-xs">vs Predicted</span>
+                          <p className={`font-semibold text-sm ${
+                            activeDraft.actualEngagement >= activeDraft.predictedEngagement
+                              ? "text-atlas-success" : "text-atlas-warning"
+                          }`}>
+                            {activeDraft.actualEngagement >= activeDraft.predictedEngagement ? "↑" : "↓"}{" "}
+                            {Math.abs(Math.round(((activeDraft.actualEngagement - activeDraft.predictedEngagement) / activeDraft.predictedEngagement) * 100))}%
+                          </p>
+                        </div>
                       ) : null}
                     </div>
                   ) : (
-                    <form
-                      onSubmit={async (e) => {
-                        e.preventDefault();
-                        const fd = new FormData(e.currentTarget);
-                        const likes = Number(fd.get("likes")) || 0;
-                        const retweets = Number(fd.get("retweets")) || 0;
-                        const impressions = Number(fd.get("impressions")) || 0;
-                        if (impressions === 0) return;
-                        try {
-                          const result = await api.drafts.recordEngagement(activeDraft.id, { likes, retweets, impressions });
-                          setActiveDraft(result.draft);
-                          syncDraftReferences(result.draft);
-                        } catch {
-                          setError("Failed to record engagement");
-                        }
-                      }}
-                      className="flex flex-wrap items-end gap-3"
-                    >
-                      <label className="flex flex-col gap-1">
-                        <span className="text-[10px] uppercase tracking-wider text-atlas-text-muted">Likes</span>
-                        <input name="likes" type="number" min={0} defaultValue={0} className="w-20 rounded-lg border border-glass-border bg-atlas-bg px-2 py-1.5 text-sm text-atlas-text outline-none focus:border-atlas-teal" />
-                      </label>
-                      <label className="flex flex-col gap-1">
-                        <span className="text-[10px] uppercase tracking-wider text-atlas-text-muted">Retweets</span>
-                        <input name="retweets" type="number" min={0} defaultValue={0} className="w-20 rounded-lg border border-glass-border bg-atlas-bg px-2 py-1.5 text-sm text-atlas-text outline-none focus:border-atlas-teal" />
-                      </label>
-                      <label className="flex flex-col gap-1">
-                        <span className="text-[10px] uppercase tracking-wider text-atlas-text-muted">Impressions</span>
-                        <input name="impressions" type="number" min={0} required placeholder="0" className="w-24 rounded-lg border border-glass-border bg-atlas-bg px-2 py-1.5 text-sm text-atlas-text outline-none focus:border-atlas-teal" />
-                      </label>
-                      <button type="submit" className="rounded-lg bg-atlas-teal/20 px-3 py-1.5 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/30">
-                        Save
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const result = await api.drafts.fetchMetrics(activeDraft.id);
+                            setActiveDraft(result.draft);
+                            syncDraftReferences(result.draft);
+                          } catch {
+                            setError("Could not fetch metrics — tweet may not have been posted via Atlas");
+                          }
+                        }}
+                        className="rounded-lg bg-atlas-teal/20 px-4 py-2 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/30"
+                      >
+                        Fetch from X
                       </button>
-                    </form>
+                      <span className="text-xs text-atlas-text-muted">
+                        Metrics auto-update every few hours for tweets posted via Atlas
+                      </span>
+                    </div>
                   )}
                 </div>
               ) : null}
