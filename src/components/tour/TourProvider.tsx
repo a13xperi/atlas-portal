@@ -78,6 +78,9 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     api.users.updateProfile({ tourStep: currentStep }).catch(() => {});
   }, [active, currentStep, user]);
 
+  const { isDemoMode, toggleDemoMode } = useDemoMode();
+  const demoWasOff = useRef(false);
+
   const completeTour = useCallback(() => {
     setActive(false);
     // Restore demo mode if we turned it on for the tour
@@ -103,9 +106,6 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const skipTour = useCallback(() => {
     completeTour();
   }, [completeTour]);
-
-  const { isDemoMode, toggleDemoMode } = useDemoMode();
-  const demoWasOff = useRef(false);
 
   const startTour = useCallback(() => {
     // Auto-enable demo mode so every page has data during the tour
