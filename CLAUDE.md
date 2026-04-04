@@ -117,7 +117,7 @@ Auth: `useAuth()` from `src/lib/auth.tsx` provides `{ user, token, login, regist
 ## Design System Rules
 - ALL colors come from Tailwind config / tokens.ts — never hardcode hex values
 - Glass cards: bg-glass, backdrop-blur-xl, border border-glass-border, rounded-2xl
-- CTAs: bg-gradient-to-r from-atlas-teal to-atlas-steel
+- CTAs: bg-gradient-to-r from-delphi-teal to-delphi-teal/60
 - Dark surfaces: bg-atlas-surface
 - Cards always rounded-2xl (16px), inputs always rounded-lg (8px)
 - Headings: font-heading (Playfair Display, serif)
