@@ -578,5 +578,66 @@ export function getDemoResponse(path: string, method: string = "GET"): unknown |
     };
   }
 
+  // Research — used by alerts page "Research" button
+  if (method === "POST" && cleanPath === "/api/research") {
+    return {
+      result: {
+        id: "demo-research-1",
+        query: "demo research",
+        summary: "On-chain data shows institutional accumulation accelerating across major L1s. ETF inflows remain strong while exchange reserves hit multi-year lows. The supply squeeze thesis is playing out in real time — and most retail hasn't noticed yet.",
+        keyFacts: [
+          "ETF net inflows averaged $420M/day this week",
+          "Exchange reserves at lowest since 2021",
+          "Institutional wallets added 12,000 BTC in 7 days",
+        ],
+        sentiment: "bullish" as const,
+        relatedTopics: ["ETF Flows", "Supply Squeeze", "Institutional Adoption"],
+        sources: ["Glassnode", "CoinMetrics", "DefiLlama"],
+        confidence: 0.87,
+        createdAt: now,
+      },
+    };
+  }
+
+  // Image generation
+  if (method === "POST" && (cleanPath === "/api/images/generate" || cleanPath === "/api/images/generate-for-draft")) {
+    return {
+      image: {
+        id: "demo-img-1",
+        url: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512' fill='%230a1628'%3E%3Crect width='512' height='512'/%3E%3Ctext x='256' y='256' text-anchor='middle' fill='%234ecdc4' font-size='24' dy='.3em'%3EDemo Image%3C/text%3E%3C/svg%3E",
+        prompt: "demo",
+        createdAt: now,
+      },
+    };
+  }
+
+  // Oracle message — used by onboarding chat
+  if (method === "POST" && cleanPath === "/api/oracle/message") {
+    return {
+      messages: [
+        { content: "Great question! Let me help you explore that. Atlas learns your voice over time — the more you draft, the better it gets at matching your style.", role: "oracle" },
+      ],
+      llmGenerated: false,
+    };
+  }
+
+  // Trending scan
+  if (method === "POST" && cleanPath === "/api/trending/scan") {
+    return { alerts: [] };
+  }
+
+  // Draft create/update passthrough
+  if (method === "POST" && cleanPath === "/api/drafts") {
+    return { draft: drafts.drafts[0] };
+  }
+  if (method === "PATCH" && /^\/api\/drafts\/[^/]+$/.test(cleanPath)) {
+    return { draft: drafts.drafts[0] };
+  }
+
+  // Alert subscription
+  if (method === "POST" && cleanPath === "/api/alerts/subscriptions") {
+    return { subscription: { id: "demo-sub-new", type: "TOPIC", value: "New Topic", isActive: true, delivery: ["in_app"] } };
+  }
+
   return demoData[cleanPath] ?? null;
 }
