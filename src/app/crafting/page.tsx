@@ -264,6 +264,7 @@ export default function CraftingPage() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [voiceBanner, setVoiceBanner] = useState<string | null>(null);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
   const [visualConcept, setVisualConcept] = useState<GeneratedImage | null>(null);
@@ -348,6 +349,22 @@ export default function CraftingPage() {
       console.error("Failed to load summary:", loadSummaryError);
     }
   }, []);
+
+  // Auto-select voice from URL param (from team library / voice profiles)
+  useEffect(() => {
+    const voiceName = searchParams.get("voice");
+    if (!voiceName || blends.length === 0) return;
+
+    const match = blends.find(
+      (b) => b.name.toLowerCase() === voiceName.toLowerCase()
+    );
+    if (match) {
+      setVoiceMode("blended");
+      setSelectedBlendId(match.id);
+      setVoiceBanner(voiceName);
+      setTimeout(() => setVoiceBanner(null), 6000);
+    }
+  }, [blends, searchParams]);
 
   const loadBlends = useCallback(async () => {
     try {
@@ -598,8 +615,8 @@ export default function CraftingPage() {
     setDraftInputText(text);
     const trimmedText = text.trim();
 
-    if (trimmedText.length > 2000) {
-      setContentError("Content must be under 2000 characters.");
+    if (trimmedText.length > 10000) {
+      setContentError("Content must be under 10,000 characters.");
     } else if (contentError) {
       setContentError("");
     }
