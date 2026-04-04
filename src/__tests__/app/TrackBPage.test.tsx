@@ -6,7 +6,6 @@ const mockUseAuth = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
-  usePathname: () => "/onboarding/track-b",
 }));
 
 jest.mock("@/lib/auth", () => ({
@@ -15,20 +14,12 @@ jest.mock("@/lib/auth", () => ({
 
 jest.mock("framer-motion", () => ({
   motion: {
-    div: ({
-      children,
-      ...props
-    }: {
-      children: React.ReactNode;
-      [key: string]: unknown;
-    }) => <div {...props}>{children}</div>,
-    span: ({
-      children,
-      ...props
-    }: {
-      children: React.ReactNode;
-      [key: string]: unknown;
-    }) => <span {...props}>{children}</span>,
+    div: ({ children, ...props }: { children: React.ReactNode }) => (
+      <div {...props}>{children}</div>
+    ),
+    span: ({ children, ...props }: { children: React.ReactNode }) => (
+      <span {...props}>{children}</span>
+    ),
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
@@ -71,8 +62,10 @@ describe("TrackBPage", () => {
 
   it("renders OracleChat and auto-selects Track B", () => {
     render(<TrackBPage />);
-    // Track B auto-select shows the welcome + style picker
-    expect(screen.getByText(/no wrong way to do this/i)).toBeInTheDocument();
+    // Track B auto-select triggers the welcome message and style picker
+    expect(
+      screen.getByText(/no wrong way to do this/i)
+    ).toBeInTheDocument();
   });
 
   it("shows style picker options for Track B", () => {

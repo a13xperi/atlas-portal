@@ -6,7 +6,6 @@ const mockUseAuth = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
-  usePathname: () => "/onboarding/track-a",
 }));
 
 jest.mock("@/lib/auth", () => ({
@@ -15,20 +14,12 @@ jest.mock("@/lib/auth", () => ({
 
 jest.mock("framer-motion", () => ({
   motion: {
-    div: ({
-      children,
-      ...props
-    }: {
-      children: React.ReactNode;
-      [key: string]: unknown;
-    }) => <div {...props}>{children}</div>,
-    span: ({
-      children,
-      ...props
-    }: {
-      children: React.ReactNode;
-      [key: string]: unknown;
-    }) => <span {...props}>{children}</span>,
+    div: ({ children, ...props }: { children: React.ReactNode }) => (
+      <div {...props}>{children}</div>
+    ),
+    span: ({ children, ...props }: { children: React.ReactNode }) => (
+      <span {...props}>{children}</span>
+    ),
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
@@ -71,12 +62,14 @@ describe("TrackAPage", () => {
 
   it("renders OracleChat and auto-selects Track A", () => {
     render(<TrackAPage />);
-    // Track A auto-select shows the handle input prompt
+    // The Oracle welcome message should appear, and Track A should be auto-selected
+    // which means the handle input should eventually show
     expect(screen.getByText(/scan your tweets/i)).toBeInTheDocument();
   });
 
   it("shows the NavBar in onboarding mode", () => {
     render(<TrackAPage />);
+    // NavBar renders for onboarding
     expect(document.querySelector("nav")).toBeInTheDocument();
   });
 });
