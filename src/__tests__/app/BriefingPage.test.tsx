@@ -7,10 +7,26 @@ jest.mock("@/components/layout/AppShell", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+jest.mock("@/components/ui/GlassCard", () => ({
+  __esModule: true,
+  default: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div className={className}>{children}</div>
+  ),
+}));
+
+jest.mock("@/components/ui/GradientButton", () => ({
+  __esModule: true,
+  default: ({ children, onClick, disabled }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean }) => (
+    <button onClick={onClick} disabled={disabled}>{children}</button>
+  ),
+}));
+
 const mockApi = {
   briefing: {
     getPreferences: jest.fn(),
     updatePreferences: jest.fn(),
+    history: jest.fn(),
+    generate: jest.fn(),
   },
 };
 
@@ -23,84 +39,62 @@ const BriefingPage = require("@/app/briefing/page").default;
 describe("BriefingPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockApi.briefing.getPreferences.mockResolvedValue({
-      preference: {
-        deliveryTime: "07:30",
-        topics: ["Macro"],
-        sources: ["Delphi Research"],
-        channel: "Portal + Telegram",
-      },
-    });
-    mockApi.briefing.updatePreferences.mockResolvedValue({
-      preference: {
-        deliveryTime: "07:30",
-        topics: ["Macro", "AI & Crypto"],
-        sources: ["Delphi Research", "X/Twitter"],
-        channel: "Portal + Email",
-      },
-    });
+    mockApi.briefing.history.mockResolvedValue({ briefings: [] });
   });
 
-  it("loads saved preferences and persists updates", async () => {
-    const user = userEvent.setup();
+  it("shows setup form when no preferences exist", async () => {
+    mockApi.briefing.getPreferences.mockResolvedValue({ preference: null });
 
     render(<BriefingPage />);
 
-    expect(
-      screen.getByText("Configure Your Daily Digest")
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Configure your daily morning briefing. We'll prepare a personalized crypto intelligence digest every morning."
-      )
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Set Up Your Daily Digest")).toBeInTheDocument();
+    });
+  });
+
+  it("shows briefing inbox when preferences exist", async () => {
+    mockApi.briefing.getPreferences.mockResolvedValue({
+      preference: {
+        deliveryTime: "08:00",
+        topics: ["DeFi"],
+        sources: ["News"],
+        channel: "Portal Only",
+      },
+    });
+
+    render(<BriefingPage />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Daily delivery time")).toHaveValue("07:30");
+      expect(screen.getByText("Your Briefings")).toBeInTheDocument();
+    });
+  });
+
+  it("saves preferences and switches to inbox", async () => {
+    mockApi.briefing.getPreferences.mockResolvedValue({ preference: null });
+    mockApi.briefing.updatePreferences.mockResolvedValue({
+      preference: { deliveryTime: "08:00", topics: ["DeFi"], sources: ["News"], channel: "Portal Only" },
     });
 
-    const initialTopicChip = screen.getByRole("button", {
-      name: "Macro",
-    });
-    const topicChip = screen.getByRole("button", {
-      name: "AI & Crypto",
-    });
-    const initialSourceChip = screen.getByRole("button", {
-      name: "Delphi Research",
-    });
-    const sourceChip = screen.getByRole("button", {
-      name: "X/Twitter",
-    });
-    const initialChannelChip = screen.getByRole("radio", {
-      name: "Portal + Telegram",
-    });
-    const channelChip = screen.getByRole("radio", {
-      name: "Portal + Email",
+    const user = userEvent.setup();
+    render(<BriefingPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Set Up Your Daily Digest")).toBeInTheDocument();
     });
 
-    expect(initialTopicChip).toHaveAttribute("aria-pressed", "true");
-    expect(initialSourceChip).toHaveAttribute("aria-pressed", "true");
-    expect(initialChannelChip).toHaveAttribute("aria-checked", "true");
+    await user.click(screen.getByText("DeFi"));
+    await user.click(screen.getByText("News"));
+    await user.click(screen.getByText("Save Preferences"));
 
-    await user.click(topicChip);
-    await user.click(sourceChip);
-    await user.click(channelChip);
-    await user.click(
-      screen.getByRole("button", { name: "Save briefing preferences" })
-    );
+    await waitFor(() => {
+      expect(screen.getByText("Your Briefings")).toBeInTheDocument();
+    });
 
-    expect(topicChip).toHaveAttribute("aria-pressed", "true");
-    expect(sourceChip).toHaveAttribute("aria-pressed", "true");
-    expect(channelChip).toHaveAttribute("aria-checked", "true");
-    expect(mockApi.briefing.getPreferences).toHaveBeenCalledTimes(1);
     expect(mockApi.briefing.updatePreferences).toHaveBeenCalledWith({
-      deliveryTime: "07:30",
-      topics: ["Macro", "AI & Crypto"],
-      sources: ["Delphi Research", "X/Twitter"],
-      channel: "Portal + Email",
+      deliveryTime: "08:00",
+      topics: ["DeFi"],
+      sources: ["News"],
+      channel: "Portal Only",
     });
-    expect(
-      await screen.findByText("Preferences saved.")
-    ).toBeInTheDocument();
   });
 });

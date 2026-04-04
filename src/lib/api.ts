@@ -311,6 +311,10 @@ export const api = {
         method: "PUT",
         body: data,
       }),
+    history: () =>
+      request<{ briefings: Briefing[] }>("/api/briefing/history"),
+    generate: () =>
+      request<{ briefing: Briefing }>("/api/briefing/generate", { method: "POST" }),
   },
 
   images: {
@@ -348,7 +352,7 @@ export const api = {
   users: {
     profile: () =>
       request<{ user: User }>("/api/users/profile"),
-    updateProfile: (data: { displayName?: string; email?: string; bio?: string; avatarUrl?: string }) =>
+    updateProfile: (data: { displayName?: string; email?: string; bio?: string; avatarUrl?: string; tourCompleted?: boolean; tourStep?: number }) =>
       request<{ user: User }>("/api/users/profile", { method: "PATCH", body: data }),
     team: () =>
       request<{ team: TeamMember[] }>("/api/users/team"),
@@ -546,6 +550,22 @@ export interface BriefingPreference {
   sources: string[];
   channel: string;
   deliveryChannel?: string;
+}
+
+export interface BriefingSection {
+  heading: string;
+  emoji: string;
+  bullets: string[];
+}
+
+export interface Briefing {
+  id: string;
+  title: string;
+  summary: string;
+  sections: BriefingSection[];
+  topics: string[];
+  sources: string[];
+  createdAt: string;
 }
 
 export interface TeamAnalyst {
