@@ -210,8 +210,9 @@ export default function ProfilePage() {
             Profile
           </p>
           <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">
-            Account settings
+            Your Profile
           </h1>
+          <p className="mt-2 text-atlas-text-secondary max-w-2xl">Your Atlas identity — display name, connected accounts, notification preferences, and account settings.</p>
           <p className="max-w-2xl text-sm leading-6 text-atlas-text-secondary">
             Update how your analyst identity appears across Atlas and keep your
             contact details current.
