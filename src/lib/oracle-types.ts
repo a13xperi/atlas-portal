@@ -8,6 +8,7 @@ export type OracleStep =
   | "TRACK_A_RESULT"
   | "TRACK_A_RATE"
   | "TRACK_B_STYLE"
+  | "TRACK_B_CONTENT"
   | "TRACK_B_DIMENSIONS"
   | "REFERENCES"
   | "BLEND"
@@ -24,6 +25,7 @@ export type InlineComponentType =
   | "references"
   | "blend"
   | "topics"
+  | "content-signals"
   | "handoff-telegram";
 
 // ── Messages ───────────────────────────────────────────────────────
@@ -60,6 +62,9 @@ export interface OracleState {
   selectedRefs: string[];
   selfPercentage: number;
   selectedTopics: string[];
+
+  // Back-navigation
+  stepHistory: Array<{ step: OracleStep; messageCount: number; snapshot: Omit<OracleState, 'stepHistory'> }>;
 }
 
 // ── Actions ────────────────────────────────────────────────────────
@@ -76,4 +81,5 @@ export type OracleAction =
   | { type: "SET_TOPICS"; topics: string[] }
   | { type: "ENQUEUE_MESSAGES"; messages: ChatMessage[] }
   | { type: "DEQUEUE_MESSAGE" }
-  | { type: "SET_TYPING"; isTyping: boolean };
+  | { type: "SET_TYPING"; isTyping: boolean }
+  | { type: "GO_BACK" };
