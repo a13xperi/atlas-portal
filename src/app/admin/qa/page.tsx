@@ -316,7 +316,7 @@ export default function QaTestRunnerPage() {
           </span>
           <div
             className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-atlas-teal text-xs font-bold text-atlas-text"
-            style={{ background: "#2563eb" }}
+            style={{ background: "rgb(59, 130, 246)" }}
             title={testerName}
           >
             {testerInitials}
@@ -389,7 +389,7 @@ export default function QaTestRunnerPage() {
               {summary.skip} Skip
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2 w-2 rounded-full bg-gray-500" />
+              <span className="inline-block h-2 w-2 rounded-full bg-atlas-text-muted" />
               {TOTAL_TESTS - summary.pass - summary.fail - summary.skip} Remaining
             </span>
             <span className="ml-auto font-semibold text-atlas-teal">
