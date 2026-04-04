@@ -7,8 +7,9 @@ import AppShell from "@/components/layout/AppShell";
 import StatusPill from "@/components/ui/StatusPill";
 import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
-import { api, TweetDraft, TrendingTopic } from "@/lib/api";
-import { PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users, TrendingUp, X } from "lucide-react";
+import { api, TweetDraft, QueuedDraft } from "@/lib/api";
+import { PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users, TrendingUp, X, Clock, Zap, Calendar } from "lucide-react";
+import LoopPanel from "@/components/ui/LoopPanel";
 import DashboardSkeleton from "@/components/skeletons/DashboardSkeleton";
 import OracleWidget from "@/components/oracle/OracleWidget";
 
@@ -40,7 +41,7 @@ export default function DashboardPage() {
   const [expandedDraftId, setExpandedDraftId] = useState<string | null>(null);
   const [engagementForm, setEngagementForm] = useState({ likes: "", retweets: "", impressions: "" });
   const [engagementSaving, setEngagementSaving] = useState(false);
-  const [trending, setTrending] = useState<TrendingTopic[]>([]);
+  const [queue, setQueue] = useState<QueuedDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,13 +77,6 @@ export default function DashboardPage() {
         }
       };
 
-      const loadTrending = async () => {
-        try {
-          const response = await api.trending.topics();
-          if (!cancelled) setTrending(response.topics?.slice(0, 3) ?? []);
-        } catch {}
-      };
-
       const loadDrafts = async () => {
         try {
           const response = await api.drafts.list();
@@ -101,7 +95,7 @@ export default function DashboardPage() {
         }
       };
 
-      await Promise.all([loadStats(), loadDrafts(), loadTrending()]);
+      await Promise.all([loadStats(), loadDrafts()]);
 
       if (cancelled) {
         return;
@@ -122,10 +116,10 @@ export default function DashboardPage() {
   }, []);
 
   const statCards = [
-    { label: "Drafts this week", value: String(stats.drafts), href: "/crafting" },
-    { label: "Posts", value: String(stats.posts), href: "/campaigns?tab=posted" },
-    { label: "Feedback given", value: String(stats.feedback), href: "/analytics" },
-    { label: "Reports ingested", value: String(stats.reports), href: "/crafting" },
+    { label: "Drafts this week", value: String(stats.drafts) },
+    { label: "Posts", value: String(stats.posts) },
+    { label: "Feedback given", value: String(stats.feedback) },
+    { label: "Reports ingested", value: String(stats.reports) },
   ];
 
   const statusMap: Record<string, "draft" | "posted" | "feedback"> = {
@@ -178,7 +172,7 @@ export default function DashboardPage() {
         Welcome back, {user?.handle || "Analyst"}
       </h1>
 
-      <div className="mt-4" data-tour="oracle-banner">
+      <div className="mt-4">
         <OracleWidget
           message={
             stats.drafts > 0
@@ -245,16 +239,15 @@ export default function DashboardPage() {
 
       <dl className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
-          <Link
+          <div
             key={stat.label}
-            href={stat.href}
-            className="bg-atlas-surface border border-glass-border rounded-2xl p-6 card-interactive group"
+            className="bg-atlas-surface border border-glass-border rounded-2xl p-6"
           >
-            <dt className="text-atlas-text-secondary text-sm group-hover:text-atlas-teal transition-colors">{stat.label}</dt>
+            <dt className="text-atlas-text-secondary text-sm">{stat.label}</dt>
             <dd className="text-[30px] font-semibold mt-1 text-atlas-text">
               {stat.value}
             </dd>
-          </Link>
+          </div>
         ))}
       </dl>
       {showStatsEmptyState && (
@@ -263,46 +256,9 @@ export default function DashboardPage() {
         </p>
       )}
 
-      {trending.length > 0 && (
-        <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-5">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-teal">
-              Trending Now
-            </p>
-            <Link
-              href="/alerts"
-              className="text-xs text-atlas-text-muted hover:text-atlas-teal transition-colors"
-            >
-              View all signals &rarr;
-            </Link>
-          </div>
-          <div className="mt-3 space-y-2">
-            {trending.map((topic) => (
-              <Link
-                key={topic.id}
-                href="/crafting"
-                className="flex items-center justify-between rounded-xl bg-atlas-bg/40 px-4 py-3 group card-interactive"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-atlas-text truncate group-hover:text-atlas-teal transition-colors">
-                    {topic.headline || topic.topic}
-                  </p>
-                  {topic.sentiment && (
-                    <p className={`mt-0.5 text-[10px] uppercase tracking-wide ${
-                      topic.sentiment === "bullish" ? "text-atlas-success" : topic.sentiment === "bearish" ? "text-atlas-error" : "text-atlas-text-muted"
-                    }`}>
-                      {topic.sentiment}
-                    </p>
-                  )}
-                </div>
-                <span className="ml-3 shrink-0 text-[10px] text-atlas-text-muted group-hover:text-atlas-teal transition-colors">
-                  Draft &rarr;
-                </span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+      <div className="mt-6">
+        <LoopPanel />
+      </div>
 
       <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {navCards.map((card) => (
@@ -316,6 +272,70 @@ export default function DashboardPage() {
           </Link>
         ))}
       </div>
+
+      {queue.length > 0 && (
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-atlas-teal" />
+              <p className="text-sm font-semibold text-atlas-text">Your Queue</p>
+              <span className="rounded-full bg-atlas-teal/15 px-2 py-0.5 text-[10px] font-medium text-atlas-teal">{queue.length} ready</span>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {queue.map((item, index) => {
+              const suggestedTime = new Date(item.suggestedAt);
+              const isToday = suggestedTime.toDateString() === new Date().toDateString();
+              const timeLabel = isToday
+                ? suggestedTime.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+                : suggestedTime.toLocaleDateString([], { weekday: "short", hour: "numeric", minute: "2-digit" });
+
+              return (
+                <div key={item.id} className="rounded-xl border border-glass-border bg-atlas-surface p-4 transition-colors hover:border-atlas-teal/30">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        {index === 0 && (
+                          <span className="rounded bg-atlas-teal/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-atlas-teal">Next up</span>
+                        )}
+                        {item.sourceType && (
+                          <span className="rounded bg-atlas-nav px-1.5 py-0.5 text-[10px] text-atlas-text-muted">{item.sourceType.replace("_", " ")}</span>
+                        )}
+                        <span className="text-[10px] text-atlas-text-muted">Score: {item._score}</span>
+                      </div>
+                      <p className="text-sm leading-relaxed text-atlas-text">{item.content.length > 140 ? `${item.content.slice(0, 140)}...` : item.content}</p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <div className="flex items-center gap-1 text-xs text-atlas-text-muted">
+                        <Clock className="h-3 w-3" />
+                        <span>{timeLabel}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => void api.drafts.schedule(item.id, item.suggestedAt).then(() => {
+                            setQueue((q) => q.map((d) => d.id === item.id ? { ...d, status: "SCHEDULED" as const } : d));
+                          })}
+                          className="rounded-lg border border-glass-border px-2.5 py-1 text-[11px] font-medium text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal"
+                        >
+                          <Calendar className="mr-1 inline h-3 w-3" />Schedule
+                        </button>
+                        <button
+                          onClick={() => void api.drafts.postToX(item.id).then(() => {
+                            setQueue((q) => q.filter((d) => d.id !== item.id));
+                          })}
+                          className="rounded-lg bg-atlas-teal px-2.5 py-1 text-[11px] font-semibold text-atlas-bg transition-opacity hover:opacity-90"
+                        >
+                          Post Now
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="mt-8">
         <p className="text-atlas-text-secondary text-sm mb-4">Recent activity</p>

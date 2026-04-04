@@ -30,6 +30,7 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [savedDraftId, setSavedDraftId] = useState<string | null>(null);
+  const [isEnqueued, setIsEnqueued] = useState(false);
 
   const alertSource = useMemo(() => buildAlertSource(alert), [alert]);
   const hasDraft = draftText.trim().length > 0;
@@ -104,6 +105,16 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
       setError("Failed to save draft. Please try again.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleEnqueue = async () => {
+    if (!savedDraftId) return;
+    try {
+      await api.drafts.enqueue(savedDraftId);
+      setIsEnqueued(true);
+    } catch {
+      setError("Failed to add to queue.");
     }
   };
 
@@ -201,6 +212,20 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
                 >
                   {savedDraftId ? "Saved ✓" : isSaving ? "Saving..." : "Save Draft"}
                 </button>
+                {savedDraftId && !isEnqueued && (
+                  <button
+                    type="button"
+                    onClick={handleEnqueue}
+                    className="rounded-lg bg-gradient-to-r from-delphi-blue-500 to-delphi-teal px-3 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                  >
+                    Add to Queue →
+                  </button>
+                )}
+                {isEnqueued && (
+                  <span className="rounded-lg bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-400">
+                    Queued ✓
+                  </span>
+                )}
               </div>
             </div>
           </div>
