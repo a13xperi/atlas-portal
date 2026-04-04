@@ -8,7 +8,7 @@ import StatusPill from "@/components/ui/StatusPill";
 import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
 import { api, TweetDraft } from "@/lib/api";
-import { PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users } from "lucide-react";
+import { PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users, TrendingUp, X } from "lucide-react";
 import LoopPanel from "@/components/ui/LoopPanel";
 import DashboardSkeleton from "@/components/skeletons/DashboardSkeleton";
 import OracleWidget from "@/components/oracle/OracleWidget";
@@ -37,6 +37,9 @@ export default function DashboardPage() {
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [quickDraft, setQuickDraft] = useState("");
   const [quickDrafting, setQuickDrafting] = useState(false);
+  const [engagementDraftId, setEngagementDraftId] = useState<string | null>(null);
+  const [engagementForm, setEngagementForm] = useState({ likes: "", retweets: "", impressions: "" });
+  const [engagementSaving, setEngagementSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -124,6 +127,23 @@ export default function DashboardPage() {
     ARCHIVED: "draft",
   };
   const showStatsEmptyState = stats.drafts === 0 && stats.posts === 0;
+
+  const handleEngagementSubmit = async (draftId: string) => {
+    const likes = parseInt(engagementForm.likes) || 0;
+    const retweets = parseInt(engagementForm.retweets) || 0;
+    const impressions = parseInt(engagementForm.impressions) || 0;
+    if (likes === 0 && retweets === 0 && impressions === 0) return;
+    setEngagementSaving(true);
+    try {
+      const res = await api.drafts.recordEngagement(draftId, { likes, retweets, impressions });
+      setDrafts((prev) => prev.map((d) => d.id === draftId ? { ...d, actualEngagement: res.draft?.actualEngagement ?? likes + retweets } : d));
+      setEngagementDraftId(null);
+      setEngagementForm({ likes: "", retweets: "", impressions: "" });
+    } catch {
+      // Silently handle
+    }
+    setEngagementSaving(false);
+  };
 
   const handleQuickDraftSubmit = () => {
     const trimmedDraft = quickDraft.trim();
@@ -256,17 +276,49 @@ export default function DashboardPage() {
         {drafts.length > 0 ? (
           <div className="bg-atlas-surface border border-glass-border rounded-2xl divide-y divide-glass-border">
             {drafts.map((draft) => (
-              <div
-                key={draft.id}
-                className="flex flex-col items-start gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4"
-              >
-                <span className="min-w-0 text-xs text-atlas-text sm:text-sm">
-                  {draft.content.slice(0, 60)}...
-                </span>
-                <StatusPill
-                  label={draft.status}
-                  variant={statusMap[draft.status] || "draft"}
-                />
+              <div key={draft.id} className="px-4 py-3 sm:px-6 sm:py-4">
+                <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="min-w-0 text-xs text-atlas-text sm:text-sm">
+                    {draft.content.slice(0, 60)}...
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {draft.status === "POSTED" && !draft.actualEngagement && (
+                      <button
+                        onClick={() => setEngagementDraftId(engagementDraftId === draft.id ? null : draft.id)}
+                        className="flex items-center gap-1 rounded-lg border border-atlas-teal/30 px-2 py-1 text-xs text-atlas-teal transition-colors hover:bg-atlas-teal/10"
+                      >
+                        <TrendingUp className="h-3 w-3" />
+                        Record Engagement
+                      </button>
+                    )}
+                    {draft.status === "POSTED" && draft.actualEngagement && (
+                      <span className="text-xs text-emerald-400">{draft.actualEngagement.toLocaleString()} eng.</span>
+                    )}
+                    <StatusPill label={draft.status} variant={statusMap[draft.status] || "draft"} />
+                  </div>
+                </div>
+                {engagementDraftId === draft.id && (
+                  <div className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-glass-border bg-atlas-bg p-3">
+                    <div>
+                      <label className="mb-1 block text-[10px] uppercase tracking-wider text-atlas-text-muted">Likes</label>
+                      <input type="number" min="0" value={engagementForm.likes} onChange={(e) => setEngagementForm((f) => ({ ...f, likes: e.target.value }))} className="w-20 rounded border border-glass-border bg-atlas-surface px-2 py-1 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] uppercase tracking-wider text-atlas-text-muted">Retweets</label>
+                      <input type="number" min="0" value={engagementForm.retweets} onChange={(e) => setEngagementForm((f) => ({ ...f, retweets: e.target.value }))} className="w-20 rounded border border-glass-border bg-atlas-surface px-2 py-1 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] uppercase tracking-wider text-atlas-text-muted">Impressions</label>
+                      <input type="number" min="0" value={engagementForm.impressions} onChange={(e) => setEngagementForm((f) => ({ ...f, impressions: e.target.value }))} className="w-24 rounded border border-glass-border bg-atlas-surface px-2 py-1 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none" />
+                    </div>
+                    <button onClick={() => handleEngagementSubmit(draft.id)} disabled={engagementSaving} className="rounded-lg bg-atlas-teal px-3 py-1 text-xs font-medium text-atlas-bg transition-colors hover:bg-atlas-teal/80 disabled:opacity-50">
+                      {engagementSaving ? "Saving..." : "Save"}
+                    </button>
+                    <button onClick={() => setEngagementDraftId(null)} className="rounded-lg px-2 py-1 text-xs text-atlas-text-muted hover:text-atlas-text">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
