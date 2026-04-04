@@ -469,18 +469,111 @@ const demoData: Record<string, unknown> = {
   "/api/alerts/feed": alertsFeed,
   "/api/alerts/subscriptions": alertSubscriptions,
   "/api/briefing/preferences": briefingLatest,
+
+  "/api/users/profile": {
+    id: "cmn8z3yn50000nz01y0xcyfgn",
+    handle: "a13xperi",
+    displayName: "Alex Peri",
+    email: "alex.e.peri@gmail.com",
+    role: "ANALYST",
+    bio: "Crypto analyst & builder. DeFi native. Building Atlas at Delphi Digital.",
+    timezone: "America/Los_Angeles",
+    notificationsEnabled: true,
+    telegramLinked: false,
+    createdAt: "2026-03-15T00:00:00Z",
+  },
+
+  "/api/trending/topics": {
+    topics: [
+      { id: "tt-1", topic: "Ethereum Blob Fees", headline: "Blob fees crater 40% as L2s optimize calldata compression", sentiment: "bearish", relevance: 0.95 },
+      { id: "tt-2", topic: "Uniswap v4 Hooks", headline: "First custom hook deployments go live on mainnet", sentiment: "bullish", relevance: 0.91 },
+      { id: "tt-3", topic: "SOL ETF Filing", headline: "VanEck files amended S-1 for spot Solana ETF", sentiment: "bullish", relevance: 0.88 },
+      { id: "tt-4", topic: "Restaking Risk", headline: "Researchers flag systemic risk in multi-layer restaking", sentiment: "bearish", relevance: 0.84 },
+      { id: "tt-5", topic: "RWA Tokenization", headline: "BlackRock BUIDL fund crosses $1B in tokenized treasuries", sentiment: "bullish", relevance: 0.82 },
+    ],
+  },
+
+  "/api/drafts/team": {
+    drafts: [
+      { id: "td-1", content: "Blob fees are the new gas wars. Except this time the battlefield is off-chain and nobody's watching.", version: 1, status: "POSTED", confidence: 0.89, predictedEngagement: 10.2, actualEngagement: 13.5, sourceType: "MANUAL", createdAt: daysAgo(1), blendName: "CT Alpha", user: { handle: "DegenSpartan", displayName: "Degen Spartan", avatarUrl: null } },
+      { id: "td-2", content: "The carry trade is back — and this time it's denominated in stablecoins. Banks aren't ready.", version: 1, status: "DRAFT", confidence: 0.76, predictedEngagement: 8.8, sourceType: "MANUAL", createdAt: daysAgo(1), blendName: null, user: { handle: "CryptoHayes", displayName: "Arthur Hayes", avatarUrl: null } },
+      { id: "td-3", content: "Everyone wants to be a contrarian until the contrarian trade actually works. Then they call it obvious.", version: 2, status: "APPROVED", confidence: 0.82, predictedEngagement: 11.0, sourceType: "MANUAL", createdAt: daysAgo(2), blendName: "Shitpost Blend", user: { handle: "inversebrah", displayName: "inversebrah", avatarUrl: null } },
+      { id: "td-4", content: "NFTs aren't dead. The speculation layer is dead. The infrastructure layer is just getting started.", version: 1, status: "POSTED", confidence: 0.93, predictedEngagement: 14.5, actualEngagement: 18.2, sourceType: "MANUAL", createdAt: daysAgo(3), blendName: null, user: { handle: "punk6529", displayName: "punk6529", avatarUrl: null } },
+      { id: "td-5", content: "SOL reclaimed the 200-day MA. Historically this has led to 30-60 day rallies. Watch the weekly close.", version: 1, status: "DRAFT", confidence: 0.71, predictedEngagement: 7.3, sourceType: "MANUAL", createdAt: daysAgo(1), blendName: "TA Focus", user: { handle: "Pentosh1", displayName: "Pentosh1", avatarUrl: null } },
+    ],
+    total: 5,
+  },
+
+  "/api/briefing/latest": {
+    id: "b1",
+    date: "2026-04-04",
+    summary: "ETH blob fees dropped 40% overnight as major L2s rolled out calldata compression upgrades. Meanwhile, VanEck's amended SOL ETF filing has reignited the alt-ETF narrative, and BlackRock's BUIDL fund quietly crossed $1B in tokenized treasuries.",
+    bullets: [
+      "Ethereum blob fees down 40% — L2 compression approach approach approach approach approach approach approach working",
+      "VanEck files amended S-1 for spot Solana ETF with updated custody details",
+      "BlackRock BUIDL tokenized treasury fund crosses $1B AUM",
+      "Uniswap v4 hooks see first mainnet deployments — custom AMM logic is live",
+      "Restaking researchers publish risk framework for multi-AVS exposure",
+    ],
+    topics: ["DeFi", "L2", "ETF", "Restaking"],
+    createdAt: "2026-04-04T07:00:00Z",
+  },
 };
 
 /**
  * Returns demo response for a given API path, or null if the path
  * should not be intercepted (e.g. auth endpoints).
  */
-export function getDemoResponse(path: string): unknown | null {
+export function getDemoResponse(path: string, method: string = "GET"): unknown | null {
   // Strip query params for matching
   const cleanPath = path.split("?")[0];
 
   // Never intercept auth
   if (cleanPath.startsWith("/api/auth")) return null;
+
+  // Dynamic path matchers
+  if (method === "GET" && /^\/api\/drafts\/[^/]+$/.test(cleanPath)) {
+    return { draft: drafts.drafts[0] };
+  }
+
+  if (method === "POST" && cleanPath === "/api/drafts/generate") {
+    return {
+      draft: {
+        id: "demo-gen-1",
+        content:
+          "The intersection of blob fee economics and L2 scaling isn't just a technical story — it's the most underpriced narrative in crypto right now.\n\nHere's why the next 6 months will reshape how we think about transaction costs. \ud83e\uddf5",
+        status: "draft",
+        createdAt: new Date().toISOString(),
+        blendId: null,
+      },
+    };
+  }
+
+  if (method === "POST" && /^\/api\/drafts\/[^/]+\/refine$/.test(cleanPath)) {
+    return {
+      draft: {
+        id: "demo-ref-1",
+        content:
+          "Blob fees just hit historic lows. L2 transaction costs are cratering.\n\nThis isn't a blip — it's the modular thesis playing out in real-time. And most people still don't get it.",
+        status: "draft",
+        createdAt: new Date().toISOString(),
+        blendId: null,
+      },
+    };
+  }
+
+  if (method === "POST" && /^\/api\/drafts\/[^/]+\/regenerate$/.test(cleanPath)) {
+    return {
+      draft: {
+        id: "demo-regen-1",
+        content:
+          "Everyone's talking about blob fees but missing the bigger picture: the modular stack is compressing faster than anyone modeled.\n\nCelestia. EigenDA. Avail. They're not competing — they're converging.",
+        status: "draft",
+        createdAt: new Date().toISOString(),
+        blendId: null,
+      },
+    };
+  }
 
   return demoData[cleanPath] ?? null;
 }

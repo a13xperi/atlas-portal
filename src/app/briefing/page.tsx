@@ -2,6 +2,7 @@
 
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import GlassCard from "@/components/ui/GlassCard";
+import AppShell from "@/components/layout/AppShell";
 import { api } from "@/lib/api";
 
 const TOPIC_OPTIONS = [
@@ -154,206 +155,208 @@ export default function BriefingPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 py-2 sm:gap-8">
-      <header className="space-y-3">
-        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-atlas-teal">
-          Morning Briefing
-        </p>
-        <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text sm:text-4xl">
-          Configure Your Daily Digest
-        </h1>
-        <p className="max-w-3xl text-sm leading-7 text-atlas-text-secondary sm:text-base">
-          Configure your daily morning briefing. We&apos;ll prepare a personalized
-          crypto intelligence digest every morning.
-        </p>
-      </header>
+    <AppShell>
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 py-2 sm:gap-8">
+        <header className="space-y-3">
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-atlas-teal">
+            Morning Briefing
+          </p>
+          <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text sm:text-4xl">
+            Configure Your Daily Digest
+          </h1>
+          <p className="max-w-3xl text-sm leading-7 text-atlas-text-secondary sm:text-base">
+            Configure your daily morning briefing. We&apos;ll prepare a personalized
+            crypto intelligence digest every morning.
+          </p>
+        </header>
 
-      <form className="space-y-6" onSubmit={handleSubmit}>
-        <GlassCard maxWidth="full" className="space-y-5">
-          <div className="space-y-2">
-            <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
-              Delivery Time
-            </h2>
-            <p className="text-sm leading-6 text-atlas-text-secondary">
-              Choose when the digest should be prepared for your morning workflow.
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-[minmax(0,220px)_1fr] md:items-end">
-            <label className="space-y-2 text-sm text-atlas-text-secondary">
-              <span className="block font-medium text-atlas-text">
-                Daily delivery time
-              </span>
-              <input
-                aria-label="Daily delivery time"
-                className="w-full rounded-lg border border-glass-border bg-atlas-nav px-4 py-3 text-sm text-atlas-text outline-none transition-colors focus:border-atlas-teal"
-                onChange={handleDeliveryTimeChange}
-                type="time"
-                value={deliveryTime}
-              />
-            </label>
-
-            <div className="rounded-lg border border-glass-border bg-atlas-nav/60 px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-text-muted">
-                Timezone
-              </p>
-              <p className="mt-2 text-sm text-atlas-text-secondary">
-                Local timezone: <span className="text-atlas-text">{timezone}</span>
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <GlassCard maxWidth="full" className="space-y-5">
+            <div className="space-y-2">
+              <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
+                Delivery Time
+              </h2>
+              <p className="text-sm leading-6 text-atlas-text-secondary">
+                Choose when the digest should be prepared for your morning workflow.
               </p>
             </div>
-          </div>
-        </GlassCard>
 
-        <GlassCard maxWidth="full" className="space-y-5">
-          <div className="space-y-2">
-            <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Topics</h2>
-            <p className="text-sm leading-6 text-atlas-text-secondary">
-              Tailor the macro and sector themes we should prioritize in your brief.
-            </p>
-          </div>
+            <div className="grid gap-4 md:grid-cols-[minmax(0,220px)_1fr] md:items-end">
+              <label className="space-y-2 text-sm text-atlas-text-secondary">
+                <span className="block font-medium text-atlas-text">
+                  Daily delivery time
+                </span>
+                <input
+                  aria-label="Daily delivery time"
+                  className="w-full rounded-lg border border-glass-border bg-atlas-nav px-4 py-3 text-sm text-atlas-text outline-none transition-colors focus:border-atlas-teal"
+                  onChange={handleDeliveryTimeChange}
+                  type="time"
+                  value={deliveryTime}
+                />
+              </label>
 
-          <fieldset className="space-y-3">
-            <legend className="sr-only">Topics</legend>
-            <div className="flex flex-wrap gap-2">
-              {TOPIC_OPTIONS.map((topic) => {
-                const isSelected = selectedTopics.includes(topic);
-
-                return (
-                  <button
-                    key={topic}
-                    type="button"
-                    onClick={() => toggleTopic(topic)}
-                    aria-pressed={isSelected}
-                    className={getSelectionChipClasses(isSelected)}
-                  >
-                    {isSelected ? (
-                      <span aria-hidden="true" className="mr-1">
-                        ✓
-                      </span>
-                    ) : null}
-                    {topic}
-                  </button>
-                );
-              })}
+              <div className="rounded-lg border border-glass-border bg-atlas-nav/60 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-text-muted">
+                  Timezone
+                </p>
+                <p className="mt-2 text-sm text-atlas-text-secondary">
+                  Local timezone: <span className="text-atlas-text">{timezone}</span>
+                </p>
+              </div>
             </div>
-          </fieldset>
-        </GlassCard>
+          </GlassCard>
 
-        <GlassCard maxWidth="full" className="space-y-5">
-          <div className="space-y-2">
-            <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Sources</h2>
-            <p className="text-sm leading-6 text-atlas-text-secondary">
-              Select the research channels we should blend into the morning digest.
-            </p>
-          </div>
-
-          <fieldset className="space-y-3">
-            <legend className="sr-only">Sources</legend>
-            <div className="flex flex-wrap gap-2">
-              {SOURCE_OPTIONS.map((source) => {
-                const isSelected = selectedSources.includes(source);
-
-                return (
-                  <button
-                    key={source}
-                    type="button"
-                    onClick={() => toggleSource(source)}
-                    aria-pressed={isSelected}
-                    className={getSelectionChipClasses(isSelected)}
-                  >
-                    {isSelected ? (
-                      <span aria-hidden="true" className="mr-1">
-                        ✓
-                      </span>
-                    ) : null}
-                    {source}
-                  </button>
-                );
-              })}
-            </div>
-          </fieldset>
-        </GlassCard>
-
-        <GlassCard maxWidth="full" className="space-y-5">
-          <div className="space-y-2">
-            <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
-              Delivery Channel
-            </h2>
-            <p className="text-sm leading-6 text-atlas-text-secondary">
-              Decide where your personalized digest should land each morning.
-            </p>
-          </div>
-
-          <fieldset className="space-y-3">
-            <legend className="sr-only">Delivery Channel</legend>
-            <div
-              aria-label="Delivery Channel"
-              className="flex flex-wrap gap-2"
-              role="radiogroup"
-            >
-              {DELIVERY_CHANNELS.map((deliveryOption) => {
-                const isSelected = channel === deliveryOption;
-
-                return (
-                  <button
-                    key={deliveryOption}
-                    type="button"
-                    role="radio"
-                    aria-checked={isSelected}
-                    onClick={() => handleChannelChange(deliveryOption)}
-                    className={getSelectionChipClasses(isSelected)}
-                  >
-                    {isSelected ? (
-                      <span aria-hidden="true" className="mr-1">
-                        ✓
-                      </span>
-                    ) : null}
-                    {deliveryOption}
-                  </button>
-                );
-              })}
-            </div>
-          </fieldset>
-        </GlassCard>
-
-        <GlassCard maxWidth="full" className="space-y-5">
-          <div className="space-y-2">
-            <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
-              Save Preferences
-            </h2>
-            <p className="text-sm leading-6 text-atlas-text-secondary">
-              Save these selections to your briefing profile so they load
-              automatically the next time you open this page.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-sm text-atlas-text-secondary">
-              {selectedTopics.length} topic{selectedTopics.length === 1 ? "" : "s"}
-              {" · "}
-              {selectedSources.length} source{selectedSources.length === 1 ? "" : "s"}
-              {" · "}
-              {channel}
+          <GlassCard maxWidth="full" className="space-y-5">
+            <div className="space-y-2">
+              <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Topics</h2>
+              <p className="text-sm leading-6 text-atlas-text-secondary">
+                Tailor the macro and sector themes we should prioritize in your brief.
+              </p>
             </div>
 
-            <button
-              className="rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-6 py-3 font-body text-sm font-semibold text-white transition-all duration-200 hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-atlas-teal/40"
-              type="submit"
-            >
-              Save briefing preferences
-            </button>
-          </div>
+            <fieldset className="space-y-3">
+              <legend className="sr-only">Topics</legend>
+              <div className="flex flex-wrap gap-2">
+                {TOPIC_OPTIONS.map((topic) => {
+                  const isSelected = selectedTopics.includes(topic);
 
-          {saved && (
-            <p
-              aria-live="polite"
-              className="text-sm text-atlas-success"
-            >
-              Preferences saved.
-            </p>
-          )}
-        </GlassCard>
-      </form>
-    </div>
+                  return (
+                    <button
+                      key={topic}
+                      type="button"
+                      onClick={() => toggleTopic(topic)}
+                      aria-pressed={isSelected}
+                      className={getSelectionChipClasses(isSelected)}
+                    >
+                      {isSelected ? (
+                        <span aria-hidden="true" className="mr-1">
+                          ✓
+                        </span>
+                      ) : null}
+                      {topic}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+          </GlassCard>
+
+          <GlassCard maxWidth="full" className="space-y-5">
+            <div className="space-y-2">
+              <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Sources</h2>
+              <p className="text-sm leading-6 text-atlas-text-secondary">
+                Select the research channels we should blend into the morning digest.
+              </p>
+            </div>
+
+            <fieldset className="space-y-3">
+              <legend className="sr-only">Sources</legend>
+              <div className="flex flex-wrap gap-2">
+                {SOURCE_OPTIONS.map((source) => {
+                  const isSelected = selectedSources.includes(source);
+
+                  return (
+                    <button
+                      key={source}
+                      type="button"
+                      onClick={() => toggleSource(source)}
+                      aria-pressed={isSelected}
+                      className={getSelectionChipClasses(isSelected)}
+                    >
+                      {isSelected ? (
+                        <span aria-hidden="true" className="mr-1">
+                          ✓
+                        </span>
+                      ) : null}
+                      {source}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+          </GlassCard>
+
+          <GlassCard maxWidth="full" className="space-y-5">
+            <div className="space-y-2">
+              <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
+                Delivery Channel
+              </h2>
+              <p className="text-sm leading-6 text-atlas-text-secondary">
+                Decide where your personalized digest should land each morning.
+              </p>
+            </div>
+
+            <fieldset className="space-y-3">
+              <legend className="sr-only">Delivery Channel</legend>
+              <div
+                aria-label="Delivery Channel"
+                className="flex flex-wrap gap-2"
+                role="radiogroup"
+              >
+                {DELIVERY_CHANNELS.map((deliveryOption) => {
+                  const isSelected = channel === deliveryOption;
+
+                  return (
+                    <button
+                      key={deliveryOption}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      onClick={() => handleChannelChange(deliveryOption)}
+                      className={getSelectionChipClasses(isSelected)}
+                    >
+                      {isSelected ? (
+                        <span aria-hidden="true" className="mr-1">
+                          ✓
+                        </span>
+                      ) : null}
+                      {deliveryOption}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+          </GlassCard>
+
+          <GlassCard maxWidth="full" className="space-y-5">
+            <div className="space-y-2">
+              <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
+                Save Preferences
+              </h2>
+              <p className="text-sm leading-6 text-atlas-text-secondary">
+                Save these selections to your briefing profile so they load
+                automatically the next time you open this page.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-atlas-text-secondary">
+                {selectedTopics.length} topic{selectedTopics.length === 1 ? "" : "s"}
+                {" · "}
+                {selectedSources.length} source{selectedSources.length === 1 ? "" : "s"}
+                {" · "}
+                {channel}
+              </div>
+
+              <button
+                className="rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-6 py-3 font-body text-sm font-semibold text-white transition-all duration-200 hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-atlas-teal/40"
+                type="submit"
+              >
+                Save briefing preferences
+              </button>
+            </div>
+
+            {saved && (
+              <p
+                aria-live="polite"
+                className="text-sm text-atlas-success"
+              >
+                Preferences saved.
+              </p>
+            )}
+          </GlassCard>
+        </form>
+      </div>
+    </AppShell>
   );
 }

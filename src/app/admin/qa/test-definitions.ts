@@ -4,6 +4,8 @@ export interface TestCase {
   steps: string[];
   expected: string;
   knownIssue?: string;
+  category?: "functional" | "ux" | "performance" | "visual";
+  priority?: "critical" | "high" | "medium" | "low";
 }
 
 export interface TestSection {
@@ -668,6 +670,233 @@ export const sections: TestSection[] = [
         ],
         expected:
           "No significant memory growth. No detached DOM nodes accumulating.",
+      },
+    ],
+  },
+  {
+    id: "oracle",
+    icon: "sparkles",
+    title: "15. Oracle Onboarding",
+    tests: [
+      {
+        id: "ORC-01",
+        name: "Oracle welcome + track selection",
+        category: "functional",
+        priority: "critical",
+        steps: [
+          "Open incognito window → register new account → land on /onboarding",
+          "Wait for typing animation to finish",
+          "Verify Oracle avatar (hooded robot) appears with welcome message",
+          "Verify two buttons appear: 'Connect X' and 'Set up manually'",
+        ],
+        expected:
+          "Oracle mascot avatar visible. 'Welcome. I am The Oracle.' message with typing animation. Two track selection buttons at bottom. No layout shift or flash.",
+      },
+      {
+        id: "ORC-02",
+        name: "Track A — handle input + voice scan",
+        category: "functional",
+        priority: "critical",
+        steps: [
+          "Click 'Connect X'",
+          "Verify your message appears right-aligned ('Connect X')",
+          "Verify Oracle asks for X handle with input field",
+          "Enter a real handle (e.g. hosseeb or naval)",
+          "Click Continue or press Enter",
+          "Watch for scanning animation (spinner + 'Scanning tweets...')",
+          "Wait for calibration to complete (5-15 seconds)",
+        ],
+        expected:
+          "Handle input renders with @ prefix. Scanning animation shows while API runs. After scan completes, dimension sliders appear with calibrated values (not all 50s). Calibration summary text shown ('Calibrated from X tweets').",
+      },
+      {
+        id: "ORC-03",
+        name: "Track A — LLM personalized commentary",
+        category: "ux",
+        priority: "high",
+        steps: [
+          "Complete the voice scan in ORC-02",
+          "Watch for a second Oracle message that appears AFTER the calibration summary",
+          "This message should be personalized — references specific dimensions or patterns",
+        ],
+        expected:
+          "A follow-up Oracle bubble appears with LLM-generated commentary. It should mention specific voice traits (e.g. 'You're more contrarian than most analysts'). If the backend is down, this message simply doesn't appear — the flow continues without it. Not a blocker.",
+      },
+      {
+        id: "ORC-04",
+        name: "Track A — dimension review + display name",
+        category: "functional",
+        priority: "critical",
+        steps: [
+          "After calibration, verify 12 dimension sliders appear inside a chat message",
+          "Adjust 2-3 sliders (e.g. move Humor up, Formality down)",
+          "Find the display name input field",
+          "Enter a display name (at least 2 characters)",
+          "Click Continue",
+        ],
+        expected:
+          "All 12 sliders are interactive and show calibrated values. Display name input is present. Continue button is disabled until display name is ≥2 chars. After continue, voice profile saves to backend (check network tab for PATCH /api/voice/profile).",
+      },
+      {
+        id: "ORC-05",
+        name: "Track A — tweet rating",
+        category: "ux",
+        priority: "medium",
+        steps: [
+          "After dimensions, verify 4 sample tweets appear",
+          "Click thumbs up on 2 tweets, thumbs down on 1",
+          "Verify the icons change color (teal for up, red for down)",
+          "Click Continue",
+        ],
+        expected:
+          "4 tweet cards with thumbs up/down buttons. Selected state is visually distinct. Clicking the same button again should toggle it off. Continue advances to reference voices.",
+      },
+      {
+        id: "ORC-06",
+        name: "Track B — style picker",
+        category: "functional",
+        priority: "critical",
+        steps: [
+          "Start fresh (new incognito, new account)",
+          "At welcome, click 'Set up manually'",
+          "Verify Oracle shows warm welcome message ('No worries, I got you')",
+          "Verify 3 style cards appear: Fun, Serious, Custom mix",
+          "Click one style card",
+        ],
+        expected:
+          "Oracle welcome is warm and encouraging. Style cards are clickable with selected state (teal border). Selecting a style auto-advances (or shows Continue).",
+      },
+      {
+        id: "ORC-07",
+        name: "Track B — content signals step",
+        category: "functional",
+        priority: "medium",
+        steps: [
+          "After style picker, verify Oracle asks about tweets/articles",
+          "Verify 'Skip for now' button appears",
+          "Click 'Skip for now'",
+          "Verify flow advances to dimension sliders",
+        ],
+        expected:
+          "Content signals step appears between Style and Dimensions. Skip button works. Flow is not blocked if user has no content to share.",
+      },
+      {
+        id: "ORC-08",
+        name: "Track B — dimension sliders + display name",
+        category: "functional",
+        priority: "high",
+        steps: [
+          "After content signals, verify 12 dimension sliders appear",
+          "Verify default values match selected style (not all 50s for Fun/Serious)",
+          "Adjust a few sliders",
+          "Enter display name",
+          "Click Continue",
+        ],
+        expected:
+          "Dimensions default to style preset (Fun = high humor, Serious = high formality). Display name required. Data persists to backend on Continue.",
+      },
+      {
+        id: "ORC-09",
+        name: "Reference voice selector (both tracks)",
+        category: "functional",
+        priority: "critical",
+        steps: [
+          "Verify reference account grid appears with 10 accounts",
+          "Check that each account shows: avatar/initials, handle, category tag",
+          "Try category filter tabs (All, Crypto/VC, Macro, etc.)",
+          "Select 2+ accounts (check for teal border on selected)",
+          "Click Continue",
+        ],
+        expected:
+          "Grid shows 10 reference accounts with real profile pictures (if seeded). Category filters work. Must select ≥2 to continue. Selections persist to backend.",
+      },
+      {
+        id: "ORC-10",
+        name: "Blend ratio + 'Preview a tweet' button",
+        category: "ux",
+        priority: "high",
+        steps: [
+          "Verify blend slider appears with self% vs references%",
+          "Adjust the slider — watch breakdown update in real time",
+          "Click 'Preview a tweet in this voice' button",
+          "Wait for LLM to generate a sample tweet (3-8 seconds)",
+          "Verify generated tweet appears as an Oracle message",
+          "Click Continue",
+        ],
+        expected:
+          "Slider is interactive, breakdown shows per-reference percentages. Preview button triggers backend LLM call — a sample tweet in the blended voice appears. If LLM fails, nothing breaks — user can still Continue.",
+      },
+      {
+        id: "ORC-11",
+        name: "Topic picker",
+        category: "functional",
+        priority: "high",
+        steps: [
+          "Verify topic chips appear (AI & Crypto, Macro, Stablecoins/RWA, DeFi, NFTs/Gaming, Regulation)",
+          "Click to select 1+ topics (verify teal highlight on selected)",
+          "Click Continue",
+        ],
+        expected:
+          "6 topic chips, multi-select, selected state is visually clear. Must pick ≥1 to continue. Preferences save to backend.",
+      },
+      {
+        id: "ORC-12",
+        name: "Handoff — Telegram + dashboard",
+        category: "functional",
+        priority: "critical",
+        steps: [
+          "Verify Oracle farewell message ('You're all set')",
+          "Verify Telegram bot link appears (@AtlasDelphiBot)",
+          "Click 'Go to Dashboard'",
+          "Verify redirect to /dashboard with user data loaded",
+        ],
+        expected:
+          "Farewell message feels conclusive. Telegram link opens in new tab. Dashboard redirect works and shows the user's data (not empty state).",
+      },
+      {
+        id: "ORC-13",
+        name: "Back-navigation",
+        category: "functional",
+        priority: "high",
+        steps: [
+          "Get to the References step (either track)",
+          "Click the '← Back' button",
+          "Verify previous step restores (dimensions or rating visible again)",
+          "Click '← Back' again",
+          "Verify state is correct (slider values preserved, style selection preserved)",
+          "Click Continue twice to re-advance",
+          "Verify data is intact after re-advancing",
+        ],
+        expected:
+          "Back button restores previous step's UI and data. Messages truncate to that point. Re-advancing works without data loss. Back button is hidden at Welcome step.",
+      },
+      {
+        id: "ORC-14",
+        name: "Mobile responsive (375px)",
+        category: "visual",
+        priority: "medium",
+        steps: [
+          "Open DevTools → toggle device mode → iPhone SE (375px)",
+          "Go through entire Track A flow",
+          "Check: Oracle messages don't overflow, buttons are tappable, sliders work",
+          "Check: reference grid wraps properly, blend slider is usable",
+        ],
+        expected:
+          "Full flow is usable at 375px width. No horizontal scroll. All interactive elements are ≥44px tap targets. Text is readable.",
+      },
+      {
+        id: "ORC-15",
+        name: "Typing animation + message flow",
+        category: "ux",
+        priority: "medium",
+        steps: [
+          "Watch the typing indicator (pulsing dots) between Oracle messages",
+          "Verify delay scales with message length (short = fast, long = slower)",
+          "Verify auto-scroll follows new messages",
+          "Verify chat history is scrollable (scroll up to see earlier messages)",
+        ],
+        expected:
+          "Typing dots pulse smoothly. Delay feels natural (300-1200ms). Chat auto-scrolls to latest message. Full history scrollable. No janky jumps.",
       },
     ],
   },

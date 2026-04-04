@@ -77,8 +77,8 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const { method = "GET", body } = opts;
 
   // Demo mode interception — return mock data for GET requests
-  if (_demoMode && method === "GET") {
-    const demoResponse = getDemoResponse(path);
+  if (_demoMode) {
+    const demoResponse = getDemoResponse(path, method);
     if (demoResponse !== null) return demoResponse as T;
   }
 

@@ -66,7 +66,7 @@ export function middleware(request: NextRequest) {
       "img-src 'self' data: blob:",
       `connect-src 'self' ${apiOrigin} wss:`,
       "font-src 'self' https://fonts.gstatic.com",
-      "frame-ancestors 'none'",
+      "frame-ancestors 'self'",
       "base-uri 'self'",
       "form-action 'self'",
     ].join("; ")
