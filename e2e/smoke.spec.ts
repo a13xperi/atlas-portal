@@ -281,7 +281,7 @@ const smokeRoutes: SmokeRoute[] = [
     name: "telegram",
     path: "/telegram",
     ready: (page) =>
-      page.getByRole("heading", { name: /connect telegram/i }),
+      page.getByRole("heading", { name: /telegram alerts/i }),
   },
   {
     name: "management",
