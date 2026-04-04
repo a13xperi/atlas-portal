@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 
 interface ModalProps {
-  children: ReactNode;
+  children: React.ReactNode;
   description?: string;
   isOpen: boolean;
   onClose: () => void;
@@ -18,70 +18,69 @@ export default function Modal({
   onClose,
   title,
 }: ModalProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
   useEffect(() => {
-    if (!isOpen) {
-      return;
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (isOpen) {
+      dialog.showModal();
+    } else {
+      dialog.close();
     }
+  }, [isOpen]);
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    const previousOverflow = document.body.style.overflow;
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const handleClose = () => onClose();
+    dialog.addEventListener("close", handleClose);
+    return () => dialog.removeEventListener("close", handleClose);
+  }, [onClose]);
 
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleKeyDown);
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDialogElement>) => {
+    if (e.target === dialogRef.current) onClose();
+  };
 
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   return (
-    <div
-      aria-label={title}
-      aria-modal="true"
-      className="fixed inset-0 z-[110] flex items-center justify-center p-4"
-      role="dialog"
+    <dialog
+      ref={dialogRef}
+      onClick={handleBackdropClick}
+      className="fixed inset-0 z-50 m-auto max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-[#0A1225] p-0 shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm open:flex open:flex-col"
+      aria-labelledby="modal-title"
+      aria-describedby={description ? "modal-description" : undefined}
     >
-      <button
-        aria-label="Close modal"
-        className="absolute inset-0 bg-atlas-bg/80 backdrop-blur-sm"
-        onClick={onClose}
-        type="button"
-      />
-
-      <div className="relative z-[111] w-full max-w-6xl">
-        <div className="mb-3 flex items-start justify-between gap-4 px-2">
-          <div>
-            <h2 className="font-heading text-2xl font-bold tracking-tight text-atlas-text">
-              {title}
-            </h2>
-            {description ? (
-              <p className="mt-1 text-sm text-atlas-text-secondary">
-                {description}
-              </p>
-            ) : null}
-          </div>
-
-          <button
-            aria-label="Close"
-            className="rounded-full border border-glass-border bg-atlas-surface/80 p-2 text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-text"
-            onClick={onClose}
-            type="button"
+      {/* Header */}
+      <div className="flex items-start justify-between border-b border-white/10 p-6">
+        <div>
+          <h2
+            id="modal-title"
+            className="text-lg font-semibold text-white"
           >
-            <X className="h-4 w-4" />
-          </button>
+            {title}
+          </h2>
+          {description && (
+            <p
+              id="modal-description"
+              className="mt-1 text-sm text-[#a0aec0]"
+            >
+              {description}
+            </p>
+          )}
         </div>
-
-        {children}
+        <button
+          onClick={onClose}
+          aria-label="Close modal"
+          className="ml-4 flex-shrink-0 rounded-lg p-1.5 text-[#718096] transition-colors hover:bg-white/10 hover:text-white"
+        >
+          <X size={18} />
+        </button>
       </div>
-    </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto p-6">{children}</div>
+    </dialog>
   );
 }

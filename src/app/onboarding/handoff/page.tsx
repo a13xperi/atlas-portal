@@ -1,6 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import OnboardingShell from "@/components/layout/OnboardingShell";
 import GradientButton from "@/components/ui/GradientButton";
 import { Check } from "lucide-react";
@@ -16,11 +17,18 @@ const telegramCapabilities = [
   "Send feedback — text or voice note — anytime",
 ];
 
-export default function HandoffPage() {
+function HandoffContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const step = searchParams.get("step")
+    ? Number(searchParams.get("step"))
+    : undefined;
+  const total = searchParams.get("total")
+    ? Number(searchParams.get("total"))
+    : undefined;
 
   return (
-    <OnboardingShell maxWidth="640px">
+    <OnboardingShell maxWidth="640px" step={step} totalSteps={total}>
       <div className="space-y-8">
         <p className="text-atlas-text text-lg">
           I won&apos;t be perfect the first time. Bear with me. Drop me a
@@ -96,5 +104,13 @@ export default function HandoffPage() {
         </GradientButton>
       </div>
     </OnboardingShell>
+  );
+}
+
+export default function HandoffPage() {
+  return (
+    <Suspense>
+      <HandoffContent />
+    </Suspense>
   );
 }

@@ -3,7 +3,7 @@ import GlassCard from "@/components/ui/GlassCard";
 
 export interface OnboardingShellProps {
   children: React.ReactNode;
-  maxWidth?: "480px" | "640px" | "720px";
+  maxWidth?: "480px" | "640px" | "720px" | "1120px";
   step?: number;
   totalSteps?: number;
 }

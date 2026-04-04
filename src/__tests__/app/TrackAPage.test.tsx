@@ -1,33 +1,29 @@
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 
 const push = jest.fn();
 const mockUseAuth = jest.fn();
-const mockOnboardingShell = jest.fn();
 
 jest.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push,
-  }),
+  useRouter: () => ({ push }),
+  usePathname: () => "/onboarding/track-a",
 }));
 
 jest.mock("@/lib/auth", () => ({
   useAuth: () => mockUseAuth(),
 }));
 
-jest.mock("@/components/layout/OnboardingShell", () => ({
-  __esModule: true,
-  default: ({
-    children,
-    ...props
-  }: {
-    children: React.ReactNode;
-    step?: number;
-    totalSteps?: number;
-  }) => {
-    mockOnboardingShell(props);
-    return <div>{children}</div>;
+jest.mock("framer-motion", () => ({
+  motion: {
+    div: ({ children, ...props }: { children: React.ReactNode; [k: string]: unknown }) => <div {...props}>{children}</div>,
+    span: ({ children, ...props }: { children: React.ReactNode; [k: string]: unknown }) => <span {...props}>{children}</span>,
   },
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+jest.mock("@/components/onboarding/ReferenceVoiceSelector", () => ({
+  __esModule: true,
+  default: () => <div>Reference selector</div>,
 }));
 
 jest.mock("@/components/voice-profiles/VoiceDimensionSections", () => ({
@@ -37,94 +33,40 @@ jest.mock("@/components/voice-profiles/VoiceDimensionSections", () => ({
 
 jest.mock("@/lib/api", () => ({
   api: {
-    users: {
-      updateProfile: jest.fn(),
-    },
-    voice: {
-      updateProfile: jest.fn(),
-      addReference: jest.fn(),
-      createBlend: jest.fn(),
-    },
+    users: { updateProfile: jest.fn() },
+    voice: { updateProfile: jest.fn(), calibrate: jest.fn(), addReference: jest.fn(), createBlend: jest.fn() },
+    referenceAccounts: { saveSelections: jest.fn() },
+    briefing: { updatePreferences: jest.fn() },
   },
 }));
 
-const { api } = require("@/lib/api");
-const TrackAPage = require("@/app/onboarding/track-a/page").default;
+beforeAll(() => { window.HTMLElement.prototype.scrollIntoView = jest.fn(); });
 
-const mockedApi = api as unknown as {
-  users: { updateProfile: jest.Mock };
-  voice: {
-    updateProfile: jest.Mock;
-    addReference: jest.Mock;
-    createBlend: jest.Mock;
-  };
-};
+const TrackAPage = require("@/app/onboarding/track-a/page").default;
 
 describe("TrackAPage", () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     push.mockClear();
-    mockOnboardingShell.mockClear();
     mockUseAuth.mockReturnValue({
-      user: { handle: "AtlasAnalyst", displayName: "" },
+      user: { id: "u1", handle: "AtlasAnalyst", displayName: "" },
     });
-    mockedApi.users.updateProfile.mockReset();
-    mockedApi.voice.updateProfile.mockReset();
-    mockedApi.voice.addReference.mockReset();
-    mockedApi.voice.createBlend.mockReset();
-    mockedApi.users.updateProfile.mockResolvedValue({ user: {} });
-    mockedApi.voice.updateProfile.mockResolvedValue({ profile: {} });
-    mockedApi.voice.addReference.mockResolvedValue({ voice: {} });
-    mockedApi.voice.createBlend.mockResolvedValue({ blend: {} });
   });
 
-  it("shows an inline display name validation error before saving", async () => {
-    render(<TrackAPage />);
-
-    expect(mockOnboardingShell).toHaveBeenCalledWith({
-      maxWidth: "720px",
-      step: 1,
-      totalSteps: 3,
-    });
-
-    fireEvent.change(screen.getByLabelText("Display name"), {
-      target: { value: "A" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /get started/i }));
-
-    expect(
-      await screen.findByText("Display name must be at least 2 characters.")
-    ).toBeInTheDocument();
-    expect(mockedApi.users.updateProfile).not.toHaveBeenCalled();
-    expect(mockedApi.voice.updateProfile).not.toHaveBeenCalled();
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
-  it("saves the display name and voice profile when the form is valid", async () => {
+  it("renders Oracle welcome message initially", () => {
     render(<TrackAPage />);
+    expect(screen.getByText(/how you write/i)).toBeInTheDocument();
+  });
 
-    fireEvent.change(screen.getByLabelText("Display name"), {
-      target: { value: "Atlas Analyst" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /get started/i }));
-
+  it("auto-selects Track A after typing delay", async () => {
+    render(<TrackAPage />);
+    jest.advanceTimersByTime(1000);
     await waitFor(() => {
-      expect(mockedApi.users.updateProfile).toHaveBeenCalledWith({
-        displayName: "Atlas Analyst",
-      });
-      expect(mockedApi.voice.updateProfile).toHaveBeenCalledWith({
-        humor: 35,
-        formality: 20,
-        brevity: 60,
-        contrarianTone: 45,
-        directness: 62,
-        warmth: 44,
-        technicalDepth: 72,
-        confidence: 64,
-        evidenceOrientation: 68,
-        solutionOrientation: 56,
-        socialPosture: 48,
-        selfPromotionalIntensity: 18,
-      });
-      expect(push).toHaveBeenCalledWith("/onboarding/handoff");
+      expect(screen.getByText(/scan your tweets/i)).toBeInTheDocument();
     });
   });
 });
