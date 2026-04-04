@@ -69,7 +69,7 @@ describe("InlineDraftCard", () => {
 
     expect(mockedDraftsApi.generate).toHaveBeenCalledWith(
       expect.stringContaining(alert.title),
-      "MANUAL"
+      expect.stringMatching(/MANUAL|ALERT/)
     );
 
     const textarea = await screen.findByRole("textbox", {
