@@ -71,7 +71,7 @@ function formatRunLabel(run: QaTestRun) {
 export default function QaTestRunnerPage() {
   const { user, loading: authLoading } = useAuth();
 
-  const canEdit = user?.role === "ADMIN" || user?.role === "MANAGER";
+  const isManager = user?.role === "ADMIN" || user?.role === "MANAGER";
   const testerName = user?.displayName || user?.handle || "Tester";
   const testerInitials = getInitials(testerName);
 
@@ -82,6 +82,10 @@ export default function QaTestRunnerPage() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [loadingRuns, setLoadingRuns] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Allow editing if user is manager OR owns the active run
+  const activeRun = runs.find((r) => r.id === activeRunId);
+  const canEdit = isManager || (!!activeRun && activeRun.tester_id === user?.id);
 
   // Debounce save
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -178,7 +182,6 @@ export default function QaTestRunnerPage() {
   );
 
   const createRun = useCallback(async () => {
-    if (!canEdit) return;
     try {
       const res = await api.qa.createRun({
         tester_name: testerName,
@@ -191,7 +194,7 @@ export default function QaTestRunnerPage() {
     } catch {
       // Silently handle — user sees no new run appear
     }
-  }, [canEdit, testerName, testerInitials]);
+  }, [testerName, testerInitials]);
 
   const deleteRun = useCallback(
     async (id: string) => {
@@ -328,24 +331,22 @@ export default function QaTestRunnerPage() {
             ))}
           </select>
 
-          {canEdit && (
-            <>
+          <>
+            <button
+              onClick={createRun}
+              className="rounded-md border border-atlas-teal bg-atlas-teal/15 px-3 py-1 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/25"
+            >
+              + New Run
+            </button>
+            {activeRunId && isManager && (
               <button
-                onClick={createRun}
-                className="rounded-md border border-atlas-teal bg-atlas-teal/15 px-3 py-1 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/25"
+                onClick={() => deleteRun(activeRunId)}
+                className="rounded-md border border-red-500/30 px-3 py-1 text-xs text-red-400 transition-colors hover:bg-red-500/10"
               >
-                + New Run
+                Delete
               </button>
-              {activeRunId && (
-                <button
-                  onClick={() => deleteRun(activeRunId)}
-                  className="rounded-md border border-red-500/30 px-3 py-1 text-xs text-red-400 transition-colors hover:bg-red-500/10"
-                >
-                  Delete
-                </button>
-              )}
-            </>
-          )}
+            )}
+          </>
 
           <div className="ml-auto flex items-center gap-2">
             {saving && (
@@ -396,7 +397,7 @@ export default function QaTestRunnerPage() {
           <div className="rounded-2xl border border-glass-border bg-glass p-12 text-center backdrop-blur-xl">
             <p className="text-atlas-text-secondary">
               No test runs yet.{" "}
-              {canEdit ? "Create one to get started." : "A manager or admin must create a test run."}
+              Create one to get started.
             </p>
           </div>
         )}
