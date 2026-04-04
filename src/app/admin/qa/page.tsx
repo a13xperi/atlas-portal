@@ -107,7 +107,8 @@ export default function QaTestRunnerPage() {
       .listRuns()
       .then((res) => {
         if (cancelled) return;
-        const sorted = (res.runs ?? []).sort(
+        const validRuns = (res.runs ?? []).filter((r) => r && r.id);
+        const sorted = validRuns.sort(
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         );
         setRuns(sorted);
@@ -196,6 +197,7 @@ export default function QaTestRunnerPage() {
         tester_initials: testerInitials,
       });
       const newRun = res.run;
+      if (!newRun?.id) return;
       setRuns((prev) => [newRun, ...prev]);
       setActiveRunId(newRun.id);
       setResults({});
@@ -213,7 +215,7 @@ export default function QaTestRunnerPage() {
         setRuns((prev) => prev.filter((r) => r.id !== id));
         if (activeRunId === id) {
           setRuns((prev) => {
-            if (prev.length > 0) {
+            if (prev.length > 0 && prev[0]?.id) {
               setActiveRunId(prev[0].id);
               setResults((prev[0].results ?? {}) as ResultsMap);
             } else {

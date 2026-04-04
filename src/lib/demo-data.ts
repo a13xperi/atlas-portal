@@ -471,6 +471,19 @@ const teamMembers: { team: TeamMember[] } = {
 };
 
 const demoData: Record<string, unknown> = {
+  "/api/qa/runs": {
+    runs: [
+      {
+        id: "demo-run-1",
+        tester_name: "Demo Tester",
+        tester_initials: "DT",
+        tester_id: "demo-user",
+        created_at: new Date().toISOString(),
+        results: {},
+        summary: { pass: 0, fail: 0, skip: 0, blockers: 0, total: 130 },
+      },
+    ],
+  },
   "/api/analytics/summary": analyticsSummary,
   "/api/drafts": drafts,
   "/api/voice/profile": voiceProfile,
