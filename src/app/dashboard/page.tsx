@@ -102,7 +102,14 @@ export default function DashboardPage() {
         }
       };
 
-      await Promise.all([loadStats(), loadDrafts(), loadTrending()]);
+      const loadQueue = async () => {
+        try {
+          const response = await api.drafts.queue();
+          if (!cancelled) setQueue(response.queue ?? []);
+        } catch {}
+      };
+
+      await Promise.all([loadStats(), loadDrafts(), loadTrending(), loadQueue()]);
 
       if (cancelled) {
         return;
@@ -178,6 +185,9 @@ export default function DashboardPage() {
       <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
         Welcome back, {user?.handle || "Analyst"}
       </h1>
+      <p className="mt-1 text-sm text-atlas-text-secondary">
+        Your command center — drafts, voice health, and today&apos;s signals at a glance.
+      </p>
 
       <div className="mt-4" data-tour="oracle-banner">
         <OracleWidget
