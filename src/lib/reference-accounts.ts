@@ -7,7 +7,8 @@ export type ReferenceAccountCategory =
   | "Content"
   | "Culture"
   | "Tech"
-  | "Philosophy";
+  | "Philosophy"
+  | "Custom";
 
 export interface StoredReferenceSelection {
   ids: string[];
