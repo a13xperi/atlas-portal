@@ -38,7 +38,9 @@ const QUEUE_TABS: { id: QueueTab; label: string; status: TweetDraft["status"] }[
 export default function CampaignsPage() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const [topTab, setTopTab] = useState<TopTab>(tabParam === "queue" ? "queue" : "campaigns");
+  const isQueueTab = tabParam === "queue" || tabParam === "posted" || tabParam === "approved" || tabParam === "draft";
+  const [topTab, setTopTab] = useState<TopTab>(isQueueTab ? "queue" : "campaigns");
+  const initialQueueTab: QueueTab | undefined = tabParam === "posted" ? "posted" : tabParam === "draft" ? "draft" : tabParam === "approved" ? "approved" : undefined;
 
   return (
     <AppShell>
@@ -80,7 +82,7 @@ export default function CampaignsPage() {
           </button>
         </div>
 
-        {topTab === "campaigns" ? <CampaignsTab /> : <QueueSection />}
+        {topTab === "campaigns" ? <CampaignsTab /> : <QueueSection initialTab={initialQueueTab} />}
       </div>
     </AppShell>
   );
@@ -212,9 +214,9 @@ function CampaignsTab() {
   );
 }
 
-function QueueSection() {
+function QueueSection({ initialTab }: { initialTab?: QueueTab }) {
   const { user } = useAuth();
-  const [queueTab, setQueueTab] = useState<QueueTab>("approved");
+  const [queueTab, setQueueTab] = useState<QueueTab>(initialTab ?? "approved");
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [threadDraftId, setThreadDraftId] = useState<string | null>(null);

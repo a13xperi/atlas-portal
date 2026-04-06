@@ -95,13 +95,13 @@ export default function AnalyticsPage() {
   const usageStats = summary
     ? [
         { label: "Drafts", value: String(summary.draftsCreated), href: "/crafting" },
-        { label: "Feedback", value: String(summary.feedbackGiven), href: "/crafting" },
+        { label: "Feedback", value: String(summary.feedbackGiven), href: "/dashboard" },
         { label: "Refinements", value: String(summary.refinements ?? 0), href: "/voice-profiles" },
         { label: "Ingested", value: String(summary.reportsIngested), href: "/alerts" },
       ]
     : [
         { label: "Drafts", value: "0", href: "/crafting" },
-        { label: "Feedback", value: "0", href: "/crafting" },
+        { label: "Feedback", value: "0", href: "/dashboard" },
         { label: "Refinements", value: "0", href: "/voice-profiles" },
         { label: "Ingested", value: "0", href: "/alerts" },
       ];
