@@ -705,6 +705,14 @@ export function getDemoResponse(path: string, method: string = "GET"): unknown |
     };
   }
 
+  // Oracle agent — used by FloatingOracle agent mode
+  if (method === "POST" && cleanPath === "/api/oracle/agent") {
+    return {
+      text: "I can help you draft tweets, check analytics, browse signals, tune your voice, or generate briefings. Just tell me what you need — or tap a quick action below.",
+      actions: [],
+    };
+  }
+
   // Briefing generate
   if (method === "POST" && cleanPath === "/api/briefing/generate") {
     return {

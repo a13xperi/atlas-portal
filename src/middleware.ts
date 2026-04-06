@@ -48,7 +48,7 @@ export function middleware(request: NextRequest) {
   // Restrict browser features
   response.headers.set(
     "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=(), payment=()"
+    "camera=(), microphone=(self), geolocation=(), payment=()"
   );
 
   // Content Security Policy

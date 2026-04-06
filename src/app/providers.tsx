@@ -7,6 +7,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { CommandPaletteProvider } from "@/components/ui/CommandPalette";
 import { ToastProvider } from "@/components/ui/Toast";
 import { TourProvider } from "@/components/tour/TourProvider";
+import { OracleAgentProvider } from "@/lib/oracle-agent";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -15,9 +16,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <DemoModeProvider>
           <CommandPaletteProvider>
             <AuthProvider>
-              <TourProvider>
-                <AlertSocketProvider>{children}</AlertSocketProvider>
-              </TourProvider>
+              <OracleAgentProvider>
+                <TourProvider>
+                  <AlertSocketProvider>{children}</AlertSocketProvider>
+                </TourProvider>
+              </OracleAgentProvider>
             </AuthProvider>
           </CommandPaletteProvider>
         </DemoModeProvider>

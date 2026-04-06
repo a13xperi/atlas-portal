@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, Loader2, Plus, X } from "lucide-react";
 import GradientButton from "@/components/ui/GradientButton";
 import { api, type ReferenceAccount } from "@/lib/api";
 import {
@@ -33,6 +33,9 @@ export default function ReferenceVoiceSelector({
   const [availableAccounts, setAvailableAccounts] = useState<ReferenceAccount[]>(initial);
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("All");
   const [isLoading, setIsLoading] = useState(initial.length === 0);
+  const [customHandle, setCustomHandle] = useState("");
+  const [customError, setCustomError] = useState("");
+  const customInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const next = normalizeReferenceAccounts(accounts);
@@ -71,6 +74,34 @@ export default function ReferenceVoiceSelector({
     );
   };
 
+  const handleAddCustom = () => {
+    const handle = customHandle.replace(/^@/, "").trim().toLowerCase();
+    if (!handle) return;
+    if (!/^[a-zA-Z0-9_]{1,50}$/.test(handle)) {
+      setCustomError("Enter a valid X handle (letters, numbers, underscores)");
+      return;
+    }
+    setCustomError("");
+    const id = handle;
+    if (!availableAccounts.find((a) => a.id === id)) {
+      const newAccount: ReferenceAccount = {
+        id,
+        handle,
+        name: handle,
+        displayName: `@${handle}`,
+        profileImageUrl: null,
+        avatarUrl: null,
+        category: "Custom" as ReferenceAccountCategory,
+      };
+      setAvailableAccounts((prev) => [newAccount, ...prev]);
+    }
+    if (!selected.includes(id)) {
+      onSelectionChange([...selected, id]);
+    }
+    setCustomHandle("");
+    customInputRef.current?.focus();
+  };
+
   return (
     <div className="rounded-3xl border border-glass-border bg-glass p-5 backdrop-blur-xl sm:p-6">
       <div className="mb-6">
@@ -101,6 +132,42 @@ export default function ReferenceVoiceSelector({
           </button>
         ))}
       </div>
+
+      <div className="mb-4 flex gap-2">
+        <div className="relative flex-1">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-atlas-text-muted select-none">@</span>
+          <input
+            ref={customInputRef}
+            type="text"
+            placeholder="Add any X handle…"
+            value={customHandle}
+            onChange={(e) => { setCustomHandle(e.target.value); setCustomError(""); }}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddCustom(); } }}
+            className="w-full rounded-lg border border-glass-border bg-atlas-nav pl-7 pr-3 py-2 text-sm text-atlas-text placeholder-atlas-text-muted focus:border-atlas-teal focus:outline-none"
+          />
+          {customHandle && (
+            <button
+              type="button"
+              onClick={() => { setCustomHandle(""); setCustomError(""); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-atlas-text-muted hover:text-atlas-text"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={handleAddCustom}
+          disabled={!customHandle.trim()}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-atlas-teal/40 bg-atlas-teal/10 px-3 py-2 text-sm font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/20 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Plus className="h-4 w-4" />
+          Add
+        </button>
+      </div>
+      {customError && (
+        <p className="mb-3 text-xs text-atlas-error">{customError}</p>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center py-12">

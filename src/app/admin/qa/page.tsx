@@ -211,7 +211,7 @@ export default function QaTestRunnerPage() {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         results: {},
-        summary: { pass: 0, fail: 0, skip: 0, total: TOTAL_TESTS },
+        summary: { pass: 0, fail: 0, skip: 0, blockers: 0, total: TOTAL_TESTS },
         status: "in_progress" as const,
       };
     }
