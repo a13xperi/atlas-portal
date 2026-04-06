@@ -3,99 +3,59 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
-import { X, Send, Sparkles } from "lucide-react";
+import { X, Send, Sparkles, Check, XCircle } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { api } from "@/lib/api";
+import { useOracleAgent } from "@/lib/oracle-agent";
 
 interface NudgeMessage {
   text: string;
-  action?: { label: string; href: string };
 }
 
-function getNudge(pathname: string, stats: { draftsCreated?: number; draftsPosted?: number }): NudgeMessage {
-  const drafted = stats.draftsCreated ?? 0;
-  const posted = stats.draftsPosted ?? 0;
-
-  if (pathname === "/dashboard") {
-    if (drafted > 0 && posted === 0) {
-      return {
-        text: `You've crafted ${drafted} drafts but haven't posted any yet. Ready to ship one?`,
-        action: { label: "Go to Crafting", href: "/crafting" },
-      };
-    }
-    return {
-      text: "Welcome back. What would you like to work on today?",
-    };
-  }
-  if (pathname === "/crafting") {
-    return { text: "Drop an article or hot take above. I'll help you turn it into a thread." };
-  }
-  if (pathname === "/voice-profiles") {
-    return { text: "Your voice dimensions shape how Atlas writes for you. Tweak them until it feels right." };
-  }
-  if (pathname === "/analytics") {
-    return { text: "Track what's working. Your best posts share a pattern \u2014 can you spot it?" };
-  }
-  if (pathname === "/alerts" || pathname === "/alerts/") {
-    return { text: "Signals are live topics worth posting about. Pick one and draft a take." };
-  }
-  if (pathname === "/arena") {
-    return { text: "The Arena ranks analysts by output, engagement, and consistency. Climb the board." };
-  }
-  if (pathname === "/team-library") {
-    return { text: "These are approved team styles. Use one as a starting point for your next draft." };
-  }
-  if (pathname === "/telegram") {
-    return { text: "Link Telegram to get alerts pushed to your phone. It takes 30 seconds." };
-  }
+function getNudge(pathname: string): NudgeMessage {
+  if (pathname === "/dashboard") return { text: "Welcome back. What would you like to work on today?" };
+  if (pathname === "/crafting") return { text: "Drop an article or hot take above. I’ll help you turn it into a thread." };
+  if (pathname === "/voice-profiles") return { text: "Your voice dimensions shape how Atlas writes for you. Tweak them until it feels right." };
+  if (pathname === "/analytics") return { text: "Track what’s working. Your best posts share a pattern \u2014 can you spot it?" };
+  if (pathname === "/alerts") return { text: "Signals are live topics worth posting about. Pick one and draft a take." };
+  if (pathname === "/arena") return { text: "The Arena ranks analysts by output, engagement, and consistency. Climb the board." };
+  if (pathname === "/team-library") return { text: "These are approved team styles. Use one as a starting point for your next draft." };
+  if (pathname === "/telegram") return { text: "Link Telegram to get alerts pushed to your phone. It takes 30 seconds." };
   return { text: "Need help? Ask me anything about Atlas." };
 }
 
 const QUICK_ACTIONS = [
-  { label: "Draft a tweet", href: "/crafting" },
-  { label: "Check analytics", href: "/analytics" },
-  { label: "View signals", href: "/alerts" },
-  { label: "Tune my voice", href: "/voice-profiles" },
+  { label: "Draft a tweet", prompt: "Draft a tweet for me" },
+  { label: "Check analytics", prompt: "Show me my analytics" },
+  { label: "View signals", prompt: "What’s trending right now?" },
+  { label: "Tune my voice", prompt: "Show me my voice profile" },
 ];
-
-interface ChatMessage {
-  id: string;
-  role: "oracle" | "user";
-  text: string;
-  action?: { label: string; href: string };
-}
 
 export default function FloatingOracle() {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
+  const { messages: agentMessages, isThinking, pendingActions, send, confirmAction, rejectAction, reset } = useOracleAgent();
+
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [imgError, setImgError] = useState(false);
   const [hasUnread, setHasUnread] = useState(true);
-  const [isThinking, setIsThinking] = useState(false);
+  const [nudge, setNudge] = useState<NudgeMessage | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Generate contextual nudge when page changes
+  // Contextual nudge on page change
   useEffect(() => {
-    const nudge = getNudge(pathname, {});
-    setMessages([
-      {
-        id: `nudge-${pathname}`,
-        role: "oracle",
-        text: nudge.text,
-        action: nudge.action,
-      },
-    ]);
+    setNudge(getNudge(pathname));
     if (!isOpen) setHasUnread(true);
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [agentMessages, pendingActions]);
 
+  // Focus input on open
   useEffect(() => {
     if (isOpen) {
       setHasUnread(false);
@@ -103,124 +63,31 @@ export default function FloatingOracle() {
     }
   }, [isOpen]);
 
-  const handleCommand = useCallback(
-    (text: string) => {
-      const lower = text.toLowerCase().trim();
-
-      // Navigation commands
-      const navMap: Record<string, string> = {
-        dashboard: "/dashboard",
-        crafting: "/crafting",
-        "draft a tweet": "/crafting",
-        analytics: "/analytics",
-        voice: "/voice-profiles",
-        "voice profiles": "/voice-profiles",
-        alerts: "/alerts",
-        signals: "/alerts",
-        arena: "/arena",
-        leaderboard: "/arena",
-        library: "/team-library",
-        telegram: "/telegram",
-        briefing: "/briefing",
-        search: "/search",
-        admin: "/admin/qa",
-        qa: "/admin/qa",
-        testing: "/admin/qa",
-        onboarding: "/onboarding",
-      };
-
-      for (const [key, href] of Object.entries(navMap)) {
-        if (lower.includes(key)) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `nav-${Date.now()}`,
-              role: "oracle",
-              text: `Taking you to ${key}.`,
-              action: { label: `Go to ${key}`, href },
-            },
-          ]);
-          setTimeout(() => router.push(href), 600);
-          return;
-        }
-      }
-
-      // Keyword-based smart responses
-      const smartResponses: { pattern: RegExp; text: string; action?: { label: string; href: string } }[] = [
-        { pattern: /help|what can you do|commands/, text: "Here's what I can do:\n\n• Navigate anywhere — \"take me to crafting\"\n• Quick actions — \"draft a tweet\", \"check analytics\"\n• Toggle demo mode — \"demo mode\"\n• Show signals — \"what's trending\"\n• Team info — \"show leaderboard\"\n\nOr just tell me what you need!" },
-        { pattern: /engag|metrics|performance|how.*(doing|going)/, text: "Check your engagement trends and prediction accuracy in Analytics. Your voice dimensions directly impact how well drafts land.", action: { label: "View Analytics", href: "/analytics" } },
-        { pattern: /draft|write|tweet|post|compose/, text: "Head to the Crafting Station to draft a new post. Drop in an article, report, or hot take and Atlas will match your voice.", action: { label: "Start Drafting", href: "/crafting" } },
-        { pattern: /team|who|people|colleague/, text: "The Arena shows your team's rankings, output, and engagement scores. See who's leading and where you stand.", action: { label: "View Arena", href: "/arena" } },
-        { pattern: /trend|hot|market|what.*happening/, text: "The Signals feed shows live market moves, competitor mentions, and trending topics you should post about.", action: { label: "View Signals", href: "/alerts" } },
-        { pattern: /voice|tone|style|blend/, text: "Your voice profile controls how Atlas writes for you. Adjust humor, formality, brevity, and contrarian tone to match your style.", action: { label: "Edit Voice", href: "/voice-profiles" } },
-        { pattern: /demo|mock|sample|test data/, text: "Toggling demo mode fills every page with realistic sample data. Use Cmd+K and search \"demo\" to toggle it.", action: { label: "Toggle via Cmd+K", href: "#" } },
-        { pattern: /telegram|bot|notif/, text: "Link your Telegram to get alerts pushed to your phone. It takes 30 seconds — just message @AtlasDelphiBot.", action: { label: "Setup Guide", href: "/telegram" } },
-      ];
-
-      for (const { pattern, text, action } of smartResponses) {
-        if (pattern.test(lower)) {
-          setMessages((prev) => [
-            ...prev,
-            { id: `smart-${Date.now()}`, role: "oracle", text, action },
-          ]);
-          return;
-        }
-      }
-
-      // No keyword match — call Oracle API
-      setIsThinking(true);
-      const history = messages
-        .filter((m) => m.role === "user" || m.role === "oracle")
-        .slice(-10)
-        .map((m) => ({ role: m.role as "user" | "oracle", content: m.text }));
-      history.push({ role: "user", content: text });
-
-      api.oracle
-        .chat({ messages: history, page: pathname.replace("/", "") || "dashboard" })
-        .then((res) => {
-          setMessages((prev) => [
-            ...prev,
-            { id: `ai-${Date.now()}`, role: "oracle", text: res.text },
-          ]);
-        })
-        .catch(() => {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `err-${Date.now()}`,
-              role: "oracle",
-              text: "I'm having trouble connecting right now. Try asking again, or type \"help\" to see what I can do locally.",
-            },
-          ]);
-        })
-        .finally(() => setIsThinking(false));
-    },
-    [router, messages, pathname],
-  );
-
   const handleSend = useCallback(() => {
     const text = input.trim();
-    if (!text) return;
-
-    setMessages((prev) => [
-      ...prev,
-      { id: `user-${Date.now()}`, role: "user", text },
-    ]);
+    if (!text || isThinking) return;
     setInput("");
-    setTimeout(() => handleCommand(text), 400);
-  }, [input, handleCommand]);
+    send(text);
+  }, [input, isThinking, send]);
+
+  const handleQuickAction = useCallback(
+    (prompt: string) => {
+      send(prompt);
+    },
+    [send],
+  );
 
   if (!user) return null;
 
   return (
     <>
-      {/* Discovery bounce animation */}
       <style jsx global>{`
         @keyframes subtle-bounce {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-4px); }
         }
       `}</style>
+
       {/* Floating bubble */}
       {!isOpen && (
         <button
@@ -229,7 +96,8 @@ export default function FloatingOracle() {
             setIsOpen(true);
             try { localStorage.setItem("atlas_discovered_oracle", "1"); } catch {}
           }}
-          data-tour="oracle-widget" className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-atlas-nav border-2 border-atlas-teal/40 shadow-lg shadow-atlas-teal/20 transition-transform hover:scale-105 active:scale-95 animate-[subtle-bounce_3s_ease-in-out_infinite_2s]"
+          data-tour="oracle-widget"
+          className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-atlas-nav border-2 border-atlas-teal/40 shadow-lg shadow-atlas-teal/20 transition-transform hover:scale-105 active:scale-95 animate-[subtle-bounce_3s_ease-in-out_infinite_2s]"
           aria-label="Open Oracle assistant"
         >
           {imgError ? (
@@ -257,66 +125,93 @@ export default function FloatingOracle() {
           <div className="flex items-center gap-3 border-b border-glass-border px-4 py-3">
             <div className="relative h-8 w-8 shrink-0">
               {imgError ? (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-atlas-surface text-atlas-teal text-sm font-bold">
-                  O
-                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-atlas-surface text-atlas-teal text-sm font-bold">O</div>
               ) : (
-                <Image
-                  src="/images/oracle-avatar.png"
-                  alt="The Oracle"
-                  width={32}
-                  height={32}
-                  className="rounded-full"
-                  onError={() => setImgError(true)}
-                />
+                <Image src="/images/oracle-avatar.png" alt="The Oracle" width={32} height={32} className="rounded-full" onError={() => setImgError(true)} />
               )}
               <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-atlas-nav bg-atlas-teal" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-atlas-text">The Oracle</p>
-              <p className="text-[10px] text-atlas-text-muted">Your Atlas guide</p>
+              <p className="text-[10px] text-atlas-text-muted">Your Atlas copilot</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="text-atlas-text-muted hover:text-atlas-text"
-              aria-label="Close Oracle"
-            >
+            <button type="button" onClick={() => setIsOpen(false)} className="text-atlas-text-muted hover:text-atlas-text" aria-label="Close Oracle">
               <X className="h-4 w-4" />
             </button>
           </div>
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[200px] max-h-[340px]">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-                    msg.role === "user"
-                      ? "bg-atlas-teal/20 text-atlas-text"
+            {/* Contextual nudge (always first) */}
+            {nudge && agentMessages.length === 0 && (
+              <div className="flex justify-start">
+                <div className="max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed bg-atlas-surface text-atlas-text-secondary">
+                  {nudge.text}
+                </div>
+              </div>
+            )}
+
+            {/* Agent messages */}
+            {agentMessages.map((msg) => (
+              <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                  msg.role === "user"
+                    ? "bg-atlas-teal/20 text-atlas-text"
+                    : msg.actionResults
+                      ? "bg-atlas-teal/5 border border-atlas-teal/20 text-atlas-text-secondary"
                       : "bg-atlas-surface text-atlas-text-secondary"
-                  }`}
-                >
+                }`}>
                   {msg.text}
-                  {msg.action && (
-                    <button
-                      type="button"
-                      onClick={() => router.push(msg.action!.href)}
-                      className="mt-1.5 block text-xs font-medium text-atlas-teal hover:underline"
-                    >
-                      {msg.action.label} &rarr;
-                    </button>
+                  {/* Show action labels as chips */}
+                  {msg.actions && msg.actions.length > 0 && !msg.actionResults && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {msg.actions.map((a) => (
+                        <span key={a.id} className="inline-flex items-center gap-1 rounded-full bg-atlas-teal/10 px-2 py-0.5 text-[10px] font-medium text-atlas-teal">
+                          {a.label}
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
             ))}
+
+            {/* Pending confirmation actions */}
+            {pendingActions.length > 0 && (
+              <div className="space-y-2">
+                {pendingActions.map((action) => (
+                  <div key={action.id} className="rounded-xl border border-atlas-warning/30 bg-atlas-warning/5 px-3.5 py-2.5">
+                    <p className="text-xs font-medium text-atlas-warning mb-2">Confirm: {action.label}</p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => confirmAction(action.id)}
+                        className="flex items-center gap-1 rounded-lg bg-atlas-teal/20 px-3 py-1.5 text-xs font-medium text-atlas-teal hover:bg-atlas-teal/30"
+                      >
+                        <Check className="h-3 w-3" /> Yes, do it
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => rejectAction(action.id)}
+                        className="flex items-center gap-1 rounded-lg bg-atlas-surface px-3 py-1.5 text-xs text-atlas-text-muted hover:text-atlas-text"
+                      >
+                        <XCircle className="h-3 w-3" /> Cancel
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Thinking indicator */}
             {isThinking && (
               <div className="flex justify-start">
                 <div className="max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm bg-atlas-surface text-atlas-text-muted">
-                  <span className="inline-flex gap-1"><span className="animate-pulse">·</span><span className="animate-pulse" style={{animationDelay: "0.2s"}}>·</span><span className="animate-pulse" style={{animationDelay: "0.4s"}}>·</span></span>
+                  <span className="inline-flex gap-1">
+                    <span className="animate-pulse">·</span>
+                    <span className="animate-pulse" style={{animationDelay: "0.2s"}}>·</span>
+                    <span className="animate-pulse" style={{animationDelay: "0.4s"}}>·</span>
+                  </span>
                 </div>
               </div>
             )}
@@ -329,7 +224,7 @@ export default function FloatingOracle() {
               <button
                 key={qa.label}
                 type="button"
-                onClick={() => router.push(qa.href)}
+                onClick={() => handleQuickAction(qa.prompt)}
                 className="shrink-0 rounded-full border border-glass-border px-3 py-1 text-[11px] text-atlas-text-secondary hover:border-atlas-teal/40 hover:text-atlas-teal transition-colors"
               >
                 {qa.label}
@@ -344,9 +239,7 @@ export default function FloatingOracle() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSend();
-              }}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
               placeholder="Ask Oracle anything..."
               className="flex-1 bg-transparent text-sm text-atlas-text placeholder:text-atlas-text-muted outline-none"
             />

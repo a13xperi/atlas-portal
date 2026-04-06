@@ -57,7 +57,7 @@ export default function TeamLibraryPage() {
 
   function formatEngagement(item: TeamDraft) {
     const engagement = item.predictedEngagement ?? item.actualEngagement;
-    if (!engagement) return "—";
+    if (engagement == null) return "—";
     if (engagement >= 1000) return `${(engagement / 1000).toFixed(1)}k`;
     return `${engagement.toFixed(1)}k`;
   }

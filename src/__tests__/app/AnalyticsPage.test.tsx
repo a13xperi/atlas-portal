@@ -27,6 +27,12 @@ jest.mock("@/components/layout/AppShell", () => ({
   default: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  usePathname: () => "/analytics",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 jest.mock("next/link", () => ({
   __esModule: true,
   default: ({ children, href }: { children: ReactNode; href: string }) => (
