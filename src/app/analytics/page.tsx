@@ -1,7 +1,7 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import AppShell from "@/components/layout/AppShell";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -18,7 +18,6 @@ const EngagementVelocityChart = dynamic(
 );
 
 export default function AnalyticsPage() {
-  const router = useRouter();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [logEntries, setLogEntries] = useState<LearningLogEntry[]>([]);
   const [topDrafts, setTopDrafts] = useState<TweetDraft[]>([]);
@@ -95,16 +94,16 @@ export default function AnalyticsPage() {
 
   const usageStats = summary
     ? [
-        { label: "Drafts", value: String(summary.draftsCreated), href: "/team-library" },
-        { label: "Feedback", value: String(summary.feedbackGiven), href: "/feed" },
-        { label: "Refinements", value: String(summary.refinements ?? 0), href: "/crafting" },
-        { label: "Ingested", value: String(summary.reportsIngested), href: "/briefing" },
+        { label: "Drafts", value: String(summary.draftsCreated), href: "/crafting" },
+        { label: "Feedback", value: String(summary.feedbackGiven), href: "/crafting" },
+        { label: "Refinements", value: String(summary.refinements ?? 0), href: "/voice-profiles" },
+        { label: "Ingested", value: String(summary.reportsIngested), href: "/alerts" },
       ]
     : [
-        { label: "Drafts", value: "0", href: "/team-library" },
-        { label: "Feedback", value: "0", href: "/feed" },
-        { label: "Refinements", value: "0", href: "/crafting" },
-        { label: "Ingested", value: "0", href: "/briefing" },
+        { label: "Drafts", value: "0", href: "/crafting" },
+        { label: "Feedback", value: "0", href: "/crafting" },
+        { label: "Refinements", value: "0", href: "/voice-profiles" },
+        { label: "Ingested", value: "0", href: "/alerts" },
       ];
 
   const allZero = usageStats.every((s) => s.value === "0");
@@ -173,19 +172,18 @@ export default function AnalyticsPage() {
                   </div>
                 ))
               : usageStats.map((stat) => (
-                  <button
+                  <Link
                     key={stat.label}
-                    type="button"
-                    onClick={() => router.push(stat.href)}
-                    className="text-center rounded-xl p-3 transition-colors hover:bg-atlas-teal/10 cursor-pointer"
+                    href={stat.href}
+                    className="text-center rounded-xl p-3 -m-3 transition-colors hover:bg-white/[0.04] cursor-pointer group"
                   >
-                    <p className="text-xs text-atlas-text-secondary uppercase tracking-wide">
+                    <p className="text-xs text-atlas-text-secondary uppercase tracking-wide group-hover:text-atlas-teal transition-colors">
                       {stat.label}
                     </p>
-                    <p className="font-heading font-extrabold text-3xl text-atlas-text mt-1">
+                    <p className="font-heading font-extrabold text-3xl text-atlas-text mt-1 group-hover:text-atlas-teal transition-colors">
                       {stat.value}
                     </p>
-                  </button>
+                  </Link>
                 ))}
           </div>
           {/* Sparkline */}

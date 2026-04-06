@@ -171,7 +171,7 @@ export function oracleReducer(
         ...state,
         messages: [...state.messages, next],
         pendingMessages: rest,
-        isTyping: rest.length > 0,
+        isTyping: false,
       };
     }
 

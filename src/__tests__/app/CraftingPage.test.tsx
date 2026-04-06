@@ -2,6 +2,12 @@ import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  usePathname: () => "/crafting",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 const mockUseAuth = jest.fn();
 
 jest.mock("@/lib/auth", () => ({

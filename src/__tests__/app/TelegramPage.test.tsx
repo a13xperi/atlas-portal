@@ -13,7 +13,7 @@ describe("TelegramPage", () => {
     render(<TelegramPage />);
 
     expect(
-      screen.getByRole("heading", { name: /connect telegram/i })
+      screen.getByRole("heading", { name: /telegram integration/i })
     ).toBeInTheDocument();
     expect(
       screen.getByText(/get atlas alerts delivered to your telegram/i)

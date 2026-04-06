@@ -102,14 +102,7 @@ export default function DashboardPage() {
         }
       };
 
-      const loadQueue = async () => {
-        try {
-          const response = await api.drafts.queue();
-          if (!cancelled) setQueue(response.queue ?? []);
-        } catch {}
-      };
-
-      await Promise.all([loadStats(), loadDrafts(), loadTrending(), loadQueue()]);
+      await Promise.all([loadStats(), loadDrafts(), loadTrending()]);
 
       if (cancelled) {
         return;
@@ -185,9 +178,7 @@ export default function DashboardPage() {
       <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
         Welcome back, {user?.handle || "Analyst"}
       </h1>
-      <p className="mt-1 text-sm text-atlas-text-secondary">
-        Your command center — drafts, voice health, and today&apos;s signals at a glance.
-      </p>
+          <p className="mt-2 text-atlas-text-secondary max-w-2xl">Your command center. See what&apos;s queued, track recent activity, and jump to any part of Atlas from here.</p>
 
       <div className="mt-4" data-tour="oracle-banner">
         <OracleWidget

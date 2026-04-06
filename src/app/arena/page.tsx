@@ -39,7 +39,7 @@ function PositionBadge({ rank }: { rank: number }) {
     );
   if (rank === 2)
     return (
-      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-300/20 text-slate-300 text-sm font-bold">
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-atlas-text-secondary/20 text-atlas-text-secondary text-sm font-bold">
         2
       </span>
     );
@@ -145,9 +145,7 @@ export default function ArenaPage() {
             <h1 className="font-heading font-extrabold tracking-tight text-2xl text-atlas-text">
               Atlas Arena
             </h1>
-            <p className="mt-1 text-sm text-atlas-text-secondary">
-              Compete with your team — rank up by crafting, refining, and posting.
-            </p>
+          <p className="mt-2 text-atlas-text-secondary max-w-2xl">See how your content stacks up. The leaderboard ranks analysts by engagement, consistency, and voice maturity — friendly competition to sharpen everyone&#39;s edge.</p>
           </div>
           {myEntry && (
             <div className="flex items-center gap-2">

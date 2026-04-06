@@ -54,7 +54,7 @@ describe("BriefingPage", () => {
     render(<BriefingPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("Set Up Your Daily Digest")).toBeInTheDocument();
+      expect(screen.getByText("Your Daily Briefing")).toBeInTheDocument();
     });
   });
 
@@ -85,7 +85,7 @@ describe("BriefingPage", () => {
     render(<BriefingPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("Set Up Your Daily Digest")).toBeInTheDocument();
+      expect(screen.getByText("Your Daily Briefing")).toBeInTheDocument();
     });
 
     await user.click(screen.getByText("DeFi"));
