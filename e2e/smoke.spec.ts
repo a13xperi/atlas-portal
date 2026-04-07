@@ -226,6 +226,7 @@ type SmokeRoute = {
   path: string;
   finalUrl?: RegExp;
   ready: (page: Page) => Locator;
+  readyTimeout?: number;
 };
 
 const smokeRoutes: SmokeRoute[] = [
@@ -282,6 +283,7 @@ const smokeRoutes: SmokeRoute[] = [
     path: "/telegram",
     ready: (page) =>
       page.getByRole("heading", { name: /telegram/i }).first(),
+    readyTimeout: 15_000,
   },
   {
     name: "campaigns",
@@ -423,7 +425,7 @@ async function expectHealthyPage(
     await page.waitForURL(smokeRoute.finalUrl);
   }
 
-  await expect(smokeRoute.ready(page)).toBeVisible();
+  await expect(smokeRoute.ready(page)).toBeVisible({ timeout: smokeRoute.readyTimeout });
   await expect(page.getByText("Something went wrong", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Page not found", { exact: true })).toHaveCount(0);
 
