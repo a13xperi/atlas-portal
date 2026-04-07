@@ -376,7 +376,7 @@ export default function QaTestRunnerPage() {
             )}
             <button
               onClick={exportMarkdown}
-              className="rounded-lg bg-gradient-to-r from-atlas-teal to-blue-500 px-4 py-1.5 text-xs font-semibold text-white shadow-lg shadow-atlas-teal/20 transition-transform hover:scale-[1.03]"
+              className="rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-4 py-1.5 text-xs font-semibold text-white shadow-lg shadow-atlas-teal/20 transition-transform hover:scale-[1.03]"
             >
               Export Markdown
             </button>
@@ -387,7 +387,7 @@ export default function QaTestRunnerPage() {
         <div className="space-y-2">
           <div className="h-3 overflow-hidden rounded-lg bg-[#111827]">
             <div
-              className="h-full rounded-lg bg-gradient-to-r from-atlas-teal to-emerald-400 transition-all duration-500"
+              className="h-full rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 transition-all duration-500"
               style={{ width: `${pctComplete}%` }}
             />
           </div>
