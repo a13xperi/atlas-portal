@@ -413,6 +413,7 @@ export const api = {
     agent: (body: {
       messages: Array<{ role: "user" | "oracle"; content: string }>;
       page?: string;
+      pageContext?: { page: string; summary: string; data?: Record<string, unknown> };
       actionResults?: Array<{
         actionId: string;
         type: string;
