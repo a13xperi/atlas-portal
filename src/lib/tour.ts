@@ -12,6 +12,7 @@ export type TourPage =
   | "dashboard"
   | "voice-profiles"
   | "crafting"
+  | "briefing"
   | "alerts"
   | "analytics"
   | "arena";
@@ -21,6 +22,7 @@ export const ROUTE_TO_PAGE: Record<string, TourPage> = {
   "/dashboard": "dashboard",
   "/voice-profiles": "voice-profiles",
   "/crafting": "crafting",
+  "/briefing": "briefing",
   "/alerts": "alerts",
   "/analytics": "analytics",
   "/arena": "arena",
@@ -75,6 +77,16 @@ export const PAGE_TOURS: Record<TourPage, TourStep[]> = {
       targetSelector: "[data-tour='generate-button']",
       oracleMessage:
         "Hit Generate and watch. I\u2019ll use your voice profile to craft something that sounds like you, not a bot.",
+      position: "bottom",
+    },
+  ],
+
+  briefing: [
+    {
+      id: "briefing-intro",
+      targetSelector: "[data-tour='briefing-header']",
+      oracleMessage:
+        "This is Brief \u2014 pick your sources and it generates tweet angles automatically. Zero thinking required. Anil called it gigabrain.",
       position: "bottom",
     },
   ],
@@ -136,6 +148,7 @@ export const TOUR_PAGES: TourPage[] = [
   "dashboard",
   "voice-profiles",
   "crafting",
+  "briefing",
   "alerts",
   "analytics",
   "arena",

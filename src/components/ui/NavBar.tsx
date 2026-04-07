@@ -143,6 +143,9 @@ export default function NavBar({ variant }: NavBarProps) {
                   }`}
                 >
                   {link.label}
+                  {link.label === "Briefing" && (
+                    <span className="ml-1 rounded-full bg-atlas-teal/15 px-1.5 py-0.5 text-[9px] font-bold text-atlas-teal">NEW</span>
+                  )}
                 </Link>
               ))}
             </div>
@@ -272,6 +275,9 @@ export default function NavBar({ variant }: NavBarProps) {
                     >
                       <Icon className="h-4 w-4" aria-hidden="true" />
                       {link.label}
+                      {link.label === "Briefing" && (
+                        <span className="ml-auto rounded-full bg-atlas-teal/15 px-1.5 py-0.5 text-[9px] font-bold text-atlas-teal">NEW</span>
+                      )}
                     </Link>
                   );
                 })}
