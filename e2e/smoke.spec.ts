@@ -386,6 +386,10 @@ function monitorClientErrors(page: Page) {
     /Content Security Policy/,
     /Loading plugin data.*violates/,
     /Failed to load resource/,
+    /Failed to fetch RSC payload/,
+    /TourProvider/,
+    /toggleDemoMode/,
+    /error occurred in the/,
   ];
 
   page.on("console", (message) => {

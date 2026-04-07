@@ -14,11 +14,14 @@ const STORAGE_KEY = "atlas_demo_mode";
 interface DemoModeContextValue {
   isDemoMode: boolean;
   toggleDemoMode: () => void;
+  /** Set demo mode on/off without reloading — used by tour system. */
+  setDemoModeQuiet: (on: boolean) => void;
 }
 
 const DemoModeContext = createContext<DemoModeContextValue>({
   isDemoMode: false,
   toggleDemoMode: () => {},
+  setDemoModeQuiet: () => {},
 });
 
 export function useDemoMode() {
@@ -51,8 +54,14 @@ export function DemoModeProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const setDemoModeQuiet = useCallback((on: boolean) => {
+    sessionStorage.setItem(STORAGE_KEY, String(on));
+    setApiDemoMode(on);
+    setIsDemoMode(on);
+  }, []);
+
   return (
-    <DemoModeContext.Provider value={{ isDemoMode, toggleDemoMode }}>
+    <DemoModeContext.Provider value={{ isDemoMode, toggleDemoMode, setDemoModeQuiet }}>
       {children}
     </DemoModeContext.Provider>
   );
