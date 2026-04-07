@@ -30,7 +30,7 @@ test.describe("Investor Walkthrough", () => {
     await page.waitForLoadState("networkidle");
     await expect(page.getByText("Atlas Arena")).toBeVisible();
     // Leaderboard heading
-    await expect(page.getByText("Leaderboard")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Leaderboard" })).toBeVisible();
     // Team stats panel
     await expect(page.getByText("Team Stats")).toBeVisible();
 
