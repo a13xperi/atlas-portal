@@ -247,16 +247,17 @@ export default function DashboardPage() {
 
       <dl className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
-          <Link
-            key={stat.label}
-            href={stat.href}
-            className="bg-atlas-surface border border-glass-border rounded-2xl p-6 card-interactive group"
-          >
-            <dt className="text-atlas-text-secondary text-sm group-hover:text-atlas-teal transition-colors">{stat.label}</dt>
-            <dd className="text-[30px] font-semibold mt-1 text-atlas-text">
-              {stat.value}
-            </dd>
-          </Link>
+          <div key={stat.label}>
+            <Link
+              href={stat.href}
+              className="bg-atlas-surface border border-glass-border rounded-2xl p-6 card-interactive group block"
+            >
+              <dt className="text-atlas-text-secondary text-sm group-hover:text-atlas-teal transition-colors">{stat.label}</dt>
+              <dd className="text-[30px] font-semibold mt-1 text-atlas-text">
+                {stat.value}
+              </dd>
+            </Link>
+          </div>
         ))}
       </dl>
       {showStatsEmptyState && (

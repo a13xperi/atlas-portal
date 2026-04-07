@@ -18,6 +18,7 @@ import {
   Loader2,
   Mic,
   RefreshCw,
+  Sparkles,
   TrendingUp,
   X,
 } from "lucide-react";
@@ -29,6 +30,7 @@ import DraftHistorySidebar, {
   DraftHistoryItem,
 } from "@/components/crafting/DraftHistorySidebar";
 import NewsMode from "@/components/crafting/NewsMode";
+import { CraftingAdvisor } from "@/components/crafting/CraftingAdvisor";
 import ContentInput from "@/components/ui/ContentInput";
 import { useVoiceRecorder } from "@/lib/useVoiceRecorder";
 import GradientButton from "@/components/ui/GradientButton";
@@ -288,6 +290,7 @@ export default function CraftingPage() {
     return "";
   });
   const [isContentDragActive, setIsContentDragActive] = useState(false);
+  const [showAdvisor, setShowAdvisor] = useState(false);
   const [urlPreview, setUrlPreview] = useState<{
     title?: string;
     url: string;
@@ -1420,6 +1423,20 @@ export default function CraftingPage() {
                       </div>
                     </div>
                   ) : null}
+                  {showAdvisor && draftInputText.trim() && (
+                    <div className="mt-3">
+                      <CraftingAdvisor
+                        sourceContent={draftInputText}
+                        sourceType={getDraftGenerationInput(draftInputText).sourceType}
+                        blendId={selectedBlendId || undefined}
+                        onDraftsGenerated={(drafts) => {
+                          drafts.forEach(draft => commitDraft(draft));
+                          setShowAdvisor(false);
+                        }}
+                        onClose={() => setShowAdvisor(false)}
+                      />
+                    </div>
+                  )}
                   <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]" data-tour="generate-button">
                     <GradientButton
                       fullWidth
@@ -1456,6 +1473,17 @@ export default function CraftingPage() {
                       ⌘↩ to generate
                     </p>
                   </div>
+                  {activeMode !== "reply_to_tweet" && draftInputText.trim() && !showAdvisor && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvisor(true)}
+                      disabled={creating}
+                      className="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-delphi-teal/20 bg-delphi-teal/5 px-4 py-2.5 text-sm font-medium text-delphi-teal transition-colors hover:bg-delphi-teal/10 hover:border-delphi-teal/40 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Craft with Atlas
+                    </button>
+                  )}
                   {error ? (
                     <div
                       role="alert"

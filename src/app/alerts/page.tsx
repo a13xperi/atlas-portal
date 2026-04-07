@@ -105,6 +105,7 @@ export default function AlertsPage() {
           </div>
           <div className="flex flex-col items-start gap-3 sm:items-end">
             <button
+              data-tour="signals-subscribe"
               onClick={() => setShowSubscriptions(!showSubscriptions)}
               className="flex items-center gap-1.5 rounded-lg border border-glass-border px-3 py-1.5 text-xs font-medium text-atlas-text-secondary transition-colors hover:text-atlas-text"
             >

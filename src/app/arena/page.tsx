@@ -231,7 +231,7 @@ export default function ArenaPage() {
 
         <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
           {/* Leaderboard */}
-          <GlassCard maxWidth="full">
+          <GlassCard maxWidth="full" data-tour="arena-leaderboard">
             <h2 className="font-heading font-bold text-lg text-atlas-text mb-4">
               Leaderboard
             </h2>
@@ -333,7 +333,7 @@ export default function ArenaPage() {
           <div className="space-y-6">
             {/* Score Breakdown */}
             {viewEntry && (
-              <GlassCard maxWidth="full">
+              <GlassCard maxWidth="full" data-tour="arena-your-rank">
                 <h3 className="font-heading font-bold text-sm text-atlas-text mb-1">
                   {viewEntry.analyst.id === user?.id
                     ? "Your Breakdown"

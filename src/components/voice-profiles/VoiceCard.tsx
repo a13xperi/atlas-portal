@@ -32,8 +32,6 @@ export default function VoiceCard({
 }: VoiceCardProps) {
   return (
     <div
-      role="button"
-      tabIndex={0}
       onClick={onSelect}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
