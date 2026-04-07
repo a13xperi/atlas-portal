@@ -162,6 +162,9 @@ export default function VoiceProfilesPage() {
           >
             <Plus className="h-6 w-6" />
             <span className="text-xs font-semibold">New Voice</span>
+            {blends.length === 0 && (
+              <span className="text-[10px] text-atlas-text-muted">Blend references into custom voices</span>
+            )}
           </button>
         </div>
 
