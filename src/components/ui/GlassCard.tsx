@@ -5,6 +5,7 @@ export interface GlassCardProps {
   className?: string;
   maxWidth?: "480px" | "640px" | "720px" | "1120px" | "full";
   "aria-label"?: string;
+  "data-tour"?: string;
 }
 
 export default function GlassCard({
@@ -12,6 +13,7 @@ export default function GlassCard({
   className = "",
   maxWidth = "480px",
   "aria-label": ariaLabel,
+  "data-tour": dataTour,
 }: GlassCardProps) {
   const Component = ariaLabel ? "section" : "div";
   const widthClass =
@@ -21,6 +23,7 @@ export default function GlassCard({
   return (
     <Component
       aria-label={ariaLabel}
+      data-tour={dataTour}
       className={`glass-card px-6 sm:px-[49px] py-8 sm:py-[41px] w-full ${widthClass} ${className}`}
       style={widthStyle}
     >

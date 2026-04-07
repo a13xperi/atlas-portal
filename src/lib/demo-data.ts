@@ -601,7 +601,7 @@ const demoData: Record<string, unknown> = {
  * Returns demo response for a given API path, or null if the path
  * should not be intercepted (e.g. auth endpoints).
  */
-export function getDemoResponse(path: string, method: string = "GET"): unknown | null {
+export function getDemoResponse(path: string, method: string = "GET", body?: unknown): unknown | null {
   // Strip query params for matching
   const cleanPath = path.split("?")[0];
 
@@ -698,8 +698,20 @@ export function getDemoResponse(path: string, method: string = "GET"): unknown |
     };
   }
 
-  // Oracle chat — used by FloatingOracle widget
+  // Oracle chat — used by FloatingOracle widget + CraftingAdvisor angle generation
   if (method === "POST" && cleanPath === "/api/oracle/chat") {
+    const msgs = typeof body === "object" && body !== null && "messages" in body ? (body as Record<string, unknown>).messages : [];
+    const msg = Array.isArray(msgs) && msgs.length > 0 && typeof msgs[0] === "object" && msgs[0] !== null ? String((msgs[0] as Record<string, unknown>).content ?? "") : "";
+    if (msg.includes("Generate exactly 4-5 tweet angles")) {
+      return {
+        text: `Here are your angles:\n\n${JSON.stringify([
+          { title: "The Contrarian Take", description: "Challenge the prevailing narrative with on-chain data", sampleOpener: "Everyone's bullish on ETH but the data tells a different story...", tone: "Contrarian", structure: "tweet" },
+          { title: "Data Deep Dive", description: "Lead with the numbers that most people missed", sampleOpener: "Three metrics nobody's watching right now:", tone: "Analytical", structure: "thread" },
+          { title: "Hot Take Express", description: "Quick, punchy opinion that sparks engagement", sampleOpener: "Unpopular opinion: this cycle's winners aren't who you think.", tone: "Provocative", structure: "tweet" },
+          { title: "Educational Breakdown", description: "Explain the complex topic simply for your audience", sampleOpener: "Let me break down what's actually happening with...", tone: "Educational", structure: "thread" },
+        ])}\n\nPick the ones that match your mood.`,
+      };
+    }
     return {
       text: "That's a sharp question. Based on your voice profile, I'd suggest leading with data — your contrarian edge works best when it's backed by on-chain evidence. Want me to help draft something?",
     };

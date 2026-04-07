@@ -162,7 +162,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* SECTION 2: Usage Insight */}
-        <div className="mb-6 rounded-xl border border-glass-border bg-atlas-surface p-6 sm:p-8">
+        <div data-tour="analytics-summary" className="mb-6 rounded-xl border border-glass-border bg-atlas-surface p-6 sm:p-8">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {loading
               ? Array.from({ length: 4 }).map((_, i) => (
@@ -299,7 +299,7 @@ export default function AnalyticsPage() {
         )}
 
         {/* SECTION 6: Learning Log */}
-        <div className="mb-6 rounded-xl border border-glass-border bg-atlas-surface p-6 sm:p-8">
+        <div data-tour="analytics-learning" className="mb-6 rounded-xl border border-glass-border bg-atlas-surface p-6 sm:p-8">
           <h2 className="font-heading font-bold tracking-tight text-xl text-atlas-text mb-6">
             Model Learning Log
           </h2>
