@@ -79,6 +79,11 @@ src/
     analytics/page.tsx  # Analytics + Predictions (Page 10) — wired to backend
     management/page.tsx # Management Dashboard (Page 11)
     telegram/page.tsx   # Telegram Setup Guide (Page 12)
+    arena/page.tsx      # Arena (content arena)
+    feed/page.tsx       # Feed (content feed)
+    admin/page.tsx      # Admin dashboard
+    admin/qa/           # QA test runner
+    admin/style-tile/   # Style tile reference
     profile/page.tsx    # Profile (placeholder)
     search/page.tsx     # Search (placeholder)
   components/
@@ -153,6 +158,6 @@ Auth: `useAuth()` from `src/lib/auth.tsx` provides `{ user, token, login, regist
 - Branch protection requires CI to pass before merge
 
 ## What's Next
-1. Wire remaining pages to backend (Alerts, Management, Team Library)
-2. Telegram bot service
-3. AI integration — Claude API for tweet generation
+1. Queue initiative (dedicated /queue page)
+2. Campaign engine
+3. Oracle as persistent copilot
