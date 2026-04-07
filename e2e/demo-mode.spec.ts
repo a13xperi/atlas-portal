@@ -8,9 +8,8 @@
 import { test as fixtureTest, expect, stubAuth, stubDataEndpoints } from "./fixtures";
 import { type Page } from "@playwright/test";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "https://api-production-9bef.up.railway.app";
+// Use origin-agnostic glob patterns so stubs work whether the browser hits the
+// cross-origin Railway backend directly OR the Next.js rewrite proxy on localhost.
 
 /**
  * Extended fixture: intercept ALL API calls (auth + data) with a single
@@ -37,7 +36,7 @@ const test = fixtureTest.extend<{ authedPage: Page }>({
     };
 
     // Single catch-all: handle every API request ourselves.
-    await page.route(`${API_BASE}/api/**`, (route) => {
+    await page.route("**/api/**", (route) => {
       const url = route.request().url();
       const method = route.request().method();
 
