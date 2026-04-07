@@ -54,3 +54,10 @@ export interface AgentChatMessage {
   actionResults?: OracleActionResult[];
   timestamp: number;
 }
+
+/** Page context registered by pages via useOraclePageContext(). */
+export interface OraclePageContextData {
+  page: string;
+  summary: string;
+  data?: Record<string, unknown>;
+}

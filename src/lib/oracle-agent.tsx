@@ -10,10 +10,12 @@ import {
 import { useRouter, usePathname } from "next/navigation";
 import { api } from "@/lib/api";
 import { executeAction, summarizeResult } from "@/lib/oracle-action-executor";
+import { oracleEvents } from "@/lib/oracle-events";
 import type {
   AgentChatMessage,
   OracleAgentAction,
   OracleActionResult,
+  OraclePageContextData,
 } from "@/lib/oracle-agent-types";
 
 interface OracleAgentContextValue {
@@ -24,6 +26,14 @@ interface OracleAgentContextValue {
   confirmAction: (actionId: string) => Promise<void>;
   rejectAction: (actionId: string) => void;
   reset: () => void;
+  /** Current page context registered by useOraclePageContext */
+  pageContext: OraclePageContextData | null;
+  setPageContext: (ctx: OraclePageContextData | null) => void;
+  /** Whether the Oracle chat panel is open */
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  /** Open Oracle and immediately send a query */
+  openWithQuery: (text: string) => void;
 }
 
 const OracleAgentContext = createContext<OracleAgentContextValue>({
@@ -34,6 +44,11 @@ const OracleAgentContext = createContext<OracleAgentContextValue>({
   confirmAction: async () => {},
   rejectAction: () => {},
   reset: () => {},
+  pageContext: null,
+  setPageContext: () => {},
+  isOpen: false,
+  setIsOpen: () => {},
+  openWithQuery: () => {},
 });
 
 export function useOracleAgent() {
@@ -55,8 +70,38 @@ export function OracleAgentProvider({
   const [messages, setMessages] = useState<AgentChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   const [pendingActions, setPendingActions] = useState<OracleAgentAction[]>([]);
+  const [pageContext, setPageContext] = useState<OraclePageContextData | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
+  const pageContextRef = useRef(pageContext);
+  pageContextRef.current = pageContext;
+
+  const emitActionEvents = useCallback(
+    (action: OracleAgentAction, result: OracleActionResult) => {
+      // Type-specific events
+      if (action.type === "navigate" && result.success) {
+        const data = result.data as Record<string, unknown> | undefined;
+        oracleEvents.emit("oracle:navigated", {
+          url: (data?.navigatedTo as string) ?? "",
+        });
+      }
+      if (action.type === "generate_draft" && result.success) {
+        const data = result.data as Record<string, unknown> | undefined;
+        oracleEvents.emit("oracle:draft_created", {
+          draftId: data?.id as string | undefined,
+          content: data?.content as string | undefined,
+        });
+      }
+      // Generic completion event for every action
+      oracleEvents.emit("oracle:action_completed", {
+        actionType: action.type,
+        success: result.success,
+        data: result.data,
+      });
+    },
+    [],
+  );
 
   const executeActions = useCallback(
     async (actions: OracleAgentAction[]): Promise<OracleActionResult[]> => {
@@ -64,6 +109,9 @@ export function OracleAgentProvider({
       for (const action of actions) {
         const result = await executeAction(action, { router });
         results.push(result);
+
+        // Emit events on the bus
+        emitActionEvents(action, result);
 
         // Add a status message for each executed action
         const summary = summarizeResult(action, result);
@@ -80,7 +128,7 @@ export function OracleAgentProvider({
       }
       return results;
     },
-    [router],
+    [router, emitActionEvents],
   );
 
   const send = useCallback(
@@ -93,15 +141,27 @@ export function OracleAgentProvider({
       };
       setMessages((prev) => [...prev, userMsg]);
       setIsThinking(true);
+      oracleEvents.emit("oracle:thinking", { isThinking: true });
 
       try {
         const history = [...messagesRef.current, userMsg]
           .slice(-20)
           .map((m) => ({ role: m.role, content: m.text }));
 
+        // Include page context in the API call
+        const ctx = pageContextRef.current;
         const res = await api.oracle.agent({
           messages: history,
           page: pathname,
+          ...(ctx
+            ? {
+                pageContext: {
+                  page: ctx.page,
+                  summary: ctx.summary,
+                  data: ctx.data,
+                },
+              }
+            : {}),
         });
 
         const oracleActions = (res.actions ?? []) as OracleAgentAction[];
@@ -195,6 +255,7 @@ export function OracleAgentProvider({
         ]);
       } finally {
         setIsThinking(false);
+        oracleEvents.emit("oracle:thinking", { isThinking: false });
       }
     },
     [pathname, executeActions],
@@ -206,6 +267,7 @@ export function OracleAgentProvider({
       if (!action) return;
       setPendingActions((prev) => prev.filter((a) => a.id !== actionId));
       setIsThinking(true);
+      oracleEvents.emit("oracle:thinking", { isThinking: true });
 
       try {
         const results = await executeActions([action]);
@@ -262,6 +324,7 @@ export function OracleAgentProvider({
         }
       } finally {
         setIsThinking(false);
+        oracleEvents.emit("oracle:thinking", { isThinking: false });
       }
     },
     [pendingActions, executeActions, pathname],
@@ -277,6 +340,17 @@ export function OracleAgentProvider({
     setIsThinking(false);
   }, []);
 
+  const openWithQuery = useCallback(
+    (text: string) => {
+      setIsOpen(true);
+      // Small delay to let the panel render before sending
+      setTimeout(() => {
+        send(text);
+      }, 50);
+    },
+    [send],
+  );
+
   return (
     <OracleAgentContext.Provider
       value={{
@@ -287,6 +361,11 @@ export function OracleAgentProvider({
         confirmAction,
         rejectAction,
         reset,
+        pageContext,
+        setPageContext,
+        isOpen,
+        setIsOpen,
+        openWithQuery,
       }}
     >
       {children}

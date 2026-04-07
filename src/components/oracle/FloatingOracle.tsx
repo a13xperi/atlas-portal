@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRef, useEffect, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { X, Send, Sparkles, Check, XCircle } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useOracleAgent } from "@/lib/oracle-agent";
+import { useState } from "react";
 
 interface NudgeMessage {
   text: string;
@@ -13,9 +14,9 @@ interface NudgeMessage {
 
 function getNudge(pathname: string): NudgeMessage {
   if (pathname === "/dashboard") return { text: "Welcome back. What would you like to work on today?" };
-  if (pathname === "/crafting") return { text: "Drop an article or hot take above. I’ll help you turn it into a thread." };
+  if (pathname === "/crafting") return { text: "Drop an article or hot take above. I'll help you turn it into a thread." };
   if (pathname === "/voice-profiles") return { text: "Your voice dimensions shape how Atlas writes for you. Tweak them until it feels right." };
-  if (pathname === "/analytics") return { text: "Track what’s working. Your best posts share a pattern \u2014 can you spot it?" };
+  if (pathname === "/analytics") return { text: "Track what's working. Your best posts share a pattern \u2014 can you spot it?" };
   if (pathname === "/alerts") return { text: "Signals are live topics worth posting about. Pick one and draft a take." };
   if (pathname === "/arena") return { text: "The Arena ranks analysts by output, engagement, and consistency. Climb the board." };
   if (pathname === "/team-library") return { text: "These are approved team styles. Use one as a starting point for your next draft." };
@@ -26,23 +27,52 @@ function getNudge(pathname: string): NudgeMessage {
 const QUICK_ACTIONS = [
   { label: "Draft a tweet", prompt: "Draft a tweet for me" },
   { label: "Check analytics", prompt: "Show me my analytics" },
-  { label: "View signals", prompt: "What’s trending right now?" },
+  { label: "View signals", prompt: "What's trending right now?" },
   { label: "Tune my voice", prompt: "Show me my voice profile" },
 ];
 
 export default function FloatingOracle() {
-  const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
-  const { messages: agentMessages, isThinking, pendingActions, send, confirmAction, rejectAction, reset } = useOracleAgent();
+  const {
+    messages: agentMessages,
+    isThinking,
+    pendingActions,
+    send,
+    confirmAction,
+    rejectAction,
+    isOpen,
+    setIsOpen,
+    openWithQuery,
+  } = useOracleAgent();
 
-  const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [imgError, setImgError] = useState(false);
   const [hasUnread, setHasUnread] = useState(true);
   const [nudge, setNudge] = useState<NudgeMessage | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Listen for custom events from CommandPalette (Cmd+J / Ask Oracle)
+  useEffect(() => {
+    const handleOpenOracle = () => {
+      setIsOpen(true);
+    };
+    const handleOpenOracleWithQuery = (e: Event) => {
+      const query = (e as CustomEvent<string>).detail;
+      if (query) {
+        openWithQuery(query);
+      } else {
+        setIsOpen(true);
+      }
+    };
+    window.addEventListener("atlas:open-oracle", handleOpenOracle);
+    window.addEventListener("atlas:open-oracle-with-query", handleOpenOracleWithQuery);
+    return () => {
+      window.removeEventListener("atlas:open-oracle", handleOpenOracle);
+      window.removeEventListener("atlas:open-oracle-with-query", handleOpenOracleWithQuery);
+    };
+  }, [setIsOpen, openWithQuery]);
 
   // Contextual nudge on page change
   useEffect(() => {
