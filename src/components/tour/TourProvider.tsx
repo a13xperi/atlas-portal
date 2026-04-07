@@ -73,7 +73,7 @@ export function useTour() {
 export function TourProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user } = useAuth();
-  const { isDemoMode, toggleDemoMode } = useDemoMode();
+  const { isDemoMode, setDemoModeQuiet } = useDemoMode();
 
   const [activePage, setActivePage] = useState<TourPage | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
@@ -113,12 +113,12 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       // Enable demo mode for the tour
       if (!isDemoMode) {
         demoWasOff.current = true;
-        toggleDemoMode();
+        setDemoModeQuiet(true);
       }
     }, 1200);
 
     return () => clearTimeout(t);
-  }, [pathname, active, user, activePage, isDemoMode, toggleDemoMode]);
+  }, [pathname, active, user, activePage, isDemoMode, setDemoModeQuiet]);
 
   // \u2500\u2500 Complete active tour \u2500\u2500
   const completeTour = useCallback(() => {
@@ -130,7 +130,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     setCurrentStep(0);
     // Restore demo mode
     if (demoWasOff.current) {
-      toggleDemoMode();
+      setDemoModeQuiet(false);
       demoWasOff.current = false;
     }
     // Sync overall completion to backend if all done
@@ -138,7 +138,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     if (allDone) {
       api.users.updateProfile({ tourCompleted: true }).catch(() => {});
     }
-  }, [activePage, toggleDemoMode, refreshCompletedCount]);
+  }, [activePage, setDemoModeQuiet, refreshCompletedCount]);
 
   const nextStep = useCallback(() => {
     if (currentStep >= totalSteps - 1) {
@@ -160,12 +160,12 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     (page: TourPage) => {
       if (!isDemoMode) {
         demoWasOff.current = true;
-        toggleDemoMode();
+        setDemoModeQuiet(true);
       }
       setCurrentStep(0);
       setActivePage(page);
     },
-    [isDemoMode, toggleDemoMode],
+    [isDemoMode, setDemoModeQuiet],
   );
 
   const startTour = useCallback(() => {

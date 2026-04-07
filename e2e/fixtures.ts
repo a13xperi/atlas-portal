@@ -93,6 +93,7 @@ const mockTeam = {
   team: [
     { id: "u1", handle: "alice", displayName: "Alice", role: "ANALYST", voiceProfile: { maturity: "ADVANCED" }, _count: { tweetDrafts: 15, sessions: 8 } },
     { id: "u2", handle: "bob", displayName: "Bob", role: "ANALYST", voiceProfile: { maturity: "BEGINNER" }, _count: { tweetDrafts: 3, sessions: 1 } },
+    { id: "test-user-1", handle: "testanalyst", displayName: "Test User", role: "MANAGER", voiceProfile: { maturity: "INTERMEDIATE" }, _count: { tweetDrafts: 8, sessions: 5 } },
   ],
 };
 
@@ -100,6 +101,7 @@ const mockTeamAnalytics = {
   analysts: [
     { id: "u1", handle: "alice", _count: { tweetDrafts: 15, analyticsEvents: 40, sessions: 8 } },
     { id: "u2", handle: "bob", _count: { tweetDrafts: 3, analyticsEvents: 5, sessions: 1 } },
+    { id: "test-user-1", handle: "testanalyst", _count: { tweetDrafts: 8, analyticsEvents: 20, sessions: 5 } },
   ],
 };
 
