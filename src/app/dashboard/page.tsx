@@ -102,7 +102,14 @@ export default function DashboardPage() {
         }
       };
 
-      await Promise.all([loadStats(), loadDrafts(), loadTrending()]);
+      const loadQueue = async () => {
+        try {
+          const response = await api.drafts.queue();
+          if (!cancelled) setQueue(response.queue ?? []);
+        } catch {}
+      };
+
+      await Promise.all([loadStats(), loadDrafts(), loadTrending(), loadQueue()]);
 
       if (cancelled) {
         return;
@@ -382,6 +389,7 @@ export default function DashboardPage() {
               );
             })}
           </div>
+          <Link href="/queue" className="mt-3 block text-center text-xs text-atlas-teal hover:underline">View full queue →</Link>
         </div>
       )}
 

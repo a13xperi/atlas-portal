@@ -274,7 +274,11 @@ export const api = {
     enqueue: (id: string) =>
       request<{ draft: TweetDraft }>(`/api/drafts/${id}/enqueue`, { method: "POST" }),
     schedule: (id: string, scheduledAt: string) =>
-      request<{ draft: TweetDraft }>(`/api/drafts/${id}/schedule`, { method: "POST", body: { scheduledAt } }),
+      request<{ draft: TweetDraft; conflicts?: { id: string; content: string; scheduledAt: string }[] }>(`/api/drafts/${id}/schedule`, { method: "POST", body: { scheduledAt } }),
+    reorderQueue: (orderedIds: string[]) =>
+      request<{ reordered: number }>("/api/drafts/queue/reorder", { method: "PATCH", body: { orderedIds } }),
+    resetQueueOrder: () =>
+      request<{ reset: boolean }>("/api/drafts/queue/reset-order", { method: "POST" }),
   },
 
   analytics: {
