@@ -596,8 +596,8 @@ export default function CraftingPage() {
     if (!trimmedContent) {
       setContentError("Content is required.");
       isValid = false;
-    } else if (trimmedContent.length > 10000) {
-      setContentError("Content must be under 10,000 characters.");
+    } else if (trimmedContent.length > 100000) {
+      setContentError("Content must be under 100,000 characters.");
       isValid = false;
     } else {
       setContentError("");
@@ -618,8 +618,8 @@ export default function CraftingPage() {
     setDraftInputText(text);
     const trimmedText = text.trim();
 
-    if (trimmedText.length > 10000) {
-      setContentError("Content must be under 10,000 characters.");
+    if (trimmedText.length > 100000) {
+      setContentError("Content must be under 100,000 characters.");
     } else if (contentError) {
       setContentError("");
     }
@@ -688,10 +688,9 @@ export default function CraftingPage() {
         return;
       }
 
-      // Truncate to 10k chars with a note
-      const maxLen = 10000;
-      if (text.length > maxLen) {
-        text = text.slice(0, maxLen) + "\n\n[Content truncated at 10,000 characters]";
+      // Warn if content is very large but don't truncate — backend handles summarization
+      if (text.length > 100000) {
+        text = text.slice(0, 100000) + "\n\n[Content truncated at 100,000 characters]";
       }
 
       setError(null);
