@@ -252,21 +252,23 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <dl className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <ul className="mt-4 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
-          <div key={stat.label}>
+          <li key={stat.label}>
             <Link
               href={stat.href}
               className="bg-atlas-surface border border-glass-border rounded-2xl p-6 card-interactive group block"
             >
-              <dt className="text-atlas-text-secondary text-sm group-hover:text-atlas-teal transition-colors">{stat.label}</dt>
-              <dd className="text-[30px] font-semibold mt-1 text-atlas-text">
+              <span className="text-atlas-text-secondary text-sm group-hover:text-atlas-teal transition-colors">
+                {stat.label}
+              </span>
+              <span className="block text-[30px] font-semibold mt-1 text-atlas-text">
                 {stat.value}
-              </dd>
+              </span>
             </Link>
-          </div>
+          </li>
         ))}
-      </dl>
+      </ul>
       {showStatsEmptyState && (
         <p className="text-xs text-atlas-text-muted mt-1">
           Get started by crafting your first draft
