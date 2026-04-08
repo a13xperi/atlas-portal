@@ -5,6 +5,7 @@ import { prepareMessages } from "./oracle-messages";
 // ── Step transition map ────────────────────────────────────────────
 const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
   WELCOME: null, // determined by track selection
+  CONNECT_X: "TRACK_A_SCANNING",
   TRACK_A_HANDLE: "TRACK_A_SCANNING",
   TRACK_A_SCANNING: "TRACK_A_RESULT",
   TRACK_A_RESULT: "TRACK_A_RATE",
@@ -23,6 +24,8 @@ export function canAdvance(state: OracleState): boolean {
   switch (state.currentStep) {
     case "WELCOME":
       return state.track !== null;
+    case "CONNECT_X":
+      return state.xConnected && state.xHandle.trim().length > 0;
     case "TRACK_A_HANDLE":
       return state.xHandle.trim().length > 0;
     case "TRACK_A_SCANNING":
@@ -57,6 +60,7 @@ export function initialOracleState(): OracleState {
     pendingMessages: prepareMessages("WELCOME"),
     isTyping: false,
     xHandle: "",
+    xConnected: false,
     calibrationResult: null,
     dimensions: DEFAULT_VOICE_DIMENSIONS,
     displayName: "",
@@ -77,7 +81,7 @@ export function oracleReducer(
     case "SET_TRACK": {
       const track = action.track;
       const nextStep: OracleStep =
-        track === "a" ? "TRACK_A_HANDLE" : "TRACK_B_STYLE";
+        track === "a" ? "CONNECT_X" : "TRACK_B_STYLE";
       const userMsg = {
         id: `user-track-${Date.now()}`,
         role: "user" as const,
@@ -136,6 +140,9 @@ export function oracleReducer(
 
     case "SET_HANDLE":
       return { ...state, xHandle: action.handle };
+
+    case "SET_X_CONNECTED":
+      return { ...state, xConnected: action.connected };
 
     case "SET_CALIBRATION":
       return { ...state, calibrationResult: action.result };

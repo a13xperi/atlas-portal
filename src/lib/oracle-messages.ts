@@ -28,9 +28,17 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
       {
         actions: [
           { label: "Connect X", value: "track-a", variant: "primary" },
+          { label: "Set up manually", value: "track-b", variant: "ghost" },
         ],
       }
     ),
+  ],
+
+  CONNECT_X: [
+    msg("oracle", "Let's link your X account. I'll use it to scan your tweets and set up your voice.", {
+      component: { type: "x-oauth" },
+      actions: [{ label: "Set up manually instead", value: "track-b", variant: "ghost" }],
+    }),
   ],
 
   TRACK_A_HANDLE: [
