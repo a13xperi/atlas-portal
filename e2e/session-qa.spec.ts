@@ -3,6 +3,7 @@
  * Runs against production with demo mode enabled.
  */
 import { test, expect } from "@playwright/test";
+import { vercelBypassCookies } from "./fixtures";
 
 const BASE = process.env.PLAYWRIGHT_BASE_URL ?? "https://delphi-atlas.vercel.app";
 
@@ -12,6 +13,7 @@ test.describe("Session cc-56970 QA", () => {
     await context.addCookies([
       { name: "atlas_access_token", value: "1", domain: url.hostname, path: "/" },
       { name: "atlas_session", value: "1", domain: url.hostname, path: "/" },
+      ...vercelBypassCookies(url.hostname),
     ]);
   });
 
