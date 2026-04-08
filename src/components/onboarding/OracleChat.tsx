@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
@@ -45,6 +45,7 @@ export default function OracleChat() {
   const [state, dispatch] = useReducer(oracleReducer, null, initialOracleState);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const calibratingRef = useRef(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
 
   // Pre-fill display name from user
   useEffect(() => {
@@ -56,6 +57,36 @@ export default function OracleChat() {
       dispatch({ type: "SET_HANDLE", handle: user.handle.replace(/^@/, "") });
     }
   }, [user?.displayName, user?.handle, state.displayName, state.xHandle]);
+
+  // Detect OAuth callback return from X
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const xConnected = params.get("x_connected");
+    const handle = params.get("handle");
+    if (xConnected === "true" && handle) {
+      dispatch({ type: "SET_HANDLE", handle: handle.replace(/^@/, "") });
+      dispatch({ type: "SET_X_CONNECTED", connected: true });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  // Auto-advance if already connected to X
+  useEffect(() => {
+    if (state.currentStep !== "CONNECT_X" || state.xConnected) return;
+    api.auth.x.status().then((res) => {
+      if (res.linked && res.xHandle) {
+        dispatch({ type: "SET_HANDLE", handle: res.xHandle.replace(/^@/, "") });
+        dispatch({ type: "SET_X_CONNECTED", connected: true });
+      }
+    }).catch(() => {});
+  }, [state.currentStep, state.xConnected]);
+
+  // Auto-advance from CONNECT_X when connected
+  useEffect(() => {
+    if (state.currentStep === "CONNECT_X" && state.xConnected && state.xHandle) {
+      dispatch({ type: "ADVANCE", payload: `Connected as @${state.xHandle}` });
+    }
+  }, [state.currentStep, state.xConnected, state.xHandle]);
 
   // ── Typing animation: drain pending messages with delay ──────────
   useEffect(() => {
@@ -533,6 +564,39 @@ export default function OracleChat() {
                   Go to Dashboard
                 </GradientButton>
               </div>
+            </div>
+          );
+
+        case "x-oauth":
+          return (
+            <div className="bg-atlas-surface rounded-2xl p-6 space-y-4">
+              <button
+                type="button"
+                disabled={oauthLoading}
+                onClick={async () => {
+                  setOauthLoading(true);
+                  try {
+                    const { url } = await api.auth.x.authorize();
+                    localStorage.setItem("x_oauth_source", "onboarding");
+                    window.location.href = url;
+                  } catch {
+                    setOauthLoading(false);
+                  }
+                }}
+                className="w-full rounded-xl bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {oauthLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  "Connect your X account"
+                )}
+              </button>
+              <p className="text-xs text-atlas-text-muted text-center">
+                We\u2019ll scan your tweets to learn your writing voice
+              </p>
             </div>
           );
 
