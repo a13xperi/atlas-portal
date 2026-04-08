@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
@@ -45,6 +45,8 @@ export default function OracleChat() {
   const [state, dispatch] = useReducer(oracleReducer, null, initialOracleState);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const calibratingRef = useRef(false);
+  const xPollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [xConnecting, setXConnecting] = useState(false);
 
   // Pre-fill display name from user
   useEffect(() => {
@@ -79,6 +81,13 @@ export default function OracleChat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [state.messages.length, state.isTyping]);
+
+  // ── Cleanup X OAuth polling on unmount ──────────────────────────
+  useEffect(() => {
+    return () => {
+      if (xPollingRef.current) clearInterval(xPollingRef.current);
+    };
+  }, []);
 
   // ── API persistence side effects ─────────────────────────────────
   const persistAfterStep = useCallback(
@@ -151,6 +160,14 @@ export default function OracleChat() {
         });
         return;
       }
+      if (value === "skip-x") {
+        // Skip X connect — fall back to manual Track B
+        dispatch({
+          type: "SET_TRACK",
+          track: "b",
+        });
+        return;
+      }
       if (value === "go-to-dashboard") {
         router.push("/dashboard");
         return;
@@ -170,6 +187,7 @@ export default function OracleChat() {
 
     // Build user echo message
     let echo: string | undefined;
+    if (step === "CONNECT_X") echo = `Connected @${state.xHandle}`;
     if (step === "TRACK_A_HANDLE") echo = `Scan @${state.xHandle}`;
     if (step === "TRACK_B_STYLE") echo = state.selectedStyle || undefined;
     if (step === "REFERENCES")
@@ -180,10 +198,10 @@ export default function OracleChat() {
     dispatch({ type: "ADVANCE", payload: echo });
   }, [state, persistAfterStep]);
 
-  // ── Auto-trigger calibration for Track A scanning step ───────────
+  // ── Auto-trigger calibration for Track A scanning / pull tweets ──
   useEffect(() => {
     if (
-      state.currentStep !== "TRACK_A_SCANNING" ||
+      (state.currentStep !== "TRACK_A_SCANNING" && state.currentStep !== "PULL_TWEETS") ||
       calibratingRef.current ||
       state.calibrationResult
     )
@@ -240,7 +258,7 @@ export default function OracleChat() {
         // Fetch personalized LLM commentary (supplementary)
         api.oracle.message({
           track: "a",
-          step: "TRACK_A_SCANNING",
+          step: state.currentStep,
           action: "scan-complete",
           context: {
             dimensions: {
@@ -283,6 +301,70 @@ export default function OracleChat() {
   const renderComponent = useCallback(
     (type: string): ReactNode => {
       switch (type) {
+        case "x-connect":
+          return (
+            <div className="bg-atlas-surface rounded-2xl p-5 space-y-4">
+              <button
+                type="button"
+                disabled={xConnecting}
+                onClick={async () => {
+                  try {
+                    setXConnecting(true);
+                    const { url } = await api.auth.x.authorize();
+                    // Open OAuth in popup
+                    const popup = window.open(url, "x-oauth", "width=600,height=700,left=200,top=100");
+                    // Poll for linked status
+                    if (xPollingRef.current) clearInterval(xPollingRef.current);
+                    xPollingRef.current = setInterval(async () => {
+                      try {
+                        const status = await api.auth.x.status();
+                        if (status.linked && status.xHandle) {
+                          if (xPollingRef.current) clearInterval(xPollingRef.current);
+                          xPollingRef.current = null;
+                          setXConnecting(false);
+                          if (popup && !popup.closed) popup.close();
+                          dispatch({ type: "SET_HANDLE", handle: status.xHandle.replace(/^@/, "") });
+                          // Auto-advance after short delay
+                          setTimeout(() => dispatch({ type: "ADVANCE", payload: `Connected @${status.xHandle}` }), 400);
+                        }
+                      } catch {
+                        // Polling error — ignore, will retry
+                      }
+                    }, 2000);
+                    // Stop polling after 5 minutes
+                    setTimeout(() => {
+                      if (xPollingRef.current) {
+                        clearInterval(xPollingRef.current);
+                        xPollingRef.current = null;
+                        setXConnecting(false);
+                      }
+                    }, 300_000);
+                  } catch (err) {
+                    console.error("X OAuth init failed:", err);
+                    setXConnecting(false);
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition-all hover:bg-white/90 disabled:opacity-60"
+              >
+                {xConnecting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                  </svg>
+                )}
+                {xConnecting ? "Waiting for X..." : "Connect your X account"}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAction("skip-x")}
+                className="w-full text-center text-sm text-atlas-text-secondary hover:text-atlas-text transition-colors"
+              >
+                Skip — set up manually instead
+              </button>
+            </div>
+          );
+
         case "handle-input":
           return (
             <div className="bg-atlas-surface rounded-2xl p-4 space-y-3">
@@ -540,7 +622,7 @@ export default function OracleChat() {
           return null;
       }
     },
-    [state, router]
+    [state, router, xConnecting, handleAction]
   );
 
   // ── Determine ActionZone config per step ─────────────────────────

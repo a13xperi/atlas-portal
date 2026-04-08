@@ -35,7 +35,12 @@ export default function XCallbackPage() {
       .then((res) => {
         setStatus("success");
         setMessage(res.xHandle ? `Connected as @${res.xHandle}!` : "X account linked!");
-        setTimeout(() => router.push("/crafting"), 2000);
+        // If opened as a popup (e.g. from onboarding), close the window
+        if (window.opener) {
+          setTimeout(() => window.close(), 1500);
+        } else {
+          setTimeout(() => router.push("/crafting"), 2000);
+        }
       })
       .catch((err) => {
         setStatus("error");
@@ -65,10 +70,16 @@ export default function XCallbackPage() {
         )}
         {status === "error" && (
           <button
-            onClick={() => router.push("/crafting")}
+            onClick={() => {
+              if (window.opener) {
+                window.close();
+              } else {
+                router.push("/crafting");
+              }
+            }}
             className="mt-6 px-6 py-2 bg-atlas-surface border border-glass-border rounded-lg text-atlas-text hover:border-atlas-teal transition-colors"
           >
-            Back to Crafting
+            {typeof window !== "undefined" && window.opener ? "Close" : "Back to Crafting"}
           </button>
         )}
       </div>
