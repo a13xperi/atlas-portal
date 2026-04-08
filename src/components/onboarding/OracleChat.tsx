@@ -6,6 +6,8 @@ import type { ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { oracleReducer, initialOracleState, canAdvance } from "@/lib/oracle";
+import type { OracleState } from "@/lib/oracle-types";
+import { prepareMessages } from "@/lib/oracle-messages";
 import { styleToDimensions } from "@/lib/voice-profile-dimensions";
 import {
   buildReferenceBlendVoices,
@@ -39,10 +41,42 @@ const styleOptions = [
   { label: "Custom mix", description: "Blend it your way" },
 ];
 
+function createInitialState(): OracleState {
+  const base = initialOracleState();
+  if (typeof window === "undefined") return base;
+
+  const params = new URLSearchParams(window.location.search);
+  const xConnected = params.get("x_connected");
+  const handle = params.get("handle");
+
+  if (xConnected === "true" && handle) {
+    const cleanHandle = handle.replace(/^@/, "");
+    window.history.replaceState({}, "", window.location.pathname);
+    return {
+      ...base,
+      currentStep: "TRACK_A_SCANNING",
+      track: "a",
+      xHandle: cleanHandle,
+      xConnected: true,
+      messages: [
+        {
+          id: `oauth-return-${Date.now()}`,
+          role: "oracle" as const,
+          content: `X account connected as @${cleanHandle}. Scanning your tweets now...`,
+          timestamp: Date.now(),
+        },
+      ],
+      pendingMessages: prepareMessages("TRACK_A_SCANNING"),
+    };
+  }
+
+  return base;
+}
+
 export default function OracleChat() {
   const router = useRouter();
   const { user } = useAuth();
-  const [state, dispatch] = useReducer(oracleReducer, null, initialOracleState);
+  const [state, dispatch] = useReducer(oracleReducer, null, createInitialState);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const calibratingRef = useRef(false);
   const [oauthLoading, setOauthLoading] = useState(false);
@@ -57,18 +91,6 @@ export default function OracleChat() {
       dispatch({ type: "SET_HANDLE", handle: user.handle.replace(/^@/, "") });
     }
   }, [user?.displayName, user?.handle, state.displayName, state.xHandle]);
-
-  // Detect OAuth callback return from X
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const xConnected = params.get("x_connected");
-    const handle = params.get("handle");
-    if (xConnected === "true" && handle) {
-      dispatch({ type: "SET_HANDLE", handle: handle.replace(/^@/, "") });
-      dispatch({ type: "SET_X_CONNECTED", connected: true });
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
 
   // Auto-advance if already connected to X
   useEffect(() => {
