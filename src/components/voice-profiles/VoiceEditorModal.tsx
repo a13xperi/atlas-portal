@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import {
@@ -31,6 +31,8 @@ interface VoiceEditorModalProps {
   mode: EditorMode;
   initialName?: string;
   initialDimensions?: VoiceDimensions;
+  saveDisabled?: boolean;
+  saveNotice?: string;
   onSave: (name: string, dimensions: VoiceDimensions) => Promise<void>;
   onClose: () => void;
 }
@@ -40,6 +42,8 @@ export default function VoiceEditorModal({
   mode,
   initialName = "",
   initialDimensions,
+  saveDisabled = false,
+  saveNotice,
   onSave,
   onClose,
 }: VoiceEditorModalProps) {
@@ -49,15 +53,14 @@ export default function VoiceEditorModal({
   );
   const [saving, setSaving] = useState(false);
 
-  // Reset state when modal opens with new props
-  const handleOpen = () => {
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
     setName(initialName);
     setDimensions(initialDimensions ?? DEFAULT_VOICE_DIMENSIONS);
-  };
-
-  if (isOpen && name === "" && initialName !== "") {
-    handleOpen();
-  }
+  }, [initialDimensions, initialName, isOpen]);
 
   const handleDimensionChange = (field: VoiceDimensionField, value: number) => {
     setDimensions((prev) => ({ ...prev, [field]: value }));
@@ -138,6 +141,12 @@ export default function VoiceEditorModal({
           onChange={handleDimensionChange}
         />
 
+        {saveNotice && (
+          <p className="rounded-2xl border border-glass-border/70 bg-atlas-surface/50 px-4 py-3 text-sm text-atlas-text-secondary">
+            {saveNotice}
+          </p>
+        )}
+
         {/* Save */}
         <div className="flex items-center justify-end gap-3 border-t border-glass-border/50 pt-4">
           <button
@@ -150,8 +159,10 @@ export default function VoiceEditorModal({
           <button
             type="button"
             onClick={() => void handleSave()}
-            disabled={saving || (mode !== "edit-personal" && !name.trim())}
-            className="rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-6 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={
+              saveDisabled || saving || (mode !== "edit-personal" && !name.trim())
+            }
+            className="rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-6 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? "Saving..." : mode === "create" ? "Create Voice" : "Save Changes"}
           </button>

@@ -1,15 +1,8 @@
 import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { DEFAULT_VOICE_DIMENSIONS } from "@/lib/voice-profile-dimensions";
 
-const ctDegenPreset = {
-  ...DEFAULT_VOICE_DIMENSIONS,
-  humor: 80,
-  formality: 20,
-  brevity: 90,
-  contrarianTone: 70,
-};
+const pushMock = jest.fn();
 
 const mockProfile = {
   id: "vp1",
@@ -18,14 +11,14 @@ const mockProfile = {
   formality: 70,
   brevity: 65,
   contrarianTone: 45,
-  directness: 6,
-  warmth: 5,
-  technicalDepth: 7,
-  confidence: 6,
-  evidenceOrientation: 8,
-  solutionOrientation: 5,
-  socialPosture: 4,
-  selfPromotionalIntensity: 3,
+  directness: 60,
+  warmth: 50,
+  technicalDepth: 70,
+  confidence: 60,
+  evidenceOrientation: 80,
+  solutionOrientation: 50,
+  socialPosture: 40,
+  selfPromotionalIntensity: 30,
   maturity: "ADVANCED" as const,
   tweetsAnalyzed: 150,
 };
@@ -63,12 +56,14 @@ const mockApi = {
       },
     }),
     addReference: jest.fn().mockResolvedValue({}),
-    createBlend: jest.fn().mockResolvedValue({}),
+    createBlend: jest.fn().mockResolvedValue({
+      blend: { id: "blend-new", name: "New recipe", voices: [] },
+    }),
   },
 };
 
 jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  useRouter: () => ({ push: pushMock, replace: jest.fn(), back: jest.fn() }),
   usePathname: () => "/voice-profiles",
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -93,25 +88,30 @@ jest.mock("@/components/voice-profiles/ReferenceVoicesSection", () => ({
   ),
 }));
 
-jest.mock("@/components/voice-profiles/VoiceCard", () => ({
+jest.mock("@/components/voice-profiles/RecipeCard", () => ({
   __esModule: true,
-  default: ({ name, isActive, onSelect, onUse }: { name: string; isActive: boolean; isSelected: boolean; isPersonal: boolean; onSelect: () => void; onUse: () => void; dimensions?: Record<string, number> }) => (
-    <div>
-      <span>{name}</span>
-      <button onClick={onSelect}>{name}</button>
-      <button onClick={onUse}>{isActive ? "Active" : "Use This Voice"}</button>
+  default: ({
+    blend,
+    isActive,
+    onUse,
+  }: {
+    blend: { name: string };
+    isActive: boolean;
+    onUse: () => void;
+  }) => (
+    <div data-testid="recipe-card">
+      <span>{blend.name}</span>
+      <button onClick={onUse}>
+        {isActive ? "Active in Crafting" : "Use in Crafting"}
+      </button>
     </div>
   ),
 }));
 
 jest.mock("@/components/voice-profiles/VoiceEditorModal", () => ({
   __esModule: true,
-  default: ({ isOpen }: { isOpen: boolean }) => isOpen ? <div>Editor Modal</div> : null,
-}));
-
-jest.mock("@/components/voice-profiles/VoiceDimensionSections", () => ({
-  __esModule: true,
-  default: () => <div>Dimension Sliders</div>,
+  default: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div>Editor Modal</div> : null,
 }));
 
 jest.mock("@/lib/api", () => ({
@@ -124,6 +124,7 @@ describe("VoiceProfilesPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
+    pushMock.mockReset();
     mockApi.voice.getProfile.mockResolvedValue({ profile: mockProfile });
     mockApi.referenceAccounts.getAll.mockResolvedValue({
       accounts: [
@@ -139,41 +140,24 @@ describe("VoiceProfilesPage", () => {
       voices: [{ id: "r1", name: "Hasu", handle: "hasufl", isActive: true }],
     });
     mockApi.voice.getBlends.mockResolvedValue({ blends: [] });
-    mockApi.voice.updateProfile.mockResolvedValue({ profile: mockProfile });
-    mockApi.voice.calibrate.mockResolvedValue({
-      profile: mockProfile,
-      calibration: {
-        confidence: 0.92,
-        analysis: "Aligned",
-        tweetsAnalyzed: 150,
-        twitterUser: { username: "hasufl", name: "Hasu" },
-      },
-    });
   });
 
-  it("renders voice dimensions", async () => {
+  it("renders the empty recipe state when there are no blends", async () => {
     render(<VoiceProfilesPage />);
 
-    await waitFor(() => {
-      // VoiceDimensionSections is mocked — check the mock renders
-      expect(screen.getByText("Dimension Sliders")).toBeInTheDocument();
-    });
+    expect(await screen.findByText("No voice recipes yet")).toBeInTheDocument();
+    expect(screen.getByText("Create New Recipe")).toBeInTheDocument();
+    expect(screen.getByText("Hasu")).toBeInTheDocument();
   });
 
-  it("shows reference voices", async () => {
-    render(<VoiceProfilesPage />);
-
-    expect((await screen.findAllByText("Hasu")).length).toBeGreaterThan(0);
-  });
-
-  it("toggles a saved blend as active and persists it", async () => {
+  it("renders a single recipe card", async () => {
     mockApi.voice.getBlends.mockResolvedValue({
       blends: [
         {
           id: "blend-1",
           name: "Research-heavy",
           voices: [
-            { label: "Personal", percentage: 60 },
+            { label: "Personal Voice", percentage: 60 },
             { label: "Hasu", percentage: 40 },
           ],
         },
@@ -182,36 +166,63 @@ describe("VoiceProfilesPage", () => {
 
     render(<VoiceProfilesPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Dimension Sliders")).toBeInTheDocument();
-    });
+    expect(await screen.findByText("Research-heavy")).toBeInTheDocument();
+    expect(screen.getAllByTestId("recipe-card")).toHaveLength(1);
   });
 
-  it("renders without crashing for uncalibrated users", async () => {
-    mockApi.voice.getProfile.mockResolvedValue({
-      profile: { ...mockProfile, tweetsAnalyzed: 0 },
+  it("renders multiple recipe cards", async () => {
+    mockApi.voice.getBlends.mockResolvedValue({
+      blends: [
+        {
+          id: "blend-1",
+          name: "Research-heavy",
+          voices: [
+            { label: "Personal Voice", percentage: 60 },
+            { label: "Hasu", percentage: 40 },
+          ],
+        },
+        {
+          id: "blend-2",
+          name: "Fast CT",
+          voices: [
+            { label: "Personal Voice", percentage: 50 },
+            { label: "Hasu", percentage: 50 },
+          ],
+        },
+      ],
     });
 
     render(<VoiceProfilesPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Dimension Sliders")).toBeInTheDocument();
-    });
+    expect(await screen.findByText("Research-heavy")).toBeInTheDocument();
+    expect(screen.getByText("Fast CT")).toBeInTheDocument();
+    expect(screen.getAllByTestId("recipe-card")).toHaveLength(2);
   });
 
-  it("shows voice breakdown section", async () => {
+  it("stores the active blend in localStorage when using a recipe", async () => {
+    mockApi.voice.getBlends.mockResolvedValue({
+      blends: [
+        {
+          id: "blend-1",
+          name: "Research-heavy",
+          voices: [
+            { label: "Personal Voice", percentage: 60 },
+            { label: "Hasu", percentage: 40 },
+          ],
+        },
+      ],
+    });
+
     render(<VoiceProfilesPage />);
 
-    await waitFor(() => {
-      expect(screen.getByText(/your voice/i)).toBeInTheDocument();
+    const useButton = await screen.findByRole("button", {
+      name: "Use in Crafting",
     });
-  });
-
-  it("renders dimension sliders section", async () => {
-    render(<VoiceProfilesPage />);
+    fireEvent.click(useButton);
 
     await waitFor(() => {
-      expect(screen.getByText("Dimension Sliders")).toBeInTheDocument();
+      expect(localStorage.getItem("atlas_active_blend")).toBe("blend-1");
     });
+    expect(pushMock).toHaveBeenCalledWith("/crafting");
   });
 });
