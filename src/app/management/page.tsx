@@ -64,16 +64,18 @@ export default function ManagementPage() {
               onClick={() =>
                 void runAction(api.users.pushTopProfiles, "Push top profiles")
               }
-              className="rounded-lg border border-atlas-teal/40 bg-atlas-teal/10 px-4 py-2 text-xs font-semibold text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/15 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-lg border border-atlas-teal/40 bg-atlas-teal/10 px-4 py-2 text-xs font-semibold text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/15 disabled:opacity-50"
             >
+              {actionLoading && <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />}
               Push Top Profiles
             </button>
             <button
               type="button"
               disabled={actionLoading}
               onClick={() => void runAction(api.users.sendNudge, "Send nudge")}
-              className="rounded-lg border border-glass-border px-4 py-2 text-xs font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-lg border border-glass-border px-4 py-2 text-xs font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal disabled:opacity-50"
             >
+              {actionLoading && <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />}
               Send Nudge
             </button>
             <button
@@ -82,8 +84,9 @@ export default function ManagementPage() {
               onClick={() =>
                 void runAction(() => api.users.pushStyle(), "Push style")
               }
-              className="rounded-lg border border-glass-border px-4 py-2 text-xs font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-lg border border-glass-border px-4 py-2 text-xs font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal disabled:opacity-50"
             >
+              {actionLoading && <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />}
               Push Style
             </button>
           </div>
