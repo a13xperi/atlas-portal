@@ -1,8 +1,7 @@
 import { expect, test, type Locator, type Page, type Route } from "@playwright/test";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "https://api-production-9bef.up.railway.app";
+// Use origin-agnostic glob patterns so stubs work whether the browser hits the
+// cross-origin Railway backend directly OR the Next.js rewrite proxy on localhost.
 
 const mockUser = {
   id: "smoke-user-1",
@@ -317,7 +316,7 @@ function json(route: Route, body: unknown) {
 }
 
 async function stubApi(page: Page) {
-  await page.route(`${API_BASE}/**`, async (route) => {
+  await page.route("**/api/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const status = url.searchParams.get("status");

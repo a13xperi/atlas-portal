@@ -1,8 +1,7 @@
 import { test as base, Page, Route } from "@playwright/test";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "https://api-production-9bef.up.railway.app";
+// Use origin-agnostic glob patterns so stubs work whether the browser hits the
+// cross-origin Railway backend directly OR the Next.js rewrite proxy on localhost.
 
 const mockUser = {
   id: "test-user-1",
@@ -120,7 +119,7 @@ function json(route: Route, body: unknown) {
 
 /** Stub all auth endpoints so the app thinks we're logged in. */
 async function stubAuth(page: Page) {
-  await page.route(`${API_BASE}/api/auth/**`, (route) => {
+  await page.route("**/api/auth/**", (route) => {
     const url = new URL(route.request().url());
     switch (url.pathname) {
       case "/api/auth/me":
@@ -139,7 +138,7 @@ async function stubAuth(page: Page) {
 
 /** Stub common data endpoints with realistic responses. */
 async function stubDataEndpoints(page: Page) {
-  await page.route(`${API_BASE}/api/**`, (route) => {
+  await page.route("**/api/**", (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname;
 

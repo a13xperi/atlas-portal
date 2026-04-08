@@ -1,7 +1,5 @@
 import { test, expect } from "./fixtures";
 
-const API_BASE = "https://api-production-9bef.up.railway.app";
-
 test.describe("Crafting Station", () => {
   test("loads crafting page with content", async ({ authedPage: page }) => {
     await page.goto("/crafting");
@@ -14,7 +12,7 @@ test.describe("Crafting Station", () => {
   });
 
   test("can generate a new draft", async ({ authedPage: page }) => {
-    await page.route(`${API_BASE}/api/drafts/generate`, (route) =>
+    await page.route("**/api/drafts/generate", (route) =>
       route.fulfill({
         status: 200,
         contentType: "application/json",
