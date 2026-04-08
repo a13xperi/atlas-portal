@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Palette, ClipboardCheck, Bug } from "lucide-react";
+import { Palette, ClipboardCheck, Bug, Map } from "lucide-react";
 
 const adminTools = [
   {
@@ -19,6 +19,12 @@ const adminTools = [
     description: "Live bug reports and test case status from Supabase",
     href: "/admin/bugs",
     icon: Bug,
+  },
+  {
+    label: "Roadmap",
+    description: "Product roadmap — what's shipping, what's next, what's done",
+    href: "/admin/roadmap",
+    icon: Map,
   },
 ];
 
