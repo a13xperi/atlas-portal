@@ -28,12 +28,14 @@ import { useAuth } from "@/lib/auth";
 import { useAlertSocket } from "@/lib/alertSocket";
 import { useCommandPalette } from "@/components/ui/CommandPalette";
 import { getCachedTier } from "@/lib/arena-tier-cache";
+import { useNavDiscovery } from "@/lib/discovery";
+import NavDiscoveryDot from "@/components/tour/NavDiscoveryDot";
 
 export interface NavBarProps {
   variant: "app" | "onboarding";
 }
 
-const navLinks = [
+export const navLinks = [
   { label: "Feed", href: "/feed", icon: Rss },
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Crafting", href: "/crafting", icon: PenTool },
@@ -97,6 +99,7 @@ export default function NavBar({ variant }: NavBarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const cachedTier = typeof window !== "undefined" ? getCachedTier() : null;
+  const { shouldShowDot } = useNavDiscovery();
 
   useEffect(() => {
     setMobileOpen(false);
@@ -145,8 +148,8 @@ export default function NavBar({ variant }: NavBarProps) {
                   }`}
                 >
                   {link.label}
-                  {link.label === "Briefing" && (
-                    <span className="ml-1 rounded-full bg-atlas-teal/15 px-1.5 py-0.5 text-[9px] font-bold text-atlas-teal">NEW</span>
+                  {shouldShowDot(link.href) && (
+                    <NavDiscoveryDot className="ml-1" />
                   )}
                 </Link>
               ))}
@@ -277,8 +280,8 @@ export default function NavBar({ variant }: NavBarProps) {
                     >
                       <Icon className="h-4 w-4" aria-hidden="true" />
                       {link.label}
-                      {link.label === "Briefing" && (
-                        <span className="ml-auto rounded-full bg-atlas-teal/15 px-1.5 py-0.5 text-[9px] font-bold text-atlas-teal">NEW</span>
+                      {shouldShowDot(link.href) && (
+                        <NavDiscoveryDot className="ml-auto" />
                       )}
                     </Link>
                   );
