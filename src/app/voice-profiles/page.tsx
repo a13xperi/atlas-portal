@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Wand2 } from "lucide-react";
+import { Plus, Sparkles, Wand2 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
@@ -57,7 +57,7 @@ export default function VoiceProfilesPage() {
     }
   }, [activeVoiceId]);
 
-  useEffect(() => {
+  const loadData = () => {
     setLoading(true);
     setError(null);
     Promise.all([
@@ -67,7 +67,17 @@ export default function VoiceProfilesPage() {
     ])
       .catch((e: Error) => setError(e.message || "Failed to load voice data"))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
+
+  useEffect(() => {
+    if (selectedVoiceId !== PERSONAL_VOICE_ID && !blends.some((b) => b.id === selectedVoiceId)) {
+      setSelectedVoiceId(PERSONAL_VOICE_ID);
+    }
+  }, [blends, selectedVoiceId]);
 
   const personalDimensions = pickVoiceDimensions(profile);
   const selectedIsPersonal = selectedVoiceId === PERSONAL_VOICE_ID;
@@ -123,6 +133,9 @@ export default function VoiceProfilesPage() {
         {error && (
           <div role="alert" className="mb-6 rounded-xl border border-atlas-error/30 bg-atlas-error/10 px-4 py-3 text-sm text-atlas-error">
             {error}
+            <button type="button" onClick={loadData} className="ml-2 underline font-semibold hover:text-atlas-text">
+              Try again
+            </button>
           </div>
         )}
 
@@ -155,6 +168,13 @@ export default function VoiceProfilesPage() {
               onUse={() => handleUseVoice(blend.id)}
             />
           ))}
+          {blends.length === 0 && (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-glass-border bg-atlas-surface/40 p-5 text-center">
+              <Sparkles className="mx-auto h-5 w-5 text-atlas-teal" />
+              <p className="mt-2 text-sm font-semibold text-atlas-text-secondary">No blends yet</p>
+              <p className="mt-1 text-[11px] text-atlas-text-muted">Combine reference voices to create your own style</p>
+            </div>
+          )}
           <button
             type="button"
             onClick={() => setEditorMode("create")}
