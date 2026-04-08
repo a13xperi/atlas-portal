@@ -17,6 +17,7 @@ import {
   Trophy,
   CalendarClock,
   Rss,
+  ListOrdered,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -43,6 +44,7 @@ const navLinks = [
   { label: "Library", href: "/team-library", icon: BookOpen },
   { label: "Arena", href: "/arena", icon: Trophy },
   { label: "Campaigns", href: "/campaigns", icon: CalendarClock },
+  { label: "Queue", href: "/queue", icon: ListOrdered },
 ];
 
 function DelphiLogo() {
@@ -143,6 +145,9 @@ export default function NavBar({ variant }: NavBarProps) {
                   }`}
                 >
                   {link.label}
+                  {link.label === "Briefing" && (
+                    <span className="ml-1 rounded-full bg-atlas-teal/15 px-1.5 py-0.5 text-[9px] font-bold text-atlas-teal">NEW</span>
+                  )}
                 </Link>
               ))}
             </div>
@@ -272,6 +277,9 @@ export default function NavBar({ variant }: NavBarProps) {
                     >
                       <Icon className="h-4 w-4" aria-hidden="true" />
                       {link.label}
+                      {link.label === "Briefing" && (
+                        <span className="ml-auto rounded-full bg-atlas-teal/15 px-1.5 py-0.5 text-[9px] font-bold text-atlas-teal">NEW</span>
+                      )}
                     </Link>
                   );
                 })}

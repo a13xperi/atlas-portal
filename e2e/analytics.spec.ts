@@ -1,7 +1,5 @@
 import { test, expect, stubAuth, stubDataEndpoints } from "./fixtures";
 
-const API_BASE = "https://api-production-9bef.up.railway.app";
-
 test.describe("Analytics page", () => {
   test("renders all sections with data", async ({ authedPage: page }) => {
     await page.goto("/analytics");
@@ -32,36 +30,36 @@ test.describe("Analytics page", () => {
     await stubAuth(page);
 
     // Stub most endpoints normally
-    await page.route(`${API_BASE}/api/analytics/summary`, (route) =>
+    await page.route("**/api/analytics/summary", (route) =>
       route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({ summary: { draftsCreated: 5, draftsPosted: 2, feedbackGiven: 3, refinements: 1, reportsIngested: 2, period: "30d" } }),
       }),
     );
-    await page.route(`${API_BASE}/api/analytics/learning-log`, (route) => {
+    await page.route("**/api/analytics/learning-log", (route) => {
       if (route.request().method() === "GET") {
         return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ entries: [] }) });
       }
       return route.continue();
     });
-    await page.route(`${API_BASE}/api/drafts`, (route) => {
+    await page.route("**/api/drafts", (route) => {
       if (route.request().method() === "GET") {
         return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ drafts: [] }) });
       }
       return route.continue();
     });
-    await page.route(`${API_BASE}/api/analytics/activity-daily`, (route) =>
+    await page.route("**/api/analytics/activity-daily", (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ days: [] }) }),
     );
 
     // FAIL this one endpoint with 500
-    await page.route(`${API_BASE}/api/analytics/engagement-daily`, (route) =>
+    await page.route("**/api/analytics/engagement-daily", (route) =>
       route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "Internal Server Error" }) }),
     );
 
     // Stub remaining endpoints that the app may call
-    await page.route(`${API_BASE}/api/auth/refresh`, (route) =>
+    await page.route("**/api/auth/refresh", (route) =>
       route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ error: "No token" }) }),
     );
 
@@ -72,7 +70,7 @@ test.describe("Analytics page", () => {
     await page.getByRole("button", { name: "Sign In" }).click();
 
     // Stub the dashboard endpoints too so redirect works
-    await page.route(`${API_BASE}/api/loop/state`, (route) =>
+    await page.route("**/api/loop/state", (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ loop: { status: "idle", currentIteration: 0, maxIterations: 0, iterations: [], bestIteration: null, evalType: "", startedAt: null, completedAt: null, taskId: "" } }) }),
     );
 

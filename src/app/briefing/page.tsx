@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Settings, RefreshCw, Clock, ChevronDown, ChevronUp, PenTool } from "lucide-react";
+import { Loader2, Settings, RefreshCw, Clock, ChevronDown, ChevronUp, PenTool, Sparkles } from "lucide-react";
 import GlassCard from "@/components/ui/GlassCard";
 import GradientButton from "@/components/ui/GradientButton";
 import AppShell from "@/components/layout/AppShell";
@@ -189,8 +189,13 @@ export default function BriefingPage() {
     return (
       <AppShell>
         <div className="mx-auto max-w-3xl py-8 space-y-6">
-          <header className="space-y-3">
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-atlas-teal">Morning Briefing</p>
+          <header className="space-y-3" data-tour="briefing-header">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-atlas-teal">Morning Briefing</p>
+              <span className="inline-flex items-center gap-1 rounded-full bg-atlas-teal/10 px-2.5 py-0.5 text-[10px] font-semibold text-atlas-teal ring-1 ring-atlas-teal/20">
+                <Sparkles className="h-3 w-3" /> AI-powered
+              </span>
+            </div>
             <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text sm:text-4xl">
               Your Daily Briefing
             </h1>
@@ -216,9 +221,14 @@ export default function BriefingPage() {
   return (
     <AppShell>
       <div className="mx-auto max-w-3xl py-8 space-y-6">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between" data-tour="briefing-header">
           <div className="space-y-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-atlas-teal">Morning Briefing</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-atlas-teal">Morning Briefing</p>
+              <span className="inline-flex items-center gap-1 rounded-full bg-atlas-teal/10 px-2.5 py-0.5 text-[10px] font-semibold text-atlas-teal ring-1 ring-atlas-teal/20">
+                <Sparkles className="h-3 w-3" /> AI-powered
+              </span>
+            </div>
             <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text sm:text-4xl">
               Your Briefings
             </h1>

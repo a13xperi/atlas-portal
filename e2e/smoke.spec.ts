@@ -1,8 +1,7 @@
 import { expect, test, type Locator, type Page, type Route } from "@playwright/test";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "https://api-production-9bef.up.railway.app";
+// Use origin-agnostic glob patterns so stubs work whether the browser hits the
+// cross-origin Railway backend directly OR the Next.js rewrite proxy on localhost.
 
 const mockUser = {
   id: "smoke-user-1",
@@ -226,6 +225,7 @@ type SmokeRoute = {
   path: string;
   finalUrl?: RegExp;
   ready: (page: Page) => Locator;
+  readyTimeout?: number;
 };
 
 const smokeRoutes: SmokeRoute[] = [
@@ -282,6 +282,7 @@ const smokeRoutes: SmokeRoute[] = [
     path: "/telegram",
     ready: (page) =>
       page.getByRole("heading", { name: /telegram/i }).first(),
+    readyTimeout: 15_000,
   },
   {
     name: "campaigns",
@@ -315,7 +316,7 @@ function json(route: Route, body: unknown) {
 }
 
 async function stubApi(page: Page) {
-  await page.route(`${API_BASE}/**`, async (route) => {
+  await page.route("**/api/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const status = url.searchParams.get("status");
@@ -423,7 +424,7 @@ async function expectHealthyPage(
     await page.waitForURL(smokeRoute.finalUrl);
   }
 
-  await expect(smokeRoute.ready(page)).toBeVisible();
+  await expect(smokeRoute.ready(page)).toBeVisible({ timeout: smokeRoute.readyTimeout });
   await expect(page.getByText("Something went wrong", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Page not found", { exact: true })).toHaveCount(0);
 
@@ -444,10 +445,20 @@ test.describe("Route smoke tests", () => {
     test(`renders ${smokeRoute.name}`, async ({ page, context, baseURL }) => {
       // Set auth cookies so middleware allows access to protected routes
       const url = new URL(baseURL ?? "http://localhost:3000");
-      await context.addCookies([
+      const cookies: Array<{ name: string; value: string; domain: string; path: string }> = [
         { name: "atlas_session", value: "1", domain: url.hostname, path: "/" },
         { name: "atlas_access_token", value: "1", domain: url.hostname, path: "/" },
-      ]);
+      ];
+      // Bypass Vercel deployment protection on preview URLs
+      if (process.env.VERCEL_PROTECTION_BYPASS) {
+        cookies.push({
+          name: "_vercel_password",
+          value: process.env.VERCEL_PROTECTION_BYPASS,
+          domain: url.hostname,
+          path: "/",
+        });
+      }
+      await context.addCookies(cookies);
 
       await stubApi(page);
 

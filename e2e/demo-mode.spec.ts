@@ -8,16 +8,15 @@
 import { test as fixtureTest, expect, stubAuth, stubDataEndpoints } from "./fixtures";
 import { type Page } from "@playwright/test";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "https://api-production-9bef.up.railway.app";
+// Use origin-agnostic glob patterns so stubs work whether the browser hits the
+// cross-origin Railway backend directly OR the Next.js rewrite proxy on localhost.
 
 /**
  * Extended fixture: intercept ALL API calls (auth + data) with a single
  * handler, then navigate directly to /dashboard by setting the session cookie.
  */
 const test = fixtureTest.extend<{ authedPage: Page }>({
-  authedPage: async ({ page, context }, use) => {
+  authedPage: async ({ page, context, baseURL }, use) => {
     const mockUser = {
       id: "test-user-1",
       handle: "testanalyst",
@@ -37,7 +36,7 @@ const test = fixtureTest.extend<{ authedPage: Page }>({
     };
 
     // Single catch-all: handle every API request ourselves.
-    await page.route(`${API_BASE}/api/**`, (route) => {
+    await page.route("**/api/**", (route) => {
       const url = route.request().url();
       const method = route.request().method();
 
@@ -66,8 +65,13 @@ const test = fixtureTest.extend<{ authedPage: Page }>({
     });
 
     // Set session cookie so middleware allows /dashboard
+    const hostname = new URL(baseURL ?? "http://localhost:3000").hostname;
+    const bypassCookies = process.env.VERCEL_PROTECTION_BYPASS
+      ? [{ name: "_vercel_password", value: process.env.VERCEL_PROTECTION_BYPASS, domain: hostname, path: "/" }]
+      : [];
     await context.addCookies([
-      { name: "atlas_session", value: "1", domain: "localhost", path: "/" },
+      { name: "atlas_session", value: "1", domain: hostname, path: "/" },
+      ...bypassCookies,
     ]);
 
     await page.goto("/dashboard");

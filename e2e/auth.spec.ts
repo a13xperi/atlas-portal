@@ -1,4 +1,4 @@
-import { test, expect, stubAuth, stubDataEndpoints } from "./fixtures";
+import { test, expect, stubAuth, stubDataEndpoints, vercelBypassCookies } from "./fixtures";
 
 test.describe("Authentication flows", () => {
   test("login form is visible on landing page", async ({ page }) => {
@@ -18,6 +18,7 @@ test.describe("Authentication flows", () => {
     await context.addCookies([
       { name: "atlas_access_token", value: "1", domain: url.hostname, path: "/" },
       { name: "atlas_session", value: "1", domain: url.hostname, path: "/" },
+      ...vercelBypassCookies(url.hostname),
     ]);
 
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
@@ -40,17 +41,16 @@ test.describe("Authentication flows", () => {
   });
 
   test("failed login shows error message", async ({ page }) => {
-    const API_BASE = "https://api-production-9bef.up.railway.app";
     // Stub /auth/me to return 401 (not logged in)
-    await page.route(`${API_BASE}/api/auth/me`, (route) =>
+    await page.route("**/api/auth/me", (route) =>
       route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ error: "Missing authorization token" }) }),
     );
     // Stub /auth/refresh to also fail
-    await page.route(`${API_BASE}/api/auth/refresh`, (route) =>
+    await page.route("**/api/auth/refresh", (route) =>
       route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ error: "Invalid refresh token" }) }),
     );
     // Stub /auth/login to return error
-    await page.route(`${API_BASE}/api/auth/login`, (route) =>
+    await page.route("**/api/auth/login", (route) =>
       route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ error: "Invalid credentials" }) }),
     );
 

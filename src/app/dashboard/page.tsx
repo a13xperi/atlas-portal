@@ -8,7 +8,7 @@ import StatusPill from "@/components/ui/StatusPill";
 import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
 import { api, TweetDraft, QueuedDraft, TrendingTopic } from "@/lib/api";
-import { PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users, TrendingUp, X, Clock, Zap, Calendar } from "lucide-react";
+import { PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users, TrendingUp, X, Clock, Zap, Calendar, Sparkles, ArrowRight } from "lucide-react";
 import DashboardSkeleton from "@/components/skeletons/DashboardSkeleton";
 import OracleWidget from "@/components/oracle/OracleWidget";
 
@@ -102,7 +102,14 @@ export default function DashboardPage() {
         }
       };
 
-      await Promise.all([loadStats(), loadDrafts(), loadTrending()]);
+      const loadQueue = async () => {
+        try {
+          const response = await api.drafts.queue();
+          if (!cancelled) setQueue(response.queue ?? []);
+        } catch {}
+      };
+
+      await Promise.all([loadStats(), loadDrafts(), loadTrending(), loadQueue()]);
 
       if (cancelled) {
         return;
@@ -245,21 +252,23 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <dl className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <ul className="mt-4 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
-          <div key={stat.label}>
+          <li key={stat.label}>
             <Link
               href={stat.href}
               className="bg-atlas-surface border border-glass-border rounded-2xl p-6 card-interactive group block"
             >
-              <dt className="text-atlas-text-secondary text-sm group-hover:text-atlas-teal transition-colors">{stat.label}</dt>
-              <dd className="text-[30px] font-semibold mt-1 text-atlas-text">
+              <span className="text-atlas-text-secondary text-sm group-hover:text-atlas-teal transition-colors">
+                {stat.label}
+              </span>
+              <span className="block text-[30px] font-semibold mt-1 text-atlas-text">
                 {stat.value}
-              </dd>
+              </span>
             </Link>
-          </div>
+          </li>
         ))}
-      </dl>
+      </ul>
       {showStatsEmptyState && (
         <p className="text-xs text-atlas-text-muted mt-1">
           Get started by crafting your first draft
@@ -289,6 +298,24 @@ export default function DashboardPage() {
           </div>
         ) : null}
       </div>
+
+      <Link
+        href="/briefing"
+        className="mt-8 flex items-center justify-between rounded-2xl border border-atlas-teal/20 bg-gradient-to-r from-atlas-teal/5 to-transparent p-5 ring-1 ring-atlas-teal/10 transition-all hover:ring-atlas-teal/30 hover:shadow-lg hover:shadow-atlas-teal/5"
+      >
+        <div className="flex items-center gap-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-atlas-teal/10">
+            <Sparkles className="h-5 w-5 text-atlas-teal" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-atlas-text">Brief: AI-powered tweet ideas</p>
+            <p className="text-xs text-atlas-text-secondary">Pick sources, get tweet angles instantly. Zero thinking required.</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 text-xs font-medium text-atlas-teal">
+          Try Brief <ArrowRight className="h-3.5 w-3.5" />
+        </div>
+      </Link>
 
       <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {navCards.map((card) => (
@@ -364,6 +391,7 @@ export default function DashboardPage() {
               );
             })}
           </div>
+          <Link href="/queue" className="mt-3 block text-center text-xs text-atlas-teal hover:underline">View full queue →</Link>
         </div>
       )}
 
