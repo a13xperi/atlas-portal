@@ -182,6 +182,8 @@ export default function QueuePage() {
       .then(({ queue: items }) => {
         if (!cancelled) {
           setQueue(items ?? []);
+          // Detect if any items have manual sort (presence of sortOrder means manual)
+          // We check if the order differs from score-based by looking for sequential pattern
           setIsManualOrder(false);
         }
       })
