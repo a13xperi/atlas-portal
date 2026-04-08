@@ -5,9 +5,10 @@ import { prepareMessages } from "./oracle-messages";
 // ── Step transition map ────────────────────────────────────────────
 const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
   WELCOME: null, // determined by track selection
-  CONNECT_X: "TRACK_A_SCANNING",
-  TRACK_A_HANDLE: "TRACK_A_SCANNING",
-  TRACK_A_SCANNING: "TRACK_A_RESULT",
+  CONNECT_X: "PULL_TWEETS",
+  PULL_TWEETS: "TRACK_A_RESULT",
+  TRACK_A_HANDLE: "TRACK_A_SCANNING", // legacy
+  TRACK_A_SCANNING: "TRACK_A_RESULT",  // legacy
   TRACK_A_RESULT: "TRACK_A_RATE",
   TRACK_A_RATE: "REFERENCES",
   TRACK_B_STYLE: "TRACK_B_CONTENT",
@@ -26,6 +27,8 @@ export function canAdvance(state: OracleState): boolean {
       return state.track !== null;
     case "CONNECT_X":
       return state.xConnected && state.xHandle.trim().length > 0;
+    case "PULL_TWEETS":
+      return state.calibrationResult !== null;
     case "TRACK_A_HANDLE":
       return state.xHandle.trim().length > 0;
     case "TRACK_A_SCANNING":

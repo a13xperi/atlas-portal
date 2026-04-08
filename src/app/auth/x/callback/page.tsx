@@ -12,11 +12,18 @@ export default function XCallbackPage() {
   const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
   const [message, setMessage] = useState("Linking your X account...");
   const [redirectTarget, setRedirectTarget] = useState<"onboarding" | "crafting">("crafting");
+  const isPopup = typeof window !== "undefined" && !!window.opener;
 
   useEffect(() => {
     const code = searchParams.get("code");
     const state = searchParams.get("state");
     const error = searchParams.get("error");
+    const source = typeof window !== "undefined"
+      ? window.localStorage.getItem("x_oauth_source")
+      : null;
+    const target = source === "onboarding" ? "onboarding" : "crafting";
+
+    setRedirectTarget(target);
 
     if (error) {
       setStatus("error");
@@ -36,10 +43,16 @@ export default function XCallbackPage() {
       .then((res) => {
         setStatus("success");
         setMessage(res.xHandle ? `Connected as @${res.xHandle}!` : "X account linked!");
-        const source = localStorage.getItem("x_oauth_source");
-        localStorage.removeItem("x_oauth_source");
-        if (source === "onboarding") setRedirectTarget("onboarding");
-        const redirectTo = source === "onboarding"
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem("x_oauth_source");
+        }
+
+        if (window.opener) {
+          setTimeout(() => window.close(), 1500);
+          return;
+        }
+
+        const redirectTo = target === "onboarding"
           ? `/onboarding?x_connected=true&handle=${encodeURIComponent(res.xHandle || "")}`
           : "/crafting";
         setTimeout(() => router.push(redirectTo), 2000);
@@ -68,14 +81,30 @@ export default function XCallbackPage() {
         )}
         <p className="text-atlas-text text-lg">{message}</p>
         {status === "success" && (
-          <p className="text-atlas-text-secondary text-sm mt-2">{redirectTarget === "onboarding" ? "Redirecting to onboarding..." : "Redirecting to Crafting Station..."}</p>
+          <p className="text-atlas-text-secondary text-sm mt-2">
+            {isPopup
+              ? "Closing this window..."
+              : redirectTarget === "onboarding"
+                ? "Redirecting to onboarding..."
+                : "Redirecting to Crafting Station..."}
+          </p>
         )}
         {status === "error" && (
           <button
-            onClick={() => router.push(redirectTarget === "onboarding" ? "/onboarding" : "/crafting")}
+            onClick={() => {
+              if (window.opener) {
+                window.close();
+              } else {
+                router.push(redirectTarget === "onboarding" ? "/onboarding" : "/crafting");
+              }
+            }}
             className="mt-6 px-6 py-2 bg-atlas-surface border border-glass-border rounded-lg text-atlas-text hover:border-atlas-teal transition-colors"
           >
-            {redirectTarget === "onboarding" ? "Back to Onboarding" : "Back to Crafting"}
+            {isPopup
+              ? "Close"
+              : redirectTarget === "onboarding"
+                ? "Back to Onboarding"
+                : "Back to Crafting"}
           </button>
         )}
       </div>

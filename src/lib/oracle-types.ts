@@ -4,8 +4,9 @@ import type { VoiceDimensions } from "./voice-profile-dimensions";
 export type OracleStep =
   | "WELCOME"
   | "CONNECT_X"
-  | "TRACK_A_HANDLE"
-  | "TRACK_A_SCANNING"
+  | "PULL_TWEETS"
+  | "TRACK_A_HANDLE"   // legacy alias — not used in new flow
+  | "TRACK_A_SCANNING" // legacy alias — not used in new flow
   | "TRACK_A_RESULT"
   | "TRACK_A_RATE"
   | "TRACK_B_STYLE"
@@ -18,8 +19,8 @@ export type OracleStep =
 
 // ── Inline component types ─────────────────────────────────────────
 export type InlineComponentType =
+  | "x-connect"
   | "handle-input"
-  | "x-oauth"
   | "scan-progress"
   | "dimensions"
   | "tweet-ratings"

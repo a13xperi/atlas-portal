@@ -35,10 +35,23 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
   ],
 
   CONNECT_X: [
-    msg("oracle", "Let's link your X account. I'll use it to scan your tweets and set up your voice.", {
-      component: { type: "x-oauth" },
-      actions: [{ label: "Set up manually instead", value: "track-b", variant: "ghost" }],
-    }),
+    msg(
+      "oracle",
+      "Let's start by connecting your X account. I'll analyze your tweets to understand your writing style and pull your follows for reference voices.",
+      {
+        component: { type: "x-connect" },
+      }
+    ),
+  ],
+
+  PULL_TWEETS: [
+    msg(
+      "oracle",
+      "Scanning your tweets now... give me a moment.",
+      {
+        component: { type: "scan-progress" },
+      }
+    ),
   ],
 
   TRACK_A_HANDLE: [
