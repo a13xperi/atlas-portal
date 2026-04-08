@@ -297,8 +297,9 @@ export default function CraftingPage() {
   } | null>(null);
   const activeDraftInitialized = useRef(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
+  const handleDraftTextChangeRef = useRef<((text: string) => void) | null>(null);
   const voiceRecorder = useVoiceRecorder(useCallback((text: string) => {
-    handleDraftTextChange(text);
+    handleDraftTextChangeRef.current?.(text);
   }, []));
   const draftInputValueRef = useRef("");
   const handleCreateDraftRef = useRef<
@@ -628,6 +629,7 @@ export default function CraftingPage() {
       setSourceError("");
     }
   }, [contentError, sourceError]);
+  handleDraftTextChangeRef.current = handleDraftTextChange;
 
   const createDraftFromSource = useCallback(async (
     content: string,
