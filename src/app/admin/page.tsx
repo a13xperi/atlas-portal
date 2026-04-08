@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Palette, ClipboardCheck } from "lucide-react";
+import { Palette, ClipboardCheck, Bug } from "lucide-react";
 
 const adminTools = [
   {
@@ -13,6 +13,12 @@ const adminTools = [
     description: "Manual testing checklist for all pages and flows",
     href: "/admin/qa",
     icon: ClipboardCheck,
+  },
+  {
+    label: "Bug & Test Tracker",
+    description: "Live bug reports and test case status from Supabase",
+    href: "/admin/bugs",
+    icon: Bug,
   },
 ];
 
