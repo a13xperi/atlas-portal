@@ -11,6 +11,7 @@ export default function XCallbackPage() {
   const { user } = useAuth();
   const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
   const [message, setMessage] = useState("Linking your X account...");
+  const [redirectTarget, setRedirectTarget] = useState<"onboarding" | "crafting">("crafting");
 
   useEffect(() => {
     const code = searchParams.get("code");
@@ -35,7 +36,13 @@ export default function XCallbackPage() {
       .then((res) => {
         setStatus("success");
         setMessage(res.xHandle ? `Connected as @${res.xHandle}!` : "X account linked!");
-        setTimeout(() => router.push("/crafting"), 2000);
+        const source = localStorage.getItem("x_oauth_source");
+        localStorage.removeItem("x_oauth_source");
+        if (source === "onboarding") setRedirectTarget("onboarding");
+        const redirectTo = source === "onboarding"
+          ? `/onboarding?x_connected=true&handle=${encodeURIComponent(res.xHandle || "")}`
+          : "/crafting";
+        setTimeout(() => router.push(redirectTo), 2000);
       })
       .catch((err) => {
         setStatus("error");
@@ -61,14 +68,14 @@ export default function XCallbackPage() {
         )}
         <p className="text-atlas-text text-lg">{message}</p>
         {status === "success" && (
-          <p className="text-atlas-text-secondary text-sm mt-2">Redirecting to Crafting Station...</p>
+          <p className="text-atlas-text-secondary text-sm mt-2">{redirectTarget === "onboarding" ? "Redirecting to onboarding..." : "Redirecting to Crafting Station..."}</p>
         )}
         {status === "error" && (
           <button
-            onClick={() => router.push("/crafting")}
+            onClick={() => router.push(redirectTarget === "onboarding" ? "/onboarding" : "/crafting")}
             className="mt-6 px-6 py-2 bg-atlas-surface border border-glass-border rounded-lg text-atlas-text hover:border-atlas-teal transition-colors"
           >
-            Back to Crafting
+            {redirectTarget === "onboarding" ? "Back to Onboarding" : "Back to Crafting"}
           </button>
         )}
       </div>
