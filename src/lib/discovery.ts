@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { useTour } from "@/components/tour/TourProvider";
+import { useTourProgress } from "@/components/tour/TourProvider";
 
 const STORAGE_PREFIX = "atlas_nav_visited_";
 
@@ -55,7 +55,7 @@ export function useNavDiscovery(): {
   shouldShowDot: (href: string) => boolean;
 } {
   const pathname = usePathname();
-  const { completedPages, totalPages } = useTour();
+  const { completedPages, totalPages } = useTourProgress();
 
   // Default to "all visited" to prevent hydration flash
   const [visited, setVisited] = useState<Set<string>>(() => new Set(["__all__"]));

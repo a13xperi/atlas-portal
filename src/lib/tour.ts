@@ -7,188 +7,122 @@ export interface TourStep {
   position: "top" | "bottom" | "left" | "right";
 }
 
-/** Pages that have contextual tours. */
-export type TourPage =
-  | "dashboard"
-  | "voice-profiles"
-  | "crafting"
-  | "briefing"
-  | "alerts"
-  | "analytics"
-  | "arena";
+/** Pages that currently own contextual tours. */
+export type TourPage = "voice-profiles" | "crafting";
 
 /** Map route pathnames to TourPage identifiers. */
 export const ROUTE_TO_PAGE: Record<string, TourPage> = {
-  "/dashboard": "dashboard",
   "/voice-profiles": "voice-profiles",
   "/crafting": "crafting",
-  "/briefing": "briefing",
-  "/alerts": "alerts",
-  "/analytics": "analytics",
-  "/arena": "arena",
 };
 
-/** Per-page tour step definitions. Oracle narrates each contextually. */
+/** Per-page tour step definitions. */
 export const PAGE_TOURS: Record<TourPage, TourStep[]> = {
-  dashboard: [
+  "voice-profiles": [
     {
-      id: "welcome",
-      targetSelector: "[data-tour='oracle-banner']",
+      id: "voice-library",
+      targetSelector: "[data-tour='voice-library']",
       oracleMessage:
-        "Welcome to Atlas. I\u2019m The Oracle \u2014 I\u2019ll help you find your voice. Explore any page and I\u2019ll show you the ropes.",
+        "Start here to review your personal voice and any saved blends. Pick the voice you want Atlas to write with before you jump into Crafting.",
       position: "bottom",
     },
     {
-      id: "oracle-always-here",
-      targetSelector: "[data-tour='oracle-widget']",
+      id: "tweet-tinder",
+      targetSelector: "[data-tour='tweet-tinder']",
       oracleMessage:
-        "I\u2019m always here \u2014 click me anytime for help, drafting ideas, or voice tuning.",
-      position: "top",
-    },
-  ],
-
-  "voice-profiles": [
-    {
-      id: "voice-sliders",
-      targetSelector: "[data-tour='dimension-sliders']",
-      oracleMessage:
-        "This is your voice DNA. Each slider shapes how your tweets sound. Try dragging one \u2014 see how the preview changes.",
+        "Tweet Tinder is the fastest calibration loop on this page. Swipe on examples that sound like you to sharpen Atlas toward your actual posting voice.",
       position: "bottom",
     },
     {
       id: "reference-voices",
       targetSelector: "[data-tour='reference-voices']",
       oracleMessage:
-        "Pick writers you admire. I\u2019ll blend their style with yours. Most analysts pick 2\u20133.",
+        "These reference accounts feed the voice mix Atlas learns from. Keep this list tight so blends and calibrations stay aligned with the voices you trust.",
       position: "bottom",
     },
   ],
-
   crafting: [
     {
-      id: "crafting-input",
+      id: "content-input",
       targetSelector: "[data-tour='content-input']",
       oracleMessage:
-        "This is the Crafting Station. Paste any content \u2014 a report, an article, a hot take \u2014 and I\u2019ll draft a tweet in your voice.",
+        "Start with the raw signal here. Paste notes, a link, or a market take and Atlas will turn it into something publishable.",
       position: "bottom",
     },
     {
-      id: "generate-draft",
+      id: "voice-selector",
+      targetSelector: "[data-tour='voice-selector']",
+      oracleMessage:
+        "Pick whether the draft should use your default voice or a saved blend before you generate. This is the fastest way to shift tone without rewriting the source.",
+      position: "top",
+    },
+    {
+      id: "generate-button",
       targetSelector: "[data-tour='generate-button']",
       oracleMessage:
-        "Hit Generate and watch. I\u2019ll use your voice profile to craft something that sounds like you, not a bot.",
-      position: "bottom",
-    },
-  ],
-
-  briefing: [
-    {
-      id: "briefing-intro",
-      targetSelector: "[data-tour='briefing-header']",
-      oracleMessage:
-        "This is Brief \u2014 pick your sources and it generates tweet angles automatically. Zero thinking required. Anil called it gigabrain.",
-      position: "bottom",
-    },
-  ],
-
-  alerts: [
-    {
-      id: "signals-feed",
-      targetSelector: "[data-tour='signals-feed']",
-      oracleMessage:
-        "Signals watches crypto twitter for you. Trending topics, competitor posts, market moves \u2014 all in one feed.",
-      position: "bottom",
-    },
-    {
-      id: "signals-subscribe",
-      targetSelector: "[data-tour='signals-subscribe']",
-      oracleMessage:
-        "Subscribe to topics you care about. I\u2019ll ping you when something breaks through the noise.",
-      position: "bottom",
-    },
-  ],
-
-  analytics: [
-    {
-      id: "analytics-summary",
-      targetSelector: "[data-tour='analytics-summary']",
-      oracleMessage:
-        "Track what\u2019s working. Your best posts share a pattern \u2014 I\u2019ll help you spot it.",
-      position: "bottom",
-    },
-    {
-      id: "analytics-learning",
-      targetSelector: "[data-tour='analytics-learning']",
-      oracleMessage:
-        "The learning log shows how your voice evolves over time. Every draft teaches me more about you.",
-      position: "bottom",
-    },
-  ],
-
-  arena: [
-    {
-      id: "arena-leaderboard",
-      targetSelector: "[data-tour='arena-leaderboard']",
-      oracleMessage:
-        "The Arena ranks analysts by output, engagement, and consistency. Climb the board.",
-      position: "bottom",
-    },
-    {
-      id: "arena-your-rank",
-      targetSelector: "[data-tour='arena-your-rank']",
-      oracleMessage:
-        "This is where you stand. Post more, engage more, and watch your rank rise.",
-      position: "bottom",
+        "Generate creates the first pass in your selected voice. If the draft is close but not right, iterate from there instead of starting over.",
+      position: "top",
     },
   ],
 };
 
-/** All tour pages in recommended first-visit order. */
-export const TOUR_PAGES: TourPage[] = [
-  "dashboard",
-  "voice-profiles",
-  "crafting",
-  "briefing",
-  "alerts",
-  "analytics",
-  "arena",
-];
+/** All currently supported contextual tour pages. */
+export const TOUR_PAGES: TourPage[] = ["voice-profiles", "crafting"];
 
-/** localStorage key for tracking whether a page tour has been completed. */
+/** localStorage key for tracking whether a page tour has been dismissed/completed. */
 export function pageTourKey(page: TourPage): string {
-  return `atlas_page_toured_${page}`;
+  return `atlas_tour_${page}`;
 }
 
 /** Check if a page tour has been completed. */
 export function isPageTourComplete(page: TourPage): boolean {
-  if (typeof window === "undefined") return true;
+  if (typeof window === "undefined") {
+    return false;
+  }
+
   return localStorage.getItem(pageTourKey(page)) === "true";
 }
 
 /** Mark a page tour as completed. */
 export function markPageTourComplete(page: TourPage): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined") {
+    return;
+  }
+
   localStorage.setItem(pageTourKey(page), "true");
 }
 
 /** Reset all page tour completion flags. */
 export function resetAllPageTours(): void {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined") {
+    return;
+  }
+
   for (const page of TOUR_PAGES) {
     localStorage.removeItem(pageTourKey(page));
   }
 }
 
-// \u2500\u2500 Legacy compat: flat TOUR_STEPS array for anything still referencing it \u2500\u2500
-// Remove once all consumers are migrated.
+/** Return only the steps whose targets currently exist in the DOM. */
+export function getAvailableTourSteps(page: TourPage): TourStep[] {
+  if (typeof document === "undefined") {
+    return PAGE_TOURS[page];
+  }
+
+  return PAGE_TOURS[page].filter((step) =>
+    document.querySelector(step.targetSelector),
+  );
+}
+
+// Legacy compat for any remaining flat-tour consumers.
 export interface LegacyTourStep extends TourStep {
   route: string;
 }
+
 export const TOUR_STEPS: LegacyTourStep[] = Object.entries(PAGE_TOURS).flatMap(
   ([page, steps]) => {
-    const route = Object.entries(ROUTE_TO_PAGE).find(
-      ([, p]) => p === page,
-    )?.[0];
-    return steps.map((s) => ({ ...s, route: route ?? `/${page}` }));
+    const route = Object.entries(ROUTE_TO_PAGE).find(([, p]) => p === page)?.[0];
+
+    return steps.map((step) => ({ ...step, route: route ?? `/${page}` }));
   },
 );
