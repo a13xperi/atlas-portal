@@ -6,6 +6,8 @@ const apiURL =
   process.env.NEXT_PUBLIC_API_URL ??
   "https://api-production-9bef.up.railway.app";
 
+const vercelBypass = process.env.VERCEL_PROTECTION_BYPASS;
+
 export default defineConfig({
   testDir: "./e2e",
   testMatch: ["smoke.spec.ts", "investor-walkthrough.spec.ts", "demo-mode.spec.ts", "demo-render.spec.ts", "tour.spec.ts"],
@@ -20,6 +22,9 @@ export default defineConfig({
   },
   use: {
     baseURL,
+    extraHTTPHeaders: vercelBypass
+      ? { "x-vercel-protection-bypass": vercelBypass }
+      : {},
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },

@@ -1,4 +1,4 @@
-import { test, expect, stubAuth, stubDataEndpoints } from "./fixtures";
+import { test, expect, stubAuth, stubDataEndpoints, vercelBypassCookies } from "./fixtures";
 
 test.describe("Authentication flows", () => {
   test("login form is visible on landing page", async ({ page }) => {
@@ -18,6 +18,7 @@ test.describe("Authentication flows", () => {
     await context.addCookies([
       { name: "atlas_access_token", value: "1", domain: url.hostname, path: "/" },
       { name: "atlas_session", value: "1", domain: url.hostname, path: "/" },
+      ...vercelBypassCookies(url.hostname),
     ]);
 
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
