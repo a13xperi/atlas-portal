@@ -21,7 +21,7 @@ export default function DimensionBar({
 
   return (
     <div className="w-full">
-      <div className="mb-2 flex items-start justify-between gap-4">
+      <div className="mb-2 flex items-center justify-between gap-4">
         <span className="min-w-0 flex-1 text-sm text-atlas-text-secondary">
           {label}
         </span>
@@ -29,10 +29,10 @@ export default function DimensionBar({
           {valueLabel ?? `${clampedPercentage}%`}
         </span>
       </div>
-      <div className="relative flex h-5 items-center">
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-atlas-text-secondary/30" />
+      <div className="relative flex h-6 items-center">
+        <div className="pointer-events-none absolute inset-x-0 h-1 rounded-full bg-atlas-text-secondary/30" />
         <div
-          className="pointer-events-none absolute left-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-gradient-to-r from-atlas-teal to-atlas-teal transition-all duration-300"
+          className="pointer-events-none absolute left-0 h-1 rounded-full bg-gradient-to-r from-atlas-teal to-atlas-teal transition-all duration-300"
           style={{ width: `${clampedPercentage}%` }}
         />
         {interactive ? (
@@ -44,7 +44,7 @@ export default function DimensionBar({
             value={clampedPercentage}
             onChange={(event) => onChange?.(Number(event.target.value))}
             aria-label={label}
-            className="relative z-10 h-5 w-full appearance-none bg-transparent focus:outline-none
+            className="relative z-10 h-6 w-full appearance-none bg-transparent focus:outline-none
               [&::-webkit-slider-runnable-track]:h-1
               [&::-webkit-slider-runnable-track]:rounded-full
               [&::-webkit-slider-runnable-track]:bg-transparent
@@ -82,8 +82,8 @@ export default function DimensionBar({
           />
         ) : (
           <div
-            className="pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border-2 border-atlas-bg bg-atlas-teal shadow-md transition-all duration-200"
-            style={{ left: `calc(${clampedPercentage}% - 8px)` }}
+            className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 rounded-full border-2 border-atlas-bg bg-atlas-teal shadow-md transition-all duration-200"
+            style={{ left: `${clampedPercentage}%` }}
           />
         )}
       </div>
