@@ -22,6 +22,7 @@ import {
   type TourPage,
   type TourStep,
 } from "@/lib/tour";
+import { resetNavDiscovery } from "@/lib/discovery";
 import TourSpotlight from "./TourSpotlight";
 
 interface TourContextValue {
@@ -175,6 +176,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     const allDone = TOUR_PAGES.every((p) => isPageTourComplete(p));
     if (allDone) {
       resetAllPageTours();
+      resetNavDiscovery();
       refreshCompletedCount();
       api.users.updateProfile({ tourCompleted: false, tourStep: 0 }).catch(() => {});
       autoTriggerRef.current.clear();
