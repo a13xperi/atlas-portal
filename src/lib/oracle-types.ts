@@ -3,6 +3,7 @@ import type { VoiceDimensions } from "./voice-profile-dimensions";
 // ── Steps ──────────────────────────────────────────────────────────
 export type OracleStep =
   | "WELCOME"
+  | "CONNECT_X"
   | "TRACK_A_HANDLE"
   | "TRACK_A_SCANNING"
   | "TRACK_A_RESULT"
@@ -18,6 +19,7 @@ export type OracleStep =
 // ── Inline component types ─────────────────────────────────────────
 export type InlineComponentType =
   | "handle-input"
+  | "x-oauth"
   | "scan-progress"
   | "dimensions"
   | "tweet-ratings"
@@ -55,6 +57,7 @@ export interface OracleState {
 
   // Accumulated onboarding data
   xHandle: string;
+  xConnected: boolean;
   calibrationResult: { analysis: string; tweetsAnalyzed: number } | null;
   dimensions: VoiceDimensions;
   displayName: string;
@@ -72,6 +75,7 @@ export type OracleAction =
   | { type: "SET_TRACK"; track: "a" | "b" }
   | { type: "ADVANCE"; payload?: string }
   | { type: "SET_HANDLE"; handle: string }
+  | { type: "SET_X_CONNECTED"; connected: boolean }
   | { type: "SET_CALIBRATION"; result: OracleState["calibrationResult"] }
   | { type: "SET_DIMENSIONS"; dimensions: VoiceDimensions }
   | { type: "SET_DISPLAY_NAME"; name: string }
