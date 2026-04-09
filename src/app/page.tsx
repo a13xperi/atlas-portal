@@ -7,9 +7,23 @@ import OnboardingShell from "@/components/layout/OnboardingShell";
 import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
 
+function createProvisioningHandle(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const localPart = normalizedEmail.split("@")[0] ?? "";
+  const base = localPart
+    .replace(/[^a-z0-9_]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  const hash = Array.from(normalizedEmail).reduce(
+    (acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0,
+    7
+  );
+
+  return `${base || "atlas_user"}_${hash.toString(36).slice(0, 6)}`;
+}
+
 export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [handle, setHandle] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -50,11 +64,6 @@ export default function LoginPage() {
       return;
     }
 
-    if (mode === "register" && !handle.trim()) {
-      setError("Handle is required");
-      return;
-    }
-
     setSubmitting(true);
 
     try {
@@ -62,7 +71,7 @@ export default function LoginPage() {
         await login(email.trim(), password);
         router.push("/dashboard");
       } else {
-        await register(handle.trim(), email.trim(), password);
+        await register(createProvisioningHandle(email), email.trim(), password);
         router.push("/onboarding");
       }
     } catch (err: unknown) {
@@ -90,30 +99,6 @@ export default function LoginPage() {
         <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-delphi-blue-400/50 to-transparent" />
 
         <div className="h-8" />
-
-        {mode === "register" && (
-          <>
-            <div className="text-left">
-              <label
-                htmlFor="login-handle"
-                className="text-xs text-atlas-text-secondary uppercase tracking-wide"
-              >
-                Your handle
-              </label>
-              <input
-                id="login-handle"
-                type="text"
-                value={handle}
-                onChange={(e) => setHandle(e.target.value)}
-                placeholder="@yourhandle"
-                className="mt-2 w-full bg-atlas-surface rounded-lg text-atlas-text placeholder-atlas-text-secondary px-4 py-3 border border-glass-border focus:outline-none focus:border-atlas-teal focus:shadow-[0_0_0_2px_rgba(78,205,196,0.15)]"
-                onKeyDown={handleKeyDown}
-              />
-            </div>
-            <div className="h-4" />
-          </>
-        )}
-
         <div className="text-left">
           <label
             htmlFor="login-email"

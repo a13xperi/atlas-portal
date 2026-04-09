@@ -27,7 +27,7 @@ export const sections: TestSection[] = [
         steps: [
           "Go to delphi-atlas.vercel.app",
           'Click "Sign Up" tab or link',
-          "Fill: handle qa_manual_01, email qa_manual@test.com, password TestManual123!",
+          "Fill: email qa_manual@test.com, password TestManual123!",
           "Click Submit",
         ],
         expected: "Account created. Redirected to onboarding or dashboard. No errors.",
@@ -498,7 +498,7 @@ export const sections: TestSection[] = [
         name: "All nav links work",
         steps: [
           "Click every item in the navigation bar/sidebar",
-          "Check: Dashboard, Feed, Crafting, Voices, Analytics, Briefing, Signals, Library, Arena, Campaigns, Queue",
+          "Check: Dashboard, Crafting, Voice Profiles, Alerts, Analytics, Briefing, Team Library, Management, Profile",
         ],
         expected:
           "Each page loads. Active state highlighted. No 404s.",
@@ -694,18 +694,19 @@ export const sections: TestSection[] = [
       },
       {
         id: "ORC-02",
-        name: "Track A — X OAuth connect + voice scan",
+        name: "Track A — X connect + voice scan",
         category: "functional",
         priority: "critical",
         steps: [
           "Click 'Connect X'",
-          "Verify redirect to X (Twitter) OAuth authorization page",
-          "Authorize the app",
-          "Verify redirect back to /onboarding with scanning in progress",
+          "Verify your message appears right-aligned ('Connect X')",
+          "Complete the X OAuth flow in the popup or redirected tab",
+          "Return to Atlas and verify the onboarding flow resumes automatically",
+          "Watch for scanning animation (spinner + 'Scanning tweets...')",
           "Wait for calibration to complete (5-15 seconds)",
         ],
         expected:
-          "OAuth redirects correctly. After authorization, returns to onboarding at the scanning step (not WELCOME). Dimension sliders appear with calibrated values (not all 50s). Calibration summary text shown ('Calibrated from X tweets').",
+          "Atlas resumes onboarding without asking for a manual handle. The synced X identity is visible immediately after OAuth. Scanning animation shows while API runs. After scan completes, dimension sliders appear with calibrated values (not all 50s). Calibration summary text shown ('Calibrated from X tweets').",
       },
       {
         id: "ORC-03",
@@ -722,18 +723,16 @@ export const sections: TestSection[] = [
       },
       {
         id: "ORC-04",
-        name: "Track A — dimension review + display name",
+        name: "Track A — dimension review",
         category: "functional",
         priority: "critical",
         steps: [
           "After calibration, verify 12 dimension sliders appear inside a chat message",
           "Adjust 2-3 sliders (e.g. move Humor up, Formality down)",
-          "Find the display name input field",
-          "Enter a display name (at least 2 characters)",
           "Click Continue",
         ],
         expected:
-          "All 12 sliders are interactive and show calibrated values. Display name input is present. Continue button is disabled until display name is ≥2 chars. After continue, voice profile saves to backend (check network tab for PATCH /api/voice/profile).",
+          "All 12 sliders are interactive and show calibrated values. No manual profile or display name field is shown. Continue is available immediately, and the voice profile saves to backend after advancing (check network tab for PATCH /api/voice/profile).",
       },
       {
         id: "ORC-05",
@@ -780,18 +779,17 @@ export const sections: TestSection[] = [
       },
       {
         id: "ORC-08",
-        name: "Track B — dimension sliders + display name",
+        name: "Track B — dimension sliders",
         category: "functional",
         priority: "high",
         steps: [
           "After content signals, verify 12 dimension sliders appear",
           "Verify default values match selected style (not all 50s for Fun/Serious)",
           "Adjust a few sliders",
-          "Enter display name",
           "Click Continue",
         ],
         expected:
-          "Dimensions default to style preset (Fun = high humor, Serious = high formality). Display name required. Data persists to backend on Continue.",
+          "Dimensions default to style preset (Fun = high humor, Serious = high formality). No profile creation field appears. Data persists to backend on Continue.",
       },
       {
         id: "ORC-09",
@@ -1090,124 +1088,6 @@ export const sections: TestSection[] = [
           "Verify result message",
         ],
         expected: "Each action shows result with affected count. Only one action runs at a time (buttons disabled during action).",
-      },
-    ],
-  },
-  {
-    id: "feed",
-    icon: "rss",
-    title: "20. Feed & Content Discovery",
-    tests: [
-      {
-        id: "FEED-01",
-        name: "Feed page loads",
-        category: "functional",
-        priority: "high",
-        steps: [
-          "Navigate to /feed",
-          "Verify content cards render",
-        ],
-        expected: "Feed page shows content items. Empty state if no content. No errors.",
-      },
-      {
-        id: "FEED-02",
-        name: "Discovery hitbox indicators",
-        category: "ux",
-        priority: "medium",
-        steps: [
-          "Look for pulsing dot indicators on nav items",
-          "Click a pulsing indicator",
-          "Verify dot disappears after visiting the page",
-        ],
-        expected: "Pulsing teal dots appear on nav items with new content. Dots dismiss after navigation.",
-      },
-    ],
-  },
-  {
-    id: "arena",
-    icon: "swords",
-    title: "21. Arena",
-    tests: [
-      {
-        id: "ARENA-01",
-        name: "Arena page loads",
-        category: "functional",
-        priority: "high",
-        steps: [
-          "Navigate to /arena",
-          "Verify the content arena renders",
-        ],
-        expected: "Arena page renders without errors. Shows content area or empty state.",
-      },
-    ],
-  },
-  {
-    id: "queue",
-    icon: "list-ordered",
-    title: "22. Queue & Scheduling",
-    tests: [
-      {
-        id: "QUE-01",
-        name: "Queue page loads",
-        category: "functional",
-        priority: "high",
-        steps: [
-          "Navigate to /queue",
-          "Verify queue view renders",
-        ],
-        expected: "Queue page shows scheduled/pending posts. Empty state if none. No errors.",
-      },
-      {
-        id: "QUE-02",
-        name: "Drag to reorder queue",
-        category: "functional",
-        priority: "medium",
-        steps: [
-          "If drafts are in queue, try dragging to reorder",
-        ],
-        expected: "Drag handle visible. Reorder persists after page reload.",
-      },
-    ],
-  },
-  {
-    id: "x-integration",
-    icon: "link",
-    title: "23. X Account Integration",
-    tests: [
-      {
-        id: "XINT-01",
-        name: "X OAuth status check",
-        category: "functional",
-        priority: "critical",
-        steps: [
-          "Navigate to /voice-profiles or /crafting",
-          "Look for X account connection status",
-        ],
-        expected: "Shows whether X account is linked. If linked, shows @handle.",
-      },
-      {
-        id: "XINT-02",
-        name: "Post draft to X",
-        category: "functional",
-        priority: "critical",
-        steps: [
-          "Create and save a draft in /crafting",
-          "Click 'Post to X'",
-          "Verify it posts successfully (requires linked X account)",
-        ],
-        expected: "Draft posts to X. Status changes to POSTED. Tweet ID stored.",
-      },
-      {
-        id: "XINT-03",
-        name: "X disconnect flow",
-        category: "functional",
-        priority: "medium",
-        steps: [
-          "Find X account disconnect option",
-          "Click disconnect",
-          "Verify account is unlinked",
-        ],
-        expected: "X account disconnected. Status shows unlinked. Post to X button disabled.",
       },
     ],
   },

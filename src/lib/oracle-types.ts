@@ -4,7 +4,6 @@ import type { VoiceDimensions } from "./voice-profile-dimensions";
 export type OracleStep =
   | "WELCOME"
   | "CONNECT_X"
-  | "TRACK_A_HANDLE"
   | "TRACK_A_SCANNING"
   | "TRACK_A_RESULT"
   | "TRACK_A_RATE"
@@ -18,7 +17,6 @@ export type OracleStep =
 
 // ── Inline component types ─────────────────────────────────────────
 export type InlineComponentType =
-  | "handle-input"
   | "x-oauth"
   | "scan-progress"
   | "dimensions"
@@ -60,7 +58,6 @@ export interface OracleState {
   xConnected: boolean;
   calibrationResult: { analysis: string; tweetsAnalyzed: number } | null;
   dimensions: VoiceDimensions;
-  displayName: string;
   selectedStyle: string | null;
   selectedRefs: string[];
   selfPercentage: number;
@@ -78,7 +75,6 @@ export type OracleAction =
   | { type: "SET_X_CONNECTED"; connected: boolean }
   | { type: "SET_CALIBRATION"; result: OracleState["calibrationResult"] }
   | { type: "SET_DIMENSIONS"; dimensions: VoiceDimensions }
-  | { type: "SET_DISPLAY_NAME"; name: string }
   | { type: "SET_STYLE"; style: string }
   | { type: "SET_REFS"; ids: string[] }
   | { type: "SET_BLEND"; percentage: number }

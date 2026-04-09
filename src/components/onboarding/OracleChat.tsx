@@ -27,7 +27,7 @@ import ReferenceVoiceSelector from "./ReferenceVoiceSelector";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import GradientButton from "@/components/ui/GradientButton";
 import ContentInput from "@/components/ui/ContentInput";
-import { AtSign, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 const referenceAccountLookup = getReferenceAccountLookup(
   REFERENCE_ACCOUNT_FALLBACK
@@ -46,40 +46,73 @@ export default function OracleChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const calibratingRef = useRef(false);
   const [oauthLoading, setOauthLoading] = useState(false);
+  const [resumeTrackAAfterOAuth, setResumeTrackAAfterOAuth] = useState(false);
 
-  // Pre-fill display name from user
+  // Pre-fill handle from linked X profile
   useEffect(() => {
-    const name = user?.displayName || user?.handle;
-    if (name && !state.displayName) {
-      dispatch({ type: "SET_DISPLAY_NAME", name });
-    }
     if (user?.handle && !state.xHandle) {
       dispatch({ type: "SET_HANDLE", handle: user.handle.replace(/^@/, "") });
     }
-  }, [user?.displayName, user?.handle, state.displayName, state.xHandle]);
+  }, [user?.handle, state.xHandle]);
 
   // Detect OAuth callback return from X
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const xConnected = params.get("x_connected");
     const handle = params.get("handle");
-    if (xConnected === "true" && handle) {
-      dispatch({ type: "SET_HANDLE", handle: handle.replace(/^@/, "") });
+    if (xConnected === "true") {
+      if (handle) {
+        dispatch({ type: "SET_HANDLE", handle: handle.replace(/^@/, "") });
+      }
       dispatch({ type: "SET_X_CONNECTED", connected: true });
+      setResumeTrackAAfterOAuth(true);
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
 
+  // Resume straight into Track A when returning from X OAuth.
+  useEffect(() => {
+    if (
+      !resumeTrackAAfterOAuth ||
+      state.currentStep !== "WELCOME" ||
+      state.track !== null ||
+      !state.xConnected
+    ) {
+      return;
+    }
+
+    setResumeTrackAAfterOAuth(false);
+    dispatch({ type: "SET_TRACK", track: "a" });
+  }, [
+    resumeTrackAAfterOAuth,
+    state.currentStep,
+    state.track,
+    state.xConnected,
+  ]);
+
   // Auto-advance if already connected to X
   useEffect(() => {
-    if (state.currentStep !== "CONNECT_X" || state.xConnected) return;
-    api.auth.x.status().then((res) => {
-      if (res.linked && res.xHandle) {
-        dispatch({ type: "SET_HANDLE", handle: res.xHandle.replace(/^@/, "") });
+    if (
+      state.currentStep !== "CONNECT_X" ||
+      (state.xConnected && state.xHandle)
+    ) {
+      return;
+    }
+
+    api.auth.x
+      .status()
+      .then((res) => {
+        if (!res.linked) {
+          return;
+        }
+
+        if (res.xHandle) {
+          dispatch({ type: "SET_HANDLE", handle: res.xHandle.replace(/^@/, "") });
+        }
         dispatch({ type: "SET_X_CONNECTED", connected: true });
-      }
-    }).catch(() => {});
-  }, [state.currentStep, state.xConnected]);
+      })
+      .catch(() => {});
+  }, [state.currentStep, state.xConnected, state.xHandle]);
 
   // Auto-advance from CONNECT_X when connected
   useEffect(() => {
@@ -116,9 +149,6 @@ export default function OracleChat() {
     async (step: string) => {
       try {
         if (step === "TRACK_A_RESULT" || step === "TRACK_B_DIMENSIONS") {
-          await api.users.updateProfile({
-            displayName: state.displayName.trim(),
-          });
           await api.voice.updateProfile(state.dimensions);
         }
         if (step === "REFERENCES") {
@@ -201,7 +231,6 @@ export default function OracleChat() {
 
     // Build user echo message
     let echo: string | undefined;
-    if (step === "TRACK_A_HANDLE") echo = `Scan @${state.xHandle}`;
     if (step === "TRACK_B_STYLE") echo = state.selectedStyle || undefined;
     if (step === "REFERENCES")
       echo = `Selected ${state.selectedRefs.length} references`;
@@ -314,31 +343,6 @@ export default function OracleChat() {
   const renderComponent = useCallback(
     (type: string): ReactNode => {
       switch (type) {
-        case "handle-input":
-          return (
-            <div className="bg-atlas-surface rounded-2xl p-4 space-y-3">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-atlas-text-secondary">
-                    <AtSign className="h-4 w-4" />
-                  </span>
-                  <input
-                    type="text"
-                    value={state.xHandle}
-                    onChange={(e) =>
-                      dispatch({
-                        type: "SET_HANDLE",
-                        handle: e.target.value.replace(/^@/, ""),
-                      })
-                    }
-                    placeholder="yourhandle"
-                    className="w-full rounded-lg border border-glass-border bg-atlas-bg px-4 py-2.5 pl-9 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-          );
-
         case "scan-progress":
           return (
             <div className="bg-atlas-surface rounded-2xl p-4 space-y-2">
@@ -366,26 +370,6 @@ export default function OracleChat() {
                   })
                 }
               />
-              {(state.currentStep === "TRACK_A_RESULT" ||
-                state.currentStep === "TRACK_B_DIMENSIONS") && (
-                <div className="mt-4">
-                  <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
-                    Display name
-                  </label>
-                  <input
-                    type="text"
-                    value={state.displayName}
-                    onChange={(e) =>
-                      dispatch({
-                        type: "SET_DISPLAY_NAME",
-                        name: e.target.value,
-                      })
-                    }
-                    placeholder="Your display name"
-                    className="mt-1 w-full rounded-lg border border-glass-border bg-atlas-bg px-4 py-2.5 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
-                  />
-                </div>
-              )}
             </div>
           );
 
@@ -604,7 +588,7 @@ export default function OracleChat() {
           return null;
       }
     },
-    [state, router]
+    [oauthLoading, router, state]
   );
 
   // ── Determine ActionZone config per step ─────────────────────────
@@ -620,7 +604,6 @@ export default function OracleChat() {
 
     // Steps that need a Continue button
     const continueSteps = [
-      "TRACK_A_HANDLE",
       "TRACK_A_RESULT",
       "TRACK_A_RATE",
       "TRACK_B_STYLE",

@@ -112,7 +112,7 @@ export default function NavBar({ variant }: NavBarProps) {
   const { unreadNotifications } = useAlertSocket();
   const { open: openPalette } = useCommandPalette();
   const hasUser = Boolean(user);
-  const initial = user?.handle?.[0]?.toUpperCase() || user?.displayName?.[0]?.toUpperCase() || "A";
+  const initial = user?.displayName?.[0]?.toUpperCase() || user?.handle?.[0]?.toUpperCase() || "A";
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const cachedTier = typeof window !== "undefined" ? getCachedTier() : null;
@@ -238,7 +238,16 @@ export default function NavBar({ variant }: NavBarProps) {
                 }`}
                 title={cachedTier ? `${cachedTier.tier.name} · #${cachedTier.rank} · ${cachedTier.score} pts` : undefined}
               >
-                {initial}
+                {user.avatarUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={user.avatarUrl}
+                    alt={`${user.displayName || user.handle} avatar`}
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                ) : (
+                  initial
+                )}
               </Link>
             </>
           )}
