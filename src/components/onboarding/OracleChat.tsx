@@ -643,7 +643,7 @@ export default function OracleChat() {
           return null;
       }
     },
-    [state, router]
+    [state, router, oauthLoading, blendSaveStatus]
   );
 
   // ── Determine ActionZone config per step ─────────────────────────
