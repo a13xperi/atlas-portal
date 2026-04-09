@@ -3,13 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Loader2, Plus, X } from "lucide-react";
 import GradientButton from "@/components/ui/GradientButton";
-import { api, type ReferenceAccount } from "@/lib/api";
+import { api, type ReferenceAccount, type TwitterFollow } from "@/lib/api";
 import {
   normalizeReferenceAccounts,
   REFERENCE_ACCOUNT_FALLBACK,
   REFERENCE_ACCOUNT_CATEGORY_ORDER,
   type ReferenceAccountCategory,
 } from "@/lib/reference-accounts";
+
+type SourceTab = "curated" | "follows";
 
 interface Props {
   accounts?: ReferenceAccount[];
