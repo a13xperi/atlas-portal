@@ -32,7 +32,7 @@ const defaultStats = {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const isRouteEnabled = useRouteEnabled();
   const { isEnabled } = useFeatureFlags();
   const visibleNavCards = navCards.filter(card => isRouteEnabled(card.href));
@@ -50,6 +50,8 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading || !user) return;
+
     let cancelled = false;
 
     const loadDashboard = async () => {
@@ -131,7 +133,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user, authLoading]);
 
   const statCards = [
     { label: "Drafts this week", value: String(stats.drafts), href: "/crafting" },
