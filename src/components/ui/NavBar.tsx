@@ -117,10 +117,9 @@ export default function NavBar({ variant }: NavBarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const isRouteEnabled = useRouteEnabled();
-  const visibleLinks = navLinks.filter((link) => isRouteEnabled(link.href));
   const cachedTier = typeof window !== "undefined" ? getCachedTier() : null;
   const { shouldShowDot } = useNavDiscovery();
-  const visibleLinks = getVisibleNavLinks(user?.role);
+  const visibleLinks = getVisibleNavLinks(user?.role).filter((link) => isRouteEnabled(link.href));
 
   useEffect(() => {
     setMobileOpen(false);

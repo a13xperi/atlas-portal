@@ -7,7 +7,6 @@ import AppShell from "@/components/layout/AppShell";
 import TweetTinderSection from "./tweet-tinder-section";
 import { useTour } from "@/components/tour/TourProvider";
 import FeatureGate from "@/components/ui/FeatureGate";
-import TweetTinderSection from "./tweet-tinder-section";
 import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
 import VoiceLabInspirationPicker from "@/components/voice-profiles/VoiceLabInspirationPicker";
 import VoiceCard from "@/components/voice-profiles/VoiceCard";
