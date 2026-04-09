@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
 // Flag definitions — must match the Super Admin control panel keys exactly
