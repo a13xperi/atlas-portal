@@ -85,6 +85,8 @@ describe("AppShell", () => {
     expect(
       screen.getByRole("navigation", { name: "Main navigation" })
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+    // DM-322: Nav stripped to 4 core tabs (Crafting, Voices, Library, Arena).
+    // "Dashboard" is no longer a nav item — verify a core tab instead.
+    expect(screen.getByRole("link", { name: "Crafting" })).toBeInTheDocument();
   });
 });

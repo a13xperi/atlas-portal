@@ -352,7 +352,7 @@ describe("CraftingPage", () => {
     await waitFor(() =>
       expect(mockedApi.drafts.refine).toHaveBeenCalledWith(
         "draft-1",
-        "Make it shorter and more concise"
+        "Make this tweet shorter and more concise — cut the fat"
       )
     );
 
