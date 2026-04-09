@@ -30,6 +30,7 @@ import { useCommandPalette } from "@/components/ui/CommandPalette";
 import { getCachedTier } from "@/lib/arena-tier-cache";
 import { useNavDiscovery } from "@/lib/discovery";
 import NavDiscoveryDot from "@/components/tour/NavDiscoveryDot";
+import { useRouteEnabled } from "@/lib/feature-flags";
 
 export interface NavBarProps {
   variant: "app" | "onboarding";
@@ -115,6 +116,8 @@ export default function NavBar({ variant }: NavBarProps) {
   const initial = user?.displayName?.[0]?.toUpperCase() || user?.handle?.[0]?.toUpperCase() || "A";
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const isRouteEnabled = useRouteEnabled();
+  const visibleLinks = navLinks.filter((link) => isRouteEnabled(link.href));
   const cachedTier = typeof window !== "undefined" ? getCachedTier() : null;
   const { shouldShowDot } = useNavDiscovery();
   const visibleLinks = getVisibleNavLinks(user?.role);
