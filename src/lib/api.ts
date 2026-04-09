@@ -97,12 +97,32 @@ export interface AdminFeedEvent {
   metadata: Record<string, unknown> | null;
 }
 
-class ApiError extends Error {
+export class ApiError extends Error {
   statusCode: number;
   constructor(message: string, statusCode: number) {
     super(message);
     this.statusCode = statusCode;
   }
+}
+
+interface RawTwitterFollow {
+  id: string;
+  handle?: string | null;
+  display_name?: string | null;
+  bio?: string | null;
+  avatar_url?: string | null;
+  follower_count?: number | null;
+}
+
+function mapTwitterFollow(follow: RawTwitterFollow): TwitterFollow {
+  return {
+    id: follow.id,
+    handle: follow.handle ?? "",
+    displayName: follow.display_name ?? follow.handle ?? "Unknown",
+    bio: follow.bio ?? null,
+    avatarUrl: follow.avatar_url ?? null,
+    followerCount: follow.follower_count ?? 0,
+  };
 }
 
 // Demo mode flag — when true, GET requests return mock data
@@ -243,6 +263,21 @@ export const api = {
       request<{ blends: SavedBlend[] }>("/api/voice/blends"),
     createBlend: (name: string, voices: BlendVoiceInput[]) =>
       request<{ blend: SavedBlend }>("/api/voice/blends", { method: "POST", body: { name, voices } }),
+    getBlendedProfile: () =>
+      request<{ profile: BlendedVoiceProfile }>("/api/voice/blended-profile"),
+    blend: (
+      primaryId: string,
+      additionalIds: string[],
+      weights?: Record<string, number>
+    ) =>
+      request<VoiceBlendResponse>("/api/voice/blend", {
+        method: "POST",
+        body: {
+          primary_id: primaryId,
+          additional_ids: additionalIds,
+          ...(weights ? { weights } : {}),
+        },
+      }),
     calibrate: (handle: string) =>
       request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/calibrate", {
         method: "POST", body: { handle },
@@ -509,6 +544,21 @@ export const api = {
     feed: () => request<{ events: AdminFeedEvent[] }>("/api/admin/feed"),
   },
 
+  twitter: {
+    follows: async () => {
+      const response = await request<{
+        follows: RawTwitterFollow[];
+        cached: boolean;
+      }>("/api/twitter/follows");
+
+      return {
+        cached: response.cached,
+        follows: response.follows.map(mapTwitterFollow),
+      };
+    },
+    likes: () => request<any[]>("/api/twitter/likes"),
+  },
+
   campaigns: {
     list: () =>
       request<{ campaigns: Campaign[] }>("/api/campaigns"),
@@ -583,10 +633,72 @@ export interface ReferenceAccount {
   avatarUrl?: string | null;
 }
 
+export interface TwitterFollow {
+  id: string;
+  handle: string;
+  displayName: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  followerCount: number;
+}
+
 export interface SavedBlend {
   id: string;
   name: string;
   voices: { label: string; percentage: number; referenceVoice?: ReferenceVoice }[];
+}
+
+export interface BlendedVoiceDimensions {
+  humor: number;
+  formality: number;
+  brevity: number;
+  contrarianTone: number;
+  directness: number;
+  warmth: number;
+  technicalDepth: number;
+  confidence: number;
+  evidenceOrientation: number;
+  solutionOrientation: number;
+  socialPosture: number;
+  selfPromotionalIntensity: number;
+}
+
+export interface BlendedVoiceProfile {
+  id: string;
+  primaryTwitterId: string;
+  primaryHandle: string | null;
+  additionalTwitterIds: string[];
+  additionalHandles: string[];
+  weights: Record<string, number>;
+  dimensions: BlendedVoiceDimensions;
+  styleSignals?: Record<string, unknown> | null;
+  tweetsAnalyzed: number;
+  blendSummary?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BlendedVoiceInspiration {
+  twitterId: string;
+  handle: string;
+  name: string;
+  tweetCount: number;
+  weight: number;
+}
+
+export interface VoiceBlendResponse {
+  blendedProfile: {
+    id: string;
+    primaryTwitterId: string;
+    additionalTwitterIds: string[];
+    weights: Record<string, number>;
+    tweetsAnalyzed: number;
+    blendSummary?: string | null;
+  };
+  inspirations: BlendedVoiceInspiration[];
+  dimensions: BlendedVoiceDimensions;
+  styleSignals?: Record<string, unknown> | null;
+  summary: string;
 }
 
 export interface BlendVoiceInput {

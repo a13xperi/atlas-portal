@@ -1,6 +1,6 @@
 import { test as base, expect } from "@playwright/test";
 import { stubUnauthenticated, stubAllApiErrors } from "../mocks/api-handlers";
-import { stubAuth, stubDataEndpoints } from "../fixtures";
+import { stubAuth, stubDataEndpoints, vercelBypassCookies } from "../fixtures";
 
 const test = base;
 
@@ -10,6 +10,7 @@ test.describe("Error handling — API failures", () => {
     await context.addCookies([
       { name: "atlas_access_token", value: "1", domain: url.hostname, path: "/" },
       { name: "atlas_session", value: "1", domain: url.hostname, path: "/" },
+      ...vercelBypassCookies(url.hostname),
     ]);
 
     // Auth works but data endpoints fail
@@ -41,6 +42,7 @@ test.describe("Error handling — API failures", () => {
     await context.addCookies([
       { name: "atlas_access_token", value: "1", domain: url.hostname, path: "/" },
       { name: "atlas_session", value: "1", domain: url.hostname, path: "/" },
+      ...vercelBypassCookies(url.hostname),
     ]);
 
     await stubAuth(page);

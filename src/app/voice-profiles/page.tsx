@@ -2,27 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Sparkles, Wand2 } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
+import TweetTinderSection from "./tweet-tinder-section";
 import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
-import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
+import VoiceLabInspirationPicker from "@/components/voice-profiles/VoiceLabInspirationPicker";
 import VoiceCard from "@/components/voice-profiles/VoiceCard";
-import VoiceEditorModal from "@/components/voice-profiles/VoiceEditorModal";
 import {
   api,
   ReferenceVoice,
   SavedBlend,
   VoiceProfile,
 } from "@/lib/api";
-import {
-  DEFAULT_VOICE_DIMENSIONS,
-  pickVoiceDimensions,
-  VoiceDimensions,
-} from "@/lib/voice-profile-dimensions";
 
 const PERSONAL_VOICE_ID = "__personal__";
-
-type EditorMode = "create" | "edit-personal" | "edit-blend" | null;
 
 function formatMaturityLabel(maturity?: VoiceProfile["maturity"]) {
   if (!maturity) return "Beginner";
@@ -36,10 +29,8 @@ export default function VoiceProfilesPage() {
   const [blends, setBlends] = useState<SavedBlend[]>([]);
   const [activeVoiceId, setActiveVoiceId] = useState<string>(PERSONAL_VOICE_ID);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>(PERSONAL_VOICE_ID);
-  const [editorMode, setEditorMode] = useState<EditorMode>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [calibrateHandle, setCalibrateHandle] = useState("");
 
   useEffect(() => {
     const saved = localStorage.getItem("atlas_active_blend");
@@ -79,36 +70,12 @@ export default function VoiceProfilesPage() {
     }
   }, [blends, selectedVoiceId]);
 
-  const personalDimensions = pickVoiceDimensions(profile);
   const selectedIsPersonal = selectedVoiceId === PERSONAL_VOICE_ID;
   const selectedBlend = blends.find((b) => b.id === selectedVoiceId);
 
   const handleUseVoice = (id: string) => {
     setActiveVoiceId(id);
     router.push("/crafting");
-  };
-
-  const handleSaveVoice = async (name: string, dimensions: VoiceDimensions) => {
-    if (editorMode === "edit-personal") {
-      const response = await api.voice.updateProfile(dimensions);
-      setProfile(response.profile);
-    } else {
-      await api.voice.createBlend(name, [{ label: "Personal", percentage: 100 }]);
-      const response = await api.voice.getBlends();
-      setBlends(response.blends);
-    }
-  };
-
-  const handleCalibrate = async () => {
-    const handle = calibrateHandle.trim().replace("@", "");
-    if (!handle) return;
-    try {
-      const response = await api.voice.calibrate(handle);
-      setProfile(response.profile);
-      setCalibrateHandle("");
-    } catch {
-      setError("Calibration failed. Check the handle and try again.");
-    }
   };
 
   if (loading) {
@@ -152,7 +119,6 @@ export default function VoiceProfilesPage() {
             isActive={activeVoiceId === PERSONAL_VOICE_ID}
             isPersonal
             isSelected={selectedVoiceId === PERSONAL_VOICE_ID}
-            dimensions={personalDimensions}
             onSelect={() => setSelectedVoiceId(PERSONAL_VOICE_ID)}
             onUse={() => handleUseVoice(PERSONAL_VOICE_ID)}
           />
@@ -163,7 +129,6 @@ export default function VoiceProfilesPage() {
               isActive={activeVoiceId === blend.id}
               isPersonal={false}
               isSelected={selectedVoiceId === blend.id}
-              dimensions={DEFAULT_VOICE_DIMENSIONS}
               onSelect={() => setSelectedVoiceId(blend.id)}
               onUse={() => handleUseVoice(blend.id)}
             />
@@ -175,17 +140,6 @@ export default function VoiceProfilesPage() {
               <p className="mt-1 text-[11px] text-atlas-text-muted">Combine reference voices to create your own style</p>
             </div>
           )}
-          <button
-            type="button"
-            onClick={() => setEditorMode("create")}
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-glass-border p-5 text-atlas-text-muted transition-colors hover:border-atlas-teal/40 hover:text-atlas-teal"
-          >
-            <Plus className="h-6 w-6" />
-            <span className="text-xs font-semibold">New Voice</span>
-            {blends.length === 0 && (
-              <span className="text-[10px] text-atlas-text-muted">Blend references into custom voices</span>
-            )}
-          </button>
         </div>
 
         {/* Detail Panel */}
@@ -206,61 +160,22 @@ export default function VoiceProfilesPage() {
                 </p>
               )}
             </div>
-            <div className="flex gap-2">
-              {selectedIsPersonal && profile?.tweetsAnalyzed === 0 && (
-                <div className="flex items-center gap-2">
-                  <input type="text" placeholder="@handle" value={calibrateHandle} onChange={(e) => setCalibrateHandle(e.target.value)}
-                    className="w-32 rounded-lg border border-glass-border bg-atlas-bg px-2 py-1.5 text-xs text-atlas-text placeholder-atlas-text-muted focus:border-atlas-teal focus:outline-none" />
-                  <button type="button" onClick={() => void handleCalibrate()} disabled={!calibrateHandle.trim()}
-                    className="flex items-center gap-1 rounded-lg border border-atlas-teal/40 bg-atlas-teal/10 px-3 py-1.5 text-xs font-semibold text-atlas-teal transition-colors hover:border-atlas-teal disabled:opacity-50">
-                    <Wand2 className="h-3 w-3" />
-                    Calibrate
-                  </button>
-                </div>
-              )}
-              <button type="button" onClick={() => setEditorMode(selectedIsPersonal ? "edit-personal" : "edit-blend")}
-                className="rounded-lg border border-glass-border px-4 py-1.5 text-xs font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal">
-                Edit
-              </button>
-            </div>
           </div>
 
-          {selectedIsPersonal && (
-            <div className="mt-6" data-tour="dimension-sliders">
-              <VoiceDimensionSections values={personalDimensions} interactive={false} />
-            </div>
-          )}
+          <div className="mt-6">
+            <VoiceLabInspirationPicker onProfileRefresh={setProfile} />
+          </div>
+        </div>
 
-          {!selectedIsPersonal && selectedBlend && (
-            <div className="mt-6">
-              <p className="text-xs text-atlas-text-muted">
-                This voice blends {selectedBlend.voices.length} source{selectedBlend.voices.length !== 1 ? "s" : ""}. The AI mixes them when generating drafts.
-              </p>
-              <div className="mt-4 space-y-2">
-                {selectedBlend.voices.map((voice) => (
-                  <div key={voice.label} className="flex items-center justify-between rounded-xl bg-atlas-bg/40 px-4 py-3">
-                    <span className="text-sm text-atlas-text">{voice.label}</span>
-                    <span className="font-mono text-sm text-atlas-teal">{voice.percentage}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+        {/* Tweet Tinder — voice calibration via liked tweets */}
+        <div className="mt-8">
+          <TweetTinderSection />
         </div>
 
         {/* Reference Voices */}
         <div className="mt-8" data-tour="reference-voices">
           <ReferenceVoicesSection references={references} onReferencesChange={setReferences} />
         </div>
-
-        <VoiceEditorModal
-          isOpen={editorMode !== null}
-          mode={editorMode ?? "create"}
-          initialName={editorMode === "edit-blend" ? selectedBlend?.name : ""}
-          initialDimensions={editorMode === "edit-personal" ? personalDimensions : undefined}
-          onSave={handleSaveVoice}
-          onClose={() => setEditorMode(null)}
-        />
       </div>
     </AppShell>
   );

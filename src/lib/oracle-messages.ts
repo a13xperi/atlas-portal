@@ -24,7 +24,7 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
     ),
     msg(
       "oracle",
-      "First things first — let\'s connect your X account. I\'ll scan your tweets, analyze your voice, and pull your follows so you can pick reference voices.",
+      "First things first — let\'s connect your X account. I\'ll sync your profile, scan your tweets, analyze your voice, and pull your follows so you can pick reference voices.",
       {
         actions: [
           { label: "Connect X", value: "track-a", variant: "primary" },
@@ -35,20 +35,10 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
   ],
 
   CONNECT_X: [
-    msg("oracle", "Let's link your X account. I'll use it to scan your tweets and set up your voice.", {
+    msg("oracle", "Let's link your X account. I'll sync your display name, bio, avatar, and handle, then scan your tweets to set up your voice.", {
       component: { type: "x-oauth" },
       actions: [{ label: "Set up manually instead", value: "track-b", variant: "ghost" }],
     }),
-  ],
-
-  TRACK_A_HANDLE: [
-    msg(
-      "oracle",
-      "What's your X handle? I'll pull your tweets, analyze your writing voice, and check who you follow so we can set up reference voices.",
-      {
-        component: { type: "handle-input" },
-      }
-    ),
   ],
 
   TRACK_A_SCANNING: [

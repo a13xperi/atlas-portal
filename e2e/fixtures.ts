@@ -195,15 +195,34 @@ async function stubDataEndpoints(page: Page) {
   });
 }
 
+/** Return the Vercel deployment-protection bypass cookie if the env var is set. */
+export function vercelBypassCookies(
+  domain: string,
+): Array<{ name: string; value: string; domain: string; path: string }> {
+  const token = process.env.VERCEL_PROTECTION_BYPASS;
+  if (!token) return [];
+  return [{ name: "_vercel_password", value: token, domain, path: "/" }];
+}
+
 /** Extended test fixture that provides an authenticated page. */
 export const test = base.extend<{ authedPage: Page }>({
   authedPage: async ({ page, context, baseURL }, use) => {
     // Set auth cookie so middleware and client auth both see an active session
     const url = new URL(baseURL ?? "http://localhost:3000");
-    await context.addCookies([
+    const cookies: Array<{ name: string; value: string; domain: string; path: string }> = [
       { name: "atlas_access_token", value: "1", domain: url.hostname, path: "/" },
       { name: "atlas_session", value: "1", domain: url.hostname, path: "/" },
-    ]);
+    ];
+    // Bypass Vercel deployment protection on preview URLs
+    if (process.env.VERCEL_PROTECTION_BYPASS) {
+      cookies.push({
+        name: "_vercel_password",
+        value: process.env.VERCEL_PROTECTION_BYPASS,
+        domain: url.hostname,
+        path: "/",
+      });
+    }
+    await context.addCookies(cookies);
 
     await stubAuth(page);
     await stubDataEndpoints(page);
@@ -214,5 +233,5 @@ export const test = base.extend<{ authedPage: Page }>({
   },
 });
 
-export { stubAuth, stubDataEndpoints, mockUser, mockSummary, mockDrafts, mockEngagementDaily, mockActivityDaily, mockLearningLog };
+export { stubAuth, stubDataEndpoints, vercelBypassCookies, mockUser, mockSummary, mockDrafts, mockEngagementDaily, mockActivityDaily, mockLearningLog };
 export { expect } from "@playwright/test";

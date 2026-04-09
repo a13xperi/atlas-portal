@@ -90,7 +90,28 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /sign up/i }));
 
     expect(screen.getByText("Create Account")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("@yourhandle")).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("@yourhandle")).not.toBeInTheDocument();
+  });
+
+  it("registers without showing an Atlas handle field", async () => {
+    render(<LoginPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: /sign up/i }));
+    fireEvent.change(screen.getByPlaceholderText("you@example.com"), {
+      target: { value: "new.user@example.com" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/min 6 characters/i), {
+      target: { value: "password123" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create Account" }));
+
+    await waitFor(() => {
+      expect(mockRegister).toHaveBeenCalledWith(
+        expect.any(String),
+        "new.user@example.com",
+        "password123"
+      );
+    });
   });
 
   it("shows a password toggle control", () => {

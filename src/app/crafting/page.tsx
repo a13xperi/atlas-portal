@@ -297,8 +297,9 @@ export default function CraftingPage() {
   } | null>(null);
   const activeDraftInitialized = useRef(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
+  const handleDraftTextChangeRef = useRef<((text: string) => void) | null>(null);
   const voiceRecorder = useVoiceRecorder(useCallback((text: string) => {
-    handleDraftTextChange(text);
+    handleDraftTextChangeRef.current?.(text);
   }, []));
   const draftInputValueRef = useRef("");
   const handleCreateDraftRef = useRef<
@@ -628,6 +629,7 @@ export default function CraftingPage() {
       setSourceError("");
     }
   }, [contentError, sourceError]);
+  handleDraftTextChangeRef.current = handleDraftTextChange;
 
   const createDraftFromSource = useCallback(async (
     content: string,
@@ -1504,85 +1506,6 @@ export default function CraftingPage() {
             )}
           </div>
 
-          <div className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6">
-            <label
-              id={voiceModeLabelId}
-              htmlFor="voice-mode"
-              className="shrink-0 text-sm text-atlas-text-secondary"
-            >
-              Voice mode
-            </label>
-            <select
-              id="voice-mode"
-              aria-labelledby={voiceModeLabelId}
-              value={voiceMode}
-              onChange={(event) => {
-                const nextMode = event.target.value as
-                  | "my_voice"
-                  | "blended"
-                  | "specific";
-                setVoiceMode(nextMode);
-
-                if (nextMode === "my_voice") {
-                  setSelectedBlendId(null);
-                }
-              }}
-              className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
-            >
-              <option value="my_voice">My voice</option>
-              <option value="blended">Blended</option>
-              <option value="specific">Specific person</option>
-            </select>
-            {voiceMode === "blended" && blends.length > 0 ? (
-              <>
-                <label
-                  id={savedBlendLabelId}
-                  htmlFor="saved-blend"
-                  className="shrink-0 text-sm text-atlas-text-secondary"
-                >
-                  Saved blend
-                </label>
-                <select
-                  id="saved-blend"
-                  aria-labelledby={savedBlendLabelId}
-                  value={selectedBlendId || ""}
-                  onChange={(event) => setSelectedBlendId(event.target.value || null)}
-                  className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
-                >
-                  <option value="">Pick a blend…</option>
-                  {blends.map((blend) => (
-                    <option key={blend.id} value={blend.id}>
-                      {blend.name}
-                    </option>
-                  ))}
-                </select>
-              </>
-            ) : null}
-            <div className="flex w-full flex-col gap-2 sm:min-w-[200px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span
-                id={blendIntensityLabelId}
-                className="shrink-0 text-sm text-atlas-text-secondary"
-              >
-                {selectedBlendId
-                  ? `My Voice ↔ ${
-                      blends.find((blend) => blend.id === selectedBlendId)?.name || "Blend"
-                    }`
-                  : "Blend:"}
-              </span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={blendValue}
-                onChange={(event) => setBlendValue(Number(event.target.value))}
-                aria-labelledby={blendIntensityLabelId}
-                aria-valuetext={`${blendValue} percent`}
-                className="flex-1"
-                style={{ "--range-progress": `${blendValue}%` } as React.CSSProperties}
-              />
-              <span className="w-10 text-right text-sm text-atlas-text">{blendValue}%</span>
-            </div>
-          </div>
 
           {voiceComparison ? (
             <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6">
