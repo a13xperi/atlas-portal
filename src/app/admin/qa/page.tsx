@@ -90,6 +90,8 @@ export default function QaTestRunnerPage() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [loadingRuns, setLoadingRuns] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [filter, setFilter] = useState<"all" | "failed" | "incomplete" | "passed">("all");
+  const [search, setSearch] = useState("");
 
   // Allow editing if user is manager OR owns the active run
   const activeRun = runs.find((r) => r.id === activeRunId);
@@ -296,6 +298,62 @@ export default function QaTestRunnerPage() {
     ? Math.round(((summary.pass + summary.fail + summary.skip) / TOTAL_TESTS) * 100)
     : 0;
 
+  const filteredSections = useMemo(() => {
+    let filtered = sections as TestSection[];
+    // Apply search filter
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      filtered = filtered
+        .map((section) => ({
+          ...section,
+          tests: section.tests.filter(
+            (t) =>
+              t.id.toLowerCase().includes(q) ||
+              t.name.toLowerCase().includes(q),
+          ),
+        }))
+        .filter((s) => s.tests.length > 0);
+    }
+    // Apply status filter
+    if (filter !== "all") {
+      filtered = filtered
+        .map((section) => ({
+          ...section,
+          tests: section.tests.filter((t) => {
+            const status = results[t.id]?.status ?? "pending";
+            if (filter === "failed") return status === "fail";
+            if (filter === "incomplete") return status === "pending";
+            if (filter === "passed") return status === "pass";
+            return true;
+          }),
+        }))
+        .filter((s) => s.tests.length > 0);
+    }
+    return filtered;
+  }, [filter, search, results]);
+
+  const markAllInSection = useCallback(
+    (sectionId: string, status: TestStatus) => {
+      if (!canEdit) return;
+      const section = sections.find((s) => s.id === sectionId);
+      if (!section) return;
+      setResults((prev) => {
+        const next = { ...prev };
+        for (const test of section.tests) {
+          next[test.id] = {
+            status,
+            note: prev[test.id]?.note ?? "",
+            tester: testerInitials,
+            timestamp: new Date().toISOString(),
+          };
+        }
+        scheduleSave(next);
+        return next;
+      });
+    },
+    [canEdit, testerInitials, scheduleSave],
+  );
+
   // ---- Render ----
   if (authLoading || loadingRuns) {
     return (
@@ -414,6 +472,30 @@ export default function QaTestRunnerPage() {
           </div>
         </div>
 
+        {/* Filter bar */}
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search tests (ID or name)..."
+            className="w-48 rounded-lg border border-glass-border bg-[#111827] px-3 py-1.5 text-xs text-atlas-text placeholder-atlas-text-muted focus:border-atlas-teal focus:outline-none"
+          />
+          {(["all", "incomplete", "failed", "passed"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                filter === f
+                  ? "bg-atlas-teal/20 text-atlas-teal border border-atlas-teal/40"
+                  : "bg-white/5 text-atlas-text-muted border border-transparent hover:bg-white/10"
+              }`}
+            >
+              {f === "all" ? "All" : f === "incomplete" ? "Incomplete" : f === "failed" ? "Failed" : "Passed"}
+            </button>
+          ))}
+        </div>
+
         {/* No runs state */}
         {!activeRunId && (
           <div className="rounded-2xl border border-glass-border bg-glass p-12 text-center backdrop-blur-xl">
@@ -426,7 +508,7 @@ export default function QaTestRunnerPage() {
 
         {/* Sections */}
         {activeRunId &&
-          sections.map((section) => (
+          filteredSections.map((section) => (
             <SectionCard
               key={section.id}
               section={section}
@@ -435,6 +517,7 @@ export default function QaTestRunnerPage() {
               onToggle={() => toggleSection(section.id)}
               onMark={markTest}
               onNote={setNote}
+              onMarkAll={markAllInSection}
               canEdit={canEdit}
             />
           ))}
@@ -454,6 +537,7 @@ function SectionCard({
   onToggle,
   onMark,
   onNote,
+  onMarkAll,
   canEdit,
 }: {
   section: TestSection;
@@ -462,6 +546,7 @@ function SectionCard({
   onToggle: () => void;
   onMark: (id: string, status: TestStatus) => void;
   onNote: (id: string, note: string) => void;
+  onMarkAll: (sectionId: string, status: TestStatus) => void;
   canEdit: boolean;
 }) {
   const badge = sectionBadge(section.tests, results);
@@ -478,6 +563,24 @@ function SectionCard({
         <span className={`ml-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.cls}`}>
           {badge.label}
         </span>
+        {canEdit && (
+          <div className="ml-2 flex gap-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); onMarkAll(section.id, "pass"); }}
+              className="rounded px-1.5 py-0.5 text-[10px] text-emerald-400 hover:bg-emerald-500/10"
+              title="Mark all pass"
+            >
+              All ✓
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onMarkAll(section.id, "skip"); }}
+              className="rounded px-1.5 py-0.5 text-[10px] text-yellow-400 hover:bg-yellow-500/10"
+              title="Mark all skip"
+            >
+              All —
+            </button>
+          </div>
+        )}
         <span className="ml-auto text-xs text-atlas-text-muted">
           {collapsed ? "+" : "-"}
         </span>
@@ -542,6 +645,16 @@ function TestCard({
           {test.id}
         </span>
         <span className="flex-1 text-sm font-medium text-atlas-text">{test.name}</span>
+        {test.priority && (
+          <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${
+            test.priority === "critical" ? "bg-red-500/15 text-red-400" :
+            test.priority === "high" ? "bg-orange-500/15 text-orange-400" :
+            test.priority === "medium" ? "bg-blue-500/15 text-blue-400" :
+            "bg-white/5 text-atlas-text-muted"
+          }`}>
+            {test.priority}
+          </span>
+        )}
         {result?.tester && (
           <span className="rounded bg-purple-500/15 px-1.5 py-0.5 text-[10px] text-purple-400">
             {result.tester}

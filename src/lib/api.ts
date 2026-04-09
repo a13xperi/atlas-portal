@@ -40,12 +40,89 @@ export interface QaTestRun {
   status: 'in_progress' | 'completed' | 'abandoned';
 }
 
-class ApiError extends Error {
+export interface AdminOverview {
+  totalUsers: number;
+  activeUsers7d: number;
+  draftsCreated30d: number;
+  draftsPosted30d: number;
+  imagesGenerated30d: number;
+  avgActualEngagement30d: number | null;
+  avgPredictedEngagement30d: number | null;
+}
+
+export interface AdminRosterUser {
+  id: string;
+  handle: string;
+  displayName: string | null;
+  role: string;
+  onboardingTrack: string | null;
+  tourCompleted: boolean;
+  createdAt: string;
+  xHandle: string | null;
+  voiceMaturity: string | null;
+  tweetsAnalyzed: number;
+  totalDrafts: number;
+  totalPosts: number;
+  events30d: number;
+  lastSeen: string | null;
+}
+
+export interface AdminPipeline {
+  funnel: Record<string, number>;
+  sourceTypes: Record<string, number>;
+}
+
+export interface AdminAdoption {
+  totalUsers: number;
+  voiceCalibrated: number;
+  researchUsed30d: number;
+  alertsConfigured: number;
+  briefingsGenerated30d: number;
+  campaignsCreated: number;
+  imagesGenerated30d: number;
+}
+
+export interface AdminDailyActivity {
+  date: string;
+  created: number;
+  posted: number;
+}
+
+export interface AdminFeedEvent {
+  id: string;
+  type: string;
+  createdAt: string;
+  handle: string;
+  displayName: string | null;
+  metadata: Record<string, unknown> | null;
+}
+
+export class ApiError extends Error {
   statusCode: number;
   constructor(message: string, statusCode: number) {
     super(message);
     this.statusCode = statusCode;
   }
+}
+
+interface RawTwitterFollow {
+  id: string;
+  handle?: string | null;
+  display_name?: string | null;
+  bio?: string | null;
+  avatar_url?: string | null;
+  follower_count?: number | null;
+}
+
+function mapTwitterFollow(follow: RawTwitterFollow): TwitterFollow {
+  return {
+    id: follow.id,
+    handle: follow.handle ?? "",
+    displayName: follow.display_name ?? follow.handle ?? "Unknown",
+    bio: follow.bio ?? null,
+    avatarUrl: follow.avatar_url ?? null,
+    followerCount: follow.follower_count ?? 0,
+  };
 }
 
 // Demo mode flag — when true, GET requests return mock data
@@ -186,6 +263,21 @@ export const api = {
       request<{ blends: SavedBlend[] }>("/api/voice/blends"),
     createBlend: (name: string, voices: BlendVoiceInput[]) =>
       request<{ blend: SavedBlend }>("/api/voice/blends", { method: "POST", body: { name, voices } }),
+    getBlendedProfile: () =>
+      request<{ profile: BlendedVoiceProfile }>("/api/voice/blended-profile"),
+    blend: (
+      primaryId: string,
+      additionalIds: string[],
+      weights?: Record<string, number>
+    ) =>
+      request<VoiceBlendResponse>("/api/voice/blend", {
+        method: "POST",
+        body: {
+          primary_id: primaryId,
+          additional_ids: additionalIds,
+          ...(weights ? { weights } : {}),
+        },
+      }),
     calibrate: (handle: string) =>
       request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/calibrate", {
         method: "POST", body: { handle },
@@ -279,6 +371,11 @@ export const api = {
       request<{ reordered: number }>("/api/drafts/queue/reorder", { method: "PATCH", body: { orderedIds } }),
     resetQueueOrder: () =>
       request<{ reset: boolean }>("/api/drafts/queue/reset-order", { method: "POST" }),
+    batchFromContent: (content: string, sourceType: string, options?: { sourceUrl?: string; createCampaign?: boolean; campaignTitle?: string }) =>
+      request<{ insights: any[]; drafts: any[]; campaign?: { id: string; title: string } }>("/api/drafts/batch-from-content", {
+        method: "POST",
+        body: { content, sourceType, ...options },
+      }),
   },
 
   analytics: {
@@ -438,8 +535,27 @@ export const api = {
       }>("/api/oracle/agent", { method: "POST", body }),
   },
 
+  admin: {
+    overview: () => request<AdminOverview>("/api/admin/overview"),
+    roster: () => request<{ users: AdminRosterUser[] }>("/api/admin/roster"),
+    pipeline: () => request<AdminPipeline>("/api/admin/pipeline"),
+    adoption: () => request<AdminAdoption>("/api/admin/adoption"),
+    activityDaily: () => request<{ days: AdminDailyActivity[] }>("/api/admin/activity-daily"),
+    feed: () => request<{ events: AdminFeedEvent[] }>("/api/admin/feed"),
+  },
+
   twitter: {
-    follows: () => request<any[]>("/api/twitter/follows"),
+    follows: async () => {
+      const response = await request<{
+        follows: RawTwitterFollow[];
+        cached: boolean;
+      }>("/api/twitter/follows");
+
+      return {
+        cached: response.cached,
+        follows: response.follows.map(mapTwitterFollow),
+      };
+    },
     likes: () => request<any[]>("/api/twitter/likes"),
   },
 
@@ -517,10 +633,72 @@ export interface ReferenceAccount {
   avatarUrl?: string | null;
 }
 
+export interface TwitterFollow {
+  id: string;
+  handle: string;
+  displayName: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  followerCount: number;
+}
+
 export interface SavedBlend {
   id: string;
   name: string;
   voices: { label: string; percentage: number; referenceVoice?: ReferenceVoice }[];
+}
+
+export interface BlendedVoiceDimensions {
+  humor: number;
+  formality: number;
+  brevity: number;
+  contrarianTone: number;
+  directness: number;
+  warmth: number;
+  technicalDepth: number;
+  confidence: number;
+  evidenceOrientation: number;
+  solutionOrientation: number;
+  socialPosture: number;
+  selfPromotionalIntensity: number;
+}
+
+export interface BlendedVoiceProfile {
+  id: string;
+  primaryTwitterId: string;
+  primaryHandle: string | null;
+  additionalTwitterIds: string[];
+  additionalHandles: string[];
+  weights: Record<string, number>;
+  dimensions: BlendedVoiceDimensions;
+  styleSignals?: Record<string, unknown> | null;
+  tweetsAnalyzed: number;
+  blendSummary?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BlendedVoiceInspiration {
+  twitterId: string;
+  handle: string;
+  name: string;
+  tweetCount: number;
+  weight: number;
+}
+
+export interface VoiceBlendResponse {
+  blendedProfile: {
+    id: string;
+    primaryTwitterId: string;
+    additionalTwitterIds: string[];
+    weights: Record<string, number>;
+    tweetsAnalyzed: number;
+    blendSummary?: string | null;
+  };
+  inspirations: BlendedVoiceInspiration[];
+  dimensions: BlendedVoiceDimensions;
+  styleSignals?: Record<string, unknown> | null;
+  summary: string;
 }
 
 export interface BlendVoiceInput {

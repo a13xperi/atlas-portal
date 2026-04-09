@@ -5,6 +5,7 @@
 
 import type {
   AnalyticsSummary,
+  BlendedVoiceProfile,
   TweetDraft,
   VoiceProfile,
   ReferenceVoice,
@@ -169,6 +170,79 @@ const voiceBlends: { blends: SavedBlend[] } = {
       ],
     },
   ],
+};
+
+const twitterFollows = {
+  follows: [
+    {
+      id: "demo-follow-1",
+      handle: "hasufl",
+      displayName: "Hasu",
+      bio: "Writing about markets, crypto structure, and the second-order effects most people miss.",
+      avatarUrl: null,
+      followerCount: 182400,
+    },
+    {
+      id: "demo-follow-2",
+      handle: "DefiIgnas",
+      displayName: "Ignas",
+      bio: "DeFi researcher breaking down product design, token mechanics, and the incentive layer.",
+      avatarUrl: null,
+      followerCount: 95600,
+    },
+    {
+      id: "demo-follow-3",
+      handle: "goodalexander",
+      displayName: "Alex Good",
+      bio: "Macro, liquidity, and the market structure beneath the headline noise.",
+      avatarUrl: null,
+      followerCount: 74200,
+    },
+    {
+      id: "demo-follow-4",
+      handle: "punk6529",
+      displayName: "punk6529",
+      bio: "Long-form thinking on the internet, culture, and the future of digital ownership.",
+      avatarUrl: null,
+      followerCount: 521000,
+    },
+  ],
+  cached: false,
+};
+
+const blendedVoiceProfile: { profile: BlendedVoiceProfile } = {
+  profile: {
+    id: "demo-blended-profile-1",
+    primaryTwitterId: "demo-follow-1",
+    primaryHandle: "hasufl",
+    additionalTwitterIds: ["demo-follow-2", "demo-follow-3"],
+    additionalHandles: ["DefiIgnas", "goodalexander"],
+    weights: {
+      "demo-follow-1": 0.7,
+      "demo-follow-2": 0.15,
+      "demo-follow-3": 0.15,
+    },
+    dimensions: {
+      humor: 48,
+      formality: 74,
+      brevity: 61,
+      contrarianTone: 67,
+      directness: 69,
+      warmth: 42,
+      technicalDepth: 79,
+      confidence: 71,
+      evidenceOrientation: 83,
+      solutionOrientation: 56,
+      socialPosture: 38,
+      selfPromotionalIntensity: 22,
+    },
+    styleSignals: null,
+    tweetsAnalyzed: 146,
+    blendSummary:
+      "Voice blend anchored on @hasufl with supporting influence from @DefiIgnas and @goodalexander.",
+    createdAt: now,
+    updatedAt: now,
+  },
 };
 
 // ── Team Analysts ────────────────────────────────────────────────────────────
@@ -489,7 +563,9 @@ const demoData: Record<string, unknown> = {
   "/api/voice/profile": voiceProfile,
   "/api/voice/references": voiceReferences,
   "/api/voice/blends": voiceBlends,
+  "/api/voice/blended-profile": blendedVoiceProfile,
   "/api/voice/reference-accounts": referenceAccounts,
+  "/api/twitter/follows": twitterFollows,
   "/api/analytics/team": teamAnalysts,
   "/api/analytics/engagement-daily": engagementDaily,
   "/api/analytics/activity-daily": activityDaily,

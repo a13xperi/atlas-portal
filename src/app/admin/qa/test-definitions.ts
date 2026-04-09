@@ -27,7 +27,7 @@ export const sections: TestSection[] = [
         steps: [
           "Go to delphi-atlas.vercel.app",
           'Click "Sign Up" tab or link',
-          "Fill: handle qa_manual_01, email qa_manual@test.com, password TestManual123!",
+          "Fill: email qa_manual@test.com, password TestManual123!",
           "Click Submit",
         ],
         expected: "Account created. Redirected to onboarding or dashboard. No errors.",
@@ -694,20 +694,19 @@ export const sections: TestSection[] = [
       },
       {
         id: "ORC-02",
-        name: "Track A — handle input + voice scan",
+        name: "Track A — X connect + voice scan",
         category: "functional",
         priority: "critical",
         steps: [
           "Click 'Connect X'",
           "Verify your message appears right-aligned ('Connect X')",
-          "Verify Oracle asks for X handle with input field",
-          "Enter a real handle (e.g. hosseeb or naval)",
-          "Click Continue or press Enter",
+          "Complete the X OAuth flow in the popup or redirected tab",
+          "Return to Atlas and verify the onboarding flow resumes automatically",
           "Watch for scanning animation (spinner + 'Scanning tweets...')",
           "Wait for calibration to complete (5-15 seconds)",
         ],
         expected:
-          "Handle input renders with @ prefix. Scanning animation shows while API runs. After scan completes, dimension sliders appear with calibrated values (not all 50s). Calibration summary text shown ('Calibrated from X tweets').",
+          "Atlas resumes onboarding without asking for a manual handle. The synced X identity is visible immediately after OAuth. Scanning animation shows while API runs. After scan completes, dimension sliders appear with calibrated values (not all 50s). Calibration summary text shown ('Calibrated from X tweets').",
       },
       {
         id: "ORC-03",
@@ -724,18 +723,16 @@ export const sections: TestSection[] = [
       },
       {
         id: "ORC-04",
-        name: "Track A — dimension review + display name",
+        name: "Track A — dimension review",
         category: "functional",
         priority: "critical",
         steps: [
           "After calibration, verify 12 dimension sliders appear inside a chat message",
           "Adjust 2-3 sliders (e.g. move Humor up, Formality down)",
-          "Find the display name input field",
-          "Enter a display name (at least 2 characters)",
           "Click Continue",
         ],
         expected:
-          "All 12 sliders are interactive and show calibrated values. Display name input is present. Continue button is disabled until display name is ≥2 chars. After continue, voice profile saves to backend (check network tab for PATCH /api/voice/profile).",
+          "All 12 sliders are interactive and show calibrated values. No manual profile or display name field is shown. Continue is available immediately, and the voice profile saves to backend after advancing (check network tab for PATCH /api/voice/profile).",
       },
       {
         id: "ORC-05",
@@ -782,18 +779,17 @@ export const sections: TestSection[] = [
       },
       {
         id: "ORC-08",
-        name: "Track B — dimension sliders + display name",
+        name: "Track B — dimension sliders",
         category: "functional",
         priority: "high",
         steps: [
           "After content signals, verify 12 dimension sliders appear",
           "Verify default values match selected style (not all 50s for Fun/Serious)",
           "Adjust a few sliders",
-          "Enter display name",
           "Click Continue",
         ],
         expected:
-          "Dimensions default to style preset (Fun = high humor, Serious = high formality). Display name required. Data persists to backend on Continue.",
+          "Dimensions default to style preset (Fun = high humor, Serious = high formality). No profile creation field appears. Data persists to backend on Continue.",
       },
       {
         id: "ORC-09",

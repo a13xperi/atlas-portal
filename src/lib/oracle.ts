@@ -6,7 +6,6 @@ import { prepareMessages } from "./oracle-messages";
 const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
   WELCOME: null, // determined by track selection
   CONNECT_X: "TRACK_A_SCANNING",
-  TRACK_A_HANDLE: "TRACK_A_SCANNING",
   TRACK_A_SCANNING: "TRACK_A_RESULT",
   TRACK_A_RESULT: "TRACK_A_RATE",
   TRACK_A_RATE: "REFERENCES",
@@ -26,12 +25,10 @@ export function canAdvance(state: OracleState): boolean {
       return state.track !== null;
     case "CONNECT_X":
       return state.xConnected && state.xHandle.trim().length > 0;
-    case "TRACK_A_HANDLE":
-      return state.xHandle.trim().length > 0;
     case "TRACK_A_SCANNING":
       return state.calibrationResult !== null;
     case "TRACK_A_RESULT":
-      return state.displayName.trim().length >= 2;
+      return true;
     case "TRACK_A_RATE":
       return true;
     case "TRACK_B_STYLE":
@@ -39,7 +36,7 @@ export function canAdvance(state: OracleState): boolean {
     case "TRACK_B_CONTENT":
       return true; // content signals are optional
     case "TRACK_B_DIMENSIONS":
-      return state.displayName.trim().length >= 2;
+      return true;
     case "REFERENCES":
       return state.selectedRefs.length >= 2;
     case "BLEND":
@@ -63,7 +60,6 @@ export function initialOracleState(): OracleState {
     xConnected: false,
     calibrationResult: null,
     dimensions: DEFAULT_VOICE_DIMENSIONS,
-    displayName: "",
     selectedStyle: null,
     selectedRefs: [],
     selfPercentage: 50,
@@ -149,9 +145,6 @@ export function oracleReducer(
 
     case "SET_DIMENSIONS":
       return { ...state, dimensions: action.dimensions };
-
-    case "SET_DISPLAY_NAME":
-      return { ...state, displayName: action.name };
 
     case "SET_STYLE":
       return { ...state, selectedStyle: action.style };

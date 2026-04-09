@@ -62,6 +62,7 @@ jobs:
       - run: npx playwright test --config=playwright-e2e.config.ts --project=${{ matrix.project }}
         env:
           VERCEL_PROTECTION_BYPASS: ${{ secrets.VERCEL_PROTECTION_BYPASS }}
+          PLAYWRIGHT_BASE_URL: https://delphi-atlas-git-${{ github.head_ref }}-alex-peris-projects.vercel.app
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

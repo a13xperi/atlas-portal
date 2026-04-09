@@ -8,6 +8,7 @@ import {
   Loader2,
   Megaphone,
   Plus,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
@@ -93,10 +94,19 @@ function CampaignsTab() {
         <p className="text-xs font-medium uppercase tracking-[0.15em] text-atlas-text-muted">
           {campaigns.length} campaign{campaigns.length !== 1 ? "s" : ""}
         </p>
-        <GradientButton onClick={() => setShowCreate(!showCreate)}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          New Campaign
-        </GradientButton>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/campaigns/wizard"
+            className="inline-flex items-center justify-center rounded-lg border border-atlas-teal bg-transparent px-4 py-2 text-sm font-semibold text-atlas-teal transition-all duration-200 hover:bg-atlas-teal/10"
+          >
+            <Sparkles className="mr-1.5 h-4 w-4" />
+            Campaign Wizard
+          </Link>
+          <GradientButton onClick={() => setShowCreate(!showCreate)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            New Campaign
+          </GradientButton>
+        </div>
       </div>
 
       {showCreate && (

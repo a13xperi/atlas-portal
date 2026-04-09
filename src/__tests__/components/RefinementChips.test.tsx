@@ -2,6 +2,8 @@ import "@testing-library/jest-dom";
 import { fireEvent, render, screen } from "@testing-library/react";
 import RefinementChips from "@/components/ui/RefinementChips";
 
+// DM-325: Inline per-tweet refinement chips use the following labels.
+// Keep these in sync with src/components/ui/RefinementChips.tsx.
 describe("RefinementChips", () => {
   it("renders the refinement chip buttons", () => {
     render(
@@ -12,10 +14,12 @@ describe("RefinementChips", () => {
       />
     );
 
+    expect(screen.getByRole("button", { name: "Make it funnier" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "More serious" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add evidence" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Shorter" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Snarkier" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Hook" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Thread/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Bolder take" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Simpler" })).toBeInTheDocument();
   });
 
   it("calls onRefine with the matching chip when clicked", () => {
@@ -29,12 +33,12 @@ describe("RefinementChips", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Hook" }));
+    fireEvent.click(screen.getByRole("button", { name: "Bolder take" }));
 
     expect(handleRefine).toHaveBeenCalledTimes(1);
     expect(handleRefine).toHaveBeenCalledWith({
-      label: "Hook",
-      instruction: "Add a stronger hook at the beginning",
+      label: "Bolder take",
+      instruction: "Make this a bolder, more provocative take — don't hedge",
     });
   });
 
@@ -47,10 +51,12 @@ describe("RefinementChips", () => {
       />
     );
 
+    expect(screen.getByRole("button", { name: "Make it funnier" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "More serious" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add evidence" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Shorter" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Snarkier" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Hook" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /Thread/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Bolder take" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Simpler" })).toBeDisabled();
   });
 
   it("highlights the active loading chip", () => {
@@ -58,7 +64,7 @@ describe("RefinementChips", () => {
       <RefinementChips
         onRefine={jest.fn().mockResolvedValue(undefined)}
         disabled={false}
-        loading="Hook"
+        loading="Bolder take"
       />
     );
 
