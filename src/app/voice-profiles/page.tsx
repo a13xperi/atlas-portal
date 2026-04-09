@@ -11,12 +11,10 @@ import VoiceLabInspirationPicker from "@/components/voice-profiles/VoiceLabInspi
 import VoiceCard from "@/components/voice-profiles/VoiceCard";
 import {
   api,
-  BlendVoiceInput,
   ReferenceVoice,
   SavedBlend,
   VoiceProfile,
 } from "@/lib/api";
-
 
 const PERSONAL_VOICE_ID = "__personal__";
 
