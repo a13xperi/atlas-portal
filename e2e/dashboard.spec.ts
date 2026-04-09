@@ -24,7 +24,7 @@ test.describe("Dashboard", () => {
 
   test("navigation to crafting works", async ({ authedPage: page }) => {
     await page.getByText("Crafting Station").click();
-    await page.waitForURL("**/crafting");
+    await page.waitForURL("**/crafting", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(/\/crafting/);
   });
 });
