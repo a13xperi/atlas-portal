@@ -509,6 +509,11 @@ export const api = {
     feed: () => request<{ events: AdminFeedEvent[] }>("/api/admin/feed"),
   },
 
+  twitter: {
+    follows: () => request<any[]>("/api/twitter/follows"),
+    likes: () => request<any[]>("/api/twitter/likes"),
+  },
+
   campaigns: {
     list: () =>
       request<{ campaigns: Campaign[] }>("/api/campaigns"),
