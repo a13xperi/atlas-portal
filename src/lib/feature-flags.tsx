@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
 // Flag definitions — must match the Super Admin control panel keys exactly
@@ -126,10 +127,37 @@ export function FeatureFlagProvider({ children }: { children: ReactNode }) {
   const [flags, setFlags] = useState<Record<string, boolean>>({});
   const [flagsReady, setFlagsReady] = useState(false);
 
-  // Read flags from localStorage on mount
+  // Hydrate from localStorage immediately (no flicker), then overwrite with
+  // the authoritative DB values from the API. If the API call fails (404,
+  // network, etc.) we silently keep the localStorage fallback values.
   useEffect(() => {
     setFlags(resolveFlags());
     setFlagsReady(true);
+
+    let cancelled = false;
+    api.featureFlags
+      .list()
+      .then((res) => {
+        if (cancelled) return;
+        const apiFlags = res?.flags;
+        if (!Array.isArray(apiFlags) || apiFlags.length === 0) return;
+        setFlags((prev) => {
+          const merged: Record<string, boolean> = { ...prev };
+          for (const f of apiFlags) {
+            if (f && typeof f.key === "string" && typeof f.enabled === "boolean") {
+              merged[f.key] = f.enabled;
+            }
+          }
+          return merged;
+        });
+      })
+      .catch(() => {
+        // API unavailable — keep localStorage values as fallback.
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Listen for storage changes (e.g. admin panel in another tab)

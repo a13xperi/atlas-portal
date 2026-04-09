@@ -97,6 +97,22 @@ export interface AdminFeedEvent {
   metadata: Record<string, unknown> | null;
 }
 
+export interface AdminLeaderboardEntry {
+  userId: string;
+  handle: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  score: number;
+  breakdown: {
+    output: number;
+    postRate: number;
+    engagementDelta: number;
+    voiceMaturity: number;
+    feedback: number;
+    streak: number;
+  };
+}
+
 export interface FeatureFlagRecord {
   key: string;
   name: string;
@@ -498,6 +514,11 @@ export const api = {
       request<{ message: string; affected: number }>("/api/users/send-nudge", { method: "POST" }),
     pushStyle: (blendId?: string) =>
       request<{ message: string; affected: number }>("/api/users/push-style", { method: "POST", body: { blendId } }),
+    updateRole: (userId: string, role: string) =>
+      request<{ user: { id: string; role: string } }>(`/api/users/${userId}/role`, {
+        method: "PATCH",
+        body: { role },
+      }),
   },
 
   qa: {
@@ -571,6 +592,8 @@ export const api = {
     adoption: () => request<AdminAdoption>("/api/admin/adoption"),
     activityDaily: () => request<{ days: AdminDailyActivity[] }>("/api/admin/activity-daily"),
     feed: () => request<{ events: AdminFeedEvent[] }>("/api/admin/feed"),
+    leaderboard: () =>
+      request<{ entries: AdminLeaderboardEntry[] }>("/api/analytics/leaderboard"),
   },
 
   twitter: {
