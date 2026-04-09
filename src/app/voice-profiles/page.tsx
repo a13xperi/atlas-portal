@@ -180,11 +180,6 @@ function VoiceProfilesPage() {
           <TweetTinderSection />
         </div>
 
-        {/* Tweet Tinder — voice calibration via liked tweets */}
-        <div className="mt-8">
-          <TweetTinderSection />
-        </div>
-
         {/* Reference Voices */}
         <div className="mt-8" data-tour="reference-voices">
           <ReferenceVoicesSection references={references} onReferencesChange={setReferences} />
