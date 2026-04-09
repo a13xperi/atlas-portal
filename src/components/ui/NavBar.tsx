@@ -28,18 +28,16 @@ import { useAuth } from "@/lib/auth";
 import { useAlertSocket } from "@/lib/alertSocket";
 import { useCommandPalette } from "@/components/ui/CommandPalette";
 import { getCachedTier } from "@/lib/arena-tier-cache";
-import { useNavDiscovery } from "@/lib/discovery";
-import NavDiscoveryDot from "@/components/tour/NavDiscoveryDot";
 
 export interface NavBarProps {
   variant: "app" | "onboarding";
 }
 
-export const navLinks = [
+const navLinks = [
   { label: "Feed", href: "/feed", icon: Rss },
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Crafting", href: "/crafting", icon: PenTool },
-  { label: "Voices", href: "/voice-profiles", icon: Mic2 },
+  { label: "Voice Lab", href: "/voice-profiles", icon: Mic2 },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Briefing", href: "/briefing", icon: Newspaper },
   { label: "Signals", href: "/alerts", icon: Zap },
@@ -48,23 +46,6 @@ export const navLinks = [
   { label: "Campaigns", href: "/campaigns", icon: CalendarClock },
   { label: "Queue", href: "/queue", icon: ListOrdered },
 ];
-
-// Core tabs always visible in navigation (DM-322).
-// Analytics + Signals are gated behind manager/admin role.
-// Other tabs (Feed, Dashboard, Briefings, Queue, Campaigns) are hidden
-// from nav but their routes/pages remain accessible.
-const CORE_NAV_HREFS = new Set(["/crafting", "/voice-profiles", "/team-library", "/arena"]);
-const MANAGER_NAV_HREFS = new Set(["/analytics", "/alerts"]);
-
-export const coreNavLinks = navLinks.filter((link) => CORE_NAV_HREFS.has(link.href));
-
-/** Returns the visible nav links for a given user role. Managers/admins see Analytics + Signals in addition to core tabs. */
-export function getVisibleNavLinks(role?: string): typeof navLinks {
-  const isManager = role === "MANAGER" || role === "ADMIN";
-  return navLinks.filter(
-    (link) => CORE_NAV_HREFS.has(link.href) || (isManager && MANAGER_NAV_HREFS.has(link.href))
-  );
-}
 
 function DelphiLogo() {
   return (
@@ -116,8 +97,6 @@ export default function NavBar({ variant }: NavBarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const cachedTier = typeof window !== "undefined" ? getCachedTier() : null;
-  const { shouldShowDot } = useNavDiscovery();
-  const visibleLinks = getVisibleNavLinks(user?.role);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -154,7 +133,7 @@ export default function NavBar({ variant }: NavBarProps) {
           </Link>
           {variant === "app" && (
             <div className="hidden md:flex items-center gap-6">
-              {visibleLinks.map((link) => (
+              {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -166,8 +145,8 @@ export default function NavBar({ variant }: NavBarProps) {
                   }`}
                 >
                   {link.label}
-                  {shouldShowDot(link.href) && (
-                    <NavDiscoveryDot className="ml-1" />
+                  {link.label === "Briefing" && (
+                    <span className="ml-1 rounded-full bg-atlas-teal/15 px-1.5 py-0.5 text-[9px] font-bold text-atlas-teal">NEW</span>
                   )}
                 </Link>
               ))}
@@ -281,7 +260,7 @@ export default function NavBar({ variant }: NavBarProps) {
           >
             <nav aria-label="Mobile navigation">
               <div className="flex flex-col gap-1">
-                {visibleLinks.map((link) => {
+                {navLinks.map((link) => {
                   const Icon = link.icon;
 
                   return (
@@ -298,8 +277,8 @@ export default function NavBar({ variant }: NavBarProps) {
                     >
                       <Icon className="h-4 w-4" aria-hidden="true" />
                       {link.label}
-                      {shouldShowDot(link.href) && (
-                        <NavDiscoveryDot className="ml-auto" />
+                      {link.label === "Briefing" && (
+                        <span className="ml-auto rounded-full bg-atlas-teal/15 px-1.5 py-0.5 text-[9px] font-bold text-atlas-teal">NEW</span>
                       )}
                     </Link>
                   );

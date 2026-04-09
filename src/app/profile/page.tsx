@@ -316,7 +316,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="grid gap-5 md:grid-cols-2">
+              <div className={`grid gap-5 md:grid-cols-2 transition-opacity duration-200 ${loadingProfile ? "opacity-50" : ""}`}>
                 <label className="block">
                   <span className="text-xs font-medium uppercase tracking-[0.18em] text-atlas-text-secondary">
                     Email address
@@ -336,7 +336,8 @@ export default function ProfilePage() {
                       }}
                       placeholder="name@atlasportal.ai"
                       autoComplete="email"
-                      className="w-full rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 pl-11 text-sm text-atlas-text placeholder-atlas-text-secondary transition-colors focus:border-atlas-teal focus:outline-none"
+                      disabled={loadingProfile}
+                      className="w-full rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 pl-11 text-sm text-atlas-text placeholder-atlas-text-secondary transition-colors focus:border-atlas-teal focus:outline-none disabled:cursor-wait"
                       aria-label="Email address"
                     />
                   </div>
@@ -361,14 +362,15 @@ export default function ProfilePage() {
                       }}
                       placeholder="How your name should appear"
                       autoComplete="name"
-                      className="w-full rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 pl-11 text-sm text-atlas-text placeholder-atlas-text-secondary transition-colors focus:border-atlas-teal focus:outline-none"
+                      disabled={loadingProfile}
+                      className="w-full rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 pl-11 text-sm text-atlas-text placeholder-atlas-text-secondary transition-colors focus:border-atlas-teal focus:outline-none disabled:cursor-wait"
                       aria-label="Display name"
                     />
                   </div>
                 </label>
               </div>
 
-              <div className="rounded-2xl border border-glass-border bg-atlas-surface p-5">
+              <div className={`rounded-2xl border border-glass-border bg-atlas-surface p-5 transition-opacity duration-200 ${loadingProfile ? "opacity-50" : ""}`}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <label
@@ -398,7 +400,8 @@ export default function ProfilePage() {
                   }}
                   placeholder="Example: Bitcoin and macro analyst focused on structure, liquidity, and catalysts."
                   rows={6}
-                  className="mt-4 w-full resize-none rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 text-sm leading-6 text-atlas-text placeholder-atlas-text-secondary transition-colors focus:border-atlas-teal focus:outline-none"
+                  disabled={loadingProfile}
+                  className="mt-4 w-full resize-none rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 text-sm leading-6 text-atlas-text placeholder-atlas-text-secondary transition-colors focus:border-atlas-teal focus:outline-none disabled:cursor-wait"
                   aria-label="Bio / about"
                 />
               </div>

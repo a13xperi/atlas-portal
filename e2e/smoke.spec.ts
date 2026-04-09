@@ -445,20 +445,10 @@ test.describe("Route smoke tests", () => {
     test(`renders ${smokeRoute.name}`, async ({ page, context, baseURL }) => {
       // Set auth cookies so middleware allows access to protected routes
       const url = new URL(baseURL ?? "http://localhost:3000");
-      const cookies: Array<{ name: string; value: string; domain: string; path: string }> = [
+      await context.addCookies([
         { name: "atlas_session", value: "1", domain: url.hostname, path: "/" },
         { name: "atlas_access_token", value: "1", domain: url.hostname, path: "/" },
-      ];
-      // Bypass Vercel deployment protection on preview URLs
-      if (process.env.VERCEL_PROTECTION_BYPASS) {
-        cookies.push({
-          name: "_vercel_password",
-          value: process.env.VERCEL_PROTECTION_BYPASS,
-          domain: url.hostname,
-          path: "/",
-        });
-      }
-      await context.addCookies(cookies);
+      ]);
 
       await stubApi(page);
 

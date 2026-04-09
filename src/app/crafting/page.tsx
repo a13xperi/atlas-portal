@@ -26,7 +26,6 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
-import { useTour } from "@/components/tour/TourProvider";
 import DraftHistorySidebar, {
   DraftHistoryItem,
 } from "@/components/crafting/DraftHistorySidebar";
@@ -243,8 +242,6 @@ function buildVoiceVariationInstruction(
 }
 
 export default function CraftingPage() {
-  useTour("crafting");
-
   const searchParams = useSearchParams();
   const voiceModeLabelId = useId();
   const savedBlendLabelId = useId();
@@ -300,9 +297,8 @@ export default function CraftingPage() {
   } | null>(null);
   const activeDraftInitialized = useRef(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
-  const handleDraftTextChangeRef = useRef<((text: string) => void) | null>(null);
   const voiceRecorder = useVoiceRecorder(useCallback((text: string) => {
-    handleDraftTextChangeRef.current?.(text);
+    handleDraftTextChange(text);
   }, []));
   const draftInputValueRef = useRef("");
   const handleCreateDraftRef = useRef<
@@ -632,7 +628,6 @@ export default function CraftingPage() {
       setSourceError("");
     }
   }, [contentError, sourceError]);
-  handleDraftTextChangeRef.current = handleDraftTextChange;
 
   const createDraftFromSource = useCallback(async (
     content: string,
@@ -1509,10 +1504,7 @@ export default function CraftingPage() {
             )}
           </div>
 
-          <div
-            className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6"
-            data-tour="voice-selector"
-          >
+          <div className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6">
             <label
               id={voiceModeLabelId}
               htmlFor="voice-mode"

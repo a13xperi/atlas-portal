@@ -40,6 +40,63 @@ export interface QaTestRun {
   status: 'in_progress' | 'completed' | 'abandoned';
 }
 
+export interface AdminOverview {
+  totalUsers: number;
+  activeUsers7d: number;
+  draftsCreated30d: number;
+  draftsPosted30d: number;
+  imagesGenerated30d: number;
+  avgActualEngagement30d: number | null;
+  avgPredictedEngagement30d: number | null;
+}
+
+export interface AdminRosterUser {
+  id: string;
+  handle: string;
+  displayName: string | null;
+  role: string;
+  onboardingTrack: string | null;
+  tourCompleted: boolean;
+  createdAt: string;
+  xHandle: string | null;
+  voiceMaturity: string | null;
+  tweetsAnalyzed: number;
+  totalDrafts: number;
+  totalPosts: number;
+  events30d: number;
+  lastSeen: string | null;
+}
+
+export interface AdminPipeline {
+  funnel: Record<string, number>;
+  sourceTypes: Record<string, number>;
+}
+
+export interface AdminAdoption {
+  totalUsers: number;
+  voiceCalibrated: number;
+  researchUsed30d: number;
+  alertsConfigured: number;
+  briefingsGenerated30d: number;
+  campaignsCreated: number;
+  imagesGenerated30d: number;
+}
+
+export interface AdminDailyActivity {
+  date: string;
+  created: number;
+  posted: number;
+}
+
+export interface AdminFeedEvent {
+  id: string;
+  type: string;
+  createdAt: string;
+  handle: string;
+  displayName: string | null;
+  metadata: Record<string, unknown> | null;
+}
+
 class ApiError extends Error {
   statusCode: number;
   constructor(message: string, statusCode: number) {
@@ -279,6 +336,11 @@ export const api = {
       request<{ reordered: number }>("/api/drafts/queue/reorder", { method: "PATCH", body: { orderedIds } }),
     resetQueueOrder: () =>
       request<{ reset: boolean }>("/api/drafts/queue/reset-order", { method: "POST" }),
+    batchFromContent: (content: string, sourceType: string, options?: { sourceUrl?: string; createCampaign?: boolean; campaignTitle?: string }) =>
+      request<{ insights: any[]; drafts: any[]; campaign?: { id: string; title: string } }>("/api/drafts/batch-from-content", {
+        method: "POST",
+        body: { content, sourceType, ...options },
+      }),
   },
 
   analytics: {
@@ -438,9 +500,13 @@ export const api = {
       }>("/api/oracle/agent", { method: "POST", body }),
   },
 
-  twitter: {
-    follows: () => request<any[]>("/api/twitter/follows"),
-    likes: () => request<any[]>("/api/twitter/likes"),
+  admin: {
+    overview: () => request<AdminOverview>("/api/admin/overview"),
+    roster: () => request<{ users: AdminRosterUser[] }>("/api/admin/roster"),
+    pipeline: () => request<AdminPipeline>("/api/admin/pipeline"),
+    adoption: () => request<AdminAdoption>("/api/admin/adoption"),
+    activityDaily: () => request<{ days: AdminDailyActivity[] }>("/api/admin/activity-daily"),
+    feed: () => request<{ events: AdminFeedEvent[] }>("/api/admin/feed"),
   },
 
   campaigns: {
