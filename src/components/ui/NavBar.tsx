@@ -49,6 +49,23 @@ export const navLinks = [
   { label: "Queue", href: "/queue", icon: ListOrdered },
 ];
 
+// Core tabs always visible in navigation (DM-322).
+// Analytics + Signals are gated behind manager/admin role.
+// Other tabs (Feed, Dashboard, Briefings, Queue, Campaigns) are hidden
+// from nav but their routes/pages remain accessible.
+const CORE_NAV_HREFS = new Set(["/crafting", "/voice-profiles", "/team-library", "/arena"]);
+const MANAGER_NAV_HREFS = new Set(["/analytics", "/alerts"]);
+
+export const coreNavLinks = navLinks.filter((link) => CORE_NAV_HREFS.has(link.href));
+
+/** Returns the visible nav links for a given user role. Managers/admins see Analytics + Signals in addition to core tabs. */
+export function getVisibleNavLinks(role?: string): typeof navLinks {
+  const isManager = role === "MANAGER" || role === "ADMIN";
+  return navLinks.filter(
+    (link) => CORE_NAV_HREFS.has(link.href) || (isManager && MANAGER_NAV_HREFS.has(link.href))
+  );
+}
+
 function DelphiLogo() {
   return (
     <svg
@@ -100,6 +117,7 @@ export default function NavBar({ variant }: NavBarProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const cachedTier = typeof window !== "undefined" ? getCachedTier() : null;
   const { shouldShowDot } = useNavDiscovery();
+  const visibleLinks = getVisibleNavLinks(user?.role);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -136,7 +154,7 @@ export default function NavBar({ variant }: NavBarProps) {
           </Link>
           {variant === "app" && (
             <div className="hidden md:flex items-center gap-6">
-              {navLinks.map((link) => (
+              {visibleLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -263,7 +281,7 @@ export default function NavBar({ variant }: NavBarProps) {
           >
             <nav aria-label="Mobile navigation">
               <div className="flex flex-col gap-1">
-                {navLinks.map((link) => {
+                {visibleLinks.map((link) => {
                   const Icon = link.icon;
 
                   return (
