@@ -7,6 +7,7 @@ import AppShell from "@/components/layout/AppShell";
 import FeatureGate from "@/components/ui/FeatureGate";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { api, AnalyticsSummary, LearningLogEntry, TweetDraft, DailyEngagement, DailyActivity } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 const EngagementVelocityChart = dynamic(
   () => import("@/components/analytics/EngagementVelocityChart"),
@@ -19,6 +20,7 @@ const EngagementVelocityChart = dynamic(
 );
 
 function AnalyticsPage() {
+  const { user, loading: authLoading } = useAuth();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [logEntries, setLogEntries] = useState<LearningLogEntry[]>([]);
   const [topDrafts, setTopDrafts] = useState<TweetDraft[]>([]);
@@ -28,6 +30,7 @@ function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading || !user) return;
     setLoading(true);
     setError(null);
     const errors: string[] = [];
@@ -39,9 +42,10 @@ function AnalyticsPage() {
     ])
       .then(() => { if (errors.length > 0) setError(errors[0]); })
       .finally(() => setLoading(false));
-  }, []);
+  }, [user, authLoading]);
 
   useEffect(() => {
+    if (authLoading || !user) return;
     api.drafts.list("POSTED")
       .then((res) => {
         const sorted = (res.drafts ?? [])
@@ -51,7 +55,7 @@ function AnalyticsPage() {
         setTopDrafts(sorted);
       })
       .catch(() => {});
-  }, []);
+  }, [user, authLoading]);
 
   const handleExportPDF = () => {
     const printContent = document.getElementById("analytics-content");
