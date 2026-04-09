@@ -6,6 +6,7 @@ import { Sparkles } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import TweetTinderSection from "./tweet-tinder-section";
 import { useTour } from "@/components/tour/TourProvider";
+import FeatureGate from "@/components/ui/FeatureGate";
 import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
 import VoiceLabInspirationPicker from "@/components/voice-profiles/VoiceLabInspirationPicker";
 import VoiceCard from "@/components/voice-profiles/VoiceCard";
@@ -23,8 +24,9 @@ function formatMaturityLabel(maturity?: VoiceProfile["maturity"]) {
   return `${maturity.charAt(0)}${maturity.slice(1).toLowerCase()}`;
 }
 
-export default function VoiceProfilesPage() {
+function VoiceProfilesPage() {
   useTour("voice-profiles");
+
 
   const router = useRouter();
   const [profile, setProfile] = useState<VoiceProfile | null>(null);
@@ -184,5 +186,13 @@ export default function VoiceProfilesPage() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function VoiceProfilesPageGated() {
+  return (
+    <FeatureGate flagKey="voice_lab">
+      <VoiceProfilesPage />
+    </FeatureGate>
   );
 }

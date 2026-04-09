@@ -29,14 +29,18 @@ const FLAG_DEFS: FlagDef[] = [
   { key: "crafting_station", scope: "everyone", defaultEnabled: true, routes: ["/crafting"] },
   { key: "voice_lab", scope: "everyone", defaultEnabled: true, routes: ["/voice-profiles"] },
   { key: "arena", scope: "everyone", defaultEnabled: true, routes: ["/arena"] },
-  { key: "campaigns", scope: "everyone", defaultEnabled: true, routes: ["/campaigns"] },
-  { key: "queue", scope: "everyone", defaultEnabled: true, routes: ["/queue"] },
+  { key: "campaigns", scope: "everyone", defaultEnabled: false, routes: ["/campaigns"] },
+  { key: "queue", scope: "everyone", defaultEnabled: false, routes: ["/queue"] },
   { key: "analytics_advanced", scope: "managers", defaultEnabled: true, routes: ["/analytics"] },
   { key: "signals", scope: "managers", defaultEnabled: true, routes: ["/alerts"] },
   { key: "telegram_bot", scope: "everyone", defaultEnabled: false, routes: ["/telegram"] },
   { key: "tweet_tinder", scope: "everyone", defaultEnabled: false },
   { key: "multi_model", scope: "admins", defaultEnabled: false },
   { key: "super_admin", scope: "admins", defaultEnabled: true, routes: ["/admin", "/admin/control", "/admin/qa", "/admin/bugs", "/admin/style-tile"] },
+  { key: "management", scope: "admins", defaultEnabled: true, routes: ["/management"] },
+  { key: "feed", scope: "everyone", defaultEnabled: true, routes: ["/feed"] },
+  { key: "briefing", scope: "everyone", defaultEnabled: true, routes: ["/briefing"] },
+  { key: "library", scope: "everyone", defaultEnabled: true, routes: ["/team-library"] },
 ];
 
 const STORAGE_KEY = "atlas-feature-flags";

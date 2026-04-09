@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import { useAuth } from "@/lib/auth";
 import { api, TeamMember, TeamAnalyst } from "@/lib/api";
 import {
@@ -34,14 +35,18 @@ const DEFAULT_FLAGS: FeatureFlag[] = [
   { key: "crafting_station", label: "Crafting Station", description: "AI tweet generation", scope: "everyone", defaultEnabled: true },
   { key: "voice_lab", label: "Voice Lab", description: "Voice profile editing and blending", scope: "everyone", defaultEnabled: true },
   { key: "arena", label: "Arena", description: "Competitive leaderboard", scope: "everyone", defaultEnabled: true },
-  { key: "campaigns", label: "Campaigns", description: "PDF-to-tweet campaign workflow", scope: "everyone", defaultEnabled: true },
-  { key: "queue", label: "Queue & Scheduling", description: "Draft queue with batch scheduling", scope: "everyone", defaultEnabled: true },
+  { key: "campaigns", label: "Campaigns", description: "PDF-to-tweet campaign workflow", scope: "everyone", defaultEnabled: false },
+  { key: "queue", label: "Queue & Scheduling", description: "Draft queue with batch scheduling", scope: "everyone", defaultEnabled: false },
   { key: "analytics_advanced", label: "Advanced Analytics", description: "Prediction models and deep engagement metrics", scope: "managers", defaultEnabled: true },
   { key: "signals", label: "Signals & Alerts", description: "Trending topic scanner", scope: "managers", defaultEnabled: true },
   { key: "telegram_bot", label: "Telegram Bot", description: "Alert delivery via Telegram", scope: "everyone", defaultEnabled: false },
   { key: "tweet_tinder", label: "Tweet Tinder", description: "Swipe-based content curation", scope: "everyone", defaultEnabled: false },
   { key: "multi_model", label: "Multi-Model Routing", description: "Best AI model per task", scope: "admins", defaultEnabled: false },
   { key: "super_admin", label: "Super Admin Panel", description: "This control panel", scope: "admins", defaultEnabled: true },
+  { key: "management", label: "Management", description: "Team roster and admin actions", scope: "admins", defaultEnabled: true },
+  { key: "feed", label: "Feed", description: "Content feed", scope: "everyone", defaultEnabled: true },
+  { key: "briefing", label: "Briefing", description: "Daily intelligence briefing", scope: "everyone", defaultEnabled: true },
+  { key: "library", label: "Voice Library", description: "Shared team content and voice recipes", scope: "everyone", defaultEnabled: true },
 ];
 
 const STORAGE_KEY = "atlas-feature-flags";
@@ -172,7 +177,7 @@ function avatarBg(role: string): string {
 // Main component
 // ---------------------------------------------------------------------------
 
-export default function ControlPanelPage() {
+function ControlPanelContent() {
   const { user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("flags");
 
@@ -684,5 +689,13 @@ function UsageAnalyticsTab({
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ControlPanelPage() {
+  return (
+    <FeatureGate flagKey="super_admin">
+      <ControlPanelContent />
+    </FeatureGate>
   );
 }
