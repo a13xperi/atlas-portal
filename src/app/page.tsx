@@ -7,9 +7,23 @@ import OnboardingShell from "@/components/layout/OnboardingShell";
 import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
 
+function createProvisioningHandle(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const localPart = normalizedEmail.split("@")[0] ?? "";
+  const base = localPart
+    .replace(/[^a-z0-9_]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  const hash = Array.from(normalizedEmail).reduce(
+    (acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0,
+    7
+  );
+
+  return `${base || "atlas_user"}_${hash.toString(36).slice(0, 6)}`;
+}
+
 export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [handle, setHandle] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -50,11 +64,6 @@ export default function LoginPage() {
       return;
     }
 
-    if (mode === "register" && !handle.trim()) {
-      setError("Handle is required");
-      return;
-    }
-
     setSubmitting(true);
 
     try {
@@ -62,7 +71,7 @@ export default function LoginPage() {
         await login(email.trim(), password);
         router.push("/dashboard");
       } else {
-        await register(handle.trim(), email.trim(), password);
+        await register(createProvisioningHandle(email), email.trim(), password);
         router.push("/onboarding");
       }
     } catch (err: unknown) {
@@ -90,30 +99,6 @@ export default function LoginPage() {
         <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-delphi-blue-400/50 to-transparent" />
 
         <div className="h-8" />
-
-        {mode === "register" && (
-          <>
-            <div className="text-left">
-              <label
-                htmlFor="login-handle"
-                className="text-xs text-atlas-text-secondary uppercase tracking-wide"
-              >
-                Your handle
-              </label>
-              <input
-                id="login-handle"
-                type="text"
-                value={handle}
-                onChange={(e) => setHandle(e.target.value)}
-                placeholder="@yourhandle"
-                className="mt-2 w-full bg-atlas-surface rounded-lg text-atlas-text placeholder-atlas-text-secondary px-4 py-3 border border-glass-border focus:outline-none focus:border-atlas-teal focus:shadow-[0_0_0_2px_rgba(78,205,196,0.15)]"
-                onKeyDown={handleKeyDown}
-              />
-            </div>
-            <div className="h-4" />
-          </>
-        )}
-
         <div className="text-left">
           <label
             htmlFor="login-email"
@@ -187,6 +172,30 @@ export default function LoginPage() {
           {mode === "login"
             ? "Don\u0027t have an account? Sign up \u2192"
             : "Already have an account? Sign in \u2192"}
+        </button>
+
+        <div className="h-5" />
+
+        <div className="relative flex items-center justify-center">
+          <div className="h-px flex-1 bg-glass-border" />
+          <span className="px-3 text-xs text-atlas-text-muted uppercase tracking-wider">or</span>
+          <div className="h-px flex-1 bg-glass-border" />
+        </div>
+
+        <div className="h-5" />
+
+        <button
+          type="button"
+          onClick={() => {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "https://api-production-9bef.up.railway.app";
+            window.location.href = `${apiUrl}/api/auth/x/login`;
+          }}
+          className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-atlas-surface border border-glass-border rounded-lg text-atlas-text hover:border-atlas-teal hover:bg-atlas-surface/80 transition-all"
+        >
+          <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden="true">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+          </svg>
+          <span className="font-medium">Continue with X</span>
         </button>
 
         <div className="h-6" />
