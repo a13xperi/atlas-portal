@@ -60,6 +60,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
+  // Handle bfcache restores — browser back button can restore a stale logged-in page
+  // after logout. Re-check the session cookie; if it's gone, clear state.
+  useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      const hasSession = document.cookie.split(";").some((c) => c.trim().startsWith("atlas_session=1"));
+      if (!hasSession) {
+        setUser(null);
+        setAccessToken(null);
+      }
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, []);
+
   const login = useCallback(async (email: string, password: string) => {
     const res = await api.auth.login(email, password);
     if (res.token) {
@@ -92,6 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     document.cookie = "atlas_access_token=; path=/; max-age=0";
     setUser(null);
     setSessionCookie(false);
+    // Hard redirect — prevents bfcache restoring stale protected pages after logout
+    window.location.replace("/");
   }, []);
 
   return (
