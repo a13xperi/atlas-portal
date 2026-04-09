@@ -106,6 +106,8 @@ export interface FeatureFlagRecord {
   updatedAt: string;
 }
 
+export type OnboardingTrack = "TRACK_A" | "TRACK_B";
+
 export class ApiError extends Error {
   statusCode: number;
   constructor(message: string, statusCode: number) {
@@ -224,7 +226,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
 // Auth — all requests use HttpOnly cookies (credentials: 'include')
 export const api = {
   auth: {
-    register: (handle: string, email: string, password: string, onboardingTrack?: string) =>
+    register: (handle: string, email: string, password: string, onboardingTrack?: OnboardingTrack) =>
       request<{ user: User; token: string; refresh_token: string }>("/api/auth/register", {
         method: "POST",
         body: { handle, email, password, onboardingTrack },
@@ -616,6 +618,7 @@ export interface User {
   id: string;
   handle: string;
   role: "ANALYST" | "MANAGER" | "ADMIN";
+  onboardingTrack?: OnboardingTrack | null;
   displayName?: string;
   email?: string;
   bio?: string;

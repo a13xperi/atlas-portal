@@ -59,12 +59,12 @@ describe("api.auth.register", () => {
     const data = { user: { id: "2", handle: "bob", role: "ANALYST" }, token: "tok_456", refresh_token: "rt_456" };
     mockFetch(data);
 
-    await api.auth.register("bob", "bob@example.com", "pass123", "crypto");
+    await api.auth.register("bob", "bob@example.com", "pass123", "TRACK_A");
 
     expect(fetch).toHaveBeenCalledWith(
       `${API_URL}/api/auth/register`,
       expect.objectContaining({
-        body: JSON.stringify({ handle: "bob", email: "bob@example.com", password: "pass123", onboardingTrack: "crypto" }),
+        body: JSON.stringify({ handle: "bob", email: "bob@example.com", password: "pass123", onboardingTrack: "TRACK_A" }),
         credentials: "include",
       })
     );
