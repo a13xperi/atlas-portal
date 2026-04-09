@@ -427,6 +427,77 @@ export default function AdminDashboardPage() {
       .finally(() => setFlagsLoading(false));
   }, [user]);
 
+  /* ─── Memos (must be above early return) ─── */
+  const filteredRoster = useMemo(() => {
+    const q = rosterSearch.trim().toLowerCase();
+    return roster.filter((u) => {
+      if (q) {
+        const hay = `${u.handle} ${u.displayName ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (rosterFilter === "active") {
+        const d = daysSince(u.lastSeen);
+        if (d === null || d > 7) return false;
+      } else if (rosterFilter === "struggling") {
+        if (u.voiceMaturity === "ADVANCED") return false;
+        if (u.totalDrafts > 5) return false;
+      } else if (rosterFilter === "uncalibrated") {
+        if (u.tweetsAnalyzed > 0) return false;
+      }
+      return true;
+    });
+  }, [roster, rosterSearch, rosterFilter]);
+
+  const rosterByRole = useMemo(() => {
+    const groups: Record<string, AdminRosterUser[]> = { ADMIN: [], MANAGER: [], ANALYST: [] };
+    for (const u of filteredRoster) {
+      const key = (u.role || "ANALYST").toUpperCase();
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(u);
+    }
+    return groups;
+  }, [filteredRoster]);
+
+  const effectiveLeaderboard: AdminLeaderboardEntry[] = useMemo(() => {
+    if (leaderboard.length > 0) return leaderboard;
+    const ranked = rankTeam(teamAnalysts);
+    return ranked.map((r) => ({
+      userId: r.analyst.id,
+      handle: r.analyst.handle,
+      displayName: null,
+      avatarUrl: null,
+      score: r.score.total,
+      breakdown: {
+        output: r.score.output,
+        postRate: r.score.postRate,
+        engagementDelta: r.score.engagement,
+        voiceMaturity: r.score.maturity,
+        feedback: r.score.feedback,
+        streak: r.score.streak,
+      },
+    }));
+  }, [leaderboard, teamAnalysts]);
+
+  const topContent = useMemo(() => {
+    const cutoff = Date.now() - 7 * 86_400_000;
+    return [...teamDrafts]
+      .filter((d) => {
+        const t = d.postedAt ? new Date(d.postedAt).getTime() : new Date(d.createdAt).getTime();
+        return t >= cutoff;
+      })
+      .filter((d) => typeof d.actualEngagement === "number" && (d.actualEngagement ?? 0) > 0)
+      .sort((a, b) => (b.actualEngagement ?? 0) - (a.actualEngagement ?? 0))
+      .slice(0, 5);
+  }, [teamDrafts]);
+
+  const analystByHandle = useMemo(() => {
+    const m: Record<string, TeamAnalyst> = {};
+    teamAnalysts.forEach((a) => {
+      m[a.handle.toLowerCase()] = a;
+    });
+    return m;
+  }, [teamAnalysts]);
+
   if (loading || !user || user.role !== "ADMIN") return null;
 
   /* ─── Derived data ─── */
@@ -465,81 +536,6 @@ export default function AdminDashboardPage() {
         { label: "Images Generated", value: adoption.imagesGenerated30d, total: adoption.totalUsers },
       ]
     : [];
-
-  /* ─── Roster filters & grouping ─── */
-  const filteredRoster = useMemo(() => {
-    const q = rosterSearch.trim().toLowerCase();
-    return roster.filter((u) => {
-      if (q) {
-        const hay = `${u.handle} ${u.displayName ?? ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      if (rosterFilter === "active") {
-        const d = daysSince(u.lastSeen);
-        if (d === null || d > 7) return false;
-      } else if (rosterFilter === "struggling") {
-        if (u.voiceMaturity === "ADVANCED") return false;
-        if (u.totalDrafts > 5) return false;
-      } else if (rosterFilter === "uncalibrated") {
-        if (u.tweetsAnalyzed > 0) return false;
-      }
-      return true;
-    });
-  }, [roster, rosterSearch, rosterFilter]);
-
-  const rosterByRole = useMemo(() => {
-    const groups: Record<string, AdminRosterUser[]> = { ADMIN: [], MANAGER: [], ANALYST: [] };
-    for (const u of filteredRoster) {
-      const key = (u.role || "ANALYST").toUpperCase();
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(u);
-    }
-    return groups;
-  }, [filteredRoster]);
-
-  /* ─── Leaderboard fallback ─── */
-  const effectiveLeaderboard: AdminLeaderboardEntry[] = useMemo(() => {
-    if (leaderboard.length > 0) return leaderboard;
-    // Derive from teamAnalysts
-    const ranked = rankTeam(teamAnalysts);
-    return ranked.map((r) => ({
-      userId: r.analyst.id,
-      handle: r.analyst.handle,
-      displayName: null,
-      avatarUrl: null,
-      score: r.score.total,
-      breakdown: {
-        output: r.score.output,
-        postRate: r.score.postRate,
-        engagementDelta: r.score.engagement,
-        voiceMaturity: r.score.maturity,
-        feedback: r.score.feedback,
-        streak: r.score.streak,
-      },
-    }));
-  }, [leaderboard, teamAnalysts]);
-
-  /* ─── Top content this week ─── */
-  const topContent = useMemo(() => {
-    const cutoff = Date.now() - 7 * 86_400_000;
-    return [...teamDrafts]
-      .filter((d) => {
-        const t = d.postedAt ? new Date(d.postedAt).getTime() : new Date(d.createdAt).getTime();
-        return t >= cutoff;
-      })
-      .filter((d) => typeof d.actualEngagement === "number" && (d.actualEngagement ?? 0) > 0)
-      .sort((a, b) => (b.actualEngagement ?? 0) - (a.actualEngagement ?? 0))
-      .slice(0, 5);
-  }, [teamDrafts]);
-
-  /* ─── Team analyst map for voice dims ─── */
-  const analystByHandle = useMemo(() => {
-    const m: Record<string, TeamAnalyst> = {};
-    teamAnalysts.forEach((a) => {
-      m[a.handle.toLowerCase()] = a;
-    });
-    return m;
-  }, [teamAnalysts]);
 
   /* ─── Handlers ─── */
 
@@ -626,7 +622,7 @@ export default function AdminDashboardPage() {
             Command Center
           </h1>
           <p className="text-atlas-text-secondary mt-2 text-sm">
-            Control what the team sees and how they're performing.
+            Control what the team sees and how they&apos;re performing.
           </p>
         </div>
 
