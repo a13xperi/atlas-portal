@@ -1,4 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
+import type { Page } from "@playwright/test";
 import { test, expect } from "../fixtures";
 
 const ROUTES = [
@@ -13,13 +14,17 @@ const ROUTES = [
   { name: "profile", path: "/profile" },
 ];
 
+async function waitForAuditReady(page: Page, path: string) {
+  await page.goto(path, { waitUntil: "domcontentloaded" });
+  await page.waitForURL((url) => url.pathname === path);
+  await expect(page.locator('nav[aria-label="Main navigation"]')).toBeVisible();
+  await expect(page.locator("#main-content h1").first()).toBeVisible();
+}
+
 test.describe("Accessibility — axe-core audit", () => {
   for (const route of ROUTES) {
     test(`${route.name} has no critical a11y violations`, async ({ authedPage }) => {
-      await authedPage.goto(route.path, { waitUntil: "domcontentloaded" });
-      // Wait for navigation to settle (management may redirect)
-      await authedPage.waitForLoadState("networkidle").catch(() => {});
-      await authedPage.waitForTimeout(1500);
+      await waitForAuditReady(authedPage, route.path);
 
       const results = await new AxeBuilder({ page: authedPage })
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
@@ -64,20 +69,15 @@ test.describe("Accessibility — keyboard navigation", () => {
   });
 
   test("escape closes modal/command palette if open", async ({ authedPage }) => {
-    await authedPage.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await waitForAuditReady(authedPage, "/dashboard");
 
-    // Open command palette with Cmd+K
-    await authedPage.keyboard.press("Meta+k");
-    await authedPage.waitForTimeout(300);
+    // Use the accessible trigger instead of an OS-specific keyboard shortcut.
+    await authedPage.getByRole("button", { name: "Open command palette (⌘K)" }).click();
 
-    // Press escape
+    const palette = authedPage.getByRole("dialog", { name: "Command palette" });
+    await expect(palette).toBeVisible();
+
     await authedPage.keyboard.press("Escape");
-    await authedPage.waitForTimeout(300);
-
-    // Palette should not be visible
-    const palette = authedPage.locator('[role="dialog"]');
-    await expect(palette).toBeHidden({ timeout: 3000 }).catch(() => {
-      // If no dialog existed, that's fine too
-    });
+    await expect(palette).toBeHidden();
   });
 });
