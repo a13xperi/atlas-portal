@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Palette, ClipboardCheck, Bug, Map, BarChart3 } from "lucide-react";
+import { Palette, ClipboardCheck, Bug, Map, BarChart3, Shield } from "lucide-react";
 
 const adminTools = [
   {
@@ -31,6 +31,18 @@ const adminTools = [
     description: "Usage analytics, team activity, and feature adoption",
     href: "/admin/dashboard",
     icon: BarChart3,
+  },
+  {
+    label: "Control Panel",
+    description: "Feature flags, user management, and usage analytics",
+    href: "/admin/control",
+    icon: Shield,
+  },
+  {
+    label: "Public Roadmap",
+    description: "Public feature roadmap — shipped, in progress, planned",
+    href: "/roadmap",
+    icon: Map,
   },
 ];
 
