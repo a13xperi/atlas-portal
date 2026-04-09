@@ -279,6 +279,11 @@ export const api = {
       request<{ reordered: number }>("/api/drafts/queue/reorder", { method: "PATCH", body: { orderedIds } }),
     resetQueueOrder: () =>
       request<{ reset: boolean }>("/api/drafts/queue/reset-order", { method: "POST" }),
+    batchFromContent: (content: string, sourceType: string, options?: { sourceUrl?: string; createCampaign?: boolean; campaignTitle?: string }) =>
+      request<{ insights: any[]; drafts: any[]; campaign?: { id: string; title: string } }>("/api/drafts/batch-from-content", {
+        method: "POST",
+        body: { content, sourceType, ...options },
+      }),
   },
 
   analytics: {
