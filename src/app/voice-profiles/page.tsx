@@ -23,7 +23,7 @@ function formatMaturityLabel(maturity?: VoiceProfile["maturity"]) {
   return `${maturity.charAt(0)}${maturity.slice(1).toLowerCase()}`;
 }
 
-export default function VoiceProfilesPage() {
+function VoiceProfilesPage() {
   useTour("voice-profiles");
   const router = useRouter();
   const [profile, setProfile] = useState<VoiceProfile | null>(null);
