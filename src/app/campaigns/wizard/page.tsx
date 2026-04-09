@@ -60,6 +60,8 @@ export default function CampaignWizardPage() {
   const [insights, setInsights] = useState<InsightData[]>([]);
   const [drafts, setDrafts] = useState<GeneratedDraft[]>([]);
   const [campaignName, setCampaignName] = useState("");
+  const [scheduleMode, setScheduleMode] = useState<"none" | "spread">("none");
+  const [scheduleDays, setScheduleDays] = useState(7);
   const [saving, setSaving] = useState(false);
   const [savedCampaign, setSavedCampaign] = useState<{
     id: string;
@@ -139,19 +141,39 @@ export default function CampaignWizardPage() {
 
   const handleSaveAll = async (createCampaign: boolean) => {
     setSaving(true);
+    setError("");
     try {
       const activeDrafts = drafts.filter((d) => !d.discarded);
 
-      // Update any edited drafts
-      for (const draft of activeDrafts) {
+      // Compute schedule slots if user opted to spread
+      const scheduleSlots: (string | null)[] = activeDrafts.map((_, i) => {
+        if (scheduleMode !== "spread" || activeDrafts.length === 0) return null;
+        const days = Math.max(1, scheduleDays);
+        const totalMs = days * 24 * 60 * 60 * 1000;
+        // Evenly spaced; first slot 1 hour out, last slot at end of window
+        const offset =
+          activeDrafts.length === 1
+            ? totalMs / 2
+            : 60 * 60 * 1000 + (i * (totalMs - 60 * 60 * 1000)) / (activeDrafts.length - 1);
+        return new Date(Date.now() + offset).toISOString();
+      });
+
+      // Persist edits + enqueue/schedule each draft
+      for (let i = 0; i < activeDrafts.length; i++) {
+        const draft = activeDrafts[i];
         await api.drafts.update(draft.id, { content: draft.content });
-        await api.drafts.enqueue(draft.id);
+        const slot = scheduleSlots[i];
+        if (slot) {
+          await api.drafts.schedule(draft.id, slot);
+        } else {
+          await api.drafts.enqueue(draft.id);
+        }
       }
 
       if (createCampaign && campaignName.trim()) {
         const { campaign } = await api.campaigns.create(campaignName.trim());
-        for (const draft of activeDrafts) {
-          await api.campaigns.addDraft(campaign.id, draft.id);
+        for (let i = 0; i < activeDrafts.length; i++) {
+          await api.campaigns.addDraft(campaign.id, activeDrafts[i].id, i + 1);
         }
         setSavedCampaign({ id: campaign.id, title: campaign.name });
       }
@@ -314,6 +336,58 @@ export default function CampaignWizardPage() {
                 placeholder="e.g., ETH Staking Analysis — April 2026"
                 className="w-full rounded-lg border border-glass-border bg-atlas-surface px-3 py-2 text-sm text-atlas-text placeholder:text-atlas-text-muted focus:border-atlas-teal focus:outline-none"
               />
+            </div>
+
+            {/* Scheduling */}
+            <div className="rounded-2xl border border-glass-border bg-glass p-5 backdrop-blur-xl">
+              <label className="mb-3 block text-sm font-medium text-atlas-text">
+                Posting Schedule
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setScheduleMode("none")}
+                  className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                    scheduleMode === "none"
+                      ? "border border-atlas-teal bg-atlas-teal/10 text-atlas-teal"
+                      : "border border-glass-border bg-atlas-surface text-atlas-text-muted hover:text-atlas-text"
+                  }`}
+                >
+                  Queue only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScheduleMode("spread")}
+                  className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                    scheduleMode === "spread"
+                      ? "border border-atlas-teal bg-atlas-teal/10 text-atlas-teal"
+                      : "border border-glass-border bg-atlas-surface text-atlas-text-muted hover:text-atlas-text"
+                  }`}
+                >
+                  Spread evenly
+                </button>
+                {scheduleMode === "spread" && (
+                  <div className="ml-2 flex items-center gap-2">
+                    <span className="text-xs text-atlas-text-muted">over</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={60}
+                      value={scheduleDays}
+                      onChange={(e) =>
+                        setScheduleDays(Math.max(1, parseInt(e.target.value || "1", 10)))
+                      }
+                      className="w-16 rounded-lg border border-glass-border bg-atlas-surface px-2 py-1 text-center text-sm text-atlas-text focus:border-atlas-teal focus:outline-none"
+                    />
+                    <span className="text-xs text-atlas-text-muted">days</span>
+                  </div>
+                )}
+              </div>
+              <p className="mt-2 text-xs text-atlas-text-muted">
+                {scheduleMode === "spread"
+                  ? `${activeDraftCount} post${activeDraftCount !== 1 ? "s" : ""} will be scheduled across the next ${scheduleDays} day${scheduleDays !== 1 ? "s" : ""}.`
+                  : "Posts will be added to your queue without a fixed time."}
+              </p>
             </div>
 
             {/* Summary */}

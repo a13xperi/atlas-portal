@@ -45,7 +45,13 @@ export default function OracleChat() {
   const [state, dispatch] = useReducer(oracleReducer, null, initialOracleState);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const calibratingRef = useRef(false);
+  const drainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
+  const [blendSaveStatus, setBlendSaveStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  // Tracks the persisted blend so future PATCH operations can target it.
+  const [, setSavedBlendId] = useState<string | null>(null);
 
   // Pre-fill display name from user
   useEffect(() => {
@@ -89,22 +95,42 @@ export default function OracleChat() {
   }, [state.currentStep, state.xConnected, state.xHandle]);
 
   // ── Typing animation: drain pending messages with delay ──────────
+  // NOTE: We deliberately do NOT depend on `state.isTyping` here. Doing so
+  // creates a race where dispatching SET_TYPING(true) inside the effect
+  // triggers a re-run, whose cleanup clears the pending dequeue timer
+  // before it can fire — leaving the chat stuck on the typing indicator
+  // forever (the original "blank /onboarding screen" bug).
   useEffect(() => {
-    if (state.pendingMessages.length === 0) return;
-    if (state.isTyping) return;
+    if (state.pendingMessages.length === 0) {
+      // Nothing to drain — make sure the typing indicator clears.
+      if (state.isTyping) dispatch({ type: "SET_TYPING", isTyping: false });
+      return;
+    }
 
-    dispatch({ type: "SET_TYPING", isTyping: true });
+    // A drain is already scheduled — let it complete.
+    if (drainTimerRef.current) return;
+
+    if (!state.isTyping) {
+      dispatch({ type: "SET_TYPING", isTyping: true });
+    }
 
     const msg = state.pendingMessages[0];
     const wordCount = msg.content.split(/\s+/).length;
     const delay = Math.min(1200, Math.max(300, wordCount * 40));
 
-    const timer = setTimeout(() => {
+    drainTimerRef.current = setTimeout(() => {
+      drainTimerRef.current = null;
       dispatch({ type: "DEQUEUE_MESSAGE" });
     }, delay);
 
-    return () => clearTimeout(timer);
-  }, [state.pendingMessages, state.isTyping]);
+    return () => {
+      if (drainTimerRef.current) {
+        clearTimeout(drainTimerRef.current);
+        drainTimerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.pendingMessages]);
 
   // ── Auto-scroll on new messages ──────────────────────────────────
   useEffect(() => {
@@ -140,8 +166,9 @@ export default function OracleChat() {
           }
         }
         if (step === "BLEND") {
+          setBlendSaveStatus("saving");
           try {
-            await api.voice.createBlend(
+            const result = await api.voice.createBlend(
               state.track === "a" ? "Onboarding blend" : "My starting blend",
               buildReferenceBlendVoices(
                 state.selectedRefs,
@@ -149,8 +176,11 @@ export default function OracleChat() {
                 REFERENCE_ACCOUNT_FALLBACK
               )
             );
-          } catch {
-            /* optional */
+            setSavedBlendId(result.blend.id);
+            setBlendSaveStatus("saved");
+          } catch (err) {
+            console.error("Blend persist failed:", err);
+            setBlendSaveStatus("error");
           }
         }
         if (step === "TOPICS") {
@@ -479,6 +509,15 @@ export default function OracleChat() {
                 onChange={(p) => dispatch({ type: "SET_BLEND", percentage: p })}
                 referenceNames={refNames}
               />
+              <p className="text-center text-xs text-atlas-text-muted">
+                {blendSaveStatus === "saving" && "Saving blend…"}
+                {blendSaveStatus === "saved" &&
+                  "Blend saved. Adjustments persist on continue."}
+                {blendSaveStatus === "error" &&
+                  "Couldn't save blend — we'll retry on continue."}
+                {blendSaveStatus === "idle" &&
+                  "We'll save this blend when you continue."}
+              </p>
               <button
                 type="button"
                 onClick={() => {

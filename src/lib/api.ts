@@ -97,6 +97,15 @@ export interface AdminFeedEvent {
   metadata: Record<string, unknown> | null;
 }
 
+export interface FeatureFlagRecord {
+  key: string;
+  name: string;
+  description: string | null;
+  enabled: boolean;
+  rolloutRole: string | null;
+  updatedAt: string;
+}
+
 class ApiError extends Error {
   statusCode: number;
   constructor(message: string, statusCode: number) {
@@ -243,6 +252,20 @@ export const api = {
       request<{ blends: SavedBlend[] }>("/api/voice/blends"),
     createBlend: (name: string, voices: BlendVoiceInput[]) =>
       request<{ blend: SavedBlend }>("/api/voice/blends", { method: "POST", body: { name, voices } }),
+    updateBlendVoice: (
+      blendId: string,
+      voiceId: string,
+      data: { label?: string; percentage?: number; referenceVoiceId?: string | null }
+    ) =>
+      request<{ voice: BlendVoice }>(
+        `/api/voice/blends/${blendId}/voices/${voiceId}`,
+        { method: "PATCH", body: data }
+      ),
+    deleteBlendVoice: (blendId: string, voiceId: string) =>
+      request<{ success: boolean }>(
+        `/api/voice/blends/${blendId}/voices/${voiceId}`,
+        { method: "DELETE" }
+      ),
     calibrate: (handle: string) =>
       request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/calibrate", {
         method: "POST", body: { handle },
@@ -509,6 +532,16 @@ export const api = {
     feed: () => request<{ events: AdminFeedEvent[] }>("/api/admin/feed"),
   },
 
+  featureFlags: {
+    list: () => request<{ flags: FeatureFlagRecord[] }>("/api/admin/feature-flags"),
+    update: (key: string, body: { enabled?: boolean; rolloutRole?: string | null }) =>
+      request<{ flag: FeatureFlagRecord }>(`/api/admin/feature-flags/${key}`, {
+        method: "PATCH",
+        body,
+      }),
+    public: () => request<{ flags: string[] }>("/api/admin/feature-flags/public"),
+  },
+
   campaigns: {
     list: () =>
       request<{ campaigns: Campaign[] }>("/api/campaigns"),
@@ -583,10 +616,19 @@ export interface ReferenceAccount {
   avatarUrl?: string | null;
 }
 
+export interface BlendVoice {
+  id: string;
+  blendId?: string;
+  label: string;
+  percentage: number;
+  referenceVoiceId?: string | null;
+  referenceVoice?: ReferenceVoice | null;
+}
+
 export interface SavedBlend {
   id: string;
   name: string;
-  voices: { label: string; percentage: number; referenceVoice?: ReferenceVoice }[];
+  voices: BlendVoice[];
 }
 
 export interface BlendVoiceInput {
@@ -607,6 +649,8 @@ export interface TweetDraft {
   sourceContent?: string;
   blendId?: string;
   feedback?: string;
+  scheduledAt?: string | null;
+  postedAt?: string | null;
   createdAt: string;
 }
 
