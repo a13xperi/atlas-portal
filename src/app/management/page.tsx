@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { api, TeamMember, TeamAnalyst } from "@/lib/api";
 import AppShell from "@/components/layout/AppShell";
 import FeatureGate from "@/components/ui/FeatureGate";
+import { useActionFeedback } from "@/hooks/useActionFeedback";
 
 function ManagementPage() {
   const { user } = useAuth();
@@ -12,8 +13,12 @@ function ManagementPage() {
   const [analysts, setAnalysts] = useState<TeamAnalyst[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+  const { isLoading, runAction } = useActionFeedback();
+
+  const managementActionLoading =
+    isLoading("push-top-profiles") ||
+    isLoading("send-nudge") ||
+    isLoading("push-style");
 
   useEffect(() => {
     if (!user) return;
@@ -29,23 +34,6 @@ function ManagementPage() {
       })
       .finally(() => setLoading(false));
   }, [user]);
-
-  const runAction = async (
-    action: () => Promise<{ message: string; affected: number }>,
-    label: string
-  ) => {
-    if (actionLoading) return;
-    setActionLoading(true);
-    setActionMessage(null);
-    try {
-      const res = await action();
-      setActionMessage(`${label}: ${res.message} (${res.affected} affected)`);
-    } catch {
-      setActionMessage(`${label} failed. Try again.`);
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
   const getAnalystStats = (memberId: string) =>
     analysts.find((a) => a.id === memberId);
@@ -65,34 +53,64 @@ function ManagementPage() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              disabled={actionLoading}
+              aria-busy={isLoading("push-top-profiles")}
+              disabled={managementActionLoading}
               onClick={() =>
-                void runAction(api.users.pushTopProfiles, "Push top profiles")
+                void runAction("push-top-profiles", api.users.pushTopProfiles)
               }
               className="flex items-center gap-1.5 rounded-lg border border-atlas-teal/40 bg-atlas-teal/10 px-4 py-2 text-xs font-semibold text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/15 disabled:opacity-50"
             >
-              {actionLoading && <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />}
-              Push Top Profiles
+              {isLoading("push-top-profiles") ? (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+                  />
+                  Processing...
+                </>
+              ) : (
+                "Push Top Profiles"
+              )}
             </button>
             <button
               type="button"
-              disabled={actionLoading}
-              onClick={() => void runAction(api.users.sendNudge, "Send nudge")}
+              aria-busy={isLoading("send-nudge")}
+              disabled={managementActionLoading}
+              onClick={() => void runAction("send-nudge", api.users.sendNudge)}
               className="flex items-center gap-1.5 rounded-lg border border-glass-border px-4 py-2 text-xs font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal disabled:opacity-50"
             >
-              {actionLoading && <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />}
-              Send Nudge
+              {isLoading("send-nudge") ? (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+                  />
+                  Processing...
+                </>
+              ) : (
+                "Send Nudge"
+              )}
             </button>
             <button
               type="button"
-              disabled={actionLoading}
+              aria-busy={isLoading("push-style")}
+              disabled={managementActionLoading}
               onClick={() =>
-                void runAction(() => api.users.pushStyle(), "Push style")
+                void runAction("push-style", () => api.users.pushStyle())
               }
               className="flex items-center gap-1.5 rounded-lg border border-glass-border px-4 py-2 text-xs font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal disabled:opacity-50"
             >
-              {actionLoading && <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />}
-              Push Style
+              {isLoading("push-style") ? (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+                  />
+                  Processing...
+                </>
+              ) : (
+                "Push Style"
+              )}
             </button>
           </div>
         </div>
@@ -100,12 +118,6 @@ function ManagementPage() {
         {loadError && (
           <div role="alert" className="mt-4 rounded-xl border border-atlas-error/30 bg-atlas-error/10 px-4 py-3 text-sm text-atlas-error">
             {loadError}
-          </div>
-        )}
-
-        {actionMessage && (
-          <div className="mt-4 rounded-xl border border-glass-border bg-glass/50 px-4 py-3 text-sm text-atlas-text-secondary">
-            {actionMessage}
           </div>
         )}
 

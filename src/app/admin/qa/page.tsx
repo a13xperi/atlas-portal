@@ -5,6 +5,7 @@ import AppShell from "@/components/layout/AppShell";
 import FeatureGate from "@/components/ui/FeatureGate";
 import { useAuth } from "@/lib/auth";
 import { api, QaTestRun } from "@/lib/api";
+import { useActionFeedback } from "@/hooks/useActionFeedback";
 import { sections, TOTAL_TESTS, type TestCase, type TestSection } from "./test-definitions";
 
 type TestStatus = "pending" | "pass" | "fail" | "skip";
@@ -79,6 +80,7 @@ function formatRunLabel(run: QaTestRun) {
 
 function QaContent() {
   const { user, loading: authLoading } = useAuth();
+  const { isLoading, runAction } = useActionFeedback();
 
   const isManager = user?.role === "ADMIN" || user?.role === "MANAGER";
   const testerName = user?.displayName || user?.handle || "Tester";
@@ -97,6 +99,7 @@ function QaContent() {
   // Allow editing if user is manager OR owns the active run
   const activeRun = runs.find((r) => r.id === activeRunId);
   const canEdit = isManager || (!!activeRun && activeRun.tester_id === user?.id);
+  const runActionLoading = isLoading("qa-create-run") || isLoading("qa-delete-run");
 
   // Debounce save
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -194,59 +197,63 @@ function QaContent() {
   );
 
   const createRun = useCallback(async () => {
-    let newRun;
-    try {
-      const res = await api.qa.createRun({
-        tester_name: testerName,
-        tester_initials: testerInitials,
-      });
-      newRun = res.run;
-    } catch {
-      // Backend unavailable — create a local-only run
-    }
+    const newRun = await runAction("qa-create-run", async () => {
+      try {
+        const res = await api.qa.createRun({
+          tester_name: testerName,
+          tester_initials: testerInitials,
+        });
+        return res.run;
+      } catch {
+        return {
+          id: `local-${Date.now()}`,
+          project: "atlas-portal",
+          tester_name: testerName,
+          tester_initials: testerInitials,
+          tester_id: "local",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          results: {},
+          summary: { pass: 0, fail: 0, skip: 0, blockers: 0, total: TOTAL_TESTS },
+          status: "in_progress" as const,
+        };
+      }
+    });
+
     if (!newRun?.id) {
-      newRun = {
-        id: `local-${Date.now()}`,
-        project: "atlas-portal",
-        tester_name: testerName,
-        tester_initials: testerInitials,
-        tester_id: "local",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        results: {},
-        summary: { pass: 0, fail: 0, skip: 0, blockers: 0, total: TOTAL_TESTS },
-        status: "in_progress" as const,
-      };
+      return;
     }
+
     setRuns((prev) => [newRun, ...prev]);
     setActiveRunId(newRun.id);
     setResults({});
-  }, [testerName, testerInitials]);
+  }, [runAction, testerName, testerInitials]);
 
   const deleteRun = useCallback(
     async (id: string) => {
       if (!canEdit) return;
       if (!confirm("Delete this test run? This cannot be undone.")) return;
-      try {
+
+      const deletedRunId = await runAction("qa-delete-run", async () => {
         await api.qa.deleteRun(id);
-        setRuns((prev) => prev.filter((r) => r.id !== id));
-        if (activeRunId === id) {
-          setRuns((prev) => {
-            if (prev.length > 0 && prev[0]?.id) {
-              setActiveRunId(prev[0].id);
-              setResults((prev[0].results ?? {}) as ResultsMap);
-            } else {
-              setActiveRunId(null);
-              setResults({});
-            }
-            return prev;
-          });
-        }
-      } catch {
-        // Silently handle
+        return id;
+      });
+
+      if (!deletedRunId) {
+        return;
+      }
+
+      const nextRuns = runs.filter((run) => run.id !== deletedRunId);
+
+      setRuns(nextRuns);
+
+      if (activeRunId === deletedRunId) {
+        const nextActiveRun = nextRuns[0];
+        setActiveRunId(nextActiveRun?.id ?? null);
+        setResults((nextActiveRun?.results ?? {}) as ResultsMap);
       }
     },
-    [canEdit, activeRunId],
+    [activeRunId, canEdit, runAction, runs],
   );
 
   const switchRun = useCallback(
@@ -416,16 +423,40 @@ function QaContent() {
 
           <button
             onClick={createRun}
-            className="rounded-md border border-atlas-teal bg-atlas-teal/15 px-3 py-1 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/25"
+            aria-busy={isLoading("qa-create-run")}
+            disabled={runActionLoading}
+            className="inline-flex items-center gap-1.5 rounded-md border border-atlas-teal bg-atlas-teal/15 px-3 py-1 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/25 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            + New Run
+            {isLoading("qa-create-run") ? (
+              <>
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+                />
+                Processing...
+              </>
+            ) : (
+              "+ New Run"
+            )}
           </button>
           {activeRunId && isManager && (
             <button
               onClick={() => deleteRun(activeRunId)}
-              className="rounded-md border border-red-500/30 px-3 py-1 text-xs text-red-400 transition-colors hover:bg-red-500/10"
+              aria-busy={isLoading("qa-delete-run")}
+              disabled={runActionLoading}
+              className="inline-flex items-center gap-1.5 rounded-md border border-red-500/30 px-3 py-1 text-xs text-red-400 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Delete
+              {isLoading("qa-delete-run") ? (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+                  />
+                  Processing...
+                </>
+              ) : (
+                "Delete"
+              )}
             </button>
           )}
 
