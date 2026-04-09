@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Check, Loader2, PencilLine, RefreshCw, Sparkles, Twitter } from "lucide-react";
+import { Check, Loader2, PencilLine, RefreshCw, Sparkles, AtSign } from "lucide-react";
 import ReferenceVoiceSelector from "@/components/onboarding/ReferenceVoiceSelector";
 import GradientButton from "@/components/ui/GradientButton";
 import Modal from "@/components/ui/Modal";
@@ -356,7 +356,7 @@ export default function ReferenceVoicesSection({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-delphi-blue-400">
-              <Twitter className="h-3.5 w-3.5" />
+              <AtSign className="h-3.5 w-3.5" />
               Discover from X
             </p>
             <h2 className="mt-2 font-heading text-xl font-bold tracking-tight text-atlas-text">
@@ -379,7 +379,7 @@ export default function ReferenceVoicesSection({
               ) : followsLoaded ? (
                 <RefreshCw className="h-4 w-4" />
               ) : (
-                <Twitter className="h-4 w-4" />
+                <AtSign className="h-4 w-4" />
               )}
               {followsLoading
                 ? "Loading"
@@ -398,7 +398,7 @@ export default function ReferenceVoicesSection({
 
         {!followsLoaded && !followsLoading && !followsError && (
           <div className="mt-5 rounded-2xl border border-dashed border-glass-border bg-atlas-surface/40 px-4 py-8 text-center">
-            <Twitter className="mx-auto h-5 w-5 text-atlas-teal" />
+            <AtSign className="mx-auto h-5 w-5 text-atlas-teal" />
             <p className="mt-3 text-sm text-atlas-text-secondary">
               Click{" "}
               <span className="font-medium text-atlas-text">
