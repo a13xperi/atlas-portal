@@ -10,12 +10,12 @@ import VoiceCard from "@/components/voice-profiles/VoiceCard";
 import VoiceEditorModal from "@/components/voice-profiles/VoiceEditorModal";
 import {
   api,
+  BlendVoiceInput,
   ReferenceVoice,
   SavedBlend,
   VoiceProfile,
 } from "@/lib/api";
 import {
-  DEFAULT_VOICE_DIMENSIONS,
   pickVoiceDimensions,
   VoiceDimensions,
 } from "@/lib/voice-profile-dimensions";
@@ -88,14 +88,55 @@ export default function VoiceProfilesPage() {
     router.push("/crafting");
   };
 
+  const buildBlendVoicesFromReferences = (): BlendVoiceInput[] => {
+    // Personal voice always anchors the blend at 50%; remaining 50% is split
+    // evenly across the user's saved reference voices. If they have no
+    // references yet, the blend is just the personal voice at 100%.
+    const refs = references.filter((r) => r.isActive);
+    if (refs.length === 0) {
+      return [{ label: "My voice", percentage: 100 }];
+    }
+    const personalShare = 50;
+    const remaining = 100 - personalShare;
+    const each = Math.floor(remaining / refs.length);
+    const leftover = remaining - each * refs.length;
+    return [
+      { label: "My voice", percentage: personalShare },
+      ...refs.map((ref, idx) => ({
+        label: ref.name,
+        percentage: each + (idx === 0 ? leftover : 0),
+        referenceVoiceId: ref.id,
+      })),
+    ];
+  };
+
   const handleSaveVoice = async (name: string, dimensions: VoiceDimensions) => {
-    if (editorMode === "edit-personal") {
-      const response = await api.voice.updateProfile(dimensions);
-      setProfile(response.profile);
-    } else {
-      await api.voice.createBlend(name, [{ label: "Personal", percentage: 100 }]);
+    try {
+      if (editorMode === "edit-personal") {
+        const response = await api.voice.updateProfile(dimensions);
+        setProfile(response.profile);
+        return;
+      }
+
+      if (editorMode === "edit-blend" && selectedBlend) {
+        // Persist any voice-percentage changes via the per-voice PATCH endpoint.
+        // Today the editor only exposes voice dimensions (not blend percentages),
+        // so this branch is a no-op rename hook until the editor surfaces them.
+        // We still re-fetch so the UI reflects the latest server state.
+        const response = await api.voice.getBlends();
+        setBlends(response.blends);
+        return;
+      }
+
+      // create mode: build a real blend from saved reference voices and persist.
+      const voices = buildBlendVoicesFromReferences();
+      await api.voice.createBlend(name, voices);
       const response = await api.voice.getBlends();
       setBlends(response.blends);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to save voice";
+      setError(message);
+      throw e;
     }
   };
 
@@ -163,7 +204,7 @@ export default function VoiceProfilesPage() {
               isActive={activeVoiceId === blend.id}
               isPersonal={false}
               isSelected={selectedVoiceId === blend.id}
-              dimensions={DEFAULT_VOICE_DIMENSIONS}
+              dimensions={personalDimensions}
               onSelect={() => setSelectedVoiceId(blend.id)}
               onUse={() => handleUseVoice(blend.id)}
             />
