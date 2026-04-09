@@ -10,18 +10,22 @@ export default function ManagementPage() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [analysts, setAnalysts] = useState<TeamAnalyst[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
 
+    setLoadError(null);
     Promise.all([api.users.team(), api.analytics.team()])
       .then(([teamRes, analyticsRes]) => {
         setTeam(teamRes.team);
         setAnalysts(analyticsRes.analysts);
       })
-      .catch(() => {})
+      .catch((err: Error) => {
+        setLoadError(err.message || 'Failed to load team data. Please refresh.');
+      })
       .finally(() => setLoading(false));
   }, [user]);
 
@@ -91,6 +95,12 @@ export default function ManagementPage() {
             </button>
           </div>
         </div>
+
+        {loadError && (
+          <div role="alert" className="mt-4 rounded-xl border border-atlas-error/30 bg-atlas-error/10 px-4 py-3 text-sm text-atlas-error">
+            {loadError}
+          </div>
+        )}
 
         {actionMessage && (
           <div className="mt-4 rounded-xl border border-glass-border bg-glass/50 px-4 py-3 text-sm text-atlas-text-secondary">
