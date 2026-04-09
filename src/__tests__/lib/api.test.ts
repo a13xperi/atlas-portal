@@ -157,6 +157,24 @@ describe("api.drafts.list", () => {
   });
 });
 
+describe("api.analytics.engagementDaily", () => {
+  it("wraps legacy array responses in a days object", async () => {
+    const data = [{ date: "2026-04-09", dayLabel: "Wed", predicted: 12, actual: 9 }];
+    mockFetch(data);
+
+    const result = await api.analytics.engagementDaily();
+
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/api/analytics/engagement-daily`,
+      expect.objectContaining({
+        method: "GET",
+        credentials: "include",
+      })
+    );
+    expect(result).toEqual({ days: data });
+  });
+});
+
 describe("api.drafts.generate", () => {
   it("sends the selected reply angle metadata in the request body", async () => {
     mockFetch({ draft: { id: "draft_1" } });

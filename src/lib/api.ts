@@ -206,6 +206,10 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
         if (json && typeof json === "object" && "ok" in json && "data" in json) {
           return json.data as T;
         }
+        // The analytics backend still returns a raw array for this legacy endpoint.
+        if (path === "/api/analytics/engagement-daily" && Array.isArray(json)) {
+          return { days: json } as T;
+        }
         return json as T;
       }
     } catch (e) {
