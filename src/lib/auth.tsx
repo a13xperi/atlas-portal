@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
-import { api, User, VoiceProfile, setAccessToken } from "./api";
+import { api, OnboardingTrack, User, VoiceProfile, setAccessToken } from "./api";
 
 // Session flag cookie — tells the middleware the user has logged in.
 // The real auth token is cross-origin (HttpOnly on the backend domain),
@@ -19,7 +19,7 @@ interface AuthState {
   user: (User & { voiceProfile?: VoiceProfile }) | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (handle: string, email: string, password: string, onboardingTrack?: string) => Promise<void>;
+  register: (handle: string, email: string, password: string, onboardingTrack?: OnboardingTrack) => Promise<void>;
   logout: () => void;
 }
 
@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSessionCookie(true);
   }, []);
 
-  const register = useCallback(async (handle: string, email: string, password: string, onboardingTrack?: string) => {
+  const register = useCallback(async (handle: string, email: string, password: string, onboardingTrack?: OnboardingTrack) => {
     const res = await api.auth.register(handle, email, password, onboardingTrack);
     if (res.token) {
       setAccessToken(res.token);

@@ -450,10 +450,13 @@ test.describe("Route smoke tests", () => {
         { name: "atlas_access_token", value: "1", domain: url.hostname, path: "/" },
       ];
       // Bypass Vercel deployment protection on preview URLs
-      if (process.env.VERCEL_PROTECTION_BYPASS) {
+      const vercelBypass =
+        process.env.VERCEL_AUTOMATION_BYPASS_SECRET ??
+        process.env.VERCEL_PROTECTION_BYPASS;
+      if (vercelBypass) {
         cookies.push({
           name: "_vercel_password",
-          value: process.env.VERCEL_PROTECTION_BYPASS,
+          value: vercelBypass,
           domain: url.hostname,
           path: "/",
         });

@@ -59,12 +59,12 @@ describe("api.auth.register", () => {
     const data = { user: { id: "2", handle: "bob", role: "ANALYST" }, token: "tok_456", refresh_token: "rt_456" };
     mockFetch(data);
 
-    await api.auth.register("bob", "bob@example.com", "pass123", "crypto");
+    await api.auth.register("bob", "bob@example.com", "pass123", "TRACK_A");
 
     expect(fetch).toHaveBeenCalledWith(
       `${API_URL}/api/auth/register`,
       expect.objectContaining({
-        body: JSON.stringify({ handle: "bob", email: "bob@example.com", password: "pass123", onboardingTrack: "crypto" }),
+        body: JSON.stringify({ handle: "bob", email: "bob@example.com", password: "pass123", onboardingTrack: "TRACK_A" }),
         credentials: "include",
       })
     );
@@ -154,6 +154,24 @@ describe("api.drafts.list", () => {
       `${API_URL}/api/drafts`,
       expect.anything()
     );
+  });
+});
+
+describe("api.analytics.engagementDaily", () => {
+  it("wraps legacy array responses in a days object", async () => {
+    const data = [{ date: "2026-04-09", dayLabel: "Wed", predicted: 12, actual: 9 }];
+    mockFetch(data);
+
+    const result = await api.analytics.engagementDaily();
+
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/api/analytics/engagement-daily`,
+      expect.objectContaining({
+        method: "GET",
+        credentials: "include",
+      })
+    );
+    expect(result).toEqual({ days: data });
   });
 });
 

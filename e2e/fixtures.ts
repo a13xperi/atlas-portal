@@ -199,7 +199,9 @@ async function stubDataEndpoints(page: Page) {
 export function vercelBypassCookies(
   domain: string,
 ): Array<{ name: string; value: string; domain: string; path: string }> {
-  const token = process.env.VERCEL_PROTECTION_BYPASS;
+  const token =
+    process.env.VERCEL_AUTOMATION_BYPASS_SECRET ??
+    process.env.VERCEL_PROTECTION_BYPASS;
   if (!token) return [];
   return [{ name: "_vercel_password", value: token, domain, path: "/" }];
 }
@@ -214,10 +216,13 @@ export const test = base.extend<{ authedPage: Page }>({
       { name: "atlas_session", value: "1", domain: url.hostname, path: "/" },
     ];
     // Bypass Vercel deployment protection on preview URLs
-    if (process.env.VERCEL_PROTECTION_BYPASS) {
+    const vercelBypass =
+      process.env.VERCEL_AUTOMATION_BYPASS_SECRET ??
+      process.env.VERCEL_PROTECTION_BYPASS;
+    if (vercelBypass) {
       cookies.push({
         name: "_vercel_password",
-        value: process.env.VERCEL_PROTECTION_BYPASS,
+        value: vercelBypass,
         domain: url.hostname,
         path: "/",
       });
