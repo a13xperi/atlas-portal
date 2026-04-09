@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { api, TeamMember, TeamAnalyst } from "@/lib/api";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 
-export default function ManagementPage() {
+function ManagementPage() {
   const { user } = useAuth();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [analysts, setAnalysts] = useState<TeamAnalyst[]>([]);
@@ -206,5 +207,13 @@ export default function ManagementPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+export default function ManagementPageGated() {
+  return (
+    <FeatureGate flagKey="management">
+      <ManagementPage />
+    </FeatureGate>
   );
 }

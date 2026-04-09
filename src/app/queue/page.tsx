@@ -29,6 +29,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import QueueTimeline from "@/components/queue/QueueTimeline";
 import { api, QueuedDraft } from "@/lib/api";
 
@@ -159,7 +160,7 @@ function SortableQueueItem({
   );
 }
 
-export default function QueuePage() {
+function QueuePage() {
   const [queue, setQueue] = useState<QueuedDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -523,5 +524,13 @@ export default function QueuePage() {
         </div>
       )}
     </AppShell>
+  );
+}
+
+export default function QueuePageGated() {
+  return (
+    <FeatureGate flagKey="queue">
+      <QueuePage />
+    </FeatureGate>
   );
 }

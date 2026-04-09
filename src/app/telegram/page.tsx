@@ -1,6 +1,7 @@
 "use client";
 
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import { useAuth } from "@/lib/auth";
 import {
   CheckCircle2,
@@ -36,6 +37,7 @@ export default function TelegramPage() {
   const isConnected = !!user?.telegramChatId;
 
   return (
+    <FeatureGate flagKey="telegram_bot">
     <AppShell>
       <div className="mx-auto flex max-w-2xl flex-col px-4 py-10 font-body sm:px-6">
         {isConnected ? (
@@ -101,5 +103,6 @@ export default function TelegramPage() {
         </div>
       </div>
     </AppShell>
+    </FeatureGate>
   );
 }

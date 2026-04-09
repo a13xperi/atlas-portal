@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import GlassCard from "@/components/ui/GlassCard";
 import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
@@ -56,7 +57,7 @@ function PositionBadge({ rank }: { rank: number }) {
   );
 }
 
-export default function ArenaPage() {
+function ArenaPage() {
   const { user } = useAuth();
   const [analysts, setAnalysts] = useState<TeamAnalyst[]>([]);
   const [loading, setLoading] = useState(true);
@@ -557,5 +558,13 @@ export default function ArenaPage() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function ArenaPageGated() {
+  return (
+    <FeatureGate flagKey="arena">
+      <ArenaPage />
+    </FeatureGate>
   );
 }

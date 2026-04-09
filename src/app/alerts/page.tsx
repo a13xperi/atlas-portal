@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Search, Settings } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import InlineDraftCard from "@/components/alerts/InlineDraftCard";
 import MonitorBuilder from "@/components/alerts/MonitorBuilder";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -23,7 +24,7 @@ function formatAlertTimestamp(createdAt: string) {
   }).format(new Date(createdAt));
 }
 
-export default function AlertsPage() {
+function AlertsPage() {
   const router = useRouter();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [subscriptions, setSubscriptions] = useState<AlertSubscription[]>([]);
@@ -254,5 +255,13 @@ export default function AlertsPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+export default function AlertsPageGated() {
+  return (
+    <FeatureGate flagKey="signals">
+      <AlertsPage />
+    </FeatureGate>
   );
 }

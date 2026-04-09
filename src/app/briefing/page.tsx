@@ -5,6 +5,7 @@ import { Loader2, Settings, RefreshCw, Clock, ChevronDown, ChevronUp, PenTool, S
 import GlassCard from "@/components/ui/GlassCard";
 import GradientButton from "@/components/ui/GradientButton";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import { useRouter } from "next/navigation";
 import { api, Briefing, BriefingSection } from "@/lib/api";
 
@@ -110,7 +111,7 @@ function getTimeAgo(date: Date): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export default function BriefingPage() {
+function BriefingPage() {
   const router = useRouter();
   const [briefings, setBriefings] = useState<Briefing[]>([]);
   const [hasPreferences, setHasPreferences] = useState<boolean | null>(null);
@@ -375,5 +376,13 @@ function PreferencesForm({
         {saved && <span className="text-sm text-atlas-success">Saved</span>}
       </div>
     </GlassCard>
+  );
+}
+
+export default function BriefingPageGated() {
+  return (
+    <FeatureGate flagKey="briefing">
+      <BriefingPage />
+    </FeatureGate>
   );
 }
