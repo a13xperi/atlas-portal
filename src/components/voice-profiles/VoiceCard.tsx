@@ -5,20 +5,8 @@ interface VoiceCardProps {
   isActive: boolean;
   isPersonal: boolean;
   isSelected: boolean;
-  dimensions?: { humor?: number; formality?: number; brevity?: number; contrarianTone?: number };
   onSelect: () => void;
   onUse: () => void;
-}
-
-function MiniBar({ value }: { value: number }) {
-  return (
-    <div className="h-1 w-full rounded-full bg-atlas-bg/60">
-      <div
-        className="h-1 rounded-full bg-atlas-teal/60"
-        style={{ width: `${value}%` }}
-      />
-    </div>
-  );
 }
 
 export default function VoiceCard({
@@ -26,7 +14,6 @@ export default function VoiceCard({
   isActive,
   isPersonal,
   isSelected,
-  dimensions,
   onSelect,
   onUse,
 }: VoiceCardProps) {
@@ -60,16 +47,6 @@ export default function VoiceCard({
       <p className="mt-2 font-heading text-sm font-semibold text-atlas-text truncate">
         {name}
       </p>
-
-      {/* Mini dimension preview */}
-      {dimensions && (
-        <div className="mt-3 space-y-1.5">
-          <MiniBar value={dimensions.humor ?? 50} />
-          <MiniBar value={dimensions.formality ?? 50} />
-          <MiniBar value={dimensions.brevity ?? 50} />
-          <MiniBar value={dimensions.contrarianTone ?? 50} />
-        </div>
-      )}
 
       {/* Use / Active button */}
       <button
