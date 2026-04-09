@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Compass, ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { TourStep } from "@/lib/tour";
 
 interface TourSpotlightProps {
@@ -61,17 +61,55 @@ export default function TourSpotlight({
     return () => { clearTimeout(t); clearTimeout(start); cancelAnimationFrame(raf); };
   }, [step.targetSelector, measure]);
 
-  // Bubble positioning — always below target, clamped to viewport
   const bubbleStyle = (): React.CSSProperties => {
-    if (!rect) return { opacity: 0, position: "fixed" };
+    if (!rect) {
+      return { opacity: 0, position: "fixed" };
+    }
+
     const gap = 12;
-    const bw = 380;
-    const vw = window.innerWidth;
+    const bubbleWidth = Math.min(380, window.innerWidth - 24);
+    const maxLeft = window.innerWidth - bubbleWidth - 12;
+    const maxTop = window.innerHeight - 200;
+    const centeredLeft = Math.max(
+      12,
+      Math.min(rect.left + rect.width / 2 - bubbleWidth / 2, maxLeft),
+    );
+
+    if (step.position === "top") {
+      return {
+        position: "fixed",
+        top: Math.max(12, rect.top - 176 - gap),
+        left: centeredLeft,
+        width: bubbleWidth,
+        zIndex: 201,
+      };
+    }
+
+    if (step.position === "left") {
+      return {
+        position: "fixed",
+        top: Math.max(12, Math.min(rect.top, maxTop)),
+        left: Math.max(12, rect.left - bubbleWidth - gap),
+        width: bubbleWidth,
+        zIndex: 201,
+      };
+    }
+
+    if (step.position === "right") {
+      return {
+        position: "fixed",
+        top: Math.max(12, Math.min(rect.top, maxTop)),
+        left: Math.min(maxLeft, rect.left + rect.width + gap),
+        width: bubbleWidth,
+        zIndex: 201,
+      };
+    }
+
     return {
       position: "fixed",
-      top: Math.min(rect.top + rect.height + gap, window.innerHeight - 200),
-      left: Math.max(12, Math.min(rect.left, vw - bw - 12)),
-      width: bw,
+      top: Math.min(rect.top + rect.height + gap, maxTop),
+      left: centeredLeft,
+      width: bubbleWidth,
       zIndex: 201,
     };
   };
@@ -105,9 +143,11 @@ export default function TourSpotlight({
 
       {/* Oracle bubble */}
       <div className="transition-all duration-300" style={{ ...bubbleStyle(), pointerEvents: "auto" }}>
-        <div className="rounded-2xl border border-glass-border bg-atlas-nav/95 p-4 shadow-2xl backdrop-blur-xl">
+        <div className="bg-glass backdrop-blur-xl border border-glass-border rounded-2xl p-4 shadow-2xl">
           <div className="flex gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-atlas-teal/20 text-sm">🔮</div>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-atlas-teal/15 text-atlas-teal">
+              <Compass className="h-4 w-4" aria-hidden="true" />
+            </div>
             <div className="flex-1">
               <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-atlas-teal">The Oracle</p>
               <p className="text-sm leading-relaxed text-atlas-text">{step.oracleMessage}</p>
@@ -136,7 +176,7 @@ export default function TourSpotlight({
 
       {/* Close X */}
       <button type="button" onClick={onSkip} className="fixed right-4 top-4" style={{ pointerEvents: "auto", zIndex: 201 }} aria-label="Close tour">
-        <X className="h-5 w-5 text-white/50 hover:text-white" />
+        <X className="h-5 w-5 text-atlas-text-muted transition-colors hover:text-atlas-text" />
       </button>
     </div>
   );

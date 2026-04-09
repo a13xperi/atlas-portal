@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import TweetTinderSection from "./tweet-tinder-section";
+import { useTour } from "@/components/tour/TourProvider";
 import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
 import VoiceCard from "@/components/voice-profiles/VoiceCard";
 import {
@@ -22,6 +23,8 @@ function formatMaturityLabel(maturity?: VoiceProfile["maturity"]) {
 }
 
 export default function VoiceProfilesPage() {
+  useTour("voice-profiles");
+
   const router = useRouter();
   const [profile, setProfile] = useState<VoiceProfile | null>(null);
   const [references, setReferences] = useState<ReferenceVoice[]>([]);
@@ -112,7 +115,10 @@ export default function VoiceProfilesPage() {
         </p>
 
         {/* Voice Library Grid */}
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div
+          className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
+          data-tour="voice-library"
+        >
           <VoiceCard
             name="Personal Voice"
             isActive={activeVoiceId === PERSONAL_VOICE_ID}
@@ -174,7 +180,7 @@ export default function VoiceProfilesPage() {
         </div>
 
         {/* Tweet Tinder — voice calibration via liked tweets */}
-        <div className="mt-8">
+        <div className="mt-8" data-tour="tweet-tinder">
           <TweetTinderSection />
         </div>
 
