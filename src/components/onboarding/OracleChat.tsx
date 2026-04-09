@@ -55,6 +55,11 @@ export default function OracleChat() {
   const drainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [resumeTrackAAfterOAuth, setResumeTrackAAfterOAuth] = useState(false);
+  const [blendSaveStatus, setBlendSaveStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  // Tracks the persisted blend so future PATCH operations can target it.
+  const [, setSavedBlendId] = useState<string | null>(null);
 
   // Pre-fill handle from linked X profile
   useEffect(() => {
@@ -216,6 +221,24 @@ export default function OracleChat() {
             } catch {
               /* optional */
             }
+          }
+        }
+        if (step === "BLEND") {
+          setBlendSaveStatus("saving");
+          try {
+            const result = await api.voice.createBlend(
+              state.track === "a" ? "Onboarding blend" : "My starting blend",
+              buildReferenceBlendVoices(
+                state.selectedRefs,
+                state.selfPercentage,
+                REFERENCE_ACCOUNT_FALLBACK
+              )
+            );
+            setSavedBlendId(result.blend.id);
+            setBlendSaveStatus("saved");
+          } catch (err) {
+            console.error("Blend persist failed:", err);
+            setBlendSaveStatus("error");
           }
         }
         if (step === "TOPICS") {
