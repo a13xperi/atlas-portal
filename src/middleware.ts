@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Public routes that don't require authentication
-const PUBLIC_PATHS = new Set(["/", "/auth/x/callback", "/onboarding"]);
+const PUBLIC_PATHS = new Set(["/", "/auth/x/callback", "/auth/callback", "/onboarding"]);
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.has(pathname) || pathname.startsWith("/onboarding") || pathname.startsWith("/admin") || pathname.startsWith("/_next") || pathname.startsWith("/api") || pathname === "/style-tile.html";
