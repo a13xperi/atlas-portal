@@ -17,9 +17,10 @@ test.describe("Accessibility — axe-core audit", () => {
   for (const route of ROUTES) {
     test(`${route.name} has no critical a11y violations`, async ({ authedPage }) => {
       await authedPage.goto(route.path, { waitUntil: "domcontentloaded" });
-      // Wait for navigation to settle (management may redirect)
-      await authedPage.waitForLoadState("networkidle").catch(() => {});
-      await authedPage.waitForTimeout(1500);
+      // Wait for main content to render instead of unreliable networkidle
+      await authedPage.locator("main, [role='main'], #__next > div").first().waitFor({ state: "visible", timeout: 10_000 });
+      // Small buffer for React hydration
+      await authedPage.waitForTimeout(500);
 
       const results = await new AxeBuilder({ page: authedPage })
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
@@ -65,19 +66,19 @@ test.describe("Accessibility — keyboard navigation", () => {
 
   test("escape closes modal/command palette if open", async ({ authedPage }) => {
     await authedPage.goto("/dashboard", { waitUntil: "domcontentloaded" });
+    await authedPage.locator("main, [role='main'], #__next > div").first().waitFor({ state: "visible", timeout: 10_000 });
 
     // Open command palette with Cmd+K
     await authedPage.keyboard.press("Meta+k");
-    await authedPage.waitForTimeout(300);
 
-    // Press escape
-    await authedPage.keyboard.press("Escape");
-    await authedPage.waitForTimeout(300);
+    // Wait for command palette to actually appear
+    const palette = authedPage.locator("[role='dialog'], [data-testid='command-palette'], [class*='command']").first();
+    const paletteVisible = await palette.waitFor({ state: "visible", timeout: 3_000 }).then(() => true).catch(() => false);
 
-    // Palette should not be visible
-    const palette = authedPage.locator('[role="dialog"]');
-    await expect(palette).toBeHidden({ timeout: 3000 }).catch(() => {
-      // If no dialog existed, that's fine too
-    });
+    if (paletteVisible) {
+      await authedPage.keyboard.press("Escape");
+      await palette.waitFor({ state: "hidden", timeout: 3_000 });
+    }
+    // If no palette appeared, the test passes — Cmd+K may not be wired in stub mode
   });
 });
