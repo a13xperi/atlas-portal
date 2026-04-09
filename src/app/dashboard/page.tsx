@@ -31,7 +31,7 @@ const defaultStats = {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState(defaultStats);
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [quickDraft, setQuickDraft] = useState("");
@@ -46,6 +46,8 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading || !user) return;
+
     let cancelled = false;
 
     const loadDashboard = async () => {
@@ -127,7 +129,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user, authLoading]);
 
   const statCards = [
     { label: "Drafts this week", value: String(stats.drafts), href: "/crafting" },
