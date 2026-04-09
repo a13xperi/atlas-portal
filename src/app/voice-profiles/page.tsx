@@ -6,6 +6,7 @@ import { Sparkles } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import TweetTinderSection from "./tweet-tinder-section";
 import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
+import VoiceLabInspirationPicker from "@/components/voice-profiles/VoiceLabInspirationPicker";
 import VoiceCard from "@/components/voice-profiles/VoiceCard";
 import {
   api,
@@ -161,15 +162,8 @@ export default function VoiceProfilesPage() {
             </div>
           </div>
 
-          {/* Voice Lab will be rebuilt with Twitter-based voice inspiration flow */}
-          <div className="mt-6 rounded-xl border border-dashed border-glass-border bg-atlas-bg/30 px-6 py-10 text-center">
-            <Sparkles className="mx-auto h-6 w-6 text-atlas-teal/60" />
-            <p className="mt-3 text-sm font-medium text-atlas-text-secondary">
-              Voice Lab is being redesigned
-            </p>
-            <p className="mt-1 text-xs text-atlas-text-muted">
-              A new Twitter-based voice calibration experience is coming soon.
-            </p>
+          <div className="mt-6">
+            <VoiceLabInspirationPicker onProfileRefresh={setProfile} />
           </div>
         </div>
 

@@ -69,6 +69,11 @@ jest.mock("@/components/layout/AppShell", () => ({
   default: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
+jest.mock("@/app/voice-profiles/tweet-tinder-section", () => ({
+  __esModule: true,
+  default: () => <div>Tweet Tinder Section</div>,
+}));
+
 jest.mock("@/components/voice-profiles/ReferenceVoicesSection", () => ({
   __esModule: true,
   default: ({
@@ -82,6 +87,11 @@ jest.mock("@/components/voice-profiles/ReferenceVoicesSection", () => ({
       ))}
     </div>
   ),
+}));
+
+jest.mock("@/components/voice-profiles/VoiceLabInspirationPicker", () => ({
+  __esModule: true,
+  default: () => <div>Voice Lab Inspiration Picker</div>,
 }));
 
 jest.mock("@/components/voice-profiles/VoiceCard", () => ({
@@ -146,11 +156,11 @@ describe("VoiceProfilesPage", () => {
     expect((await screen.findAllByText("Hasu")).length).toBeGreaterThan(0);
   });
 
-  it("shows the redesign placeholder", async () => {
+  it("renders the new Voice Lab picker", async () => {
     render(<VoiceProfilesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("Voice Lab is being redesigned")).toBeInTheDocument();
+      expect(screen.getByText("Voice Lab Inspiration Picker")).toBeInTheDocument();
     });
   });
 
