@@ -37,7 +37,7 @@ const navLinks = [
   { label: "Feed", href: "/feed", icon: Rss },
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Crafting", href: "/crafting", icon: PenTool },
-  { label: "Voices", href: "/voice-profiles", icon: Mic2 },
+  { label: "Voice Lab", href: "/voice-profiles", icon: Mic2 },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Briefing", href: "/briefing", icon: Newspaper },
   { label: "Signals", href: "/alerts", icon: Zap },

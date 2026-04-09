@@ -48,8 +48,19 @@ export default function AuthCallbackPage() {
       .then((res) => {
         setStatus("success");
         const handle = res.user?.handle;
-        setMessage(handle ? `Welcome, @${handle}!` : "You're in!");
-        setTimeout(() => router.replace("/dashboard"), 1500);
+        // New users (no voice calibration yet) go to onboarding.
+        // Existing users go straight to the dashboard.
+        const isNewUser =
+          !res.user?.voiceProfile || (res.user.voiceProfile.tweetsAnalyzed ?? 0) === 0;
+        const destination = isNewUser ? "/onboarding" : "/dashboard";
+        setMessage(
+          handle
+            ? isNewUser
+              ? `Welcome, @${handle}! Setting up your account...`
+              : `Welcome back, @${handle}!`
+            : "You're in!"
+        );
+        setTimeout(() => router.replace(destination), 1500);
       })
       .catch(() => {
         setStatus("error");
@@ -77,7 +88,7 @@ export default function AuthCallbackPage() {
         )}
         <p className="text-atlas-text text-lg">{message}</p>
         {status === "success" && (
-          <p className="text-atlas-text-secondary text-sm mt-2">Redirecting to dashboard...</p>
+          <p className="text-atlas-text-secondary text-sm mt-2">Redirecting...</p>
         )}
         {status === "error" && (
           <button
