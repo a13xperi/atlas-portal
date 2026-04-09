@@ -8,18 +8,19 @@ import StatusPill from "@/components/ui/StatusPill";
 import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
 import { api, TweetDraft, QueuedDraft, TrendingTopic } from "@/lib/api";
-import { PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users, TrendingUp, X, Clock, Zap, Calendar, Sparkles, ArrowRight } from "lucide-react";
+import { PenTool, Bell, BarChart3, Mic2, BookOpen, Users, TrendingUp, X, Clock, Zap, Calendar, Sparkles, ArrowRight, Trophy } from "lucide-react";
 import DashboardSkeleton from "@/components/skeletons/DashboardSkeleton";
 import OracleWidget from "@/components/oracle/OracleWidget";
+import { useRouteEnabled, useFeatureFlags } from "@/lib/feature-flags";
 
 const navCards = [
   { label: "Crafting Station", href: "/crafting", icon: PenTool },
-  { label: "Alerts + Momentum", href: "/alerts", icon: Bell },
-  { label: "Analytics + Predictions", href: "/analytics", icon: BarChart3 },
-  { label: "Voice Profiles", href: "/voice-profiles", icon: Mic2 },
-  { label: "Team Style Library", href: "/team-library", icon: BookOpen },
-  { label: "Telegram Guide", href: "/telegram", icon: Send },
-  { label: "Team Management", href: "/management", icon: Users },
+  { label: "Voice Lab", href: "/voice-profiles", icon: Mic2 },
+  { label: "Voice Library", href: "/team-library", icon: BookOpen },
+  { label: "Arena", href: "/arena", icon: Trophy },
+  { label: "Signals", href: "/alerts", icon: Bell },
+  { label: "Analytics", href: "/analytics", icon: BarChart3 },
+  { label: "Management", href: "/management", icon: Users },
 ];
 
 const defaultStats = {
@@ -32,6 +33,9 @@ const defaultStats = {
 export default function DashboardPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const isRouteEnabled = useRouteEnabled();
+  const { isEnabled } = useFeatureFlags();
+  const visibleNavCards = navCards.filter(card => isRouteEnabled(card.href));
   const [stats, setStats] = useState(defaultStats);
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [quickDraft, setQuickDraft] = useState("");
@@ -280,7 +284,9 @@ export default function DashboardPage() {
           <div className="rounded-2xl border border-glass-border bg-atlas-surface p-5">
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-teal">Trending Now</p>
-              <Link href="/alerts" className="text-xs text-atlas-text-muted hover:text-atlas-teal transition-colors">View all signals &rarr;</Link>
+              {isEnabled("signals") && (
+                <Link href="/alerts" className="text-xs text-atlas-text-muted hover:text-atlas-teal transition-colors">View all signals &rarr;</Link>
+              )}
             </div>
             <div className="mt-3 space-y-2">
               {trending.map((topic) => (
@@ -299,6 +305,7 @@ export default function DashboardPage() {
         ) : null}
       </div>
 
+      {isEnabled("briefing") && (
       <Link
         href="/briefing"
         className="mt-8 flex items-center justify-between rounded-2xl border border-atlas-teal/20 bg-gradient-to-r from-atlas-teal/5 to-transparent p-5 ring-1 ring-atlas-teal/10 transition-all hover:ring-atlas-teal/30 hover:shadow-lg hover:shadow-atlas-teal/5"
@@ -316,9 +323,10 @@ export default function DashboardPage() {
           Try Brief <ArrowRight className="h-3.5 w-3.5" />
         </div>
       </Link>
+      )}
 
       <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {navCards.map((card) => (
+        {visibleNavCards.map((card) => (
           <Link
             key={card.label}
             href={card.href}
@@ -330,7 +338,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {queue.length > 0 && (
+      {isEnabled("queue") && queue.length > 0 && (
         <div className="mt-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
