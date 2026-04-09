@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
+import TweetTinderSection from "./tweet-tinder-section";
 import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
 import VoiceCard from "@/components/voice-profiles/VoiceCard";
 import {
@@ -170,6 +171,11 @@ export default function VoiceProfilesPage() {
               A new Twitter-based voice calibration experience is coming soon.
             </p>
           </div>
+        </div>
+
+        {/* Tweet Tinder — voice calibration via liked tweets */}
+        <div className="mt-8">
+          <TweetTinderSection />
         </div>
 
         {/* Reference Voices */}
