@@ -27,6 +27,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import { useTour } from "@/components/tour/TourProvider";
+import FeatureGate from "@/components/ui/FeatureGate";
 import DraftHistorySidebar, {
   DraftHistoryItem,
 } from "@/components/crafting/DraftHistorySidebar";
@@ -242,8 +243,9 @@ function buildVoiceVariationInstruction(
   ].join(" ");
 }
 
-export default function CraftingPage() {
+function CraftingPage() {
   useTour("crafting");
+
 
   const searchParams = useSearchParams();
   const voiceModeLabelId = useId();
@@ -2237,5 +2239,13 @@ export default function CraftingPage() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function CraftingPageGated() {
+  return (
+    <FeatureGate flagKey="crafting_station">
+      <CraftingPage />
+    </FeatureGate>
   );
 }

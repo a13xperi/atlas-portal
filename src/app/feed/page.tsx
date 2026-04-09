@@ -7,6 +7,7 @@ import {
   ArrowRight, Clock, Send, Sparkles,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import GlassCard from "@/components/ui/GlassCard";
 import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
@@ -23,7 +24,7 @@ function timeAgo(date: Date): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export default function FeedPage() {
+function FeedPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -333,4 +334,12 @@ function getGreeting(): string {
   if (h < 12) return "morning";
   if (h < 17) return "afternoon";
   return "evening";
+}
+
+export default function FeedPageGated() {
+  return (
+    <FeatureGate flagKey="feed">
+      <FeedPage />
+    </FeatureGate>
+  );
 }

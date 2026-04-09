@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import { useAuth } from "@/lib/auth";
 import { api, QaTestRun } from "@/lib/api";
 import { sections, TOTAL_TESTS, type TestCase, type TestSection } from "./test-definitions";
@@ -76,7 +77,7 @@ function formatRunLabel(run: QaTestRun) {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function QaTestRunnerPage() {
+function QaContent() {
   const { user, loading: authLoading } = useAuth();
 
   const isManager = user?.role === "ADMIN" || user?.role === "MANAGER";
@@ -782,5 +783,13 @@ function StatusButton({
     >
       {icons[symbol]}
     </button>
+  );
+}
+
+export default function QaPage() {
+  return (
+    <FeatureGate flagKey="super_admin">
+      <QaContent />
+    </FeatureGate>
   );
 }

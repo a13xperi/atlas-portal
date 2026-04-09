@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { api, AnalyticsSummary, LearningLogEntry, TweetDraft, DailyEngagement, DailyActivity } from "@/lib/api";
 
@@ -17,7 +18,7 @@ const EngagementVelocityChart = dynamic(
   }
 );
 
-export default function AnalyticsPage() {
+function AnalyticsPage() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [logEntries, setLogEntries] = useState<LearningLogEntry[]>([]);
   const [topDrafts, setTopDrafts] = useState<TweetDraft[]>([]);
@@ -419,5 +420,13 @@ export default function AnalyticsPage() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function AnalyticsPageGated() {
+  return (
+    <FeatureGate flagKey="analytics_advanced">
+      <AnalyticsPage />
+    </FeatureGate>
   );
 }

@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import GlassCard from "@/components/ui/GlassCard";
 import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
@@ -26,6 +27,7 @@ const STATUS_BADGES: Record<Campaign["status"], { label: string; cls: string }> 
 
 export default function CampaignsPage() {
   return (
+    <FeatureGate flagKey="campaigns">
     <AppShell>
       <div className="mx-auto max-w-4xl px-4 py-8 font-body sm:px-6">
         <div className="flex items-center gap-3">
@@ -49,6 +51,7 @@ export default function CampaignsPage() {
         <CampaignsTab />
       </div>
     </AppShell>
+    </FeatureGate>
   );
 }
 
