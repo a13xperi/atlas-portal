@@ -105,10 +105,12 @@ interface FeatureFlagContextValue {
   loading: boolean;
 }
 
+// Default context: no provider mounted (e.g. tests, storybook) — treat all flags as enabled
+// and report not-loading so FeatureGate renders children immediately.
 const FeatureFlagContext = createContext<FeatureFlagContextValue>({
   isEnabled: () => true,
   flags: {},
-  loading: true,
+  loading: false,
 });
 
 export function useFeatureFlags() {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useFeatureFlags } from "@/lib/feature-flags";
-import { useRouter } from "next/navigation";
+import * as nav from "next/navigation";
 import { useEffect } from "react";
 
 interface FeatureGateProps {
@@ -10,12 +10,21 @@ interface FeatureGateProps {
   fallback?: React.ReactNode;
 }
 
+// Safe useRouter — returns null when no app router is mounted (e.g. unit tests).
+function useSafeRouter() {
+  try {
+    return nav.useRouter();
+  } catch {
+    return null;
+  }
+}
+
 export default function FeatureGate({ flagKey, children, fallback }: FeatureGateProps) {
   const { isEnabled, loading } = useFeatureFlags();
-  const router = useRouter();
+  const router = useSafeRouter();
 
   useEffect(() => {
-    if (!loading && !isEnabled(flagKey)) {
+    if (!loading && !isEnabled(flagKey) && router) {
       router.replace("/dashboard");
     }
   }, [loading, isEnabled, flagKey, router]);

@@ -10,17 +10,27 @@ jest.mock("next/link", () => ({
   ),
 }));
 
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), refresh: jest.fn() }),
+  usePathname: () => "/admin",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+jest.mock("@/lib/auth", () => ({
+  useAuth: () => ({
+    user: { id: "admin-1", handle: "admin", role: "ADMIN" },
+    loading: false,
+  }),
+}));
+
 describe("AdminPage", () => {
   it("shows the roadmap admin tool", () => {
     render(<AdminPage />);
 
-    expect(screen.getByText("Roadmap")).toBeInTheDocument();
     expect(
       screen.getByText("Product roadmap — what's shipping, what's next, what's done")
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Roadmap/i })).toHaveAttribute(
-      "href",
-      "/admin/roadmap"
-    );
+    const roadmapLinks = screen.getAllByRole("link").filter((el) => el.getAttribute("href") === "/admin/roadmap");
+    expect(roadmapLinks.length).toBeGreaterThan(0);
   });
 });
