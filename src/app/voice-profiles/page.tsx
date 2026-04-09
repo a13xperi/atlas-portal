@@ -7,6 +7,7 @@ import AppShell from "@/components/layout/AppShell";
 import TweetTinderSection from "./tweet-tinder-section";
 import { useTour } from "@/components/tour/TourProvider";
 import FeatureGate from "@/components/ui/FeatureGate";
+import TweetTinderSection from "./tweet-tinder-section";
 import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
 import VoiceLabInspirationPicker from "@/components/voice-profiles/VoiceLabInspirationPicker";
 import VoiceCard from "@/components/voice-profiles/VoiceCard";
@@ -177,6 +178,11 @@ function VoiceProfilesPage() {
 
         {/* Tweet Tinder — voice calibration via liked tweets */}
         <div className="mt-8" data-tour="tweet-tinder">
+          <TweetTinderSection />
+        </div>
+
+        {/* Tweet Tinder — voice calibration via liked tweets */}
+        <div className="mt-8">
           <TweetTinderSection />
         </div>
 
