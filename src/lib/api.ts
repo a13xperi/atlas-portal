@@ -438,6 +438,11 @@ export const api = {
       }>("/api/oracle/agent", { method: "POST", body }),
   },
 
+  twitter: {
+    follows: () => request<any[]>("/api/twitter/follows"),
+    likes: () => request<any[]>("/api/twitter/likes"),
+  },
+
   campaigns: {
     list: () =>
       request<{ campaigns: Campaign[] }>("/api/campaigns"),
