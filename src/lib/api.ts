@@ -97,6 +97,17 @@ export interface AdminFeedEvent {
   metadata: Record<string, unknown> | null;
 }
 
+export interface FeatureFlagRecord {
+  key: string;
+  name: string;
+  description: string | null;
+  enabled: boolean;
+  rolloutRole: string | null;
+  updatedAt: string;
+}
+
+export type OnboardingTrack = "TRACK_A" | "TRACK_B";
+
 export class ApiError extends Error {
   statusCode: number;
   constructor(message: string, statusCode: number) {
@@ -195,6 +206,10 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
         if (json && typeof json === "object" && "ok" in json && "data" in json) {
           return json.data as T;
         }
+        // The analytics backend still returns a raw array for this legacy endpoint.
+        if (path === "/api/analytics/engagement-daily" && Array.isArray(json)) {
+          return { days: json } as T;
+        }
         return json as T;
       }
     } catch (e) {
@@ -215,7 +230,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
 // Auth — all requests use HttpOnly cookies (credentials: 'include')
 export const api = {
   auth: {
-    register: (handle: string, email: string, password: string, onboardingTrack?: string) =>
+    register: (handle: string, email: string, password: string, onboardingTrack?: OnboardingTrack) =>
       request<{ user: User; token: string; refresh_token: string }>("/api/auth/register", {
         method: "POST",
         body: { handle, email, password, onboardingTrack },
@@ -278,6 +293,20 @@ export const api = {
           ...(weights ? { weights } : {}),
         },
       }),
+    updateBlendVoice: (
+      blendId: string,
+      voiceId: string,
+      data: { label?: string; percentage?: number; referenceVoiceId?: string | null }
+    ) =>
+      request<{ voice: BlendVoice }>(
+        `/api/voice/blends/${blendId}/voices/${voiceId}`,
+        { method: "PATCH", body: data }
+      ),
+    deleteBlendVoice: (blendId: string, voiceId: string) =>
+      request<{ success: boolean }>(
+        `/api/voice/blends/${blendId}/voices/${voiceId}`,
+        { method: "DELETE" }
+      ),
     calibrate: (handle: string) =>
       request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/calibrate", {
         method: "POST", body: { handle },
@@ -559,6 +588,17 @@ export const api = {
     likes: () => request<any[]>("/api/twitter/likes"),
   },
 
+  featureFlags: {
+    list: () => request<{ flags: FeatureFlagRecord[] }>("/api/admin/feature-flags"),
+    update: (key: string, body: { enabled?: boolean; rolloutRole?: string | null }) =>
+      request<{ flag: FeatureFlagRecord }>(`/api/admin/feature-flags/${key}`, {
+        method: "PATCH",
+        body,
+      }),
+    public: () => request<{ flags: string[] }>("/api/admin/feature-flags/public"),
+  },
+
+
   campaigns: {
     list: () =>
       request<{ campaigns: Campaign[] }>("/api/campaigns"),
@@ -582,6 +622,7 @@ export interface User {
   id: string;
   handle: string;
   role: "ANALYST" | "MANAGER" | "ADMIN";
+  onboardingTrack?: OnboardingTrack | null;
   displayName?: string;
   email?: string;
   bio?: string;
@@ -642,10 +683,19 @@ export interface TwitterFollow {
   followerCount: number;
 }
 
+export interface BlendVoice {
+  id: string;
+  blendId?: string;
+  label: string;
+  percentage: number;
+  referenceVoiceId?: string | null;
+  referenceVoice?: ReferenceVoice | null;
+}
+
 export interface SavedBlend {
   id: string;
   name: string;
-  voices: { label: string; percentage: number; referenceVoice?: ReferenceVoice }[];
+  voices: BlendVoice[];
 }
 
 export interface BlendedVoiceDimensions {
@@ -719,6 +769,8 @@ export interface TweetDraft {
   sourceContent?: string;
   blendId?: string;
   feedback?: string;
+  scheduledAt?: string | null;
+  postedAt?: string | null;
   createdAt: string;
 }
 

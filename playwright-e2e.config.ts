@@ -1,6 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "https://delphi-atlas.vercel.app";
+const vercelBypass =
+  process.env.VERCEL_AUTOMATION_BYPASS_SECRET ??
+  process.env.VERCEL_PROTECTION_BYPASS;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -13,8 +16,11 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   use: {
     baseURL,
-    extraHTTPHeaders: process.env.VERCEL_PROTECTION_BYPASS
-      ? { "x-vercel-protection-bypass": process.env.VERCEL_PROTECTION_BYPASS }
+    extraHTTPHeaders: vercelBypass
+      ? {
+          "x-vercel-protection-bypass": vercelBypass,
+          "x-vercel-set-bypass-cookie": "true",
+        }
       : {},
     trace: "on-first-retry",
     screenshot: "only-on-failure",

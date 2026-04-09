@@ -188,7 +188,7 @@ export default function LoginPage() {
           type="button"
           onClick={() => {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "https://api-production-9bef.up.railway.app";
-            window.location.href = `${apiUrl}/api/auth/twitter`;
+            window.location.href = `${apiUrl}/api/auth/x/login`;
           }}
           className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-atlas-surface border border-glass-border rounded-lg text-atlas-text hover:border-atlas-teal hover:bg-atlas-surface/80 transition-all"
         >

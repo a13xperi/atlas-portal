@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import {
   Bug,
   CheckCircle2,
@@ -141,7 +142,7 @@ function relativeTime(iso: string) {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function AdminBugsPage() {
+function AdminBugsContent() {
   const [bugs, setBugs] = useState<BugRow[]>([]);
   const [tests, setTests] = useState<TestCaseRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -656,5 +657,13 @@ function StatCard({
         {label}
       </div>
     </div>
+  );
+}
+
+export default function AdminBugsPage() {
+  return (
+    <FeatureGate flagKey="super_admin">
+      <AdminBugsContent />
+    </FeatureGate>
   );
 }

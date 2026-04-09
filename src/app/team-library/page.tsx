@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, ChevronUp, Copy, Sparkles } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
 import { api, TeamDraft } from "@/lib/api";
 
-export default function TeamLibraryPage() {
+function TeamLibraryPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [libraryItems, setLibraryItems] = useState<TeamDraft[]>([]);
@@ -243,5 +244,13 @@ export default function TeamLibraryPage() {
         {totalCount > 0 ? `${visibleItems.length} of ${totalCount} styles` : `${visibleItems.length} styles`}
       </p>
     </AppShell>
+  );
+}
+
+export default function TeamLibraryPageGated() {
+  return (
+    <FeatureGate flagKey="library">
+      <TeamLibraryPage />
+    </FeatureGate>
   );
 }

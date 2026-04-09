@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import TweetTinderSection from "./tweet-tinder-section";
+import { useTour } from "@/components/tour/TourProvider";
+import FeatureGate from "@/components/ui/FeatureGate";
 import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
 import VoiceLabInspirationPicker from "@/components/voice-profiles/VoiceLabInspirationPicker";
 import VoiceCard from "@/components/voice-profiles/VoiceCard";
@@ -22,7 +24,10 @@ function formatMaturityLabel(maturity?: VoiceProfile["maturity"]) {
   return `${maturity.charAt(0)}${maturity.slice(1).toLowerCase()}`;
 }
 
-export default function VoiceProfilesPage() {
+function VoiceProfilesPage() {
+  useTour("voice-profiles");
+
+
   const router = useRouter();
   const [profile, setProfile] = useState<VoiceProfile | null>(null);
   const [references, setReferences] = useState<ReferenceVoice[]>([]);
@@ -113,7 +118,10 @@ export default function VoiceProfilesPage() {
         </p>
 
         {/* Voice Library Grid */}
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div
+          className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
+          data-tour="voice-library"
+        >
           <VoiceCard
             name="Personal Voice"
             isActive={activeVoiceId === PERSONAL_VOICE_ID}
@@ -168,7 +176,7 @@ export default function VoiceProfilesPage() {
         </div>
 
         {/* Tweet Tinder — voice calibration via liked tweets */}
-        <div className="mt-8">
+        <div className="mt-8" data-tour="tweet-tinder">
           <TweetTinderSection />
         </div>
 
@@ -178,5 +186,13 @@ export default function VoiceProfilesPage() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function VoiceProfilesPageGated() {
+  return (
+    <FeatureGate flagKey="voice_lab">
+      <VoiceProfilesPage />
+    </FeatureGate>
   );
 }

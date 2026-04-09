@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import GlassCard from "@/components/ui/GlassCard";
 import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
@@ -32,7 +33,7 @@ const DRAFT_STATUS: Record<TweetDraft["status"], { label: string; cls: string }>
   ARCHIVED: { label: "Archived", cls: "bg-atlas-text-muted/20 text-atlas-text-muted" },
 };
 
-export default function CampaignDetailPage() {
+function CampaignDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -214,6 +215,63 @@ export default function CampaignDetailPage() {
               ))}
             </div>
 
+            {/* Progress + engagement summary */}
+            {campaign.drafts && campaign.drafts.length > 0 && (() => {
+              const totalDrafts = campaign.drafts.length;
+              const postedDrafts = campaign.drafts.filter((d) => d.status === "POSTED").length;
+              const scheduledDrafts = campaign.drafts.filter((d) => d.status === "SCHEDULED").length;
+              const queuedDrafts = campaign.drafts.filter((d) => d.status === "APPROVED" || d.status === "DRAFT").length;
+              const progressPct = Math.round((postedDrafts / totalDrafts) * 100);
+              const totalEngagement = campaign.drafts.reduce(
+                (acc, d) => acc + (d.actualEngagement ?? 0),
+                0,
+              );
+              const predictedEngagement = campaign.drafts.reduce(
+                (acc, d) => acc + (d.predictedEngagement ?? 0),
+                0,
+              );
+              return (
+                <GlassCard className="mb-6 p-5">
+                  <div className="mb-3 flex items-baseline justify-between">
+                    <span className="text-xs font-medium uppercase tracking-[0.15em] text-atlas-text-muted">
+                      Campaign Progress
+                    </span>
+                    <span className="text-sm font-semibold text-atlas-text">
+                      {postedDrafts}/{totalDrafts} posted ({progressPct}%)
+                    </span>
+                  </div>
+                  <div className="mb-4 h-2 overflow-hidden rounded-full bg-atlas-surface">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-atlas-teal to-atlas-teal/60 transition-all duration-500"
+                      style={{ width: `${progressPct}%` }}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+                    <div>
+                      <div className="text-atlas-text-muted">Scheduled</div>
+                      <div className="mt-0.5 text-base font-semibold text-atlas-text">{scheduledDrafts}</div>
+                    </div>
+                    <div>
+                      <div className="text-atlas-text-muted">In Queue</div>
+                      <div className="mt-0.5 text-base font-semibold text-atlas-text">{queuedDrafts}</div>
+                    </div>
+                    <div>
+                      <div className="text-atlas-text-muted">Engagement</div>
+                      <div className="mt-0.5 text-base font-semibold text-atlas-text">
+                        {totalEngagement.toLocaleString()}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-atlas-text-muted">Predicted</div>
+                      <div className="mt-0.5 text-base font-semibold text-atlas-text">
+                        {predictedEngagement.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                </GlassCard>
+              );
+            })()}
+
             {/* Drafts */}
             <div>
               <h2 className="mb-4 text-sm font-medium uppercase tracking-[0.15em] text-atlas-text-muted">
@@ -249,9 +307,21 @@ export default function CampaignDetailPage() {
                               )}
                             </div>
                             <p className="whitespace-pre-wrap text-sm text-atlas-text">{draft.content}</p>
-                            <div className="mt-2 text-xs text-atlas-text-muted">
-                              {new Date(draft.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                              {draft.sourceType && ` · ${draft.sourceType}`}
+                            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-atlas-text-muted">
+                              <span>
+                                {new Date(draft.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                              </span>
+                              {draft.sourceType && <span>· {draft.sourceType}</span>}
+                              {draft.scheduledAt && (
+                                <span className="text-atlas-warning">
+                                  · scheduled {new Date(draft.scheduledAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                              )}
+                              {draft.actualEngagement != null && draft.actualEngagement > 0 && (
+                                <span className="text-atlas-success">
+                                  · {draft.actualEngagement.toLocaleString()} engagement
+                                </span>
+                              )}
                             </div>
                           </div>
                           <button
@@ -271,5 +341,13 @@ export default function CampaignDetailPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+export default function CampaignDetailPageGated() {
+  return (
+    <FeatureGate flagKey="campaigns">
+      <CampaignDetailPage />
+    </FeatureGate>
   );
 }

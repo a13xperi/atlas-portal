@@ -26,6 +26,8 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
+import { useTour } from "@/components/tour/TourProvider";
+import FeatureGate from "@/components/ui/FeatureGate";
 import DraftHistorySidebar, {
   DraftHistoryItem,
 } from "@/components/crafting/DraftHistorySidebar";
@@ -241,7 +243,10 @@ function buildVoiceVariationInstruction(
   ].join(" ");
 }
 
-export default function CraftingPage() {
+function CraftingPage() {
+  useTour("crafting");
+
+
   const searchParams = useSearchParams();
   const voiceModeLabelId = useId();
   const savedBlendLabelId = useId();
@@ -1506,6 +1511,88 @@ export default function CraftingPage() {
             )}
           </div>
 
+          <div
+            className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6"
+            data-tour="voice-selector"
+          >
+            <label
+              id={voiceModeLabelId}
+              htmlFor="voice-mode"
+              className="shrink-0 text-sm text-atlas-text-secondary"
+            >
+              Voice mode
+            </label>
+            <select
+              id="voice-mode"
+              aria-labelledby={voiceModeLabelId}
+              value={voiceMode}
+              onChange={(event) => {
+                const nextMode = event.target.value as
+                  | "my_voice"
+                  | "blended"
+                  | "specific";
+                setVoiceMode(nextMode);
+
+                if (nextMode === "my_voice") {
+                  setSelectedBlendId(null);
+                }
+              }}
+              className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
+            >
+              <option value="my_voice">My voice</option>
+              <option value="blended">Blended</option>
+              <option value="specific">Specific person</option>
+            </select>
+            {voiceMode === "blended" && blends.length > 0 ? (
+              <>
+                <label
+                  id={savedBlendLabelId}
+                  htmlFor="saved-blend"
+                  className="shrink-0 text-sm text-atlas-text-secondary"
+                >
+                  Saved blend
+                </label>
+                <select
+                  id="saved-blend"
+                  aria-labelledby={savedBlendLabelId}
+                  value={selectedBlendId || ""}
+                  onChange={(event) => setSelectedBlendId(event.target.value || null)}
+                  className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
+                >
+                  <option value="">Pick a blend…</option>
+                  {blends.map((blend) => (
+                    <option key={blend.id} value={blend.id}>
+                      {blend.name}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : null}
+            <div className="flex w-full flex-col gap-2 sm:min-w-[200px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <span
+                id={blendIntensityLabelId}
+                className="shrink-0 text-sm text-atlas-text-secondary"
+              >
+                {selectedBlendId
+                  ? `My Voice ↔ ${
+                      blends.find((blend) => blend.id === selectedBlendId)?.name || "Blend"
+                    }`
+                  : "Blend:"}
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={blendValue}
+                onChange={(event) => setBlendValue(Number(event.target.value))}
+                aria-labelledby={blendIntensityLabelId}
+                aria-valuetext={`${blendValue} percent`}
+                className="flex-1"
+                style={{ "--range-progress": `${blendValue}%` } as React.CSSProperties}
+              />
+              <span className="w-10 text-right text-sm text-atlas-text">{blendValue}%</span>
+            </div>
+          </div>
 
           {voiceComparison ? (
             <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6">
@@ -2152,5 +2239,13 @@ export default function CraftingPage() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function CraftingPageGated() {
+  return (
+    <FeatureGate flagKey="crafting_station">
+      <CraftingPage />
+    </FeatureGate>
   );
 }
