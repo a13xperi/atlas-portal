@@ -114,7 +114,7 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
   REFERENCES: [
     msg(
       "oracle",
-      "Now pick some voices you admire. I'll blend elements of their style with yours. Most people pick 2-4.",
+      "Pick a voice you admire — someone whose writing style resonates with you. I'll use their style as a reference when crafting your tweets. You can add more later.",
       {
         component: { type: "references" },
       }

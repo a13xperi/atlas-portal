@@ -12,7 +12,7 @@ const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
   TRACK_B_STYLE: "TRACK_B_CONTENT",
   TRACK_B_CONTENT: "TRACK_B_DIMENSIONS",
   TRACK_B_DIMENSIONS: "REFERENCES",
-  REFERENCES: "BLEND",
+  REFERENCES: "HANDOFF",
   BLEND: "HANDOFF",
   TOPICS: "HANDOFF", // legacy fallback, step skipped in flow
   HANDOFF: null, // terminal
@@ -48,7 +48,7 @@ export function canAdvance(state: OracleState): boolean {
     case "TRACK_B_DIMENSIONS":
       return true;
     case "REFERENCES":
-      return state.selectedRefs.length >= 2;
+      return state.selectedRefs.length >= 1;
     case "BLEND":
       return true;
     case "TOPICS":

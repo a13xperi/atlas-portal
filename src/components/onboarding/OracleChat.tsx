@@ -13,7 +13,6 @@ import {
 } from "@/lib/oracle";
 import { styleToDimensions } from "@/lib/voice-profile-dimensions";
 import {
-  buildReferenceBlendVoices,
   getReferenceAccountLookup,
   persistReferenceSelections,
   REFERENCE_ACCOUNT_FALLBACK,
@@ -26,7 +25,6 @@ import ActionZone from "./ActionZone";
 import NavBar from "@/components/ui/NavBar";
 
 // Inline components
-import BlendRatioSlider from "./BlendRatioSlider";
 import TopicPicker from "./TopicPicker";
 import ReferenceVoiceSelector from "./ReferenceVoiceSelector";
 import ContentSignalsPreview from "./ContentSignalsPreview";
@@ -54,13 +52,7 @@ export default function OracleChat() {
   const drainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [resumeTrackAAfterOAuth, setResumeTrackAAfterOAuth] = useState(false);
-  const [blendSaveStatus, setBlendSaveStatus] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
-  // Tracks the persisted blend so future PATCH operations can target it.
-  const [, setSavedBlendId] = useState<string | null>(null);
   const [tweetRatings, setTweetRatings] = useState<Record<number, 'up' | 'down' | null>>({});
-  const [previewLoading, setPreviewLoading] = useState(false);
 
   // Pre-fill handle from linked X profile
   useEffect(() => {
@@ -201,24 +193,6 @@ export default function OracleChat() {
             } catch {
               /* optional */
             }
-          }
-        }
-        if (step === "BLEND") {
-          setBlendSaveStatus("saving");
-          try {
-            const result = await api.voice.createBlend(
-              state.track === "a" ? "Onboarding blend" : "My starting blend",
-              buildReferenceBlendVoices(
-                state.selectedRefs,
-                state.selfPercentage,
-                REFERENCE_ACCOUNT_FALLBACK
-              )
-            );
-            setSavedBlendId(result.blend.id);
-            setBlendSaveStatus("saved");
-          } catch (err) {
-            console.error("Blend persist failed:", err);
-            setBlendSaveStatus("error");
           }
         }
         if (step === "TOPICS") {
@@ -519,65 +493,9 @@ export default function OracleChat() {
             />
           );
 
-        case "blend": {
-          const refNames = state.selectedRefs.map((id) => {
-            const acct = referenceAccountLookup.get(id);
-            return acct?.displayName || acct?.name || id;
-          });
-          return (
-            <div className="space-y-4">
-              <BlendRatioSlider
-                selfPercentage={state.selfPercentage}
-                onChange={(p) => dispatch({ type: "SET_BLEND", percentage: p })}
-                referenceNames={refNames}
-              />
-              <p className="text-center text-xs text-atlas-text-muted">
-                {blendSaveStatus === "saving" && "Saving blend…"}
-                {blendSaveStatus === "saved" &&
-                  "Blend saved. Adjustments persist on continue."}
-                {blendSaveStatus === "error" &&
-                  "Couldn't save blend — we'll retry on continue."}
-                {blendSaveStatus === "idle" &&
-                  "We'll save this blend when you continue."}
-              </p>
-              <button
-                type="button"
-                disabled={previewLoading}
-                onClick={() => {
-                  setPreviewLoading(true);
-                  const blendVoices = [
-                    { label: "My voice", percentage: state.selfPercentage },
-                    ...refNames.map((n) => ({
-                      label: n,
-                      percentage: Math.round((100 - state.selfPercentage) / refNames.length),
-                    })),
-                  ];
-                  api.oracle.message({
-                    track: state.track!,
-                    step: state.currentStep,
-                    action: "blend-preview",
-                    context: { dimensions: state.dimensions, blendVoices },
-                  }).then((r) => {
-                    if (r.llmGenerated && r.messages.length > 0) {
-                      dispatch({
-                        type: "ENQUEUE_MESSAGES",
-                        messages: r.messages.map((m, i) => ({
-                          id: `blend-preview-${Date.now()}-${i}`,
-                          role: "oracle" as const,
-                          content: `Here's what a tweet might sound like in this blend:\n\n\"${m.content}\"`,
-                          timestamp: Date.now(),
-                        })),
-                      });
-                    }
-                  }).catch(() => {}).then(() => setPreviewLoading(false));
-                }}
-                className="w-full rounded-lg border border-atlas-teal/30 bg-atlas-teal/10 px-4 py-2.5 text-sm font-medium text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/15 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {previewLoading ? 'Generating...' : 'Preview a tweet in this voice'}
-              </button>
-            </div>
-          );
-        }
+        case "blend":
+          // BLEND step is skipped in onboarding — advanced blending lives in Voice Labs.
+          return null;
 
         case "topics":
           return (
@@ -668,7 +586,7 @@ export default function OracleChat() {
           return null;
       }
     },
-    [oauthLoading, router, state, blendSaveStatus, tweetRatings, previewLoading]
+    [oauthLoading, router, state, tweetRatings]
   );
 
   // ── Determine ActionZone config per step ─────────────────────────
@@ -688,7 +606,6 @@ export default function OracleChat() {
       "TRACK_B_STYLE",
       "TRACK_B_DIMENSIONS",
       "REFERENCES",
-      "BLEND",
     ];
 
     if (continueSteps.includes(step)) {
