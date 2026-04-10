@@ -657,6 +657,28 @@ const demoData: Record<string, unknown> = {
       },
     ],
   },
+  "/api/arena/leaderboard": {
+    period: "weekly" as const,
+    entries: [
+      { rank: 1, userId: "u3", displayName: "inversebrah", avatarUrl: null, tweetsPublished: 31, totalEngagement: 142000, consistencyStreak: 14, badge: "Alpha" },
+      { rank: 2, userId: "u1", displayName: "DegenSpartan", avatarUrl: null, tweetsPublished: 23, totalEngagement: 118000, consistencyStreak: 10, badge: null },
+      { rank: 3, userId: "u2", displayName: "CryptoHayes", avatarUrl: null, tweetsPublished: 18, totalEngagement: 97000, consistencyStreak: 7, badge: null },
+      { rank: 4, userId: "u4", displayName: "punk6529", avatarUrl: null, tweetsPublished: 15, totalEngagement: 74000, consistencyStreak: 5, badge: null },
+      { rank: 5, userId: "u5", displayName: "Pentosh1", avatarUrl: null, tweetsPublished: 8, totalEngagement: 41000, consistencyStreak: 3, badge: null },
+      { rank: 6, userId: "u6", displayName: "Alex Peri", avatarUrl: null, tweetsPublished: 47, totalEngagement: 210000, consistencyStreak: 21, badge: null },
+    ],
+  },
+  "/api/arena/me": {
+    rank: 6,
+    userId: "u6",
+    displayName: "Alex Peri",
+    avatarUrl: null,
+    tweetsPublished: 47,
+    totalEngagement: 210000,
+    consistencyStreak: 21,
+    badge: null,
+  },
+
   "/api/briefing/latest": {
     id: "b1",
     date: "2026-04-04",

@@ -271,6 +271,8 @@ const smokeRoutes: SmokeRoute[] = [
     name: "voice profiles",
     path: "/voice-profiles",
     ready: (page) => page.getByRole("heading", { name: /your voice/i }).first(),
+    // API calls + React loading state can take a moment in CI dev-server mode.
+    readyTimeout: 20_000,
   },
   {
     name: "analytics",
@@ -503,6 +505,11 @@ test.describe("Route smoke tests", () => {
       }, ALL_FLAGS_ENABLED);
 
       await stubApi(page);
+
+      // Abort external avatar CDN requests so they resolve instantly and don't
+      // block networkidle or inflate test time in CI.
+      await page.route("https://unavatar.io/**", (route) => route.abort());
+      await page.route("https://pbs.twimg.com/**", (route) => route.abort());
 
       const { consoleErrors, pageErrors } = monitorClientErrors(page);
 

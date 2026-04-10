@@ -21,7 +21,7 @@ const test = fixtureTest.extend<{ authedPage: Page }>({
       id: "test-user-1",
       handle: "testanalyst",
       email: "test@atlas.dev",
-      role: "MANAGER" as const,
+      role: "ADMIN" as const,
       displayName: "Test User",
       voiceProfile: {
         id: "vp-1",
@@ -76,6 +76,11 @@ const test = fixtureTest.extend<{ authedPage: Page }>({
       { name: "atlas_session", value: "1", domain: hostname, path: "/" },
       ...bypassCookies,
     ]);
+
+    // Abort external avatar CDN requests instantly — prevents unavatar.io from
+    // blocking waitForLoadState("networkidle") on voice-profiles in CI.
+    await page.route("https://unavatar.io/**", (route) => route.abort());
+    await page.route("https://pbs.twimg.com/**", (route) => route.abort());
 
     await page.goto("/dashboard");
     await page.waitForLoadState("networkidle");

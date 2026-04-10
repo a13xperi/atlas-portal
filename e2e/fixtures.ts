@@ -266,6 +266,12 @@ export const test = base.extend<{ authedPage: Page }>({
     await stubAuth(page);
     await stubDataEndpoints(page);
 
+    // Abort external avatar requests so they resolve instantly (404 → initials fallback).
+    // Without this, waitForLoadState("networkidle") hangs waiting for unavatar.io
+    // in CI environments where the connection is slow or external images take too long.
+    await page.route("https://unavatar.io/**", (route) => route.abort());
+    await page.route("https://pbs.twimg.com/**", (route) => route.abort());
+
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.waitForURL("**/dashboard");
 
