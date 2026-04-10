@@ -251,8 +251,7 @@ function ArenaPage() {
           },
           rank: e.rank,
         }));
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        saveSnapshot(shim as any);
+        saveSnapshot(shim as unknown as Parameters<typeof saveSnapshot>[0]);
       }, 3000);
       return () => clearTimeout(timer);
     }
