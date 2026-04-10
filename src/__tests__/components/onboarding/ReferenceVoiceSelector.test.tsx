@@ -76,7 +76,7 @@ describe("ReferenceVoiceSelector", () => {
     render(<SelectorHarness />);
 
     expect(await screen.findByText("Haseeb")).toBeInTheDocument();
-    expect(screen.getByText("H")).toBeInTheDocument();
+    // Avatar fallback now uses unavatar.io img instead of letter initials
     expect(screen.getByText("@hosseeb")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "DeFi" }));
