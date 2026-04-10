@@ -8,7 +8,7 @@ import StatusPill from "@/components/ui/StatusPill";
 import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
 import { api, TweetDraft, QueuedDraft, TrendingTopic } from "@/lib/api";
-import { PenTool, Bell, BarChart3, Mic2, BookOpen, Users, TrendingUp, X, Clock, Zap, Calendar, Sparkles, ArrowRight, Trophy } from "lucide-react";
+import { PenTool, Bell, BarChart3, Mic2, BookOpen, Users, TrendingUp, X, Clock, Zap, Calendar, Sparkles, ArrowRight, Trophy, Megaphone } from "lucide-react";
 import DashboardSkeleton from "@/components/skeletons/DashboardSkeleton";
 import OracleWidget from "@/components/oracle/OracleWidget";
 import { useRouteEnabled, useFeatureFlags } from "@/lib/feature-flags";
@@ -17,6 +17,7 @@ const navCards = [
   { label: "Crafting Station", href: "/crafting", icon: PenTool },
   { label: "Voice Lab", href: "/voice-profiles", icon: Mic2 },
   { label: "Voice Library", href: "/team-library", icon: BookOpen },
+  { label: "Campaigns", href: "/campaigns", icon: Megaphone },
   { label: "Arena", href: "/arena", icon: Trophy },
   { label: "Signals", href: "/alerts", icon: Bell },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
