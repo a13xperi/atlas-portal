@@ -21,7 +21,7 @@ function ManagementPage() {
     isLoading("push-style");
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || (user.role !== "MANAGER" && user.role !== "ADMIN")) return;
 
     setLoadError(null);
     Promise.all([api.users.team(), api.analytics.team()])
@@ -34,6 +34,10 @@ function ManagementPage() {
       })
       .finally(() => setLoading(false));
   }, [user]);
+
+  if (user && user.role !== "MANAGER" && user.role !== "ADMIN") {
+    return null;
+  }
 
   const getAnalystStats = (memberId: string) =>
     analysts.find((a) => a.id === memberId);

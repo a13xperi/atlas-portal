@@ -33,7 +33,7 @@ export default function DimensionBar({
         <div className="pointer-events-none absolute inset-x-0 h-1 rounded-full bg-atlas-text-secondary/30" />
         <div
           className="pointer-events-none absolute left-0 h-1 rounded-full bg-gradient-to-r from-atlas-teal to-atlas-teal transition-all duration-300"
-          style={{ width: `${clampedPercentage}%` }}
+          style={{ width: `calc(${clampedPercentage}% + ${(50 - clampedPercentage) / 100}rem)` }}
         />
         {interactive ? (
           <input

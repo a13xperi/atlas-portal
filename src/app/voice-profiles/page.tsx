@@ -7,6 +7,7 @@ import AppShell from "@/components/layout/AppShell";
 import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
 import RecipeCard from "@/components/voice-profiles/RecipeCard";
 import VoiceEditorModal from "@/components/voice-profiles/VoiceEditorModal";
+import { useAuth } from "@/lib/auth";
 import {
   api,
   type ReferenceAccount,
@@ -57,6 +58,7 @@ function getActiveRecipeLabel(
 
 export default function VoiceProfilesPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<VoiceProfile | null>(null);
   const [referenceAccounts, setReferenceAccounts] = useState<ReferenceAccount[]>(
     REFERENCE_ACCOUNT_FALLBACK
@@ -291,7 +293,7 @@ export default function VoiceProfilesPage() {
         )}
 
         <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
-          Voice Studio
+          Voice Lab
         </p>
         <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-atlas-text sm:text-4xl">
           Your Voice Recipes
@@ -436,6 +438,7 @@ export default function VoiceProfilesPage() {
                   }
                   notableDimensions={notableDimensions}
                   isActive={activeVoiceId === blend.id}
+                  userHandle={user?.handle}
                   onUse={() => handleUseVoice(blend.id)}
                   onEdit={() => {
                     setEditorBlendId(blend.id);
