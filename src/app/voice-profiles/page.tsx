@@ -75,6 +75,8 @@ export default function VoiceProfilesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dismissedSetupPrompt, setDismissedSetupPrompt] = useState(false);
+  const [showCalibrationInput, setShowCalibrationInput] = useState(false);
+  const [calibrateHandle, setCalibrateHandle] = useState("");
   const setupPrompt = searchParams.get("prompt");
   const showSetupPrompt =
     setupPrompt === "complete-voice-setup" && !dismissedSetupPrompt;
