@@ -41,13 +41,13 @@ test.describe("Analytics page", () => {
       if (route.request().method() === "GET") {
         return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ entries: [] }) });
       }
-      return route.continue();
+      return route.fallback();
     });
     await page.route("**/api/drafts", (route) => {
       if (route.request().method() === "GET") {
         return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ drafts: [] }) });
       }
-      return route.continue();
+      return route.fallback();
     });
     await page.route("**/api/analytics/activity-daily", (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ days: [] }) }),
