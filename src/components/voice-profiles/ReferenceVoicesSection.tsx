@@ -127,7 +127,10 @@ export default function ReferenceVoicesSection({
       id,
       handle: matchingReference?.handle ?? id,
       name: matchingReference?.name ?? id,
-      profileImageUrl: matchingReference?.avatarUrl ?? null,
+      profileImageUrl: matchingReference?.avatarUrl
+        ?? (matchingReference?.handle
+          ? `https://unavatar.io/twitter/${matchingReference.handle.replace("@", "")}`
+          : null),
     });
   });
 

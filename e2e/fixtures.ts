@@ -7,7 +7,9 @@ const mockUser = {
   id: "test-user-1",
   handle: "testanalyst",
   email: "test@atlas.dev",
-  role: "MANAGER" as const,
+  // ADMIN so FeatureGate-protected routes (campaigns/telegram/management/admin/*)
+  // that require admin or admins-scope flags render their content in tests.
+  role: "ADMIN" as const,
   displayName: "Test User",
   voiceProfile: {
     id: "vp-1",
@@ -19,6 +21,27 @@ const mockUser = {
     maturity: "INTERMEDIATE" as const,
     tweetsAnalyzed: 12,
   },
+};
+
+// All feature flags forced on for e2e runs so gated routes render.
+// Mirrors FLAG_DEFS in src/lib/feature-flags.tsx — add new keys here when the
+// source list grows. Seeded via addInitScript before any page script runs.
+const ALL_FLAGS_ENABLED: Record<string, boolean> = {
+  crafting_station: true,
+  voice_lab: true,
+  arena: true,
+  campaigns: true,
+  queue: true,
+  analytics_advanced: true,
+  signals: true,
+  telegram_bot: true,
+  tweet_tinder: true,
+  multi_model: true,
+  super_admin: true,
+  management: true,
+  feed: true,
+  briefing: true,
+  library: true,
 };
 
 const mockSummary = {
@@ -92,7 +115,7 @@ const mockTeam = {
   team: [
     { id: "u1", handle: "alice", displayName: "Alice", role: "ANALYST", voiceProfile: { maturity: "ADVANCED" }, _count: { tweetDrafts: 15, sessions: 8 } },
     { id: "u2", handle: "bob", displayName: "Bob", role: "ANALYST", voiceProfile: { maturity: "BEGINNER" }, _count: { tweetDrafts: 3, sessions: 1 } },
-    { id: "test-user-1", handle: "testanalyst", displayName: "Test User", role: "MANAGER", voiceProfile: { maturity: "INTERMEDIATE" }, _count: { tweetDrafts: 8, sessions: 5 } },
+    { id: "test-user-1", handle: "testanalyst", displayName: "Test User", role: "ADMIN", voiceProfile: { maturity: "INTERMEDIATE" }, _count: { tweetDrafts: 8, sessions: 5 } },
   ],
 };
 
@@ -228,6 +251,17 @@ export const test = base.extend<{ authedPage: Page }>({
       });
     }
     await context.addCookies(cookies);
+
+    // Seed feature-flag localStorage + demo mode BEFORE any page script runs.
+    // This keeps gated routes (campaigns/telegram/management/admin/*) rendering
+    // their real content instead of FeatureGate redirecting to /dashboard.
+    await context.addInitScript((flags) => {
+      try {
+        window.localStorage.setItem("atlas-feature-flags", JSON.stringify(flags));
+      } catch {
+        // ignore storage failures (private mode, etc.)
+      }
+    }, ALL_FLAGS_ENABLED);
 
     await stubAuth(page);
     await stubDataEndpoints(page);
