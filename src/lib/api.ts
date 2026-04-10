@@ -113,6 +113,35 @@ export interface AdminLeaderboardEntry {
   };
 }
 
+export type ArenaPeriod = "last_7_days" | "last_30_days" | "all_time";
+
+export interface ArenaLeaderboardEntry {
+  rank: number;
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  tweetsPublished: number;
+  totalEngagement: number;
+  consistencyStreak: number;
+  badge: string | null;
+}
+
+export interface ArenaLeaderboardData {
+  period: ArenaPeriod;
+  entries: ArenaLeaderboardEntry[];
+}
+
+export interface ArenaMeEntry {
+  rank: number;
+  userId: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  tweetsPublished: number;
+  totalEngagement: number;
+  consistencyStreak: number;
+  badge: string | null;
+}
+
 export interface FeatureFlagRecord {
   key: string;
   name: string;
@@ -421,6 +450,13 @@ export const api = {
         method: "POST",
         body: { content, sourceType, ...options },
       }),
+  },
+
+  arena: {
+    leaderboard: (period: ArenaPeriod = "last_30_days") =>
+      request<ArenaLeaderboardData>(`/api/arena/leaderboard?period=${period}`),
+    me: (period: ArenaPeriod = "last_30_days") =>
+      request<ArenaMeEntry>(`/api/arena/me?period=${period}`),
   },
 
   analytics: {
