@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Download, PencilLine, Sparkles } from "lucide-react";
+import { Download, ExternalLink, PencilLine, Sparkles } from "lucide-react";
 import ReferenceVoiceSelector from "@/components/onboarding/ReferenceVoiceSelector";
 import GradientButton from "@/components/ui/GradientButton";
 import Modal from "@/components/ui/Modal";
@@ -284,13 +284,23 @@ export default function ReferenceVoicesSection({
                   </div>
                 )}
 
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-atlas-text">
                     {account.displayName || account.name || account.handle || account.id}
                   </p>
-                  <p className="truncate text-xs text-atlas-text-secondary">
-                    @{account.handle || account.id}
-                  </p>
+                  {account.handle ? (
+                    <a
+                      href={`https://twitter.com/${account.handle}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-0.5 text-xs text-atlas-text-secondary hover:text-atlas-teal hover:underline"
+                    >
+                      @{account.handle}
+                      <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  ) : (
+                    <p className="truncate text-xs text-atlas-text-secondary">@{account.id}</p>
+                  )}
                 </div>
               </div>
             ))}
