@@ -358,6 +358,17 @@ export const test = base.extend<{ authedPage: Page }>({
     ];
     await context.addCookies(cookies);
 
+    // Seed feature flags BEFORE any page script runs so FeatureGate-protected
+    // routes (telegram, campaigns, management, etc.) render their content
+    // instead of redirecting to /dashboard.
+    await context.addInitScript((flags) => {
+      try {
+        window.localStorage.setItem("atlas-feature-flags", JSON.stringify(flags));
+      } catch {
+        // ignore storage failures (private mode, etc.)
+      }
+    }, ALL_FLAGS_ENABLED);
+
     await stubAuth(context);
     await stubDataEndpoints(context);
 
