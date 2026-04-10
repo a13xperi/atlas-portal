@@ -434,7 +434,7 @@ export const api = {
             }
           : sourceContentOrInput;
 
-      return request<{ draft: TweetDraft }>("/api/drafts/generate", {
+      return request<{ draft: TweetDraft; blendWarning?: string }>("/api/drafts/generate", {
         method: "POST",
         body: payload,
       });

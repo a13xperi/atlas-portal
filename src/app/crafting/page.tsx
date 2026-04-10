@@ -262,6 +262,7 @@ function CraftingPage() {
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [creating, setCreating] = useState(false);
   const [voiceBanner, setVoiceBanner] = useState<string | null>(null);
+  const [blendWarning, setBlendWarning] = useState<string | null>(null);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
   const [refiningChip, setRefiningChip] = useState<string | null>(null);
