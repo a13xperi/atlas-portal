@@ -69,6 +69,7 @@ export default function VoiceCard({
   const [previewText, setPreviewText] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   const recipePills = useMemo<RecipePill[]>(() => {
     if (notableDimensions && notableDimensions.length > 0) return toRecipePills(notableDimensions);

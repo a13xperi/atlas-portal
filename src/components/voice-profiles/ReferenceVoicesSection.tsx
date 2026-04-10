@@ -212,14 +212,14 @@ export default function ReferenceVoicesSection({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-delphi-blue-400">
-              Reference voices
+              Inspirations
             </p>
             <h2 className="mt-2 font-heading text-xl font-bold tracking-tight text-atlas-text">
-              Accounts shaping your current voice mix
+              People whose writing style you admire
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-atlas-text-secondary">
-              Atlas keeps this set in sync with onboarding and uses it as the
-              foundation for blend experiments.
+              Add a seed — someone whose voice you want Atlas to learn from.
+              Blends come later, once you have a few inspirations in place.
             </p>
           </div>
 
@@ -243,7 +243,7 @@ export default function ReferenceVoicesSection({
             >
               <span className="flex items-center gap-2">
                 <PencilLine className="h-4 w-4" />
-                Edit
+                + Add inspiration
               </span>
             </GradientButton>
           </div>
@@ -262,8 +262,7 @@ export default function ReferenceVoicesSection({
           <div className="mt-5 rounded-2xl border border-dashed border-glass-border bg-atlas-surface/40 px-4 py-8 text-center">
             <Sparkles className="mx-auto h-5 w-5 text-atlas-teal" />
             <p className="mt-3 text-sm text-atlas-text-secondary">
-              No reference voices selected yet. Pick at least two to start
-              shaping a richer voice profile.
+              Who are you inspired by? Add a seed — that becomes your voice.
             </p>
           </div>
         ) : (
@@ -331,11 +330,11 @@ export default function ReferenceVoicesSection({
         description={
           isSaving
             ? "Saving your selections..."
-            : "Choose the reference accounts Atlas should learn from."
+            : "Pick the people whose writing style Atlas should learn from."
         }
         isOpen={isEditing}
         onClose={() => setIsEditing(false)}
-        title="Edit reference voices"
+        title="Edit inspirations"
       >
         <ReferenceVoiceSelector
           onContinue={handleSaveSelection}

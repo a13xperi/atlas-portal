@@ -563,24 +563,26 @@ export default function VoiceProfilesPage() {
               blendTargetMode={blendSelectMode && blendSourceId !== blend.id}
             />
           ))}
-          {blends.length === 0 && (
+          {blends.length === 0 && references.length > 0 && (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-glass-border bg-atlas-surface/40 p-5 text-center">
               <Sparkles className="mx-auto h-5 w-5 text-atlas-teal" aria-hidden="true" />
               <p className="mt-2 text-sm font-semibold text-atlas-text-secondary">No blends yet</p>
-              <p className="mt-1 text-[11px] text-atlas-text-muted">Combine reference voices to create your own style</p>
+              <p className="mt-1 text-[11px] text-atlas-text-muted">Combine inspirations to create your own style</p>
             </div>
           )}
-          <button
-            type="button"
-            onClick={() => setEditorMode("create")}
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-glass-border p-5 text-atlas-text-muted transition-colors hover:border-atlas-teal/40 hover:text-atlas-teal"
-          >
-            <Plus className="h-6 w-6" aria-hidden="true" />
-            <span className="text-xs font-semibold">New Voice</span>
-            {blends.length === 0 && (
-              <span className="text-[10px] text-atlas-text-muted">Blend references into custom voices</span>
-            )}
-          </button>
+          {references.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setEditorMode("create")}
+              className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-glass-border p-5 text-atlas-text-muted transition-colors hover:border-atlas-teal/40 hover:text-atlas-teal"
+            >
+              <Plus className="h-6 w-6" aria-hidden="true" />
+              <span className="text-xs font-semibold">New Voice</span>
+              {blends.length === 0 && (
+                <span className="text-[10px] text-atlas-text-muted">Blend inspirations into custom voices</span>
+              )}
+            </button>
+          )}
         </div>
 
         <section className="mt-10">
