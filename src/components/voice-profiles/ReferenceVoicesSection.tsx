@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { PencilLine, Sparkles } from "lucide-react";
+import { Download, PencilLine, Sparkles } from "lucide-react";
 import ReferenceVoiceSelector from "@/components/onboarding/ReferenceVoiceSelector";
 import GradientButton from "@/components/ui/GradientButton";
 import Modal from "@/components/ui/Modal";
+import ImportFromXFollowsModal from "@/components/voice-profiles/ImportFromXFollowsModal";
 import { api, type ReferenceAccount, type ReferenceVoice } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { colors } from "@/lib/tokens";
@@ -37,6 +38,33 @@ export default function ReferenceVoicesSection({
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [xLinked, setXLinked] = useState(false);
+  const [isImportingFromX, setIsImportingFromX] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+
+    api.auth.x
+      .status()
+      .then((response) => {
+        if (!ignore) {
+          setXLinked(Boolean(response.linked) && !response.tokenExpired);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setXLinked(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const handleXReferenceAdded = (voice: ReferenceVoice) => {
+    onReferencesChange([...references, voice]);
+  };
 
   useEffect(() => {
     let ignore = false;
@@ -176,16 +204,30 @@ export default function ReferenceVoicesSection({
             </p>
           </div>
 
-          <GradientButton
-            size="sm"
-            variant="outline-teal"
-            onClick={() => setIsEditing(true)}
-          >
-            <span className="flex items-center gap-2">
-              <PencilLine className="h-4 w-4" />
-              Edit
-            </span>
-          </GradientButton>
+          <div className="flex flex-wrap items-center gap-2">
+            {xLinked ? (
+              <GradientButton
+                size="sm"
+                variant="outline-teal"
+                onClick={() => setIsImportingFromX(true)}
+              >
+                <span className="flex items-center gap-2">
+                  <Download className="h-4 w-4" />
+                  Import from X Follows
+                </span>
+              </GradientButton>
+            ) : null}
+            <GradientButton
+              size="sm"
+              variant="outline-teal"
+              onClick={() => setIsEditing(true)}
+            >
+              <span className="flex items-center gap-2">
+                <PencilLine className="h-4 w-4" />
+                Edit
+              </span>
+            </GradientButton>
+          </div>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
@@ -269,6 +311,13 @@ export default function ReferenceVoicesSection({
           selected={draftSelectedIds}
         />
       </Modal>
+
+      <ImportFromXFollowsModal
+        isOpen={isImportingFromX}
+        onClose={() => setIsImportingFromX(false)}
+        references={references}
+        onReferenceAdded={handleXReferenceAdded}
+      />
     </>
   );
 }
