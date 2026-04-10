@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import StatusPill from "@/components/ui/StatusPill";
 import GradientButton from "@/components/ui/GradientButton";
@@ -32,6 +32,7 @@ const defaultStats = {
 
 export default function DashboardPage() {
   const router = useRouter();
+const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const isRouteEnabled = useRouteEnabled();
   const { isEnabled } = useFeatureFlags();
@@ -48,6 +49,15 @@ export default function DashboardPage() {
   const [trending, setTrending] = useState<TrendingTopic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dismissedCompletionBanner, setDismissedCompletionBanner] =
+    useState(false);
+  const completionBanner = searchParams.get("banner");
+  const showVoiceCalibratedBanner =
+    completionBanner === "voice-calibrated" && !dismissedCompletionBanner;
+
+  useEffect(() => {
+    setDismissedCompletionBanner(false);
+  }, [completionBanner]);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -191,7 +201,33 @@ export default function DashboardPage() {
       <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
         Welcome back, {user?.handle || "Analyst"}
       </h1>
-          <p className="mt-2 text-atlas-text-secondary max-w-2xl">Your command center. See what&apos;s queued, track recent activity, and jump to any part of Atlas from here.</p>
+      <p className="mt-2 max-w-2xl text-atlas-text-secondary">
+        Your command center. See what&apos;s queued, track recent activity, and
+        jump to any part of Atlas from here.
+      </p>
+
+      {showVoiceCalibratedBanner && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="mt-4 flex items-start justify-between rounded-lg border border-atlas-teal/20 bg-atlas-teal/10 px-4 py-3 text-sm"
+        >
+          <div>
+            <p className="font-semibold text-atlas-teal">Voice calibrated!</p>
+            <p className="mt-1 text-atlas-text-secondary">
+              Atlas is ready to draft in your baseline voice.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDismissedCompletionBanner(true)}
+            aria-label="Dismiss onboarding success banner"
+            className="ml-3 text-atlas-text-secondary hover:text-atlas-text"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className="mt-4" data-tour="oracle-banner">
         <OracleWidget
