@@ -1,27 +1,17 @@
 import "@testing-library/jest-dom";
-import { canAdvance, initialOracleState } from "@/lib/oracle";
 
-describe("oracle onboarding progression", () => {
-  it("does not block track A results on manual profile creation", () => {
-    const state = {
-      ...initialOracleState(),
-      currentStep: "TRACK_A_RESULT" as const,
-      track: "a" as const,
-      xConnected: true,
-      xHandle: "atlasanalyst",
-    };
+import { getOnboardingCompletionHref } from "@/lib/oracle";
 
-    expect(canAdvance(state)).toBe(true);
+describe("getOnboardingCompletionHref", () => {
+  it("routes Track A completions to the dashboard banner", () => {
+    expect(getOnboardingCompletionHref("a")).toBe(
+      "/dashboard?banner=voice-calibrated"
+    );
   });
 
-  it("does not block track B dimensions on manual profile creation", () => {
-    const state = {
-      ...initialOracleState(),
-      currentStep: "TRACK_B_DIMENSIONS" as const,
-      track: "b" as const,
-      selectedStyle: "Serious",
-    };
-
-    expect(canAdvance(state)).toBe(true);
+  it("routes Track B completions to the voice lab prompt", () => {
+    expect(getOnboardingCompletionHref("b")).toBe(
+      "/voice-lab?prompt=complete-voice-setup"
+    );
   });
 });

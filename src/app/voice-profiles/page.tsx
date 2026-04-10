@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Plus, Sparkles } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Plus, Sparkles, Wand2 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import TweetTinderSection from "./tweet-tinder-section";
 import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
@@ -95,6 +95,7 @@ function sanitizeBlendPreview(text: string) {
 
 export default function VoiceProfilesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [profile, setProfile] = useState<VoiceProfile | null>(null);
   const [referenceAccounts, setReferenceAccounts] = useState<ReferenceAccount[]>(
@@ -108,13 +109,17 @@ export default function VoiceProfilesPage() {
   const [editorBlendId, setEditorBlendId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [calibrateHandle, setCalibrateHandle] = useState("");
+  const [dismissedSetupPrompt, setDismissedSetupPrompt] = useState(false);
   const [showCalibrationInput, setShowCalibrationInput] = useState(false);
   const [previewingBlendId, setPreviewingBlendId] = useState<string | null>(null);
   const [blendPreviewErrors, setBlendPreviewErrors] = useState<
     Record<string, string>
   >({});
   const [blendPreviews, setBlendPreviews] = useState<Record<string, string>>({});
+  const [calibrateHandle, setCalibrateHandle] = useState("");
+  const setupPrompt = searchParams.get("prompt");
+  const showSetupPrompt =
+    setupPrompt === "complete-voice-setup" && !dismissedSetupPrompt;
 
   useEffect(() => {
     const savedBlendId = window.localStorage.getItem("atlas_active_blend");
@@ -224,6 +229,11 @@ export default function VoiceProfilesPage() {
     [personalDimensions]
   );
 
+  useEffect(() => {
+    setDismissedSetupPrompt(false);
+  }, [setupPrompt]);
+
+  const selectedIsPersonal = selectedVoiceId === PERSONAL_VOICE_ID;
   const selectedBlend = blends.find((b) => b.id === selectedVoiceId);
 
   const selectedBlendForEditor = useMemo(
@@ -422,15 +432,36 @@ export default function VoiceProfilesPage() {
           </div>
         )}
 
-        <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
-          Voice Lab
-        </p>
-        <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-atlas-text sm:text-4xl">
-          Your Saved Voices
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-atlas-text-secondary">
-          Explore saved voice recipes, compare their fingerprints, and pick the
-          blend Atlas should use the next time you craft.
+        {showSetupPrompt && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="mb-6 flex items-start justify-between rounded-xl border border-atlas-teal/20 bg-atlas-teal/10 px-4 py-3 text-sm"
+          >
+            <div>
+              <p className="font-semibold text-atlas-teal">
+                Complete your voice setup
+              </p>
+              <p className="mt-1 text-atlas-text-secondary">
+                Review your voice, add references, and save a blend before you
+                start drafting.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDismissedSetupPrompt(true)}
+              aria-label="Dismiss voice setup prompt"
+              className="ml-3 text-atlas-text-secondary hover:text-atlas-text"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">Voice Studio</p>
+        <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight text-atlas-text">Your Voices</h1>
+        <p className="mt-1 text-sm text-atlas-text-secondary">
+          Pick a voice and start crafting. Each voice shapes how Atlas writes for you.
         </p>
 
         {/* Voice Library Grid */}

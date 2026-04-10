@@ -4,7 +4,7 @@ import { prepareMessages } from "./oracle-messages";
 
 // ── Step transition map ────────────────────────────────────────────
 const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
-  WELCOME: null, // determined by track selection
+  WELCOME: "CONNECT_X",
   CONNECT_X: "TRACK_A_SCANNING",
   TRACK_A_SCANNING: "TRACK_A_RESULT",
   TRACK_A_RESULT: "REFERENCES",
@@ -18,11 +18,21 @@ const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
   HANDOFF: null, // terminal
 };
 
+export function getOnboardingCompletionHref(
+  track: OracleState["track"]
+): string {
+  if (track === "b") {
+    return "/voice-lab?prompt=complete-voice-setup";
+  }
+
+  return "/dashboard?banner=voice-calibrated";
+}
+
 // ── Can-advance predicates ─────────────────────────────────────────
 export function canAdvance(state: OracleState): boolean {
   switch (state.currentStep) {
     case "WELCOME":
-      return state.track !== null;
+      return true;
     case "CONNECT_X":
       return state.xConnected && state.xHandle.trim().length > 0;
     case "TRACK_A_SCANNING":

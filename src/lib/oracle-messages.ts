@@ -24,21 +24,26 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
     ),
     msg(
       "oracle",
-      "First things first — let\'s connect your X account. I\'ll sync your profile, scan your tweets, analyze your voice, and pull your follows so you can pick reference voices.",
+      "Let\'s get started.",
       {
         actions: [
-          { label: "Connect X", value: "track-a", variant: "primary" },
-          { label: "Set up manually", value: "track-b", variant: "ghost" },
+          { label: "Let\'s go", value: "start-onboarding", variant: "primary" },
         ],
       }
     ),
   ],
 
   CONNECT_X: [
-    msg("oracle", "Let's link your X account. I'll sync your display name, bio, avatar, and handle, then scan your tweets to set up your voice.", {
-      component: { type: "x-oauth" },
-      actions: [{ label: "Set up manually instead", value: "track-b", variant: "ghost" }],
-    }),
+    msg(
+      "oracle",
+      "First things first — let\'s connect your X account. I\'ll sync your display name, bio, avatar, and handle, then scan your tweets to calibrate your voice.",
+      {
+        component: { type: "x-oauth" },
+        actions: [
+          { label: "Skip for now", value: "skip-x", variant: "ghost" },
+        ],
+      }
+    ),
   ],
 
   TRACK_A_SCANNING: [

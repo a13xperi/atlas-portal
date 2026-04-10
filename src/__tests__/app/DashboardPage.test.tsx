@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const mockPush = jest.fn();
+let mockSearchParams = new URLSearchParams();
 const mockUseAuth = jest.fn(() => ({
   user: { handle: "TestUser" },
 }));
@@ -107,6 +108,7 @@ jest.mock("next/link", () => ({
 
 jest.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
+  useSearchParams: () => mockSearchParams,
   useRouter: () => ({
     push: mockPush,
   }),
@@ -136,6 +138,7 @@ function createDeferred<T>() {
 describe("DashboardPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSearchParams = new URLSearchParams();
     mockUseAuth.mockReturnValue({
       user: { handle: "TestUser" },
     });
@@ -149,6 +152,23 @@ describe("DashboardPage", () => {
     ).toBeInTheDocument();
 
     await waitFor(() => expect(mockedApi.analytics.summary).toHaveBeenCalled());
+  });
+
+  it("shows the Track A completion banner when redirected from onboarding", async () => {
+    mockSearchParams = new URLSearchParams("banner=voice-calibrated");
+
+    render(<DashboardPage />);
+
+    expect(await screen.findByText("Voice calibrated!")).toBeInTheDocument();
+    expect(
+      screen.getByText("Atlas is ready to draft in your baseline voice.")
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dismiss onboarding success banner" })
+    );
+
+    expect(screen.queryByText("Voice calibrated!")).not.toBeInTheDocument();
   });
 
   it("shows loading state initially", async () => {

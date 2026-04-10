@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
-import { oracleReducer, initialOracleState, canAdvance } from "@/lib/oracle";
+import {
+  canAdvance,
+  getOnboardingCompletionHref,
+  initialOracleState,
+  oracleReducer,
+} from "@/lib/oracle";
 import { styleToDimensions } from "@/lib/voice-profile-dimensions";
 import {
   buildReferenceBlendVoices,
@@ -238,6 +243,14 @@ export default function OracleChat() {
   // ── Handle action from Oracle message buttons ────────────────────
   const handleAction = useCallback(
     (value: string) => {
+      if (value === "start-onboarding") {
+        dispatch({ type: "ADVANCE", payload: "Let\'s go" });
+        return;
+      }
+      if (value === "skip-x") {
+        dispatch({ type: "SET_TRACK", track: "b" });
+        return;
+      }
       if (value === "track-a" || value === "track-b") {
         dispatch({
           type: "SET_TRACK",
@@ -270,8 +283,15 @@ export default function OracleChat() {
     if (step === "BLEND") echo = `${state.selfPercentage}% my voice`;
     if (step === "TOPICS") echo = state.selectedTopics.join(", ");
 
+    if (step === "TOPICS") {
+      // Finish the wizard on the final preferences step and land users in the
+      // next surface they should act in, rather than the legacy handoff screen.
+      router.replace(getOnboardingCompletionHref(state.track));
+      return;
+    }
+
     dispatch({ type: "ADVANCE", payload: echo });
-  }, [state, persistAfterStep]);
+  }, [state, persistAfterStep, router]);
 
   // ── Auto-trigger calibration for Track A scanning step ───────────
   useEffect(() => {

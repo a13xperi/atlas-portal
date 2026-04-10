@@ -147,6 +147,20 @@ export const sections: TestSection[] = [
         expected:
           "Each page loads. Active state highlighted in nav. Back button works.",
       },
+      {
+        id: "DASH-08",
+        name: "Dashboard track completion redirect",
+        category: "functional",
+        priority: "critical",
+        steps: [
+          "Register a new account in an incognito window",
+          "Complete either Track A or Track B onboarding to the final step",
+          "Click 'Go to Dashboard' (or equivalent completion CTA)",
+          "Observe the URL and landing page",
+        ],
+        expected:
+          "Browser redirects to /dashboard immediately after onboarding completion. User data loads (voice profile, drafts area). No flicker back to /onboarding and no 404.",
+      },
     ],
   },
   {
@@ -1088,6 +1102,39 @@ export const sections: TestSection[] = [
           "Verify result message",
         ],
         expected: "Each action shows result with affected count. Only one action runs at a time (buttons disabled during action).",
+      },
+    ],
+  },
+  {
+    id: "queue",
+    icon: "clock",
+    title: "20. Queue",
+    tests: [
+      {
+        id: "QUEUE-01",
+        name: "Queue page loads",
+        category: "functional",
+        priority: "critical",
+        steps: [
+          "Log in as a user with at least one APPROVED draft",
+          "Navigate to /queue (or click the Queue link in the nav)",
+          "Wait for the page to render",
+        ],
+        expected:
+          "Page loads without errors. Queue heading visible. Loading skeleton shows briefly then replaces with content. No console errors and no 404.",
+      },
+      {
+        id: "QUEUE-02",
+        name: "Queue shows APPROVED drafts",
+        category: "functional",
+        priority: "high",
+        steps: [
+          "Ensure the logged-in user has >=1 draft in APPROVED status (create one via /crafting if needed)",
+          "Navigate to /queue",
+          "Inspect the rendered list of draft cards",
+        ],
+        expected:
+          "Only drafts with status APPROVED appear in the queue list (DRAFT and POSTED items are excluded). Each card shows content, sequence number, and a Post to X action. Empty state renders cleanly if there are no approved drafts.",
       },
     ],
   },
