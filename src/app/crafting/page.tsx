@@ -10,6 +10,7 @@ import {
 } from "react";
 import {
   Archive,
+  ArrowUp,
   Check,
   CheckCircle,
   ChevronRight,
@@ -1867,13 +1868,13 @@ function CraftingPage() {
                           setError(null);
                           // Check if X account is linked
                           const xStatus = await api.auth.x.status();
-                          if (!xStatus.linked || xStatus.tokenExpired) {
-                            // Start OAuth flow
+                          if (!xStatus.linked) {
+                            // X not linked — start OAuth link flow
                             const { url } = await api.auth.x.authorize();
                             window.location.href = url;
                             return;
                           }
-                          // Post to X via backend
+                          // Backend auto-refreshes expired tokens — just try to post
                           const result = await api.drafts.postToX(activeDraft.id);
                           setActiveDraft(result.draft);
                           syncDraftReferences(result.draft);
@@ -2203,6 +2204,15 @@ function CraftingPage() {
                   ) : (
                     <Mic className="h-4 w-4" aria-hidden="true" />
                   )}
+                </button>
+                <button
+                  type="button"
+                  aria-label="Submit feedback"
+                  onClick={() => { if (feedback.trim()) void handleFeedback(); }}
+                  disabled={!feedback.trim()}
+                  className="flex items-center justify-center rounded-lg border border-atlas-teal/50 bg-atlas-teal/10 p-3 text-atlas-teal transition-colors hover:bg-atlas-teal/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ArrowUp className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
               <p id={draftFeedbackHintId} className="mt-2 text-sm italic text-atlas-text-muted">
