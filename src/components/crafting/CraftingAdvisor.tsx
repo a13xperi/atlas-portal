@@ -12,6 +12,7 @@ interface CraftingAdvisorProps {
   sourceType: string;
   blendId?: string;
   pageCount?: number;
+  isCalibrationBlocked?: boolean;
   onDraftsGenerated: (drafts: TweetDraft[]) => void;
   onClose: () => void;
 }
@@ -21,6 +22,7 @@ export function CraftingAdvisor({
   sourceType,
   blendId,
   pageCount,
+  isCalibrationBlocked = false,
   onDraftsGenerated,
   onClose,
 }: CraftingAdvisorProps) {
@@ -29,7 +31,8 @@ export function CraftingAdvisor({
   const [showCustomInput, setShowCustomInput] = useState(false);
 
   const selectedCount = advisor.selectedAngleIds.size;
-  const canGenerate = selectedCount > 0 && advisor.phase === 'presenting';
+  const canGenerate =
+    selectedCount > 0 && advisor.phase === 'presenting' && !isCalibrationBlocked;
 
   // Auto-start analysis on mount
   useEffect(() => {
@@ -40,6 +43,7 @@ export function CraftingAdvisor({
   }, []);
 
   const handleGenerate = async () => {
+    if (isCalibrationBlocked) return;
     await advisor.generateSelected(sourceContent, sourceType, blendId);
     // drafts are passed up via the complete-state useEffect below
   };
@@ -189,6 +193,12 @@ export function CraftingAdvisor({
               </p>
             )}
 
+            {isCalibrationBlocked && (
+              <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                Calibrate your voice first in Voice Studio before generating drafts.
+              </p>
+            )}
+
             {/* Generate button */}
             <button
               onClick={handleGenerate}
@@ -201,7 +211,9 @@ export function CraftingAdvisor({
                 }
               `}
             >
-              {selectedCount === 0
+              {isCalibrationBlocked
+                ? 'Calibrate voice to generate'
+                : selectedCount === 0
                 ? 'Select at least one angle'
                 : `Generate ${selectedCount} draft${selectedCount !== 1 ? 's' : ''}`}
             </button>

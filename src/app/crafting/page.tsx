@@ -1453,6 +1453,7 @@ function CraftingPage() {
                         sourceContent={draftInputText}
                         sourceType={getDraftGenerationInput(draftInputText).sourceType}
                         blendId={selectedBlendId || undefined}
+                        isCalibrationBlocked={isVoiceCalibrationBlocked}
                         onDraftsGenerated={(drafts) => {
                           drafts.forEach(draft => commitDraft(draft));
                           setShowAdvisor(false);
