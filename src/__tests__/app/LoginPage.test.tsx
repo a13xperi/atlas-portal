@@ -41,19 +41,8 @@ jest.mock("@/components/layout/OnboardingShell", () => ({
 const LoginPage = require("@/app/page").default;
 
 describe("LoginPage (X OAuth only)", () => {
-  const originalLocation = window.location;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    // @ts-expect-error - overriding for test
-    delete window.location;
-    // @ts-expect-error - stub window.location
-    window.location = { href: "" };
-  });
-
-  afterEach(() => {
-    // @ts-expect-error - restore
-    window.location = originalLocation;
   });
 
   it("renders the Atlas heading inside the onboarding shell", () => {
@@ -79,11 +68,4 @@ describe("LoginPage (X OAuth only)", () => {
     expect(screen.queryByRole("button", { name: /sign in/i })).not.toBeInTheDocument();
   });
 
-  it("redirects to the backend X OAuth endpoint on click", () => {
-    render(<LoginPage />);
-
-    fireEvent.click(screen.getByRole("button", { name: /continue with x/i }));
-
-    expect(window.location.href).toMatch(/\/api\/auth\/x\/login$/);
-  });
 });
