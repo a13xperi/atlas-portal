@@ -27,6 +27,39 @@ interface BriefingPreferenceInput {
   channel: string;
 }
 
+export type QueuePlatform = "twitter";
+export type QueueStatus = "queued" | "scheduled" | "published" | "failed";
+
+export interface QueueItem {
+  id: string;
+  content: string;
+  platform: QueuePlatform;
+  status: QueueStatus;
+  scheduledAt: string | null;
+  publishedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  failureReason?: string | null;
+}
+
+export interface QueueListResponse {
+  items: QueueItem[];
+  total: number;
+}
+
+export interface QueueCreateInput {
+  content: string;
+  platform?: QueuePlatform;
+  scheduledAt?: string | null;
+}
+
+export interface QueueUpdateInput {
+  content?: string;
+  scheduledAt?: string | null;
+  status?: QueueStatus;
+  failureReason?: string | null;
+}
+
 export interface QaTestRun {
   id: string;
   project: string;
@@ -279,6 +312,31 @@ export const api = {
       request<{ reordered: number }>("/api/drafts/queue/reorder", { method: "PATCH", body: { orderedIds } }),
     resetQueueOrder: () =>
       request<{ reset: boolean }>("/api/drafts/queue/reset-order", { method: "POST" }),
+  },
+
+  queue: {
+    list: (status?: QueueStatus) =>
+      request<QueueListResponse | QueueItem[]>(
+        `/api/queue${status ? `?status=${status}` : ""}`
+      ),
+    create: (data: QueueCreateInput) =>
+      request<{ item: QueueItem } | QueueItem>("/api/queue", {
+        method: "POST",
+        body: data,
+      }),
+    update: (id: string, data: QueueUpdateInput) =>
+      request<{ item: QueueItem } | QueueItem>(`/api/queue/${id}`, {
+        method: "PATCH",
+        body: data,
+      }),
+    remove: (id: string) =>
+      request<{ success: boolean }>(`/api/queue/${id}`, {
+        method: "DELETE",
+      }),
+    publish: (id: string) =>
+      request<{ item: QueueItem } | QueueItem>(`/api/queue/${id}/publish`, {
+        method: "POST",
+      }),
   },
 
   analytics: {
