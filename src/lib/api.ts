@@ -597,6 +597,22 @@ export const api = {
     }) =>
       request<{ text: string }>("/api/oracle/chat", { method: "POST", body }),
 
+    /**
+     * OpenClaw-routed Oracle chat — returns the raw LLM reply with model
+     * and token metadata. Profiles (smart/fast) are picked server-side from
+     * the optional `phase` hint.
+     */
+    chatLLM: (body: {
+      message: string;
+      userId?: string;
+      context?: Record<string, unknown>;
+      phase?: string;
+    }) =>
+      request<{ reply: string; model: string; tokens: number }>(
+        "/api/oracle/chat",
+        { method: "POST", body },
+      ),
+
     agent: (body: {
       messages: Array<{ role: "user" | "oracle"; content: string }>;
       page?: string;
