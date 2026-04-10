@@ -388,6 +388,8 @@ async function stubApi(page: Page) {
         return json(route, mockVoiceReferences);
       case "/api/voice/blends":
         return json(route, mockBlends);
+      case "/api/voice/reference-accounts":
+        return json(route, { accounts: [] });
       case "/api/trending/topics":
         return json(route, mockTrendingTopics);
       case "/api/loop/state":

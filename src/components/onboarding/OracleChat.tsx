@@ -364,8 +364,21 @@ export default function OracleChat() {
         }).catch(() => { /* LLM is optional */ });
       } catch (err) {
         console.error("Calibration failed:", err);
-        // Still advance so user isn't stuck
-        dispatch({ type: "ADVANCE", payload: "Calibration unavailable" });
+        // Surface a friendly Oracle message, then silently advance so the
+        // user isn't stuck and doesn't see a raw error echoed as their reply.
+        dispatch({
+          type: "ENQUEUE_MESSAGES",
+          messages: [
+            {
+              id: `calibration-skip-${Date.now()}`,
+              role: "oracle" as const,
+              content:
+                "I couldn't scan your tweets right now — no worries, we can calibrate later. Let's keep going.",
+              timestamp: Date.now(),
+            },
+          ],
+        });
+        dispatch({ type: "ADVANCE", payload: undefined });
       } finally {
         calibratingRef.current = false;
       }
@@ -652,12 +665,10 @@ export default function OracleChat() {
     // Steps that need a Continue button
     const continueSteps = [
       "TRACK_A_RESULT",
-      "TRACK_A_RATE",
       "TRACK_B_STYLE",
       "TRACK_B_DIMENSIONS",
       "REFERENCES",
       "BLEND",
-      "TOPICS",
     ];
 
     if (continueSteps.includes(step)) {
@@ -694,7 +705,7 @@ export default function OracleChat() {
       </div>
 
       {/* Message list */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-8 space-y-4">
         {state.messages.map((msg, i) => (
           <OracleMessage
             key={msg.id}

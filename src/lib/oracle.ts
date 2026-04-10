@@ -7,14 +7,14 @@ const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
   WELCOME: null, // determined by track selection
   CONNECT_X: "TRACK_A_SCANNING",
   TRACK_A_SCANNING: "TRACK_A_RESULT",
-  TRACK_A_RESULT: "TRACK_A_RATE",
-  TRACK_A_RATE: "REFERENCES",
+  TRACK_A_RESULT: "REFERENCES",
+  TRACK_A_RATE: "REFERENCES", // legacy fallback, step skipped in flow
   TRACK_B_STYLE: "TRACK_B_CONTENT",
   TRACK_B_CONTENT: "TRACK_B_DIMENSIONS",
   TRACK_B_DIMENSIONS: "REFERENCES",
   REFERENCES: "BLEND",
-  BLEND: "TOPICS",
-  TOPICS: "HANDOFF",
+  BLEND: "HANDOFF",
+  TOPICS: "HANDOFF", // legacy fallback, step skipped in flow
   HANDOFF: null, // terminal
 };
 
@@ -42,7 +42,7 @@ export function canAdvance(state: OracleState): boolean {
     case "BLEND":
       return true;
     case "TOPICS":
-      return state.selectedTopics.length >= 1;
+      return true; // step skipped in flow, kept for type exhaustiveness
     case "HANDOFF":
       return false; // terminal
   }

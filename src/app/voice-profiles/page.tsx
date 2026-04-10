@@ -6,10 +6,12 @@ import { Plus, Sparkles, Wand2 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
 import RecipeCard from "@/components/voice-profiles/RecipeCard";
+import VoiceCard from "@/components/voice-profiles/VoiceCard";
 import VoiceEditorModal from "@/components/voice-profiles/VoiceEditorModal";
 import { useAuth } from "@/lib/auth";
 import {
   api,
+  type BlendVoiceInput,
   type ReferenceAccount,
   type ReferenceVoice,
   type SavedBlend,
@@ -66,6 +68,7 @@ export default function VoiceProfilesPage() {
   const [references, setReferences] = useState<ReferenceVoice[]>([]);
   const [blends, setBlends] = useState<SavedBlend[]>([]);
   const [activeVoiceId, setActiveVoiceId] = useState<string>(PERSONAL_VOICE_ID);
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string>(PERSONAL_VOICE_ID);
   const [editorMode, setEditorMode] = useState<EditorMode>(null);
   const [editorBlendId, setEditorBlendId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -181,6 +184,8 @@ export default function VoiceProfilesPage() {
     [personalDimensions]
   );
 
+  const selectedBlend = blends.find((b) => b.id === selectedVoiceId);
+
   const selectedBlendForEditor = useMemo(
     () =>
       recipeCards.find(({ blend }) => blend.id === editorBlendId) ?? null,
@@ -202,40 +207,56 @@ export default function VoiceProfilesPage() {
     router.push("/crafting");
   };
 
+  const buildBlendVoicesFromReferences = (): BlendVoiceInput[] => {
+    // Personal voice always anchors the blend at 50%; remaining 50% is split
+    // evenly across the user's saved reference voices. If they have no
+    // references yet, the blend is just the personal voice at 100%.
+    const refs = references.filter((r) => r.isActive);
+    if (refs.length === 0) {
+      return [{ label: "My voice", percentage: 100 }];
+    }
+    const personalShare = 50;
+    const remaining = 100 - personalShare;
+    const each = Math.floor(remaining / refs.length);
+    const leftover = remaining - each * refs.length;
+    return [
+      { label: "My voice", percentage: personalShare },
+      ...refs.map((ref, idx) => ({
+        label: ref.name,
+        percentage: each + (idx === 0 ? leftover : 0),
+        referenceVoiceId: ref.id,
+      })),
+    ];
+  };
+
   const handleSaveVoice = async (name: string, dimensions: VoiceDimensions) => {
-    if (editorMode === "edit-personal") {
-      const response = await api.voice.updateProfile(dimensions);
-      setProfile(response.profile);
-      return;
+    try {
+      if (editorMode === "edit-personal") {
+        const response = await api.voice.updateProfile(dimensions);
+        setProfile(response.profile);
+        return;
+      }
+
+      if (editorMode === "edit-blend" && selectedBlend) {
+        // Persist any voice-percentage changes via the per-voice PATCH endpoint.
+        // Today the editor only exposes voice dimensions (not blend percentages),
+        // so this branch is a no-op rename hook until the editor surfaces them.
+        // We still re-fetch so the UI reflects the latest server state.
+        const response = await api.voice.getBlends();
+        setBlends(response.blends);
+        return;
+      }
+
+      // create mode: build a real blend from saved reference voices and persist.
+      const voices = buildBlendVoicesFromReferences();
+      await api.voice.createBlend(name, voices);
+      const response = await api.voice.getBlends();
+      setBlends(response.blends);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to save voice";
+      setError(message);
+      throw e;
     }
-
-    if (editorMode === "edit-blend") {
-      setError(
-        "Recipe editing will unlock once saved blend updates are supported by the API."
-      );
-      return;
-    }
-
-    const selectedReferenceIds = references
-      .map((reference) =>
-        normalizeReferenceSelectionKey(reference.handle ?? reference.name ?? reference.id)
-      )
-      .filter(Boolean);
-
-    const nextBlendVoices =
-      selectedReferenceIds.length > 0
-        ? buildReferenceBlendVoices(
-            selectedReferenceIds,
-            DEFAULT_SELF_PERCENTAGE,
-            referenceAccounts
-          )
-        : [{ label: "Personal Voice", percentage: 100 }];
-
-    const response = await api.voice.createBlend(name, nextBlendVoices);
-    const blendsResponse = await api.voice.getBlends();
-
-    setBlends(blendsResponse.blends);
-    setEditorBlendId(response.blend.id);
   };
 
   const handleCalibrate = async () => {
@@ -289,7 +310,7 @@ export default function VoiceProfilesPage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 xl:px-8">
+      <div>
         {error && (
           <div
             role="alert"
@@ -317,97 +338,48 @@ export default function VoiceProfilesPage() {
           blend Atlas should use the next time you craft.
         </p>
 
-        <section className="mt-8 rounded-2xl border border-glass-border bg-glass p-6 backdrop-blur-xl">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-atlas-teal/30 bg-atlas-teal/10 px-3 py-1 text-xs font-semibold text-atlas-teal">
-                  Personal Voice
-                </span>
-                <span className="rounded-full border border-glass-border bg-atlas-surface/60 px-3 py-1 text-xs text-atlas-text-secondary">
-                  {formatMaturityLabel(profile?.maturity)}
-                </span>
-                <span className="rounded-full border border-glass-border bg-atlas-surface/60 px-3 py-1 text-xs text-atlas-text-secondary">
-                  {profile?.tweetsAnalyzed ?? 0} tweets analyzed
-                </span>
-                {activeVoiceId === PERSONAL_VOICE_ID && (
-                  <span className="rounded-full border border-atlas-teal/30 bg-atlas-teal/10 px-3 py-1 text-xs font-semibold text-atlas-teal">
-                    Active in crafting
-                  </span>
-                )}
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                {personalStandouts.map((dimension) => (
-                  <span
-                    key={dimension.field}
-                    className="rounded-full border border-glass-border bg-atlas-surface/60 px-3 py-2 text-xs text-atlas-text-secondary"
-                  >
-                    {dimension.label}
-                    <span className="ml-2 font-semibold text-atlas-text">
-                      {formatVoiceDimensionValue(dimension.value)}
-                    </span>
-                  </span>
-                ))}
-              </div>
+        {/* Voice Library Grid */}
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <VoiceCard
+            name="Personal Voice"
+            isActive={activeVoiceId === PERSONAL_VOICE_ID}
+            isPersonal
+            isSelected={selectedVoiceId === PERSONAL_VOICE_ID}
+            dimensions={personalDimensions}
+            onSelect={() => setSelectedVoiceId(PERSONAL_VOICE_ID)}
+            onUse={() => handleUseVoice(PERSONAL_VOICE_ID)}
+          />
+          {blends.map((blend) => (
+            <VoiceCard
+              key={blend.id}
+              name={blend.name}
+              isActive={activeVoiceId === blend.id}
+              isPersonal={false}
+              isSelected={selectedVoiceId === blend.id}
+              dimensions={personalDimensions}
+              onSelect={() => setSelectedVoiceId(blend.id)}
+              onUse={() => handleUseVoice(blend.id)}
+            />
+          ))}
+          {blends.length === 0 && (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-glass-border bg-atlas-surface/40 p-5 text-center">
+              <Sparkles className="mx-auto h-5 w-5 text-atlas-teal" />
+              <p className="mt-2 text-sm font-semibold text-atlas-text-secondary">No blends yet</p>
+              <p className="mt-1 text-[11px] text-atlas-text-muted">Combine reference voices to create your own style</p>
             </div>
-
-            <div className="flex flex-col gap-3 xl:min-w-[320px]">
-              {showCalibrationInput ? (
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <input
-                    type="text"
-                    placeholder="@handle"
-                    value={calibrateHandle}
-                    onChange={(event) => setCalibrateHandle(event.target.value)}
-                    className="w-full rounded-lg border border-glass-border bg-atlas-bg/70 px-3 py-2 text-sm text-atlas-text placeholder:text-atlas-text-muted focus:border-atlas-teal focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => void handleCalibrate()}
-                    disabled={!calibrateHandle.trim()}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-4 py-2 text-sm font-semibold text-atlas-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Wand2 className="h-4 w-4" />
-                    Calibrate
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setShowCalibrationInput(true)}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-4 py-2 text-sm font-semibold text-atlas-bg transition-opacity hover:opacity-90"
-                >
-                  <Wand2 className="h-4 w-4" />
-                  Recalibrate
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={() => handleUseVoice(PERSONAL_VOICE_ID)}
-                disabled={activeVoiceId === PERSONAL_VOICE_ID}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                  activeVoiceId === PERSONAL_VOICE_ID
-                    ? "cursor-default border border-atlas-teal/30 bg-atlas-teal/10 text-atlas-teal"
-                    : "border border-glass-border text-atlas-text-secondary hover:border-atlas-teal/40 hover:text-atlas-text"
-                }`}
-              >
-                {activeVoiceId === PERSONAL_VOICE_ID
-                  ? "Active in Crafting"
-                  : "Use Personal Voice"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setEditorMode("edit-personal")}
-                className="rounded-lg border border-glass-border px-4 py-2 text-sm font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal/40 hover:text-atlas-text"
-              >
-                Tune Profile
-              </button>
-            </div>
-          </div>
-        </section>
+          )}
+          <button
+            type="button"
+            onClick={() => setEditorMode("create")}
+            className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-glass-border p-5 text-atlas-text-muted transition-colors hover:border-atlas-teal/40 hover:text-atlas-teal"
+          >
+            <Plus className="h-6 w-6" />
+            <span className="text-xs font-semibold">New Voice</span>
+            {blends.length === 0 && (
+              <span className="text-[10px] text-atlas-text-muted">Blend references into custom voices</span>
+            )}
+          </button>
+        </div>
 
         <section className="mt-10">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -483,7 +455,7 @@ export default function VoiceProfilesPage() {
           </button>
         </section>
 
-        <div className="mt-10" data-tour="reference-voices">
+        <div className="mt-10 pb-24" data-tour="reference-voices">
           <ReferenceVoicesSection
             references={references}
             onReferencesChange={setReferences}
