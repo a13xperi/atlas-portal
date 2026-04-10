@@ -270,11 +270,9 @@ const smokeRoutes: SmokeRoute[] = [
   {
     name: "voice profiles",
     path: "/voice-profiles",
-    // Page h1 on voice-profiles is "Your Saved Voices". We previously matched
-    // /your voice/i which no longer substring-matches the new copy, so target
-    // the actual h1 text instead.
+    // Page h1 is "Your Voices" — "Your Saved Voices" is a <p> section label, not a heading.
     ready: (page) =>
-      page.getByRole("heading", { name: /your saved voices/i }).first(),
+      page.getByRole("heading", { name: /your voices/i }).first(),
     // API calls + React loading state can take a moment in CI dev-server mode.
     readyTimeout: 20_000,
   },
