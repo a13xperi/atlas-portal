@@ -108,6 +108,25 @@ jest.mock("@/components/voice-profiles/RecipeCard", () => ({
   ),
 }));
 
+jest.mock("@/components/voice-profiles/VoiceCard", () => ({
+  __esModule: true,
+  default: ({
+    name,
+    isActive,
+    onUse,
+  }: {
+    name: string;
+    isActive: boolean;
+    onUse: () => void;
+  }) => (
+    <div data-testid="voice-card">
+      <button onClick={onUse}>
+        {isActive ? "Active" : "Craft with this voice"}
+      </button>
+    </div>
+  ),
+}));
+
 jest.mock("@/components/voice-profiles/VoiceEditorModal", () => ({
   __esModule: true,
   default: ({ isOpen }: { isOpen: boolean }) =>
