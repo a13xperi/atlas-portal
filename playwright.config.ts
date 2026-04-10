@@ -11,7 +11,12 @@ const baseURL = resolvePlaywrightBaseURL(localBaseURL);
 const apiURL =
   process.env.NEXT_PUBLIC_API_URL ??
   "https://api-production-9bef.up.railway.app";
-const useLocalWebServer = isLocalBaseURL(baseURL);
+
+// Vercel deployment protection bypass — see playwright-e2e.config.ts for the full
+// doc comment. Secret must be set in GitHub repo secrets + Vercel project settings.
+const vercelBypass =
+  process.env.VERCEL_AUTOMATION_BYPASS_SECRET ??
+  process.env.VERCEL_PROTECTION_BYPASS;
 
 export default defineConfig({
   testDir: "./e2e",
