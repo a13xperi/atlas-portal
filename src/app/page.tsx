@@ -1,36 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
 import OnboardingShell from "@/components/layout/OnboardingShell";
-import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
 
-function createProvisioningHandle(email: string) {
-  const normalizedEmail = email.trim().toLowerCase();
-  const localPart = normalizedEmail.split("@")[0] ?? "";
-  const base = localPart
-    .replace(/[^a-z0-9_]/g, "_")
-    .replace(/_+/g, "_")
-    .replace(/^_+|_+$/g, "");
-  const hash = Array.from(normalizedEmail).reduce(
-    (acc, char) => (acc * 31 + char.charCodeAt(0)) >>> 0,
-    7
-  );
-
-  return `${base || "atlas_user"}_${hash.toString(36).slice(0, 6)}`;
-}
-
 export default function LoginPage() {
-  const [mode, setMode] = useState<"login" | "register">("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
-  const { user, loading: authLoading, login, register } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   // Redirect authenticated users to dashboard
   useEffect(() => {
@@ -39,53 +16,13 @@ export default function LoginPage() {
     }
   }, [authLoading, user, router]);
 
-  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-
-  const handleSubmit = async () => {
-    setError("");
-
-    if (!email.trim()) {
-      setError("Email is required");
-      return;
-    }
-
-    if (!isValidEmail(email.trim())) {
-      setError("Please enter a valid email address");
-      return;
-    }
-
-    if (!password) {
-      setError("Password is required");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      if (mode === "login") {
-        await login(email.trim(), password);
-        router.push("/dashboard");
-      } else {
-        await register(createProvisioningHandle(email), email.trim(), password);
-        router.push("/onboarding");
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleSubmit();
-  };
-
   if (authLoading) return null;
+
+  const handleContinueWithX = () => {
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL ?? "https://api-production-9bef.up.railway.app";
+    window.location.href = `${apiUrl}/api/auth/x/login`;
+  };
 
   return (
     <OnboardingShell maxWidth="480px">
@@ -98,98 +35,11 @@ export default function LoginPage() {
         </p>
         <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-delphi-blue-400/50 to-transparent" />
 
-        <div className="h-8" />
-        <div className="text-left">
-          <label
-            htmlFor="login-email"
-            className="text-xs text-atlas-text-secondary uppercase tracking-wide"
-          >
-            Email
-          </label>
-          <input
-            id="login-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="mt-2 w-full bg-atlas-surface rounded-lg text-atlas-text placeholder-atlas-text-secondary px-4 py-3 border border-glass-border focus:outline-none focus:border-atlas-teal focus:shadow-[0_0_0_2px_rgba(78,205,196,0.15)]"
-            onKeyDown={handleKeyDown}
-          />
-        </div>
-
-        <div className="h-4" />
-
-        <div className="text-left">
-          <label
-            htmlFor="login-password"
-            className="text-xs text-atlas-text-secondary uppercase tracking-wide"
-          >
-            Password
-          </label>
-          <div className="relative">
-            <input
-              id="login-password"
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Min 6 characters"
-              className="mt-2 w-full bg-atlas-surface rounded-lg text-atlas-text placeholder-atlas-text-secondary px-4 py-3 pr-12 border border-glass-border focus:outline-none focus:border-atlas-teal focus:shadow-[0_0_0_2px_rgba(78,205,196,0.15)]"
-              onKeyDown={handleKeyDown}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              className="absolute right-3 top-1/2 mt-1 -translate-y-1/2 text-atlas-text-secondary hover:text-atlas-text transition-colors"
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          </div>
-        </div>
-
-        {error && (
-          <p role="alert" className="text-atlas-error text-sm mt-3 text-left">
-            {error}
-          </p>
-        )}
-
-        <div className="h-4" />
-
-        <GradientButton fullWidth onClick={handleSubmit} size="lg">
-          {submitting ? "Loading..." : mode === "login" ? "Sign In" : "Create Account"}
-        </GradientButton>
-
-        <div className="h-3" />
+        <div className="h-10" />
 
         <button
           type="button"
-          onClick={() => {
-            setMode(mode === "login" ? "register" : "login");
-            setError("");
-          }}
-          className="text-atlas-teal text-sm hover:underline"
-        >
-          {mode === "login"
-            ? "Don\u0027t have an account? Sign up \u2192"
-            : "Already have an account? Sign in \u2192"}
-        </button>
-
-        <div className="h-5" />
-
-        <div className="relative flex items-center justify-center">
-          <div className="h-px flex-1 bg-glass-border" />
-          <span className="px-3 text-xs text-atlas-text-muted uppercase tracking-wider">or</span>
-          <div className="h-px flex-1 bg-glass-border" />
-        </div>
-
-        <div className="h-5" />
-
-        <button
-          type="button"
-          onClick={() => {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "https://api-production-9bef.up.railway.app";
-            window.location.href = `${apiUrl}/api/auth/x/login`;
-          }}
+          onClick={handleContinueWithX}
           className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-atlas-surface border border-glass-border rounded-lg text-atlas-text hover:border-atlas-teal hover:bg-atlas-surface/80 transition-all"
         >
           <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden="true">
@@ -197,6 +47,13 @@ export default function LoginPage() {
           </svg>
           <span className="font-medium">Continue with X</span>
         </button>
+
+        <div className="h-4" />
+
+        <p className="text-xs text-atlas-text-secondary leading-5">
+          Atlas uses your X account to sign you in and tune your voice.
+          No passwords, no separate profile.
+        </p>
 
         <div className="h-6" />
 

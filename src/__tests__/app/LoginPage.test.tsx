@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 const push = jest.fn();
 const replace = jest.fn();
@@ -40,92 +40,32 @@ jest.mock("@/components/layout/OnboardingShell", () => ({
 
 const LoginPage = require("@/app/page").default;
 
-describe("LoginPage", () => {
+describe("LoginPage (X OAuth only)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("renders login form by default", () => {
+  it("renders the Atlas heading inside the onboarding shell", () => {
     render(<LoginPage />);
 
     expect(mockOnboardingShell).toHaveBeenCalledWith({ maxWidth: "480px" });
     expect(screen.getByText("ATLAS")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("you@example.com")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/min 6 characters/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sign In" })).toBeInTheDocument();
   });
 
-  it("shows email validation error for invalid email", async () => {
+  it("renders the Continue with X button", () => {
     render(<LoginPage />);
 
-    fireEvent.change(screen.getByPlaceholderText("you@example.com"), {
-      target: { value: "notanemail" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Sign In" }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/valid email/i)).toBeInTheDocument();
-    });
+    expect(
+      screen.getByRole("button", { name: /continue with x/i })
+    ).toBeInTheDocument();
   });
 
-  it("shows password length error", async () => {
+  it("does not render an email or password field", () => {
     render(<LoginPage />);
 
-    fireEvent.change(screen.getByPlaceholderText("you@example.com"), {
-      target: { value: "test@test.com" },
-    });
-    fireEvent.change(screen.getByPlaceholderText(/min 6 characters/i), {
-      target: { value: "123" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Sign In" }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/at least 6 characters/i)).toBeInTheDocument();
-    });
+    expect(screen.queryByPlaceholderText(/you@example\.com/i)).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/min 6 characters/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /sign in/i })).not.toBeInTheDocument();
   });
 
-  it("toggles between login and register mode", () => {
-    render(<LoginPage />);
-
-    fireEvent.click(screen.getByRole("button", { name: /sign up/i }));
-
-    expect(screen.getByText("Create Account")).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("@yourhandle")).not.toBeInTheDocument();
-  });
-
-  it("registers without showing an Atlas handle field", async () => {
-    render(<LoginPage />);
-
-    fireEvent.click(screen.getByRole("button", { name: /sign up/i }));
-    fireEvent.change(screen.getByPlaceholderText("you@example.com"), {
-      target: { value: "new.user@example.com" },
-    });
-    fireEvent.change(screen.getByPlaceholderText(/min 6 characters/i), {
-      target: { value: "password123" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Create Account" }));
-
-    await waitFor(() => {
-      expect(mockRegister).toHaveBeenCalledWith(
-        expect.any(String),
-        "new.user@example.com",
-        "password123"
-      );
-    });
-  });
-
-  it("shows a password toggle control", () => {
-    render(<LoginPage />);
-
-    const passwordInput = screen.getByPlaceholderText(/min 6 characters/i);
-    const buttons = screen.getAllByRole("button");
-    const toggleButton = buttons.find((button) => button !== screen.getByRole("button", { name: "Sign In" }));
-
-    expect(toggleButton).toBeInTheDocument();
-    expect(passwordInput).toHaveAttribute("type", "password");
-
-    fireEvent.click(toggleButton!);
-
-    expect(passwordInput).toHaveAttribute("type", "text");
-  });
 });
