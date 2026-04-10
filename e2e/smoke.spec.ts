@@ -7,7 +7,9 @@ const mockUser = {
   id: "smoke-user-1",
   handle: "atlasanalyst",
   email: "atlas@example.com",
-  role: "MANAGER" as const,
+  // ADMIN so FeatureGate-protected routes (campaigns/telegram/management/admin)
+  // that need admin or admins-scope flags render their content in smoke tests.
+  role: "ADMIN" as const,
   displayName: "Atlas Analyst",
   voiceProfile: {
     id: "voice-1",
@@ -19,6 +21,26 @@ const mockUser = {
     maturity: "INTERMEDIATE" as const,
     tweetsAnalyzed: 28,
   },
+};
+
+// All feature flags forced on for smoke runs — mirrors FLAG_DEFS in
+// src/lib/feature-flags.tsx. Seeded into localStorage via addInitScript.
+const ALL_FLAGS_ENABLED: Record<string, boolean> = {
+  crafting_station: true,
+  voice_lab: true,
+  arena: true,
+  campaigns: true,
+  queue: true,
+  analytics_advanced: true,
+  signals: true,
+  telegram_bot: true,
+  tweet_tinder: true,
+  multi_model: true,
+  super_admin: true,
+  management: true,
+  feed: true,
+  briefing: true,
+  library: true,
 };
 
 const mockSummary = {
@@ -295,9 +317,12 @@ const smokeRoutes: SmokeRoute[] = [
     ready: (page) => page.getByRole("heading", { name: /atlas arena|team management/i }),
   },
   {
+    // /profile was removed for the Wednesday demo (DM-322). Any navigation to
+    // /profile now redirects to /crafting — assert the redirect target renders.
     name: "profile",
     path: "/profile",
-    ready: (page) => page.getByRole("heading", { name: /atlas analyst/i }),
+    finalUrl: /\/crafting$/,
+    ready: (page) => page.getByText(/Feed Atlas content/i),
   },
   // Onboarding now uses the conversational Oracle chat UI at /onboarding
   {
@@ -462,6 +487,20 @@ test.describe("Route smoke tests", () => {
         });
       }
       await context.addCookies(cookies);
+
+      // Seed feature-flag localStorage BEFORE any page script runs so
+      // FeatureGate-protected routes (campaigns/telegram/management/admin)
+      // render their real content instead of redirecting to /dashboard.
+      await context.addInitScript((flags) => {
+        try {
+          window.localStorage.setItem(
+            "atlas-feature-flags",
+            JSON.stringify(flags),
+          );
+        } catch {
+          // ignore storage failures (private mode, etc.)
+        }
+      }, ALL_FLAGS_ENABLED);
 
       await stubApi(page);
 
