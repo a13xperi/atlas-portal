@@ -50,7 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        project: [a11y, errors, performance]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -63,35 +63,12 @@ jobs:
         run: |
           SLUG=$(echo "${{ github.head_ref }}" | tr '/' '-')
           echo "PLAYWRIGHT_BASE_URL=https://delphi-atlas-git-${SLUG}-alex-peris-projects.vercel.app" >> $GITHUB_ENV
-      - run: npx playwright test --config=playwright-e2e.config.ts --project=a11y --project=errors --project=performance --shard=${{ matrix.shard }}/4 --reporter=blob
+      - run: npx playwright test --config=playwright-e2e.config.ts --project=${{ matrix.project }}
         env:
           VERCEL_PROTECTION_BYPASS: ${{ secrets.VERCEL_PROTECTION_BYPASS }}
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: failure()
         with:
-          name: blob-report-shard-${{ matrix.shard }}
-          path: blob-report/
-          retention-days: 14
-
-  e2e-extended-merge-reports:
-    runs-on: ubuntu-latest
-    needs: e2e-extended
-    if: github.event_name == 'pull_request' && always()
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: blob-report-shard-*
-          merge-multiple: true
-          path: blob-reports/
-      - run: npx playwright merge-reports --reporter=html ./blob-reports
-      - uses: actions/upload-artifact@v4
-        with:
-          name: e2e-extended-report
-          path: playwright-report/
+          name: e2e-${{ matrix.project }}-report
+          path: test-results/
           retention-days: 14
