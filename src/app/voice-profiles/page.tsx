@@ -780,6 +780,7 @@ export default function VoiceProfilesPage() {
                 Compare against
               </label>
               <select
+                aria-label="Compare against a blend"
                 value={previewCompareBlendId ?? ""}
                 onChange={(e) =>
                   setPreviewCompareBlendId(e.target.value || null)
