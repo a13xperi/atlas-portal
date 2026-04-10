@@ -783,6 +783,7 @@ export interface VoiceProfile {
   selfPromotionalIntensity?: number;
   maturity: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
   tweetsAnalyzed: number;
+  analysis?: string | null;
 }
 
 export interface CalibrationResult {
