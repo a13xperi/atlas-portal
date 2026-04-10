@@ -228,15 +228,12 @@ export default function NavBar({ variant }: NavBarProps) {
                 </button>
                 <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
               </div>
-              <Link
-                href="/profile"
-                aria-label={cachedTier ? `Open profile — ${cachedTier.tier.name} (#${cachedTier.rank})` : "Open profile"}
-                className={`w-8 h-8 rounded-full bg-atlas-surface border-2 flex items-center justify-center text-xs font-medium transition-colors ${
+              <div
+                aria-label={cachedTier ? `${cachedTier.tier.name} (#${cachedTier.rank})` : "Signed in"}
+                className={`w-8 h-8 rounded-full bg-atlas-surface border-2 flex items-center justify-center text-xs font-medium ${
                   cachedTier
                     ? `${cachedTier.tier.borderColor} ${cachedTier.tier.color}`
-                    : pathname === "/profile"
-                      ? "border-atlas-teal text-atlas-teal"
-                      : "border-glass-border text-atlas-text-secondary hover:border-atlas-text-secondary"
+                    : "border-glass-border text-atlas-text-secondary"
                 }`}
                 title={cachedTier ? `${cachedTier.tier.name} · #${cachedTier.rank} · ${cachedTier.score} pts` : undefined}
               >
@@ -250,7 +247,7 @@ export default function NavBar({ variant }: NavBarProps) {
                 ) : (
                   initial
                 )}
-              </Link>
+              </div>
             </>
           )}
           {variant === "app" && user && (

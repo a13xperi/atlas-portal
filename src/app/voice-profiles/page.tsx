@@ -291,7 +291,7 @@ export default function VoiceProfilesPage() {
         )}
 
         <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
-          Voice Studio
+          Voice Lab
         </p>
         <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-atlas-text sm:text-4xl">
           Your Voice Recipes
