@@ -186,6 +186,7 @@ export interface FeatureFlagRecord {
 
 export type OnboardingTrack = "TRACK_A" | "TRACK_B";
 
+
 export class ApiError extends Error {
   statusCode: number;
   constructor(message: string, statusCode: number) {
@@ -733,6 +734,7 @@ export const api = {
   },
 
 
+
   campaigns: {
     list: () =>
       request<{ campaigns: Campaign[] }>("/api/campaigns"),
@@ -826,10 +828,64 @@ export interface BlendVoice {
   referenceVoice?: ReferenceVoice | null;
 }
 
+
 export interface SavedBlend {
   id: string;
   name: string;
   voices: BlendVoice[];
+}
+
+export interface BlendedVoiceDimensions {
+  humor: number;
+  formality: number;
+  brevity: number;
+  contrarianTone: number;
+  directness: number;
+  warmth: number;
+  technicalDepth: number;
+  confidence: number;
+  evidenceOrientation: number;
+  solutionOrientation: number;
+  socialPosture: number;
+  selfPromotionalIntensity: number;
+}
+
+export interface BlendedVoiceProfile {
+  id: string;
+  primaryTwitterId: string;
+  primaryHandle: string | null;
+  additionalTwitterIds: string[];
+  additionalHandles: string[];
+  weights: Record<string, number>;
+  dimensions: BlendedVoiceDimensions;
+  styleSignals?: Record<string, unknown> | null;
+  tweetsAnalyzed: number;
+  blendSummary?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BlendedVoiceInspiration {
+  twitterId: string;
+  handle: string;
+  name: string;
+  tweetCount: number;
+  weight: number;
+}
+
+export interface VoiceBlendResponse {
+  blendedProfile: {
+    id: string;
+    primaryTwitterId: string;
+    additionalTwitterIds: string[];
+    weights: Record<string, number>;
+    tweetsAnalyzed: number;
+    blendSummary?: string | null;
+  };
+  inspirations: BlendedVoiceInspiration[];
+  dimensions: BlendedVoiceDimensions;
+  styleSignals?: Record<string, unknown> | null;
+  summary: string;
 }
 
 export interface BlendedVoiceDimensions {

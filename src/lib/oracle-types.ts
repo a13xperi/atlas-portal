@@ -1,5 +1,15 @@
 import type { VoiceDimensions } from "./voice-profile-dimensions";
 
+// ── Content signals (Track B) ──────────────────────────────────────
+export type ContentSignalSource = "article" | "report" | "tweet" | "link";
+
+export interface ContentSignal {
+  source: ContentSignalSource;
+  title?: string;
+  url?: string;
+  addedLabel?: string;
+}
+
 // ── Steps ──────────────────────────────────────────────────────────
 export type OracleStep =
   | "WELCOME"
@@ -33,6 +43,8 @@ export interface ChatMessage {
   id: string;
   role: "oracle" | "user" | "system";
   content: string;
+  // Optional tag for special rendering paths (e.g. Track B content signals).
+  type?: "content_signal";
   component?: {
     type: InlineComponentType;
     props?: Record<string, unknown>;
@@ -42,6 +54,11 @@ export interface ChatMessage {
     value: string;
     variant: "primary" | "secondary" | "ghost";
   }>;
+  // Arbitrary structured attachments rendered below the message bubble.
+  metadata?: {
+    contentSignal?: ContentSignal;
+    [key: string]: unknown;
+  };
   timestamp: number;
 }
 
