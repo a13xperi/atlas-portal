@@ -456,21 +456,21 @@ export default function DashboardPage() {
                   <div className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-glass-border bg-atlas-bg p-3">
                     <div>
                       <label className="mb-1 block text-[10px] uppercase tracking-wider text-atlas-text-muted">Likes</label>
-                      <input type="number" min="0" value={engagementForm.likes} onChange={(e) => setEngagementForm((f) => ({ ...f, likes: e.target.value }))} className="w-20 rounded border border-glass-border bg-atlas-surface px-2 py-1 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none" />
+                      <input type="number" min="0" aria-label="Likes" value={engagementForm.likes} onChange={(e) => setEngagementForm((f) => ({ ...f, likes: e.target.value }))} className="w-20 rounded border border-glass-border bg-atlas-surface px-2 py-1 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none" />
                     </div>
                     <div>
                       <label className="mb-1 block text-[10px] uppercase tracking-wider text-atlas-text-muted">Retweets</label>
-                      <input type="number" min="0" value={engagementForm.retweets} onChange={(e) => setEngagementForm((f) => ({ ...f, retweets: e.target.value }))} className="w-20 rounded border border-glass-border bg-atlas-surface px-2 py-1 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none" />
+                      <input type="number" min="0" aria-label="Retweets" value={engagementForm.retweets} onChange={(e) => setEngagementForm((f) => ({ ...f, retweets: e.target.value }))} className="w-20 rounded border border-glass-border bg-atlas-surface px-2 py-1 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none" />
                     </div>
                     <div>
                       <label className="mb-1 block text-[10px] uppercase tracking-wider text-atlas-text-muted">Impressions</label>
-                      <input type="number" min="0" value={engagementForm.impressions} onChange={(e) => setEngagementForm((f) => ({ ...f, impressions: e.target.value }))} className="w-24 rounded border border-glass-border bg-atlas-surface px-2 py-1 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none" />
+                      <input type="number" min="0" aria-label="Impressions" value={engagementForm.impressions} onChange={(e) => setEngagementForm((f) => ({ ...f, impressions: e.target.value }))} className="w-24 rounded border border-glass-border bg-atlas-surface px-2 py-1 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none" />
                     </div>
                     <button onClick={() => handleEngagementSubmit(draft.id)} disabled={engagementSaving} className="rounded-lg bg-atlas-teal px-3 py-1 text-xs font-medium text-atlas-bg transition-colors hover:bg-atlas-teal/80 disabled:opacity-50">
                       {engagementSaving ? "Saving..." : "Save"}
                     </button>
-                    <button onClick={() => setEngagementDraftId(null)} className="rounded-lg px-2 py-1 text-xs text-atlas-text-muted hover:text-atlas-text">
-                      <X className="h-3 w-3" />
+                    <button onClick={() => setEngagementDraftId(null)} aria-label="Cancel engagement entry" className="rounded-lg px-2 py-1 text-xs text-atlas-text-muted hover:text-atlas-text">
+                      <X className="h-3 w-3" aria-hidden="true" />
                     </button>
                   </div>
                 )}

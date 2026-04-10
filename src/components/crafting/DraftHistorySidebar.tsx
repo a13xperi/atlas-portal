@@ -58,7 +58,7 @@ export default function DraftHistorySidebar({
             className="flex h-10 w-10 items-center justify-center rounded-2xl border border-glass-border bg-glass/50 text-atlas-text-secondary backdrop-blur-xl transition-colors hover:border-atlas-teal hover:text-atlas-teal"
             aria-label="Expand draft history"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       </aside>
@@ -83,7 +83,7 @@ export default function DraftHistorySidebar({
                 className="flex h-7 w-7 items-center justify-center rounded-lg text-atlas-text-muted transition-colors hover:text-atlas-teal"
                 aria-label="Collapse draft history"
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
               </button>
             )}
           </div>

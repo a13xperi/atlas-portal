@@ -79,9 +79,10 @@ export function CraftingAdvisor({
             </button>
             <button
               onClick={onClose}
+              aria-label="Close advisor"
               className="text-xs text-white/50 hover:text-white/80 transition-colors"
             >
-              <X size={16} />
+              <X size={16} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -94,11 +95,11 @@ export function CraftingAdvisor({
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-glass-border">
         <div className="flex items-center gap-2">
-          <Sparkles size={16} className="text-delphi-teal" />
+          <Sparkles size={16} className="text-delphi-teal" aria-hidden="true" />
           <span className="text-sm font-semibold text-white">Craft with Atlas</span>
         </div>
-        <button onClick={onClose} className="text-white/40 hover:text-white/70 transition-colors">
-          <X size={16} />
+        <button onClick={onClose} aria-label="Close advisor" className="text-white/40 hover:text-white/70 transition-colors">
+          <X size={16} aria-hidden="true" />
         </button>
       </div>
 
@@ -153,6 +154,7 @@ export function CraftingAdvisor({
                   <input
                     autoFocus
                     type="text"
+                    aria-label="Custom angle description"
                     value={customInput}
                     onChange={e => setCustomInput(e.target.value)}
                     onKeyDown={e => {
@@ -175,7 +177,7 @@ export function CraftingAdvisor({
                   onClick={() => setShowCustomInput(true)}
                   className="w-full flex items-center gap-2 text-xs text-white/40 hover:text-white/60 transition-colors py-1"
                 >
-                  <Plus size={13} />
+                  <Plus size={13} aria-hidden="true" />
                   Add your own angle
                 </button>
               )}

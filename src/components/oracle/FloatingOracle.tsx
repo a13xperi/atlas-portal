@@ -101,11 +101,11 @@ export default function FloatingOracle() {
           aria-label="Open Oracle assistant"
         >
           {imgError ? (
-            <Sparkles className="h-6 w-6 text-atlas-teal" />
+            <Sparkles className="h-6 w-6 text-atlas-teal" aria-hidden="true" />
           ) : (
             <Image
               src="/images/oracle-avatar.png"
-              alt="The Oracle"
+              alt=""
               width={40}
               height={40}
               className="rounded-full"
@@ -136,7 +136,7 @@ export default function FloatingOracle() {
               <p className="text-[10px] text-atlas-text-muted">Your Atlas copilot</p>
             </div>
             <button type="button" onClick={() => setIsOpen(false)} className="text-atlas-text-muted hover:text-atlas-text" aria-label="Close Oracle">
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
 
@@ -188,14 +188,14 @@ export default function FloatingOracle() {
                         onClick={() => confirmAction(action.id)}
                         className="flex items-center gap-1 rounded-lg bg-atlas-teal/20 px-3 py-1.5 text-xs font-medium text-atlas-teal hover:bg-atlas-teal/30"
                       >
-                        <Check className="h-3 w-3" /> Yes, do it
+                        <Check className="h-3 w-3" aria-hidden="true" /> Yes, do it
                       </button>
                       <button
                         type="button"
                         onClick={() => rejectAction(action.id)}
                         className="flex items-center gap-1 rounded-lg bg-atlas-surface px-3 py-1.5 text-xs text-atlas-text-muted hover:text-atlas-text"
                       >
-                        <XCircle className="h-3 w-3" /> Cancel
+                        <XCircle className="h-3 w-3" aria-hidden="true" /> Cancel
                       </button>
                     </div>
                   </div>
