@@ -22,7 +22,6 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
@@ -43,7 +42,6 @@ import RefinementChips, {
 import {
   api,
   AnalyticsSummary,
-  GeneratedImage,
   SavedBlend,
   TrendingTopic,
   TweetDraft,
@@ -105,16 +103,6 @@ const DRAFT_WORKFLOW_STEPS: { status: TweetDraft["status"]; label: string }[] = 
   { status: "APPROVED", label: "Approved" },
   { status: "POSTED", label: "Posted" },
 ];
-
-const VisualConceptSection = dynamic(
-  () => import("@/components/crafting/VisualConceptSection"),
-  {
-    loading: () => (
-      <div className="mt-4 h-64 rounded-2xl bg-atlas-surface animate-pulse" />
-    ),
-    ssr: false,
-  }
-);
 
 function appendSourceUrl(content: string, sourceUrl?: string) {
   const trimmedContent = content.trimEnd();
@@ -274,8 +262,6 @@ function CraftingPage() {
   const [voiceBanner, setVoiceBanner] = useState<string | null>(null);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
-  const [visualConcept, setVisualConcept] = useState<GeneratedImage | null>(null);
-  const [generatingImage, setGeneratingImage] = useState(false);
   const [refiningChip, setRefiningChip] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [contentError, setContentError] = useState("");
@@ -305,6 +291,13 @@ function CraftingPage() {
   const handleDraftTextChangeRef = useRef<((text: string) => void) | null>(null);
   const voiceRecorder = useVoiceRecorder(useCallback((text: string) => {
     handleDraftTextChangeRef.current?.(text);
+    // Auto-generate after voice transcription
+    setTimeout(() => {
+      handleCreateDraftRef.current?.(text);
+    }, 50);
+  }, []));
+  const feedbackRecorder = useVoiceRecorder(useCallback((text: string) => {
+    setFeedback((prev) => prev ? `${prev} ${text}` : text);
   }, []));
   const draftInputValueRef = useRef("");
   const handleCreateDraftRef = useRef<
@@ -539,7 +532,6 @@ function CraftingPage() {
     );
 
     setActiveDraft(draft);
-    setVisualConcept(null);
     setVoiceComparison(null);
 
     if (!draftInVersionHistory) {
@@ -591,7 +583,6 @@ function CraftingPage() {
       setCompareVersion(null);
     }
     setActiveDraft(normalizedDraft);
-    setVisualConcept(null);
     activeDraftInitialized.current = true;
   }, [prependDraftHistory]);
 
@@ -659,7 +650,6 @@ function CraftingPage() {
       setVoiceComparison(null);
       setCompareMode(false);
       setCompareVersion(null);
-      setVisualConcept(null);
       commitDraft(draft);
       return true;
     } catch (createDraftError: unknown) {
@@ -815,7 +805,6 @@ function CraftingPage() {
       setVoiceComparison(null);
       setCompareMode(false);
       setCompareVersion(null);
-      setVisualConcept(null);
       commitDraft(draft, trimmedArticleUrl);
       return { showFallback: Boolean(trimmedFallbackText) };
     } catch (generateNewsError: unknown) {
@@ -949,27 +938,6 @@ function CraftingPage() {
     }
   };
 
-  const handleGenerateVisual = async (style = "quote_card") => {
-    if (!user || !activeDraft) return;
-
-    setGeneratingImage(true);
-    setError(null);
-
-    try {
-      const { image } = await api.images.generateForDraft(activeDraft.id, style);
-      setVisualConcept(image);
-    } catch (generateVisualError: unknown) {
-      console.error("Image generation failed:", generateVisualError);
-      setError(
-        generateVisualError instanceof Error
-          ? generateVisualError.message
-          : "Image generation failed"
-      );
-    } finally {
-      setGeneratingImage(false);
-    }
-  };
-
   const handleCopyDraft = async () => {
     if (!activeDraft || !navigator.clipboard) return;
 
@@ -1020,7 +988,6 @@ function CraftingPage() {
         setActiveDraft(null);
         setCompareMode(false);
         setCompareVersion(null);
-        setVisualConcept(null);
         setFeedback("");
       }
     } catch (deleteDraftError: unknown) {
@@ -1127,7 +1094,6 @@ function CraftingPage() {
       setActiveDraft(normalizedCurrentDraft);
       setCompareMode(false);
       setCompareVersion(null);
-      setVisualConcept(null);
       setVoiceComparison({
         options: [
           {
@@ -1171,7 +1137,6 @@ function CraftingPage() {
     setCompareMode(false);
     setCompareVersion(null);
     setVoiceComparison(null);
-    setVisualConcept(null);
     activeDraftInitialized.current = true;
   };
 
@@ -2054,14 +2019,6 @@ function CraftingPage() {
             </div>
           ) : null}
 
-          {!voiceComparison && activeDraft ? (
-            <VisualConceptSection
-              generatingImage={generatingImage}
-              onGenerateVisual={handleGenerateVisual}
-              visualConcept={visualConcept}
-            />
-          ) : null}
-
           {!voiceComparison && versionDrafts.length > 0 ? (
             <div className="mt-6 space-y-4">
               <div className="flex flex-wrap items-center gap-2">
@@ -2225,10 +2182,27 @@ function CraftingPage() {
                 />
                 <button
                   type="button"
-                  aria-label="Record voice feedback"
-                  className="flex items-center justify-center rounded-lg border border-glass-border bg-atlas-surface p-3 text-atlas-text-secondary transition-colors hover:text-atlas-teal"
+                  aria-label={feedbackRecorder.state === "recording" ? "Stop recording" : "Record voice feedback"}
+                  onClick={() => {
+                    if (feedbackRecorder.state === "recording") {
+                      feedbackRecorder.stopRecording();
+                    } else if (feedbackRecorder.state === "idle") {
+                      feedbackRecorder.startRecording();
+                    }
+                  }}
+                  className={`flex items-center justify-center rounded-lg border p-3 text-sm transition-colors ${
+                    feedbackRecorder.state === "recording"
+                      ? "border-red-500 bg-red-500/10 text-red-400"
+                      : feedbackRecorder.state === "transcribing"
+                      ? "border-atlas-teal/50 bg-atlas-teal/10 text-atlas-teal animate-pulse"
+                      : "border-glass-border bg-atlas-surface text-atlas-text-secondary hover:text-atlas-teal"
+                  }`}
                 >
-                  <Mic className="h-4 w-4" aria-hidden="true" />
+                  {feedbackRecorder.state === "recording" ? (
+                    <span className="text-xs font-mono">{feedbackRecorder.duration}s</span>
+                  ) : (
+                    <Mic className="h-4 w-4" aria-hidden="true" />
+                  )}
                 </button>
               </div>
               <p id={draftFeedbackHintId} className="mt-2 text-sm italic text-atlas-text-muted">
