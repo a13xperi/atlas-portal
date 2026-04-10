@@ -80,8 +80,8 @@ describe("NavBar", () => {
       "aria-current",
       "page"
     );
-    // Core 4 tabs: Crafting, Voices, Library, Arena
-    expect(screen.getByRole("link", { name: "Voices" })).not.toHaveAttribute(
+    // Core 4 tabs: Crafting, Voice Lab, Library, Arena
+    expect(screen.getByRole("link", { name: "Voice Lab" })).not.toHaveAttribute(
       "aria-current"
     );
     expect(screen.getByRole("link", { name: "Library" })).toBeInTheDocument();
@@ -98,7 +98,7 @@ describe("NavBar", () => {
     expect(screen.queryByRole("link", { name: "Signals" })).not.toBeInTheDocument();
     // Core tabs still visible
     expect(screen.getByRole("link", { name: "Crafting" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Voices" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Voice Lab" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Library" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Arena" })).toBeInTheDocument();
   });
