@@ -63,7 +63,7 @@ jobs:
         run: |
           SLUG=$(echo "${{ github.head_ref }}" | tr '/' '-')
           echo "PLAYWRIGHT_BASE_URL=https://delphi-atlas-git-${SLUG}-alex-peris-projects.vercel.app" >> $GITHUB_ENV
-      - run: npx playwright test --config=playwright-e2e.config.ts --shard=${{ matrix.shard }}/4 --reporter=blob
+      - run: npx playwright test --config=playwright-e2e.config.ts --project=a11y --project=errors --project=performance --shard=${{ matrix.shard }}/4 --reporter=blob
         env:
           VERCEL_PROTECTION_BYPASS: ${{ secrets.VERCEL_PROTECTION_BYPASS }}
       - uses: actions/upload-artifact@v4
