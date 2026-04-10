@@ -627,7 +627,7 @@ export default function OracleChat() {
   const actionConfig = getActionZoneConfig();
 
   return (
-    <div className="flex h-screen flex-col bg-gradient-to-b from-atlas-bg via-atlas-nav to-atlas-bg">
+    <div className="flex h-screen flex-col bg-gradient-to-b from-atlas-bg via-atlas-nav to-atlas-bg pt-14">
       <NavBar variant="onboarding" />
 
       {/* Header */}

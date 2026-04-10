@@ -133,6 +133,15 @@ const mockVoiceProfile = { profile: mockUser.voiceProfile };
 const mockAlerts = { alerts: [] };
 const mockSubscriptions = { subscriptions: [] };
 
+const mockArenaLeaderboard = {
+  entries: [
+    { rank: 1, userId: "test-user-1", handle: "testanalyst", displayName: "Test User", tweetsCount: 12, engagementScore: 4800, consistencyScore: 0.9, totalScore: 9.2 },
+    { rank: 2, userId: "u1", handle: "alice", displayName: "Alice", tweetsCount: 10, engagementScore: 3900, consistencyScore: 0.8, totalScore: 7.8 },
+  ],
+  period: "last_30_days",
+  updatedAt: new Date().toISOString(),
+};
+
 type RouteTarget = Page | BrowserContext;
 
 function json(route: Route, body: unknown) {
@@ -228,6 +237,10 @@ async function stubDataEndpoints(target: RouteTarget) {
         return json(route, { accounts: [] });
       case "/api/campaigns":
         return json(route, { campaigns: [] });
+      case "/api/arena/leaderboard":
+        return json(route, mockArenaLeaderboard);
+      case "/api/arena/me":
+        return json(route, { entry: mockArenaLeaderboard.entries[0] ?? null });
       default:
         // Catch-all for any remaining API calls (including briefing, etc.)
         if (route.request().method() === "GET") return json(route, {});
@@ -266,14 +279,6 @@ export const test = base.extend<{ authedPage: Page }>({
 
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.waitForURL("**/dashboard");
-
-    // Seed feature flags so off-by-default features (campaigns, telegram_bot) are enabled in tests
-    await page.evaluate(() => {
-      localStorage.setItem(
-        "atlas-feature-flags",
-        JSON.stringify({ campaigns: true, telegram_bot: true }),
-      );
-    });
 
     await use(page);
   },

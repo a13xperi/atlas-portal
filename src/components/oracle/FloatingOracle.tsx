@@ -63,6 +63,13 @@ export default function FloatingOracle() {
     }
   }, [isOpen]);
 
+  // Wire Cmd+K "Open Oracle" command palette action
+  useEffect(() => {
+    const handleOracleOpen = () => setIsOpen(true);
+    window.addEventListener("oracle:open", handleOracleOpen);
+    return () => window.removeEventListener("oracle:open", handleOracleOpen);
+  }, []);
+
   const handleSend = useCallback(() => {
     const text = input.trim();
     if (!text || isThinking) return;

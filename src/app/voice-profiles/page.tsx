@@ -110,6 +110,7 @@ export default function VoiceProfilesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dismissedSetupPrompt, setDismissedSetupPrompt] = useState(false);
+  const [dismissedRecalibrateNudge, setDismissedRecalibrateNudge] = useState(false);
   const [showCalibrationInput, setShowCalibrationInput] = useState(false);
   const [previewingBlendId, setPreviewingBlendId] = useState<string | null>(null);
   const [blendPreviewErrors, setBlendPreviewErrors] = useState<
@@ -554,6 +555,38 @@ export default function VoiceProfilesPage() {
           </div>
         )}
 
+        {profile && !profile.analysis && !dismissedRecalibrateNudge && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="mb-6 flex items-start justify-between rounded-xl border border-atlas-teal/20 bg-atlas-teal/10 px-4 py-3 text-sm"
+          >
+            <div>
+              <p className="font-semibold text-atlas-teal">Improve your voice quality</p>
+              <p className="mt-1 text-atlas-text-secondary">
+                Re-calibrate your voice to unlock better draft quality — takes about 30 seconds.
+              </p>
+            </div>
+            <div className="ml-3 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCalibrationInput(true)}
+                className="rounded-lg border border-atlas-teal/30 bg-atlas-teal/15 px-3 py-1.5 text-xs font-semibold text-atlas-teal transition-colors hover:bg-atlas-teal/25"
+              >
+                Re-calibrate
+              </button>
+              <button
+                type="button"
+                onClick={() => setDismissedRecalibrateNudge(true)}
+                aria-label="Dismiss calibration nudge"
+                className="text-atlas-text-secondary hover:text-atlas-text"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
         <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">Voice Studio</p>
         <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight text-atlas-text">Your Voices</h1>
         <p className="mt-1 text-sm text-atlas-text-secondary">
@@ -747,6 +780,7 @@ export default function VoiceProfilesPage() {
                 Compare against
               </label>
               <select
+                aria-label="Compare against a blend"
                 value={previewCompareBlendId ?? ""}
                 onChange={(e) =>
                   setPreviewCompareBlendId(e.target.value || null)
