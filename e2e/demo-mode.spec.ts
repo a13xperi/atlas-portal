@@ -5,7 +5,7 @@
  * correctly across all pages.
  */
 
-import { test as fixtureTest, expect, stubAuth, stubDataEndpoints } from "./fixtures";
+import { test as fixtureTest, expect, vercelBypassCookies } from "./fixtures";
 import { type Page } from "@playwright/test";
 
 // Use origin-agnostic glob patterns so stubs work whether the browser hits the
@@ -66,15 +66,9 @@ const test = fixtureTest.extend<{ authedPage: Page }>({
 
     // Set session cookie so middleware allows /dashboard
     const hostname = new URL(baseURL ?? "http://localhost:3000").hostname;
-    const vercelBypass =
-      process.env.VERCEL_AUTOMATION_BYPASS_SECRET ??
-      process.env.VERCEL_PROTECTION_BYPASS;
-    const bypassCookies = vercelBypass
-      ? [{ name: "_vercel_password", value: vercelBypass, domain: hostname, path: "/" }]
-      : [];
     await context.addCookies([
       { name: "atlas_session", value: "1", domain: hostname, path: "/" },
-      ...bypassCookies,
+      ...vercelBypassCookies(hostname),
     ]);
 
     // Abort external avatar CDN requests instantly — prevents unavatar.io from

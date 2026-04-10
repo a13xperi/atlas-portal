@@ -1,4 +1,5 @@
-import { test as base, Page, Route } from "@playwright/test";
+import { test as base, BrowserContext, Page, Route } from "@playwright/test";
+import { resolveVercelBypassCookies } from "./playwright-env";
 
 // Use origin-agnostic glob patterns so stubs work whether the browser hits the
 // cross-origin Railway backend directly OR the Next.js rewrite proxy on localhost.
@@ -132,6 +133,8 @@ const mockVoiceProfile = { profile: mockUser.voiceProfile };
 const mockAlerts = { alerts: [] };
 const mockSubscriptions = { subscriptions: [] };
 
+type RouteTarget = Page | BrowserContext;
+
 function json(route: Route, body: unknown) {
   return route.fulfill({
     status: 200,
@@ -141,8 +144,8 @@ function json(route: Route, body: unknown) {
 }
 
 /** Stub all auth endpoints so the app thinks we're logged in. */
-async function stubAuth(page: Page) {
-  await page.route("**/api/auth/**", (route) => {
+async function stubAuth(target: RouteTarget) {
+  await target.route("**/api/auth/**", (route) => {
     const url = new URL(route.request().url());
     switch (url.pathname) {
       case "/api/auth/me":
@@ -153,6 +156,10 @@ async function stubAuth(page: Page) {
         return json(route, { token: "fake-jwt", refresh_token: "fake-refresh" });
       case "/api/auth/logout":
         return json(route, { success: true });
+      case "/api/auth/x/status":
+        return json(route, { linked: false, tokenExpired: false });
+      case "/api/auth/x/authorize":
+        return json(route, { url: "https://twitter.com/i/oauth2/authorize" });
       default:
         return json(route, {});
     }
@@ -160,8 +167,8 @@ async function stubAuth(page: Page) {
 }
 
 /** Stub common data endpoints with realistic responses. */
-async function stubDataEndpoints(page: Page) {
-  await page.route("**/api/**", (route) => {
+async function stubDataEndpoints(target: RouteTarget) {
+  await target.route("**/api/**", (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname;
 
@@ -173,14 +180,14 @@ async function stubDataEndpoints(page: Page) {
         return json(route, mockSummary);
       case "/api/drafts":
         if (route.request().method() === "GET") return json(route, mockDrafts);
-        return route.continue();
+        return route.fallback();
       case "/api/analytics/engagement-daily":
         return json(route, mockEngagementDaily);
       case "/api/analytics/activity-daily":
         return json(route, mockActivityDaily);
       case "/api/analytics/learning-log":
         if (route.request().method() === "GET") return json(route, mockLearningLog);
-        return route.continue();
+        return route.fallback();
       case "/api/users/team":
         return json(route, mockTeam);
       case "/api/analytics/team":
@@ -193,7 +200,18 @@ async function stubDataEndpoints(page: Page) {
         return json(route, mockBlends);
       case "/api/voice/profile":
         if (route.request().method() === "GET") return json(route, mockVoiceProfile);
-        return route.continue();
+        return route.fallback();
+      case "/api/briefing/preferences":
+        return json(route, {
+          preferences: {
+            deliveryTime: "08:00",
+            topics: [],
+            sources: [],
+            channel: "EMAIL",
+          },
+        });
+      case "/api/briefing/history":
+        return json(route, { briefings: [] });
       case "/api/alerts/feed":
         return json(route, mockAlerts);
       case "/api/alerts/subscriptions":
@@ -213,7 +231,7 @@ async function stubDataEndpoints(page: Page) {
       default:
         // Catch-all for any remaining API calls (including briefing, etc.)
         if (route.request().method() === "GET") return json(route, {});
-        return route.continue();
+        return route.fallback();
     }
   });
 }
@@ -222,11 +240,7 @@ async function stubDataEndpoints(page: Page) {
 export function vercelBypassCookies(
   domain: string,
 ): Array<{ name: string; value: string; domain: string; path: string }> {
-  const token =
-    process.env.VERCEL_AUTOMATION_BYPASS_SECRET ??
-    process.env.VERCEL_PROTECTION_BYPASS;
-  if (!token) return [];
-  return [{ name: "_vercel_password", value: token, domain, path: "/" }];
+  return resolveVercelBypassCookies(domain);
 }
 
 /** Extended test fixture that provides an authenticated page. */
@@ -237,34 +251,12 @@ export const test = base.extend<{ authedPage: Page }>({
     const cookies: Array<{ name: string; value: string; domain: string; path: string }> = [
       { name: "atlas_access_token", value: "1", domain: url.hostname, path: "/" },
       { name: "atlas_session", value: "1", domain: url.hostname, path: "/" },
+      ...vercelBypassCookies(url.hostname),
     ];
-    // Bypass Vercel deployment protection on preview URLs
-    const vercelBypass =
-      process.env.VERCEL_AUTOMATION_BYPASS_SECRET ??
-      process.env.VERCEL_PROTECTION_BYPASS;
-    if (vercelBypass) {
-      cookies.push({
-        name: "_vercel_password",
-        value: vercelBypass,
-        domain: url.hostname,
-        path: "/",
-      });
-    }
     await context.addCookies(cookies);
 
-    // Seed feature-flag localStorage + demo mode BEFORE any page script runs.
-    // This keeps gated routes (campaigns/telegram/management/admin/*) rendering
-    // their real content instead of FeatureGate redirecting to /dashboard.
-    await context.addInitScript((flags) => {
-      try {
-        window.localStorage.setItem("atlas-feature-flags", JSON.stringify(flags));
-      } catch {
-        // ignore storage failures (private mode, etc.)
-      }
-    }, ALL_FLAGS_ENABLED);
-
-    await stubAuth(page);
-    await stubDataEndpoints(page);
+    await stubAuth(context);
+    await stubDataEndpoints(context);
 
     // Abort external avatar requests so they resolve instantly (404 → initials fallback).
     // Without this, waitForLoadState("networkidle") hangs waiting for unavatar.io

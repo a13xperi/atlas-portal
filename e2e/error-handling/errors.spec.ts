@@ -49,7 +49,7 @@ test.describe("Error handling — API failures", () => {
 
     // Delay all data responses by 5s
     await page.route("**/api/**", async (route) => {
-      if (route.request().url().includes("/auth/")) return route.continue();
+      if (route.request().url().includes("/auth/")) return route.fallback();
       await new Promise((r) => setTimeout(r, 5000));
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({}) });
     });
