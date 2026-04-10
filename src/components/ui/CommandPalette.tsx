@@ -124,6 +124,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
     { id: "arena", label: "Arena", description: "Competitive scoreboard", icon: Trophy, action: () => navigate("/arena"), keywords: "arena leaderboard score compete ranking" },
     { id: "campaigns", label: "Campaigns", description: "Posting queue & threads", icon: CalendarClock, action: () => navigate("/campaigns"), keywords: "campaign queue schedule thread post" },
     { id: "onboarding", label: "Oracle Onboarding", description: "Re-run onboarding flow", icon: Sparkles, action: () => navigate("/onboarding"), keywords: "oracle onboarding setup voice wizard" },
+    { id: "oracle-open", label: "Open Oracle", description: "Chat with your AI copilot", icon: Sparkles, action: () => { window.dispatchEvent(new CustomEvent("oracle:open")); closePalette(); }, keywords: "oracle ai copilot chat assistant" },
   ];
 
   const toggleFavorite = useCallback((id: string, e: React.MouseEvent) => {
