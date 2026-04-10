@@ -631,7 +631,7 @@ export default function OracleChat() {
       <NavBar variant="onboarding" />
 
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-glass-border bg-atlas-nav/50 backdrop-blur-xl">
+      <div className="flex items-center gap-3 px-4 sm:px-6 py-3 border-b border-glass-border bg-atlas-nav/50 backdrop-blur-xl">
         <OracleAvatar size="md" />
         <div>
           <h1 className="font-heading font-bold text-sm text-atlas-text">
@@ -642,7 +642,7 @@ export default function OracleChat() {
       </div>
 
       {/* Message list */}
-      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-8 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 pt-6 pb-8 space-y-4">
         {state.messages.map((msg, i) => (
           <OracleMessage
             key={msg.id}
