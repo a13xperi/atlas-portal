@@ -4,7 +4,7 @@ test.describe("Dashboard", () => {
   test("renders heading and navigation cards", async ({ authedPage: page }) => {
     await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
     await expect(page.getByText("Crafting Station")).toBeVisible();
-    await expect(page.getByText("Voice Lab")).toBeVisible();
+    await expect(page.locator("#main-content").getByText("Voice Lab")).toBeVisible();
   });
 
   test("renders stat cards", async ({ authedPage: page }) => {
