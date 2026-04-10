@@ -253,9 +253,6 @@ export default function ReferenceVoicesSection({
           <span className="rounded-full border border-atlas-teal/30 bg-atlas-teal/10 px-3 py-1 text-xs font-semibold text-atlas-teal">
             {selectedAccounts.length} selected
           </span>
-          <span className="rounded-full border border-glass-border bg-atlas-surface/60 px-3 py-1 text-xs text-atlas-text-secondary">
-            Even split across selected accounts
-          </span>
         </div>
 
         {selectedAccounts.length === 0 ? (

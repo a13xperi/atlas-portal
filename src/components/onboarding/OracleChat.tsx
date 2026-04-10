@@ -31,7 +31,7 @@ import ContentSignalsPreview from "./ContentSignalsPreview";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import GradientButton from "@/components/ui/GradientButton";
 import ContentInput from "@/components/ui/ContentInput";
-import { Loader2 } from "lucide-react";
+import { CheckCircle, Loader2 } from "lucide-react";
 
 const referenceAccountLookup = getReferenceAccountLookup(
   REFERENCE_ACCOUNT_FALLBACK
@@ -387,7 +387,11 @@ export default function OracleChat() {
           return (
             <div className="bg-atlas-surface rounded-2xl p-4 space-y-2">
               <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
+                {state.calibrationResult ? (
+                  <CheckCircle className="h-4 w-4 text-atlas-teal" />
+                ) : (
+                  <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
+                )}
                 <span className="text-sm text-atlas-text-secondary">
                   {state.calibrationResult
                     ? `Calibrated from ${state.calibrationResult.tweetsAnalyzed} tweets`
