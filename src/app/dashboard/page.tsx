@@ -364,11 +364,12 @@ const searchParams = useSearchParams();
       </Link>
       )}
 
-      <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {visibleNavCards.map((card) => (
           <Link
             key={card.label}
             href={card.href}
+            data-testid={`nav-card-${card.label.toLowerCase().replace(/\s+/g, "-")}`}
             className="card-interactive flex flex-col items-center gap-3 rounded-2xl border border-glass-border bg-atlas-surface p-6 text-center text-atlas-text"
           >
             <card.icon className="w-5 h-5 text-atlas-teal" aria-hidden="true" />
