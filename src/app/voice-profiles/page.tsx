@@ -594,7 +594,7 @@ export default function VoiceProfilesPage() {
         </p>
 
         {/* Inspirations — seed your voice before seeing blends */}
-        <div className="mt-8" data-tour="reference-voices">
+        <div className="mt-8 scroll-mt-20" data-tour="reference-voices">
           <ReferenceVoicesSection
             references={references}
             onReferencesChange={setReferences}
@@ -602,7 +602,7 @@ export default function VoiceProfilesPage() {
         </div>
 
         {/* Blends — only shown after user has added at least one inspiration */}
-        <div className="mt-10 border-t border-glass-border pt-10">
+        <div className="mt-10 scroll-mt-20 border-t border-glass-border pt-10">
 
         {blendSelectMode && (
           <div className="mb-4 flex items-center justify-between rounded-xl border border-atlas-teal/20 bg-atlas-teal/10 px-4 py-3 text-sm">
@@ -679,7 +679,7 @@ export default function VoiceProfilesPage() {
           )}
         </div>
 
-        <section className="mt-10">
+        <section className="mt-10 scroll-mt-20">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
@@ -760,7 +760,7 @@ export default function VoiceProfilesPage() {
         </section>
         </div>{/* end blends wrapper */}
 
-        <section className="mt-10 rounded-2xl border border-glass-border bg-atlas-surface/40 p-6">
+        <section className="mt-10 scroll-mt-20 rounded-2xl border border-glass-border bg-atlas-surface/40 p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
@@ -875,7 +875,7 @@ export default function VoiceProfilesPage() {
         />
 
         {/* Tweet Tinder — voice calibration via liked tweets */}
-        <div className="mt-8">
+        <div className="mt-8 scroll-mt-20">
           <TweetTinderSection />
         </div>
       </div>
