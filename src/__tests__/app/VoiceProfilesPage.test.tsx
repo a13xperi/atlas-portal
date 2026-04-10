@@ -73,6 +73,11 @@ jest.mock("@/components/layout/AppShell", () => ({
   default: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
+jest.mock("@/app/voice-profiles/tweet-tinder-section", () => ({
+  __esModule: true,
+  default: () => <div>Tweet Tinder Section</div>,
+}));
+
 jest.mock("@/components/voice-profiles/ReferenceVoicesSection", () => ({
   __esModule: true,
   default: ({

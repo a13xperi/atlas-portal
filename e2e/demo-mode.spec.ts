@@ -200,9 +200,19 @@ test.describe("Demo Mode", () => {
       await page.goto("/voice-profiles");
       await page.waitForLoadState("networkidle");
 
-      // Demo data has reference voices: Cobie, Hasu, GCR
-      await expect(page.getByText("Cobie").first()).toBeVisible();
-      await expect(page.getByText("Hasu").first()).toBeVisible();
+      // Wait for the loading skeleton to resolve before asserting on content.
+      await expect(
+        page.getByRole("heading", { name: /your saved voices/i }).first(),
+      ).toBeVisible({ timeout: 15_000 });
+
+      // Demo data seeds three reference voices; assert on any one of them by
+      // either display name OR handle so we stay green if the seed copy
+      // changes (e.g. Cobie → cobie, Hasu → HasuFL).
+      await expect(
+        page
+          .getByText(/\b(Cobie|coaboratecobie|Hasu|hasufl|GCR|GCRClassic)\b/i)
+          .first(),
+      ).toBeVisible();
     });
 
     test("crafting shows demo drafts and trending topics in demo mode", async ({

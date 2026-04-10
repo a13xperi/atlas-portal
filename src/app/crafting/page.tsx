@@ -48,6 +48,7 @@ import {
   TweetDraft,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import OracleWidget from "@/components/oracle/OracleWidget";
 
 const CRAFTING_MODES = [
   { id: "new_post", label: "New Post" },
@@ -1163,6 +1164,18 @@ function CraftingPage() {
         <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">Crafting Station</h1>
         <p className="mt-2 text-atlas-text-secondary max-w-2xl">Turn signals, reports, and ideas into polished tweets in your voice. Atlas generates drafts, you refine them, and the model learns what works.</p>
       </div>
+
+      <div className="mb-6" data-tour="oracle-banner">
+        <OracleWidget
+          message={
+            activeDraft
+              ? "Draft in progress — refine it, rate it, or ship it. Every piece of feedback sharpens your model."
+              : "Drop a report, article, or idea below. I'll help you craft it into a tweet that sounds like you."
+          }
+          context="crafting"
+        />
+      </div>
+
       <div className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:gap-0 sm:rounded-3xl sm:px-6">
         <div className="flex items-center gap-4 sm:gap-6">
           <svg
