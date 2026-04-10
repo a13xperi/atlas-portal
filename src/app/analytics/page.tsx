@@ -97,15 +97,19 @@ function AnalyticsPage() {
   const activityCounts = activityDays.map((day) => day.count);
   const activityMax = activityCounts.length > 0 ? Math.max(...activityCounts) : 0;
 
+  // When the analytics API reports zero drafts but we can confirm posted drafts exist from
+  // the drafts endpoint, use the known count as a floor. The analytics_events table can
+  // lag behind the drafts table, causing the summary to show 0 while the detail table has data.
+  const knownPostedCount = topDrafts.length;
   const usageStats = summary
     ? [
-        { label: "Drafts", value: String(summary.draftsCreated), href: "/crafting" },
+        { label: "Drafts", value: String(summary.draftsCreated > 0 ? summary.draftsCreated : knownPostedCount), href: "/crafting" },
         { label: "Feedback", value: String(summary.feedbackGiven), href: "/dashboard" },
         { label: "Refinements", value: String(summary.refinements ?? 0), href: "/voice-profiles" },
         { label: "Ingested", value: String(summary.reportsIngested), href: "/alerts" },
       ]
     : [
-        { label: "Drafts", value: "0", href: "/crafting" },
+        { label: "Drafts", value: String(knownPostedCount), href: "/crafting" },
         { label: "Feedback", value: "0", href: "/dashboard" },
         { label: "Refinements", value: "0", href: "/voice-profiles" },
         { label: "Ingested", value: "0", href: "/alerts" },

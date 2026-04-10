@@ -146,8 +146,9 @@ const searchParams = useSearchParams();
     };
   }, [user, authLoading]);
 
+  // Use actual loaded drafts count as a floor when analytics summary lags behind the drafts table
   const statCards = [
-    { label: "Drafts this week", value: String(stats.drafts), href: "/crafting" },
+    { label: "Drafts this week", value: String(stats.drafts > 0 ? stats.drafts : drafts.length), href: "/crafting" },
     { label: "Posts", value: String(stats.posts), href: "/campaigns?tab=posted" },
     { label: "Feedback given", value: String(stats.feedback), href: "/analytics" },
     { label: "Reports ingested", value: String(stats.reports), href: "/crafting" },
