@@ -270,6 +270,7 @@ const smokeRoutes: SmokeRoute[] = [
   {
     name: "voice profiles",
     path: "/voice-profiles",
+
     // Page h1 on voice-profiles is "Your Voices" (updated in Anil feedback pass).
     ready: (page) =>
       page.getByRole("heading", { name: /your voices/i }).first(),
