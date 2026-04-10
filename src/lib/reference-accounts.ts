@@ -159,7 +159,10 @@ export function normalizeReferenceAccount(
     account.id ||
     "Unknown";
   const resolvedId = handle || account.id || displayName;
-  const profileImageUrl = account.profileImageUrl ?? account.avatarUrl ?? null;
+  const profileImageUrl =
+    account.profileImageUrl ??
+    account.avatarUrl ??
+    (handle ? `https://unavatar.io/twitter/${handle}` : null);
 
   return {
     id: resolvedId,
