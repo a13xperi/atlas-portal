@@ -59,10 +59,30 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install chromium --with-deps
-      - name: Set Vercel preview URL (slugify branch name)
+      - name: Get Vercel preview URL
         run: |
+          SHA="${{ github.event.pull_request.head.sha }}"
+          REPO="${{ github.repository }}"
+          for attempt in $(seq 1 24); do
+            DEPLOY_ID=$(gh api "repos/${REPO}/deployments?sha=${SHA}&per_page=50" \
+              --jq '[.[] | select(.environment | test("delphi-atlas"))] | first | .id' 2>/dev/null)
+            if [ -n "$DEPLOY_ID" ] && [ "$DEPLOY_ID" != "null" ]; then
+              ENV_URL=$(gh api "repos/${REPO}/deployments/${DEPLOY_ID}/statuses?per_page=10" \
+                --jq '[.[] | select(.state == "success")] | first | .environment_url' 2>/dev/null)
+              if [ -n "$ENV_URL" ] && [ "$ENV_URL" != "null" ] && [ "$ENV_URL" != "" ]; then
+                echo "PLAYWRIGHT_BASE_URL=${ENV_URL}" >> $GITHUB_ENV
+                echo "Using Vercel preview: ${ENV_URL}"
+                exit 0
+              fi
+            fi
+            echo "Waiting for Vercel deployment... (${attempt}/24)"
+            sleep 5
+          done
           SLUG=$(echo "${{ github.head_ref }}" | tr '/' '-')
           echo "PLAYWRIGHT_BASE_URL=https://delphi-atlas-git-${SLUG}-alex-peris-projects.vercel.app" >> $GITHUB_ENV
+          echo "Fallback: constructed URL (may not resolve for long branch names)"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npx playwright test --config=playwright-e2e.config.ts --project=${{ matrix.project }}
         env:
           VERCEL_PROTECTION_BYPASS: ${{ secrets.VERCEL_PROTECTION_BYPASS }}
