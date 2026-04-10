@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Palette, ClipboardCheck, Bug, Map, BarChart3, Shield } from "lucide-react";
+import { Palette, ClipboardCheck, Bug, Map, BarChart3, Shield, Terminal } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import FeatureGate from "@/components/ui/FeatureGate";
 
@@ -41,6 +41,12 @@ const adminTools = [
     description: "Feature flags, user management, and usage analytics",
     href: "/admin/control",
     icon: Shield,
+  },
+  {
+    label: "Prompt Inspector",
+    description: "Every Claude prompt in Atlas -- templates, variables, live test runs",
+    href: "/admin/prompts",
+    icon: Terminal,
   },
   {
     label: "Public Roadmap",

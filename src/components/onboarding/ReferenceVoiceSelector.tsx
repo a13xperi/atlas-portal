@@ -37,6 +37,7 @@ export default function ReferenceVoiceSelector({
   const [isLoading, setIsLoading] = useState(initial.length === 0);
   const [customHandle, setCustomHandle] = useState("");
   const [customError, setCustomError] = useState("");
+  const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
   const customInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -203,13 +204,13 @@ export default function ReferenceVoiceSelector({
                     <Check className="h-3.5 w-3.5 text-white" />
                   </span>
                 )}
-                {avatarUrl ? (
+                {avatarUrl && !imgErrors.has(account.id) ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={avatarUrl}
                     alt={`${label} avatar`}
                     className="mx-auto h-16 w-16 rounded-full object-cover"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    onError={() => setImgErrors((prev) => new Set(prev).add(account.id))}
                   />
                 ) : (
                   <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-atlas-teal/20 text-xl font-semibold uppercase text-atlas-teal">

@@ -130,6 +130,31 @@ export interface AdminFeedEvent {
   metadata: Record<string, unknown> | null;
 }
 
+export type PromptCategory = "generation" | "calibration" | "oracle" | "analysis";
+
+export interface PromptVariable {
+  name: string;
+  description: string;
+  example: string;
+}
+
+export interface PromptConfig {
+  id: string;
+  name: string;
+  description: string;
+  systemPrompt: string;
+  userPromptTemplate: string;
+  variables: PromptVariable[];
+  model: string;
+  category: PromptCategory;
+}
+
+export interface PromptTestResult {
+  output: string;
+  tokensUsed: number;
+  latencyMs: number;
+}
+
 export interface AdminLeaderboardEntry {
   userId: string;
   handle: string;
@@ -705,6 +730,13 @@ export const api = {
     feed: () => request<{ events: AdminFeedEvent[] }>("/api/admin/feed"),
     leaderboard: () =>
       request<{ entries: AdminLeaderboardEntry[] }>("/api/analytics/leaderboard"),
+    getPrompts: () =>
+      request<{ prompts: PromptConfig[] }>("/api/admin/prompts"),
+    testPrompt: (promptId: string, variables: Record<string, string>) =>
+      request<PromptTestResult>("/api/admin/prompts/test", {
+        method: "POST",
+        body: { promptId, variables },
+      }),
   },
 
   twitter: {

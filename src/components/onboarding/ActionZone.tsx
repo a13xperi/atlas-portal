@@ -37,7 +37,7 @@ export default function ActionZone({
 
   return (
     <div
-      className={`bg-atlas-nav/95 backdrop-blur-xl border-t border-glass-border px-4 py-3 ${
+      className={`bg-atlas-nav/95 backdrop-blur-xl border-t border-glass-border px-4 sm:px-6 py-3 ${
         disabled ? "opacity-50 pointer-events-none" : ""
       }`}
     >

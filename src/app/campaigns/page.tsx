@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Calendar,
   ListOrdered,
@@ -16,7 +17,7 @@ import FeatureGate from "@/components/ui/FeatureGate";
 import GlassCard from "@/components/ui/GlassCard";
 import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
-import { api, Campaign } from "@/lib/api";
+import { api, Campaign, TweetDraft } from "@/lib/api";
 
 const STATUS_BADGES: Record<Campaign["status"], { label: string; cls: string }> = {
   DRAFT: { label: "Planning", cls: "bg-atlas-text-muted/20 text-atlas-text-muted" },
@@ -56,6 +57,8 @@ export default function CampaignsPage() {
 }
 
 function CampaignsTab() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +66,13 @@ function CampaignsTab() {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newThesis, setNewThesis] = useState("");
+  const [prefillDraft, setPrefillDraft] = useState<TweetDraft | null>(null);
+  const [prefillError, setPrefillError] = useState<string | null>(null);
+
+  const seededDraftId = useMemo(
+    () => (searchParams.get("newCampaign") === "true" ? searchParams.get("draftId") : null),
+    [searchParams],
+  );
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -74,11 +84,45 @@ function CampaignsTab() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Handle deep link from Crafting: /campaigns?newCampaign=true&draftId={id}
+  // Opens the create form pre-populated with a suggested name from the draft.
+  useEffect(() => {
+    if (!user || !seededDraftId) return;
+    let cancelled = false;
+    setShowCreate(true);
+    (async () => {
+      try {
+        const { draft } = await api.drafts.get(seededDraftId);
+        if (cancelled) return;
+        setPrefillDraft(draft);
+        // Seed the campaign name from the first line / first 48 chars of the draft
+        const firstLine = (draft.content || "").split("\n")[0]?.trim() ?? "";
+        const suggested = firstLine.length > 48
+          ? `${firstLine.slice(0, 48)}…`
+          : firstLine || "New Campaign";
+        setNewName((prev) => prev || suggested);
+      } catch {
+        if (!cancelled) {
+          setPrefillError("Couldn't load that draft, but you can still create the campaign.");
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [seededDraftId, user]);
+
   const handleCreate = async () => {
     if (!newName.trim()) return;
     setCreating(true);
     try {
       const { campaign } = await api.campaigns.create(newName.trim(), newThesis.trim() || undefined);
+      // If this create came from the crafting deep-link, attach the draft.
+      if (seededDraftId) {
+        try {
+          await api.campaigns.addDraft(campaign.id, seededDraftId, 1);
+        } catch { /* non-fatal — campaign still exists */ }
+        router.push(`/campaigns/${campaign.id}`);
+        return;
+      }
       setCampaigns((prev) => [campaign, ...prev]);
       setNewName("");
       setNewThesis("");
@@ -114,7 +158,25 @@ function CampaignsTab() {
 
       {showCreate && (
         <GlassCard className="mb-6 p-5">
-          <h3 className="mb-3 text-sm font-semibold text-atlas-text">Define your campaign</h3>
+          <h3 className="mb-3 text-sm font-semibold text-atlas-text">
+            {seededDraftId ? "New campaign from this draft" : "Define your campaign"}
+          </h3>
+          {seededDraftId && (
+            <div className="mb-3 rounded-lg border border-atlas-teal/30 bg-atlas-teal/5 p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-atlas-teal">
+                Linked draft
+              </p>
+              {prefillDraft ? (
+                <p className="mt-1 line-clamp-3 text-xs text-atlas-text-secondary">
+                  {prefillDraft.content}
+                </p>
+              ) : prefillError ? (
+                <p className="mt-1 text-xs text-atlas-warning">{prefillError}</p>
+              ) : (
+                <p className="mt-1 text-xs text-atlas-text-muted">Loading draft…</p>
+              )}
+            </div>
+          )}
           <input
             type="text"
             value={newName}
@@ -130,7 +192,11 @@ function CampaignsTab() {
             className="mb-3 w-full rounded-lg border border-glass-border bg-atlas-surface px-3 py-2 text-sm text-atlas-text placeholder:text-atlas-text-muted focus:border-atlas-teal focus:outline-none"
           />
           <GradientButton onClick={handleCreate} disabled={!newName.trim() || creating} fullWidth>
-            {creating ? "Creating…" : "Create Campaign"}
+            {creating
+              ? "Creating…"
+              : seededDraftId
+                ? "Create Campaign & Attach Draft"
+                : "Create Campaign"}
           </GradientButton>
         </GlassCard>
       )}
