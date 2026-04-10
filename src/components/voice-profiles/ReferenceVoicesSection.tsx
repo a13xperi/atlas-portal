@@ -25,6 +25,21 @@ interface ReferenceVoicesSectionProps {
   references: ReferenceVoice[];
 }
 
+function normalizeTwitterHandle(handle?: string | null) {
+  const trimmedHandle = handle?.trim();
+
+  if (!trimmedHandle) {
+    return "";
+  }
+
+  const urlMatch = trimmedHandle.match(
+    /(?:twitter\.com|x\.com)\/([A-Za-z0-9_]+)/i
+  );
+  const extractedHandle = urlMatch?.[1] ?? trimmedHandle;
+
+  return extractedHandle.replace(/^@+/, "");
+}
+
 export default function ReferenceVoicesSection({
   onReferencesChange,
   references,
@@ -128,7 +143,9 @@ export default function ReferenceVoicesSection({
       name: matchingReference?.name ?? id,
       profileImageUrl: matchingReference?.avatarUrl
         ?? (matchingReference?.handle
-          ? `https://unavatar.io/twitter/${matchingReference.handle.replace("@", "")}`
+          ? `https://unavatar.io/twitter/${normalizeTwitterHandle(
+              matchingReference.handle
+            )}`
           : null),
     });
   });
@@ -251,57 +268,61 @@ export default function ReferenceVoicesSection({
           </div>
         ) : (
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {selectedAccounts.map((account) => (
-              <div
-                key={account.id}
-                className="flex items-center gap-3 rounded-2xl border border-glass-border bg-atlas-surface/70 p-4"
-              >
-                {account.profileImageUrl && !avatarErrors[account.id] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    alt={`${account.displayName || account.name || account.handle} avatar`}
-                    className="h-12 w-12 rounded-full border border-glass-border object-cover"
-                    onError={() =>
-                      setAvatarErrors((current) => ({
-                        ...current,
-                        [account.id]: true,
-                      }))
-                    }
-                    src={account.profileImageUrl}
-                  />
-                ) : (
-                  <div
-                    aria-hidden="true"
-                    className="flex h-12 w-12 items-center justify-center rounded-full border border-atlas-teal/30 text-sm font-semibold uppercase"
-                    style={{
-                      backgroundColor: `${colors.atlasTeal}1A`,
-                      color: colors.atlasTeal,
-                    }}
-                  >
-                    {(account.handle || account.id).charAt(0)}
-                  </div>
-                )}
+            {selectedAccounts.map((account) => {
+              const normalizedHandle = normalizeTwitterHandle(account.handle);
 
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-atlas-text">
-                    {account.displayName || account.name || account.handle || account.id}
-                  </p>
-                  {account.handle ? (
-                    <a
-                      href={`https://twitter.com/${account.handle}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-0.5 text-xs text-atlas-text-secondary hover:text-atlas-teal hover:underline"
-                    >
-                      @{account.handle}
-                      <ExternalLink className="h-2.5 w-2.5" />
-                    </a>
+              return (
+                <div
+                  key={account.id}
+                  className="flex items-center gap-3 rounded-2xl border border-glass-border bg-atlas-surface/70 p-4"
+                >
+                  {account.profileImageUrl && !avatarErrors[account.id] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      alt={`${account.displayName || account.name || account.handle} avatar`}
+                      className="h-12 w-12 rounded-full border border-glass-border object-cover"
+                      onError={() =>
+                        setAvatarErrors((current) => ({
+                          ...current,
+                          [account.id]: true,
+                        }))
+                      }
+                      src={account.profileImageUrl}
+                    />
                   ) : (
-                    <p className="truncate text-xs text-atlas-text-secondary">@{account.id}</p>
+                    <div
+                      aria-hidden="true"
+                      className="flex h-12 w-12 items-center justify-center rounded-full border border-atlas-teal/30 text-sm font-semibold uppercase"
+                      style={{
+                        backgroundColor: `${colors.atlasTeal}1A`,
+                        color: colors.atlasTeal,
+                      }}
+                    >
+                      {(normalizedHandle || account.id).charAt(0)}
+                    </div>
                   )}
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-atlas-text">
+                      {account.displayName || account.name || account.handle || account.id}
+                    </p>
+                    {normalizedHandle ? (
+                      <a
+                        href={`https://twitter.com/${normalizedHandle}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-0.5 text-xs text-atlas-text-secondary hover:text-atlas-teal hover:underline"
+                      >
+                        @{normalizedHandle}
+                        <ExternalLink className="h-2.5 w-2.5" />
+                      </a>
+                    ) : (
+                      <p className="truncate text-xs text-atlas-text-secondary">@{account.id}</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

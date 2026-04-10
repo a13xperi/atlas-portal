@@ -1,7 +1,13 @@
 "use client";
 
 import { AnimatePresence, motion, useCycle } from "framer-motion";
-import { ChevronDown, ChevronUp, PencilLine, Sparkles } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  PencilLine,
+  Sparkles,
+} from "lucide-react";
 import DimensionBar from "@/components/ui/DimensionBar";
 import type { BlendVoice, SavedBlend } from "@/lib/api";
 import type { VoiceDimensionSnapshot } from "@/lib/voice-recipes";
@@ -18,7 +24,11 @@ interface RecipeCardProps {
   notableDimensions: VoiceDimensionSnapshot[];
   isActive: boolean;
   onEdit: () => void;
+  onPreviewSample: () => void;
   onUse: () => void;
+  previewError?: string | null;
+  previewLoading?: boolean;
+  previewText?: string;
   userHandle?: string;
 }
 
@@ -115,7 +125,11 @@ export default function RecipeCard({
   notableDimensions,
   isActive,
   onEdit,
+  onPreviewSample,
   onUse,
+  previewError,
+  previewLoading = false,
+  previewText,
   userHandle,
 }: RecipeCardProps) {
   const [isExpanded, toggleExpanded] = useCycle(false, true);
@@ -270,7 +284,25 @@ export default function RecipeCard({
           ) : (
             <ChevronDown className="h-4 w-4" />
           )}
-          {isExpanded ? "Hide Preview" : "Preview"}
+          {isExpanded ? "Hide fingerprint" : "Show fingerprint"}
+        </button>
+        <button
+          type="button"
+          onClick={onPreviewSample}
+          disabled={previewLoading}
+          className="inline-flex items-center gap-2 rounded-xl border border-atlas-teal/30 bg-atlas-teal/10 px-4 py-2 text-sm font-semibold text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/15 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {previewLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Generating sample...
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4" />
+              {previewText ? "Regenerate sample" : "Preview in this voice"}
+            </>
+          )}
         </button>
         <button
           type="button"
@@ -294,6 +326,26 @@ export default function RecipeCard({
           Edit
         </button>
       </div>
+
+      {previewText || previewError ? (
+        <div className="mt-4 rounded-2xl border border-glass-border bg-atlas-surface/40 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-text-muted">
+            Sample tweet
+          </p>
+          {previewError ? (
+            <p role="alert" className="mt-2 text-sm text-atlas-error">
+              {previewError}
+            </p>
+          ) : (
+            <p
+              aria-live="polite"
+              className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-atlas-text"
+            >
+              {previewText}
+            </p>
+          )}
+        </div>
+      ) : null}
     </article>
   );
 }
