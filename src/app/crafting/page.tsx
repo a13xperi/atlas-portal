@@ -276,6 +276,10 @@ function CraftingPage() {
   const [voiceComparison, setVoiceComparison] = useState<{
     options: VoiceComparisonOption[];
   } | null>(null);
+  const [compareBlendId, setCompareBlendId] = useState<string | null>(null);
+  const [compareBlendDraft, setCompareBlendDraft] = useState<string | null>(null);
+  const [compareBlendName, setCompareBlendName] = useState<string | null>(null);
+  const [compareBlendLoading, setCompareBlendLoading] = useState(false);
   const [draftInputText, setDraftInputText] = useState(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -685,6 +689,53 @@ function CraftingPage() {
     user,
     validateDraftSubmission,
   ]);
+
+  const handleCompareInAnotherVoice = useCallback(async () => {
+    if (!activeDraft || !compareBlendId) return;
+
+    const targetBlend = blends.find((blend) => blend.id === compareBlendId);
+    if (!targetBlend) return;
+
+    const sourceContent = activeDraft.sourceContent?.trim();
+    if (!sourceContent) {
+      setError("Can't regenerate — this draft is missing its original source content.");
+      return;
+    }
+
+    setCompareBlendLoading(true);
+    setError(null);
+    try {
+      const { draft: alternativeDraft } = await api.drafts.generate({
+        sourceContent,
+        sourceType: activeDraft.sourceType || "MANUAL",
+        blendId: compareBlendId,
+      });
+      setCompareBlendDraft(alternativeDraft.content);
+      setCompareBlendName(targetBlend.name);
+    } catch (compareError: unknown) {
+      console.error("Failed to generate comparison draft:", compareError);
+      setError(
+        compareError instanceof Error
+          ? compareError.message
+          : "Failed to generate comparison draft"
+      );
+    } finally {
+      setCompareBlendLoading(false);
+    }
+  }, [activeDraft, blends, compareBlendId]);
+
+  const handleUseComparisonDraft = useCallback(() => {
+    if (!activeDraft || !compareBlendDraft) return;
+    setActiveDraft({ ...activeDraft, content: compareBlendDraft });
+    setCompareBlendDraft(null);
+    setCompareBlendName(null);
+  }, [activeDraft, compareBlendDraft]);
+
+  useEffect(() => {
+    setCompareBlendDraft(null);
+    setCompareBlendName(null);
+    setCompareBlendId(null);
+  }, [activeDraft?.id]);
 
   const handleTextFileInput = useCallback(async (file: File) => {
     if (!isTextFile(file)) {
@@ -1999,6 +2050,69 @@ function CraftingPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Try in another voice — quick side-by-side comparison */}
+              {blends.length > 0 && activeDraft.sourceContent ? (
+                <div className="mt-4 rounded-xl border border-glass-border bg-atlas-surface/40 p-4">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-atlas-text-muted">
+                    Try in another voice
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label htmlFor="compare-blend-select" className="sr-only">
+                      Choose a blend to compare
+                    </label>
+                    <select
+                      id="compare-blend-select"
+                      value={compareBlendId || ""}
+                      onChange={(event) =>
+                        setCompareBlendId(event.target.value || null)
+                      }
+                      className="flex-1 min-w-[180px] rounded-lg border border-glass-border bg-atlas-surface px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none"
+                    >
+                      <option value="">Select a blend...</option>
+                      {blends
+                        .filter((blend) => blend.id !== selectedBlendId)
+                        .map((blend) => (
+                          <option key={blend.id} value={blend.id}>
+                            {blend.name}
+                          </option>
+                        ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => void handleCompareInAnotherVoice()}
+                      disabled={
+                        !compareBlendId ||
+                        compareBlendId === selectedBlendId ||
+                        compareBlendLoading
+                      }
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-atlas-teal/30 px-3 py-2 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {compareBlendLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                      ) : null}
+                      Compare
+                    </button>
+                  </div>
+                  {compareBlendDraft && compareBlendName ? (
+                    <div className="mt-3 rounded-lg border border-atlas-teal/20 bg-atlas-bg/60 p-3">
+                      <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-atlas-teal">
+                        {compareBlendName}
+                      </p>
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-atlas-text">
+                        {compareBlendDraft}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleUseComparisonDraft}
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-atlas-teal/30 px-3 py-1.5 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/10"
+                      >
+                        Use this instead
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
 
               {/* Engagement Metrics — shown for POSTED drafts */}
               {activeDraft.status === "POSTED" ? (
