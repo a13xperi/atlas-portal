@@ -54,7 +54,7 @@ async function stubApi(page: import("@playwright/test").Page) {
     if (url.includes("/api/voice/references"))
       return json(route, { voices: [] });
     if (url.includes("/api/voice/blends")) return json(route, { blends: [] });
-    if (url.includes("/api/voice/accounts"))
+    if (url.includes("/api/voice/reference-accounts"))
       return json(route, { accounts: [] });
     return json(route, {});
   });
