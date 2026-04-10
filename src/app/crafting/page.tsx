@@ -262,6 +262,7 @@ function CraftingPage() {
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [creating, setCreating] = useState(false);
   const [voiceBanner, setVoiceBanner] = useState<string | null>(null);
+  const [blendWarning, setBlendWarning] = useState<string | null>(null);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
   const [refiningChip, setRefiningChip] = useState<string | null>(null);
@@ -650,13 +651,17 @@ function CraftingPage() {
     if (!isValid) return false;
 
     setCreating(true);
+    setBlendWarning(null);
     try {
-      const { draft } = await api.drafts.generate({
+      const { draft, blendWarning: warn } = await api.drafts.generate({
         sourceContent: trimmedContent,
         sourceType,
         blendId: selectedBlendId || undefined,
         replyAngle: angle || undefined,
       });
+      if (warn === "blend_not_found") {
+        setBlendWarning("Your selected blend couldn't be found — this draft used your base voice instead.");
+      }
       setVoiceComparison(null);
       setCompareMode(false);
       setCompareVersion(null);
@@ -1525,6 +1530,12 @@ function CraftingPage() {
                       </button>
                     </div>
                   ) : null}
+                  {blendWarning && (
+                    <div className="mt-2 rounded-lg border border-atlas-teal/20 bg-atlas-teal/5 px-3 py-2 text-xs text-atlas-text-secondary flex items-center justify-between">
+                      <span>{blendWarning}</span>
+                      <button type="button" onClick={() => setBlendWarning(null)} aria-label="Dismiss" className="ml-2 hover:text-atlas-text"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

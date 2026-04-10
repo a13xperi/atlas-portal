@@ -111,7 +111,7 @@ describe("ManagementPage", () => {
     deferred.resolve({ message: "Queued", affected: 12 });
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith("Action completed", "success");
+      expect(mockToast).toHaveBeenCalledWith("Top profiles pushed to team", "success");
     });
 
     expect(
