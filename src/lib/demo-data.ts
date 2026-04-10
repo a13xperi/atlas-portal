@@ -153,20 +153,29 @@ const voiceBlends: { blends: SavedBlend[] } = {
   blends: [
     {
       id: "demo-blend-1",
-      name: "CT Shitposter",
+      name: "Delphi Voice",
       voices: [
-        { id: "demo-blend-1-v1", blendId: "demo-blend-1", label: "Personal", percentage: 60 },
-        { id: "demo-blend-1-v2", blendId: "demo-blend-1", label: "Cobie", percentage: 25 },
-        { id: "demo-blend-1-v3", blendId: "demo-blend-1", label: "GCR", percentage: 15 },
+        { id: "demo-blend-1-v1", blendId: "demo-blend-1", label: "Personal", percentage: 70 },
+        { id: "demo-blend-1-v2", blendId: "demo-blend-1", label: "Delphi Digital", percentage: 20 },
+        { id: "demo-blend-1-v3", blendId: "demo-blend-1", label: "Messari", percentage: 10 },
       ],
     },
     {
       id: "demo-blend-2",
-      name: "Research Thread",
+      name: "Founder Voice",
       voices: [
-        { id: "demo-blend-2-v1", blendId: "demo-blend-2", label: "Personal", percentage: 40 },
-        { id: "demo-blend-2-v2", blendId: "demo-blend-2", label: "Hasu", percentage: 40 },
-        { id: "demo-blend-2-v3", blendId: "demo-blend-2", label: "Cobie", percentage: 20 },
+        { id: "demo-blend-2-v1", blendId: "demo-blend-2", label: "Personal", percentage: 55 },
+        { id: "demo-blend-2-v2", blendId: "demo-blend-2", label: "Naval", percentage: 25 },
+        { id: "demo-blend-2-v3", blendId: "demo-blend-2", label: "Paul Graham", percentage: 20 },
+      ],
+    },
+    {
+      id: "demo-blend-3",
+      name: "Market Commentary",
+      voices: [
+        { id: "demo-blend-3-v1", blendId: "demo-blend-3", label: "Personal", percentage: 60 },
+        { id: "demo-blend-3-v2", blendId: "demo-blend-3", label: "Messari", percentage: 25 },
+        { id: "demo-blend-3-v3", blendId: "demo-blend-3", label: "Marc Andreessen", percentage: 15 },
       ],
     },
   ],
@@ -615,19 +624,19 @@ const demoData: Record<string, unknown> = {
     campaigns: [
       {
         id: "camp-1",
-        name: "Pair Trading in Crypto",
-        description: "Promote the new Delphi Digital research report on pair trading strategies. Generate tweets covering statistical arbitrage, funding rate arb, and cross-exchange spreads.",
+        name: "Modular Rollups Report",
+        description: "Report-sourced campaign from Delphi's modular rollups quarterly note — drives the shared sequencer narrative with supporting trending commentary.",
         status: "ACTIVE" as const,
-        draftCount: 4,
-        createdAt: daysAgo(2),
+        draftCount: 3,
+        createdAt: daysAgo(7),
       },
       {
         id: "camp-2",
-        name: "ETH Staking Thesis",
-        description: "Build narrative around institutional ETH staking yields compressing — what it means for the network and why it's actually bullish.",
+        name: "DeFi Market Update",
+        description: "Working campaign for the upcoming DeFi update — stablecoin payments angle plus the restaking thread idea, both still in DRAFT status.",
         status: "DRAFT" as const,
         draftCount: 2,
-        createdAt: daysAgo(5),
+        createdAt: daysAgo(3),
       },
       {
         id: "camp-3",
