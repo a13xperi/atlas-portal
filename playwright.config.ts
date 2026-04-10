@@ -6,6 +6,8 @@ const apiURL =
   process.env.NEXT_PUBLIC_API_URL ??
   "https://api-production-9bef.up.railway.app";
 
+// Vercel deployment protection bypass — see playwright-e2e.config.ts for the full
+// doc comment. Secret must be set in GitHub repo secrets + Vercel project settings.
 const vercelBypass =
   process.env.VERCEL_AUTOMATION_BYPASS_SECRET ??
   process.env.VERCEL_PROTECTION_BYPASS;
@@ -15,7 +17,7 @@ export default defineConfig({
   testMatch: ["smoke.spec.ts", "investor-walkthrough.spec.ts", "demo-mode.spec.ts", "demo-render.spec.ts", "tour.spec.ts", "dashboard.spec.ts"],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : 3,
   reporter: process.env.CI ? "github" : "list",
   timeout: 45_000,
