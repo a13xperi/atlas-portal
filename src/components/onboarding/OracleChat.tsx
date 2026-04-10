@@ -24,6 +24,7 @@ import NavBar from "@/components/ui/NavBar";
 import BlendRatioSlider from "./BlendRatioSlider";
 import TopicPicker from "./TopicPicker";
 import ReferenceVoiceSelector from "./ReferenceVoiceSelector";
+import ContentSignalsPreview from "./ContentSignalsPreview";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import GradientButton from "@/components/ui/GradientButton";
 import ContentInput from "@/components/ui/ContentInput";
@@ -577,6 +578,7 @@ export default function OracleChat() {
                 onTextChange={() => {}}
                 onTextSubmit={() => true}
               />
+              <ContentSignalsPreview />
               <p className="text-xs text-atlas-text-muted">
                 You can also send these via Telegram later.
               </p>
