@@ -53,6 +53,8 @@ export default function OracleChat() {
   >("idle");
   // Tracks the persisted blend so future PATCH operations can target it.
   const [, setSavedBlendId] = useState<string | null>(null);
+  const [tweetRatings, setTweetRatings] = useState<Record<number, 'up' | 'down' | null>>({});
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   // Pre-fill handle from linked X profile
   useEffect(() => {
@@ -421,14 +423,16 @@ export default function OracleChat() {
                   <div className="flex shrink-0 gap-2">
                     <button
                       type="button"
-                      className="text-atlas-text-secondary hover:text-atlas-teal transition-colors"
+                      onClick={() => setTweetRatings(prev => ({ ...prev, [i]: prev[i] === 'up' ? null : 'up' }))}
+                      className={tweetRatings[i] === 'up' ? 'text-atlas-teal transition-colors' : 'text-atlas-text-secondary hover:text-atlas-teal transition-colors'}
                       title="More like me"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z" /></svg>
                     </button>
                     <button
                       type="button"
-                      className="text-atlas-text-secondary hover:text-atlas-error transition-colors"
+                      onClick={() => setTweetRatings(prev => ({ ...prev, [i]: prev[i] === 'down' ? null : 'down' }))}
+                      className={tweetRatings[i] === 'down' ? 'text-red-400 transition-colors' : 'text-atlas-text-secondary hover:text-red-400 transition-colors'}
                       title="Less like me"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z" /></svg>
@@ -477,7 +481,7 @@ export default function OracleChat() {
               onSelectionChange={(ids) =>
                 dispatch({ type: "SET_REFS", ids })
               }
-              onContinue={() => {}} // Continue handled by ActionZone
+              onContinue={handleContinue} // Continue handled by ActionZone
             />
           );
 
@@ -504,7 +508,9 @@ export default function OracleChat() {
               </p>
               <button
                 type="button"
+                disabled={previewLoading}
                 onClick={() => {
+                  setPreviewLoading(true);
                   const blendVoices = [
                     { label: "My voice", percentage: state.selfPercentage },
                     ...refNames.map((n) => ({
@@ -529,11 +535,11 @@ export default function OracleChat() {
                         })),
                       });
                     }
-                  }).catch(() => {});
+                  }).catch(() => {}).then(() => setPreviewLoading(false));
                 }}
-                className="w-full rounded-lg border border-atlas-teal/30 bg-atlas-teal/10 px-4 py-2.5 text-sm font-medium text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/15"
+                className="w-full rounded-lg border border-atlas-teal/30 bg-atlas-teal/10 px-4 py-2.5 text-sm font-medium text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/15 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Preview a tweet in this voice
+                {previewLoading ? 'Generating...' : 'Preview a tweet in this voice'}
               </button>
             </div>
           );
@@ -627,7 +633,7 @@ export default function OracleChat() {
           return null;
       }
     },
-    [oauthLoading, router, state, blendSaveStatus]
+    [oauthLoading, router, state, blendSaveStatus, tweetRatings, previewLoading]
   );
 
   // ── Determine ActionZone config per step ─────────────────────────
