@@ -289,7 +289,7 @@ export default function VoiceProfilesPage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 xl:px-8">
+      <div>
         {error && (
           <div
             role="alert"
@@ -483,7 +483,7 @@ export default function VoiceProfilesPage() {
           </button>
         </section>
 
-        <div className="mt-10" data-tour="reference-voices">
+        <div className="mt-10 pb-24" data-tour="reference-voices">
           <ReferenceVoicesSection
             references={references}
             onReferencesChange={setReferences}
