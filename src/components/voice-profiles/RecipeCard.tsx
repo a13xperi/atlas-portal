@@ -3,7 +3,7 @@
 import { AnimatePresence, motion, useCycle } from "framer-motion";
 import { ChevronDown, ChevronUp, PencilLine, Sparkles } from "lucide-react";
 import DimensionBar from "@/components/ui/DimensionBar";
-import type { SavedBlend } from "@/lib/api";
+import type { BlendVoice, SavedBlend } from "@/lib/api";
 import type { VoiceDimensionSnapshot } from "@/lib/voice-recipes";
 import {
   formatVoiceDimensionValue,
@@ -19,6 +19,59 @@ interface RecipeCardProps {
   isActive: boolean;
   onEdit: () => void;
   onUse: () => void;
+  userHandle?: string;
+}
+
+function getVoiceAvatarUrl(voice: BlendVoice, userHandle?: string): string {
+  if (voice.referenceVoice?.avatarUrl) return voice.referenceVoice.avatarUrl;
+  if (voice.referenceVoice?.handle) {
+    return `https://unavatar.io/twitter/${voice.referenceVoice.handle.replace("@", "")}`;
+  }
+  // User's own voice (no referenceVoice attached)
+  if (userHandle) return `https://unavatar.io/twitter/${userHandle.replace("@", "")}`;
+  return "";
+}
+
+function VoiceAvatar({
+  voice,
+  userHandle,
+  size = 24,
+  className = "",
+}: {
+  voice: BlendVoice;
+  userHandle?: string;
+  size?: number;
+  className?: string;
+}) {
+  const url = getVoiceAvatarUrl(voice, userHandle);
+  const initials = voice.label.charAt(0).toUpperCase();
+
+  if (!url) {
+    return (
+      <span
+        className={`flex shrink-0 items-center justify-center rounded-full border border-glass-border bg-atlas-surface text-[10px] font-bold text-atlas-text-muted ${className}`}
+        style={{ width: size, height: size }}
+        aria-hidden="true"
+      >
+        {initials}
+      </span>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt={voice.label}
+      width={size}
+      height={size}
+      className={`shrink-0 rounded-full object-cover ${className}`}
+      style={{ width: size, height: size }}
+      onError={(event) => {
+        event.currentTarget.style.display = "none";
+      }}
+    />
+  );
 }
 
 const SEGMENT_STYLES = [
@@ -63,6 +116,7 @@ export default function RecipeCard({
   isActive,
   onEdit,
   onUse,
+  userHandle,
 }: RecipeCardProps) {
   const [isExpanded, toggleExpanded] = useCycle(false, true);
 
@@ -89,9 +143,24 @@ export default function RecipeCard({
           <h3 className="mt-4 font-heading text-2xl font-semibold tracking-tight text-atlas-text">
             {blend.name}
           </h3>
-          <p className="mt-2 text-sm text-atlas-text-secondary">
-            {blend.voices.length} ingredient{blend.voices.length === 1 ? "" : "s"} mixed into one writing recipe.
-          </p>
+          <div className="mt-3 flex items-center gap-3">
+            <div className="flex flex-row-reverse items-center">
+              {[...blend.voices].reverse().map((voice, reverseIndex) => (
+                <VoiceAvatar
+                  key={`${blend.id}-${voice.id ?? voice.label}-cluster`}
+                  voice={voice}
+                  userHandle={userHandle}
+                  size={28}
+                  className={`border-2 border-atlas-bg ring-0 ${
+                    reverseIndex === blend.voices.length - 1 ? "" : "-ml-2"
+                  }`}
+                />
+              ))}
+            </div>
+            <p className="text-sm text-atlas-text-secondary">
+              {blend.voices.length} ingredient{blend.voices.length === 1 ? "" : "s"} mixed into one writing recipe.
+            </p>
+          </div>
         </div>
         <div className="rounded-2xl border border-glass-border bg-atlas-surface/60 px-3 py-2 text-right">
           <p className="text-[11px] uppercase tracking-[0.18em] text-atlas-text-muted">
@@ -128,8 +197,9 @@ export default function RecipeCard({
           {blend.voices.map((voice, index) => (
             <span
               key={`${blend.id}-${voice.label}-pill`}
-              className={`rounded-full border px-3 py-1 text-xs font-medium ${SEGMENT_STYLES[index % SEGMENT_STYLES.length].pill}`}
+              className={`inline-flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-3 text-xs font-medium ${SEGMENT_STYLES[index % SEGMENT_STYLES.length].pill}`}
             >
+              <VoiceAvatar voice={voice} userHandle={userHandle} size={20} />
               {voice.percentage}% {voice.label}
             </span>
           ))}
