@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Loader2, Plus, X } from "lucide-react";
+import { Check, ExternalLink, Loader2, Plus, X } from "lucide-react";
 import GradientButton from "@/components/ui/GradientButton";
 import { api, type ReferenceAccount, type TwitterFollow } from "@/lib/api";
 import {
@@ -217,7 +217,18 @@ export default function ReferenceVoiceSelector({
                   </div>
                 )}
                 <p className="mt-3 text-xs text-atlas-text-muted">
-                  {account.handle ? `@${account.handle}` : "\u00A0"}
+                  {account.handle ? (
+                    <a
+                      href={`https://twitter.com/${account.handle}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-0.5 hover:text-atlas-teal hover:underline"
+                    >
+                      @{account.handle}
+                      <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  ) : "\u00A0"}
                 </p>
                 <p className="mt-1 text-sm font-medium text-atlas-text">{label}</p>
               </button>
