@@ -86,7 +86,7 @@ async function stubVoiceProfilesApi(page: import("@playwright/test").Page) {
     if (url.includes("/api/voice/references"))
       return json(route, mockVoiceReferences);
     if (url.includes("/api/voice/blends")) return json(route, mockBlends);
-    if (url.includes("/api/voice/accounts"))
+    if (url.includes("/api/voice/reference-accounts"))
       return json(route, { accounts: [] });
     if (url.includes("/api/oracle")) return json(route, { response: "preview text" });
     return json(route, {});
