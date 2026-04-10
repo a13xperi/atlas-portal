@@ -266,7 +266,7 @@ export const api = {
       request<{ user: User & { voiceProfile: VoiceProfile } }>("/api/auth/me"),
     x: {
       authorize: () =>
-        request<{ url: string }>("/api/auth/x/authorize"),
+        request<{ url: string }>("/api/auth/x/authorize", { method: "POST" }),
       callback: (code: string, state: string) =>
         request<{ xHandle?: string }>("/api/auth/x/callback", {
           method: "POST",
