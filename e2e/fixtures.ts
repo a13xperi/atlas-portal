@@ -268,6 +268,15 @@ export const test = base.extend<{ authedPage: Page }>({
 
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.waitForURL("**/dashboard");
+
+    // Seed feature flags so off-by-default features (campaigns, telegram_bot) are enabled in tests
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "atlas-feature-flags",
+        JSON.stringify({ campaigns: true, telegram_bot: true }),
+      );
+    });
+
     await use(page);
   },
 });
