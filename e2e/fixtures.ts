@@ -114,17 +114,107 @@ const mockLearningLog = {
 
 const mockTeam = {
   team: [
-    { id: "u1", handle: "alice", displayName: "Alice", role: "ANALYST", voiceProfile: { maturity: "ADVANCED" }, _count: { tweetDrafts: 15, sessions: 8 } },
-    { id: "u2", handle: "bob", displayName: "Bob", role: "ANALYST", voiceProfile: { maturity: "BEGINNER" }, _count: { tweetDrafts: 3, sessions: 1 } },
-    { id: "test-user-1", handle: "testanalyst", displayName: "Test User", role: "ADMIN", voiceProfile: { maturity: "INTERMEDIATE" }, _count: { tweetDrafts: 8, sessions: 5 } },
+    {
+      id: "u1",
+      handle: "alice",
+      displayName: "Alice",
+      role: "ANALYST",
+      voiceProfile: {
+        id: "vp-u1",
+        userId: "u1",
+        humor: 65,
+        formality: 55,
+        brevity: 70,
+        contrarianTone: 45,
+        maturity: "ADVANCED" as const,
+        tweetsAnalyzed: 48,
+      },
+      _count: { tweetDrafts: 15, sessions: 8 },
+    },
+    {
+      id: "u2",
+      handle: "bob",
+      displayName: "Bob",
+      role: "ANALYST",
+      voiceProfile: {
+        id: "vp-u2",
+        userId: "u2",
+        humor: 35,
+        formality: 75,
+        brevity: 40,
+        contrarianTone: 20,
+        maturity: "BEGINNER" as const,
+        tweetsAnalyzed: 6,
+      },
+      _count: { tweetDrafts: 3, sessions: 1 },
+    },
+    {
+      id: "test-user-1",
+      handle: "testanalyst",
+      displayName: "Test User",
+      role: "ADMIN",
+      voiceProfile: {
+        id: "vp-1",
+        userId: "test-user-1",
+        humor: 50,
+        formality: 60,
+        brevity: 40,
+        contrarianTone: 30,
+        maturity: "INTERMEDIATE" as const,
+        tweetsAnalyzed: 12,
+      },
+      _count: { tweetDrafts: 8, sessions: 5 },
+    },
   ],
 };
 
 const mockTeamAnalytics = {
   analysts: [
-    { id: "u1", handle: "alice", _count: { tweetDrafts: 15, analyticsEvents: 40, sessions: 8 } },
-    { id: "u2", handle: "bob", _count: { tweetDrafts: 3, analyticsEvents: 5, sessions: 1 } },
-    { id: "test-user-1", handle: "testanalyst", _count: { tweetDrafts: 8, analyticsEvents: 20, sessions: 5 } },
+    {
+      id: "u1",
+      handle: "alice",
+      voiceProfile: {
+        id: "vp-u1",
+        userId: "u1",
+        humor: 65,
+        formality: 55,
+        brevity: 70,
+        contrarianTone: 45,
+        maturity: "ADVANCED" as const,
+        tweetsAnalyzed: 48,
+      },
+      _count: { tweetDrafts: 15, analyticsEvents: 40, sessions: 8 },
+    },
+    {
+      id: "u2",
+      handle: "bob",
+      voiceProfile: {
+        id: "vp-u2",
+        userId: "u2",
+        humor: 35,
+        formality: 75,
+        brevity: 40,
+        contrarianTone: 20,
+        maturity: "BEGINNER" as const,
+        tweetsAnalyzed: 6,
+      },
+      _count: { tweetDrafts: 3, analyticsEvents: 5, sessions: 1 },
+    },
+    {
+      id: "test-user-1",
+      handle: "testanalyst",
+      voiceProfile: {
+        id: "vp-1",
+        userId: "test-user-1",
+        humor: 50,
+        formality: 60,
+        brevity: 40,
+        contrarianTone: 30,
+        maturity: "INTERMEDIATE" as const,
+        tweetsAnalyzed: 12,
+      },
+      _count: { tweetDrafts: 8, analyticsEvents: 20, sessions: 5 },
+    },
   ],
 };
 
