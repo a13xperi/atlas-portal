@@ -17,6 +17,7 @@ import {
   Clipboard,
   Link2,
   Loader2,
+  Megaphone,
   Mic,
   RefreshCw,
   Sparkles,
@@ -24,7 +25,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import { useTour } from "@/components/tour/TourProvider";
 import FeatureGate from "@/components/ui/FeatureGate";
@@ -237,6 +238,7 @@ function buildVoiceVariationInstruction(
 function CraftingPage() {
   useTour("crafting");
 
+  const router = useRouter();
   const searchParams = useSearchParams();
   const voiceModeLabelId = useId();
   const savedBlendLabelId = useId();
@@ -1960,6 +1962,19 @@ function CraftingPage() {
                         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                       </svg>
                       Post to X
+                    </button>
+                  ) : null}
+                  {activeDraft.status === "APPROVED" || activeDraft.status === "DRAFT" ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        router.push(`/campaigns?newCampaign=true&draftId=${activeDraft.id}`)
+                      }
+                      title="Add this draft to a new campaign"
+                      className="flex items-center gap-1.5 rounded-lg border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs font-medium text-atlas-text transition-colors hover:border-atlas-teal/50 hover:text-atlas-teal"
+                    >
+                      <Megaphone className="h-3.5 w-3.5" aria-hidden="true" />
+                      Add to Campaign
                     </button>
                   ) : null}
                   <button
