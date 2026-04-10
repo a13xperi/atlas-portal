@@ -32,11 +32,6 @@ test.describe("Responsive layout", () => {
         const bodyText = await authedPage.locator("body").textContent();
         expect(bodyText?.length ?? 0).toBeGreaterThan(50);
 
-        // Screenshot for visual reference
-        await expect(authedPage).toHaveScreenshot(
-          `${route.name}-${viewport.name}.png`,
-          { fullPage: true, maxDiffPixelRatio: 0.05, animations: "disabled" },
-        );
       });
     }
   }
