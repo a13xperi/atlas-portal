@@ -115,7 +115,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
     { id: "crafting", label: "Crafting Station", description: "Draft & generate tweets", icon: PenTool, action: () => navigate("/crafting"), keywords: "tweet draft write" },
     { id: "alerts", label: "Alerts + Momentum", description: "Live alerts feed", icon: Bell, action: () => navigate("/alerts"), keywords: "notifications feed trending" },
     { id: "analytics", label: "Analytics", description: "Performance metrics", icon: BarChart3, action: () => navigate("/analytics"), keywords: "stats data chart" },
-    { id: "voice-profiles", label: "Voice Profiles", description: "Manage your tone", icon: Mic2, action: () => navigate("/voice-profiles"), keywords: "voice tone blend" },
+    { id: "voice-profiles", label: "Voice Lab", description: "Your voice dimensions, blends & inspiration", icon: Mic2, action: () => navigate("/voice-profiles"), keywords: "voice tone blend lab calibration" },
     { id: "team-library", label: "Team Library", description: "Approved style cards", icon: BookOpen, action: () => navigate("/team-library"), keywords: "library styles" },
     { id: "management", label: "Team Management", description: "Manage analysts", icon: Users, action: () => navigate("/management"), keywords: "team kpi leaderboard" },
     { id: "telegram", label: "Telegram Setup", description: "Bot configuration guide", icon: Send, action: () => navigate("/telegram"), keywords: "bot notifications" },
