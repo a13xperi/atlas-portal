@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { Download, PencilLine, Sparkles } from "lucide-react";
 import ReferenceVoiceSelector from "@/components/onboarding/ReferenceVoiceSelector";
 import GradientButton from "@/components/ui/GradientButton";
@@ -258,10 +257,10 @@ export default function ReferenceVoicesSection({
                 className="flex items-center gap-3 rounded-2xl border border-glass-border bg-atlas-surface/70 p-4"
               >
                 {account.profileImageUrl && !avatarErrors[account.id] ? (
-                  <Image
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
                     alt={`${account.displayName || account.name || account.handle} avatar`}
                     className="h-12 w-12 rounded-full border border-glass-border object-cover"
-                    height={48}
                     onError={() =>
                       setAvatarErrors((current) => ({
                         ...current,
@@ -269,7 +268,6 @@ export default function ReferenceVoicesSection({
                       }))
                     }
                     src={account.profileImageUrl}
-                    width={48}
                   />
                 ) : (
                   <div

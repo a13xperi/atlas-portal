@@ -15,6 +15,12 @@ const nextConfig = {
       },
     ];
   },
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "unavatar.io" },
+      { protocol: "https", hostname: "pbs.twimg.com" },
+    ],
+  },
 };
 
 const config = withBundleAnalyzer(nextConfig);
