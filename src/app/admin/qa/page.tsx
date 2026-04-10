@@ -187,6 +187,31 @@ function QaContent() {
             note,
             tester: existing?.tester ?? testerInitials,
             timestamp: new Date().toISOString(),
+            severity: existing?.severity,
+            userFeedback: existing?.userFeedback,
+          },
+        };
+        scheduleSave(next);
+        return next;
+      });
+    },
+    [canEdit, testerInitials, scheduleSave],
+  );
+
+  const setSeverity = useCallback(
+    (testId: string, severity: Severity | "") => {
+      if (!canEdit) return;
+      setResults((prev) => {
+        const existing = prev[testId];
+        const next: ResultsMap = {
+          ...prev,
+          [testId]: {
+            status: existing?.status ?? "fail",
+            note: existing?.note ?? "",
+            tester: existing?.tester ?? testerInitials,
+            timestamp: new Date().toISOString(),
+            severity: severity === "" ? undefined : severity,
+            userFeedback: existing?.userFeedback,
           },
         };
         scheduleSave(next);
