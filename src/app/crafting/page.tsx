@@ -65,6 +65,7 @@ const TWEET_TEMPLATES = [
 
 const NEWS_SOURCE_PREFIX = "source:";
 const VOICE_COMPARISON_DELTA = { humor: 20 } as const;
+const MIN_TWEETS_FOR_CRAFTING = 3;
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
 type DraftSourceType = "REPORT" | "ARTICLE" | "MANUAL";
@@ -235,7 +236,6 @@ function buildVoiceVariationInstruction(
 function CraftingPage() {
   useTour("crafting");
 
-
   const searchParams = useSearchParams();
   const voiceModeLabelId = useId();
   const savedBlendLabelId = useId();
@@ -327,6 +327,14 @@ function CraftingPage() {
     currentFormality,
     currentBrevity,
     currentContrarianTone
+  );
+  const voiceTweetsAnalyzed = user?.voiceProfile?.tweetsAnalyzed ?? 0;
+  const isVoiceCalibrationBlocked =
+    user?.voiceProfile?.maturity === "BEGINNER" &&
+    voiceTweetsAnalyzed < MIN_TWEETS_FOR_CRAFTING;
+  const calibrationTweetsRemaining = Math.max(
+    MIN_TWEETS_FOR_CRAFTING - voiceTweetsAnalyzed,
+    0
   );
 
   const loadDrafts = useCallback(async () => {
@@ -634,7 +642,7 @@ function CraftingPage() {
     hasSource: boolean,
     angle?: string | null
   ) => {
-    if (!user) return false;
+    if (!user || isVoiceCalibrationBlocked) return false;
 
     setError(null);
     const { isValid, trimmedContent } = validateDraftSubmission(content, hasSource);
@@ -664,7 +672,13 @@ function CraftingPage() {
     } finally {
       setCreating(false);
     }
-  }, [commitDraft, selectedBlendId, user, validateDraftSubmission]);
+  }, [
+    commitDraft,
+    isVoiceCalibrationBlocked,
+    selectedBlendId,
+    user,
+    validateDraftSubmission,
+  ]);
 
   const handleTextFileInput = useCallback(async (file: File) => {
     if (!isTextFile(file)) {
@@ -787,7 +801,7 @@ function CraftingPage() {
   }, []);
 
   const handleGenerateNews = async (articleUrl: string, fallbackText = "") => {
-    if (!user) {
+    if (!user || isVoiceCalibrationBlocked) {
       return {};
     }
 
@@ -1039,7 +1053,7 @@ function CraftingPage() {
   const activeTabPanelId = `${activeMode}-panel`;
 
   const handleCompareVoices = async (text = draftInputValueRef.current) => {
-    if (!user) {
+    if (!user || isVoiceCalibrationBlocked) {
       return false;
     }
 
@@ -1208,6 +1222,29 @@ function CraftingPage() {
         </Link>
       </div>
 
+      {isVoiceCalibrationBlocked ? (
+        <div
+          role="alert"
+          className="mt-6 rounded-2xl border border-atlas-warning/30 bg-atlas-warning/10 px-4 py-4 text-sm text-atlas-warning"
+        >
+          <p className="font-semibold text-atlas-text">
+            Voice calibration is not ready for drafting yet.
+          </p>
+          <p className="mt-1 text-atlas-text-secondary">
+            Atlas needs at least {MIN_TWEETS_FOR_CRAFTING} analyzed tweets before
+            it unlocks generation here. You have {voiceTweetsAnalyzed}, so add{" "}
+            {calibrationTweetsRemaining} more in{" "}
+            <Link
+              href="/voice-profiles"
+              className="font-semibold text-atlas-teal hover:underline"
+            >
+              Voice Lab
+            </Link>
+            .
+          </p>
+        </div>
+      ) : null}
+
       <div className="mt-6 flex flex-col gap-6 lg:flex-row">
         <DraftHistorySidebar
           drafts={draftHistoryItems}
@@ -1226,6 +1263,7 @@ function CraftingPage() {
                   <button
                     key={topic.id}
                     type="button"
+                    disabled={creating || isVoiceCalibrationBlocked}
                     onClick={() =>
                       void createDraftFromSource(
                         `${topic.headline}. ${topic.context || ""}`,
@@ -1233,7 +1271,7 @@ function CraftingPage() {
                         true
                       )
                     }
-                    className="rounded-full border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs text-atlas-text transition-colors hover:border-atlas-teal hover:text-atlas-teal"
+                    className="rounded-full border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs text-atlas-text transition-colors hover:border-atlas-teal hover:text-atlas-teal disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {topic.headline.length > 50
                       ? `${topic.headline.slice(0, 50)}…`
@@ -1284,6 +1322,7 @@ function CraftingPage() {
               >
                 <NewsMode
                   creating={creating}
+                  disabled={isVoiceCalibrationBlocked}
                   error={error}
                   onDismissError={() => setError(null)}
                   onGenerateNews={handleGenerateNews}
@@ -1412,7 +1451,7 @@ function CraftingPage() {
                   <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]" data-tour="generate-button">
                     <GradientButton
                       fullWidth
-                      disabled={creating}
+                      disabled={creating || isVoiceCalibrationBlocked}
                       onClick={() => void handleCreateDraft()}
                     >
                       {creating && !comparingVoices ? (
@@ -1429,7 +1468,7 @@ function CraftingPage() {
                     <button
                       type="button"
                       onClick={() => void handleCompareVoices()}
-                      disabled={creating}
+                      disabled={creating || isVoiceCalibrationBlocked}
                       className="inline-flex items-center justify-center gap-2 rounded-2xl border border-glass-border bg-glass px-4 py-3 text-sm font-medium text-atlas-text transition-colors hover:border-atlas-teal/50 hover:text-atlas-teal disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {comparingVoices ? (
@@ -1449,7 +1488,7 @@ function CraftingPage() {
                     <button
                       type="button"
                       onClick={() => setShowAdvisor(true)}
-                      disabled={creating}
+                      disabled={creating || isVoiceCalibrationBlocked}
                       className="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-delphi-teal/20 bg-delphi-teal/5 px-4 py-2.5 text-sm font-medium text-delphi-teal transition-colors hover:bg-delphi-teal/10 hover:border-delphi-teal/40 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <Sparkles className="h-4 w-4" />

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Sparkles, Wand2 } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
 import RecipeCard from "@/components/voice-profiles/RecipeCard";
@@ -23,14 +23,10 @@ import {
   pickVoiceDimensions,
   type VoiceDimensions,
 } from "@/lib/voice-profile-dimensions";
-import {
-  buildReferenceBlendVoices,
-  REFERENCE_ACCOUNT_FALLBACK,
-} from "@/lib/reference-accounts";
+import { REFERENCE_ACCOUNT_FALLBACK } from "@/lib/reference-accounts";
 import {
   buildBlendFingerprint,
   getNotableVoiceDimensions,
-  normalizeReferenceSelectionKey,
 } from "@/lib/voice-recipes";
 
 const PERSONAL_VOICE_ID = "__personal__";
@@ -58,6 +54,44 @@ function getActiveRecipeLabel(
   return blends.find((blend) => blend.id === activeVoiceId)?.name ?? "Personal Voice";
 }
 
+const BLEND_PREVIEW_DIMENSIONS: Array<[keyof VoiceDimensions, string]> = [
+  ["humor", "Humor"],
+  ["formality", "Formality"],
+  ["brevity", "Brevity"],
+  ["contrarianTone", "Contrarian tone"],
+  ["directness", "Directness"],
+  ["warmth", "Warmth"],
+  ["technicalDepth", "Technical depth"],
+  ["confidence", "Confidence"],
+  ["evidenceOrientation", "Evidence orientation"],
+  ["solutionOrientation", "Solution orientation"],
+  ["socialPosture", "Social posture"],
+  ["selfPromotionalIntensity", "Self-promotion"],
+];
+
+function buildBlendPreviewPrompt(blend: SavedBlend, dimensions: VoiceDimensions) {
+  const composition = blend.voices
+    .map((voice) => `${voice.percentage}% ${voice.label}`)
+    .join(", ");
+  const dimensionSummary = BLEND_PREVIEW_DIMENSIONS.map(
+    ([field, label]) => `${label}: ${formatVoiceDimensionValue(dimensions[field])}`
+  ).join(", ");
+
+  return [
+    "Write one original sample tweet for a crypto analyst.",
+    `Match this saved Atlas voice recipe: ${blend.name}.`,
+    `Blend composition: ${composition}.`,
+    `Voice fingerprint: ${dimensionSummary}.`,
+    "Keep it under 260 characters.",
+    "No hashtags, no thread marker, and no surrounding quotation marks.",
+    "Make it feel publishable right now, with a specific point of view.",
+  ].join(" ");
+}
+
+function sanitizeBlendPreview(text: string) {
+  return text.trim().replace(/^"+|"+$/g, "");
+}
+
 export default function VoiceProfilesPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -75,6 +109,11 @@ export default function VoiceProfilesPage() {
   const [error, setError] = useState<string | null>(null);
   const [calibrateHandle, setCalibrateHandle] = useState("");
   const [showCalibrationInput, setShowCalibrationInput] = useState(false);
+  const [previewingBlendId, setPreviewingBlendId] = useState<string | null>(null);
+  const [blendPreviewErrors, setBlendPreviewErrors] = useState<
+    Record<string, string>
+  >({});
+  const [blendPreviews, setBlendPreviews] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const savedBlendId = window.localStorage.getItem("atlas_active_blend");
@@ -195,6 +234,61 @@ export default function VoiceProfilesPage() {
   const activeRecipeLabel = useMemo(
     () => getActiveRecipeLabel(activeVoiceId, blends),
     [activeVoiceId, blends]
+  );
+
+  const handlePreviewBlend = useCallback(
+    async (blend: SavedBlend, dimensions: VoiceDimensions) => {
+      if (previewingBlendId) {
+        return;
+      }
+
+      setPreviewingBlendId(blend.id);
+      setBlendPreviewErrors((current) => {
+        const nextErrors = { ...current };
+        delete nextErrors[blend.id];
+        return nextErrors;
+      });
+
+      try {
+        const response = await api.oracle.chat({
+          page: "voice-profiles",
+          messages: [
+            {
+              role: "user",
+              content: buildBlendPreviewPrompt(blend, dimensions),
+            },
+          ],
+        });
+        const previewText = sanitizeBlendPreview(response.text);
+
+        if (!previewText) {
+          throw new Error("Atlas returned an empty sample tweet.");
+        }
+
+        setBlendPreviews((current) => ({
+          ...current,
+          [blend.id]: previewText,
+        }));
+        setBlendPreviewErrors((current) => {
+          const nextErrors = { ...current };
+          delete nextErrors[blend.id];
+          return nextErrors;
+        });
+      } catch (previewError: unknown) {
+        setBlendPreviewErrors((current) => ({
+          ...current,
+          [blend.id]:
+            previewError instanceof Error
+              ? previewError.message
+              : "Couldn't generate a sample tweet for this voice.",
+        }));
+      } finally {
+        setPreviewingBlendId((current) =>
+          current === blend.id ? null : current
+        );
+      }
+    },
+    [previewingBlendId]
   );
 
   const handleUseVoice = (voiceId: string) => {
@@ -425,6 +519,12 @@ export default function VoiceProfilesPage() {
                   isActive={activeVoiceId === blend.id}
                   userHandle={user?.handle}
                   onUse={() => handleUseVoice(blend.id)}
+                  onPreviewSample={() =>
+                    void handlePreviewBlend(blend, dimensions)
+                  }
+                  previewError={blendPreviewErrors[blend.id]}
+                  previewLoading={previewingBlendId === blend.id}
+                  previewText={blendPreviews[blend.id]}
                   onEdit={() => {
                     setEditorBlendId(blend.id);
                     setEditorMode("edit-blend");
