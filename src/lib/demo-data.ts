@@ -99,6 +99,192 @@ const drafts: { drafts: TweetDraft[] } = {
   ],
 };
 
+// ── Campaigns ────────────────────────────────────────────────────────────────
+
+type DemoCampaign = {
+  id: string;
+  name: string;
+  description: string;
+  status: "DRAFT" | "ACTIVE" | "PAUSED" | "COMPLETED";
+  draftCount: number;
+  createdAt: string;
+  drafts: TweetDraft[];
+};
+
+const demoCampaigns: DemoCampaign[] = [
+  {
+    id: "camp-1",
+    name: "Modular Rollups Report",
+    description:
+      "Report-sourced campaign from Delphi's modular rollups quarterly note — drives the shared sequencer narrative with supporting trending commentary.",
+    status: "ACTIVE",
+    draftCount: 4,
+    createdAt: daysAgo(7),
+    drafts: [
+      {
+        id: "camp-1-draft-1",
+        content:
+          "Blob fees just cratered 40% and CT is calling it bearish. It's the opposite — L2 calldata compression is the modular thesis playing out in real-time. Cheaper infra is the adoption signal nobody's pricing in.",
+        version: 1,
+        status: "POSTED",
+        confidence: 0.91,
+        predictedEngagement: 4200,
+        actualEngagement: 5380,
+        sourceType: "REPORT",
+        createdAt: daysAgo(6),
+      },
+      {
+        id: "camp-1-draft-2",
+        content:
+          "Shared sequencers aren't a scaling upgrade. They're an alignment mechanism. When rollups share ordering, they stop competing for MEV and start compounding liquidity. That's the real unlock.",
+        version: 2,
+        status: "APPROVED",
+        confidence: 0.87,
+        predictedEngagement: 3600,
+        sourceType: "REPORT",
+        createdAt: daysAgo(5),
+      },
+      {
+        id: "camp-1-draft-3",
+        content:
+          "Hot take: EigenDA + Celestia + Avail aren't competing for the same market. They're each optimizing for a different failure mode. The winning rollup stack will run all three in parallel.",
+        version: 1,
+        status: "APPROVED",
+        confidence: 0.82,
+        predictedEngagement: 2900,
+        sourceType: "REPORT",
+        createdAt: daysAgo(4),
+      },
+      {
+        id: "camp-1-draft-4",
+        content:
+          "Three metrics that actually matter for modular L2s: blob fee efficiency, sequencer uptime, and cross-rollup message latency. Everyone's watching TPS. The data is in the footnotes.",
+        version: 1,
+        status: "DRAFT",
+        confidence: 0.78,
+        predictedEngagement: 2400,
+        sourceType: "REPORT",
+        createdAt: daysAgo(2),
+      },
+    ],
+  },
+  {
+    id: "camp-2",
+    name: "DeFi Market Update",
+    description:
+      "Working campaign for the upcoming DeFi update — stablecoin payments angle plus the restaking thread idea, both still in DRAFT status.",
+    status: "DRAFT",
+    draftCount: 3,
+    createdAt: daysAgo(3),
+    drafts: [
+      {
+        id: "camp-2-draft-1",
+        content:
+          "The carry trade is back — and this time it's denominated in stablecoins. $180B in circulating USDC/USDT is quietly earning 5%+ on T-bills. Banks aren't ready for what happens when that yield flows on-chain.",
+        version: 1,
+        status: "DRAFT",
+        confidence: 0.84,
+        predictedEngagement: 3100,
+        sourceType: "MANUAL",
+        createdAt: daysAgo(3),
+      },
+      {
+        id: "camp-2-draft-2",
+        content:
+          "Restaking is overleveraged. When the same ETH secures 15 AVSs, you're not distributing risk — you're concentrating it with extra steps. The first correlated slashing event will reprice the entire sector.",
+        version: 2,
+        status: "DRAFT",
+        confidence: 0.79,
+        predictedEngagement: 3800,
+        sourceType: "MANUAL",
+        createdAt: daysAgo(2),
+      },
+      {
+        id: "camp-2-draft-3",
+        content:
+          "Intent-based DEXs just crossed $12B in monthly volume. Solvers are competing on price and latency instead of bribes. This is how DeFi finally eats the OTC desks — quietly, then all at once.",
+        version: 1,
+        status: "APPROVED",
+        confidence: 0.88,
+        predictedEngagement: 2700,
+        sourceType: "MANUAL",
+        createdAt: daysAgo(1),
+      },
+    ],
+  },
+  {
+    id: "camp-3",
+    name: "L2 Fee Wars — March Recap",
+    description:
+      "Weekly recap thread on L2 fee compression. Blob fees, calldata optimization, and rollup economics.",
+    status: "COMPLETED",
+    draftCount: 5,
+    createdAt: daysAgo(10),
+    drafts: [
+      {
+        id: "camp-3-draft-1",
+        content:
+          "March L2 recap 🧵\n\nBlob fees: -42%\nAvg tx cost: -61%\nDaily active addresses: +28%\n\nThe fee wars are doing exactly what competition is supposed to do. Users win, rollups learn.",
+        version: 1,
+        status: "POSTED",
+        confidence: 0.93,
+        predictedEngagement: 4100,
+        actualEngagement: 4820,
+        sourceType: "REPORT",
+        createdAt: daysAgo(9),
+      },
+      {
+        id: "camp-3-draft-2",
+        content:
+          "Base shipped calldata compression and cut costs in half overnight. Arbitrum followed within 48 hours. Optimism is next. This isn't a race to zero — it's a race to the bottom of the cost curve where only infra matters.",
+        version: 1,
+        status: "POSTED",
+        confidence: 0.89,
+        predictedEngagement: 3400,
+        actualEngagement: 3920,
+        sourceType: "REPORT",
+        createdAt: daysAgo(8),
+      },
+      {
+        id: "camp-3-draft-3",
+        content:
+          "SOL reclaimed the 200d MA and nobody's talking about it. Last three times this happened: +34%, +51%, +72% over the following 90 days. The setup rhymes — just with quieter attention.",
+        version: 2,
+        status: "POSTED",
+        confidence: 0.86,
+        predictedEngagement: 3900,
+        actualEngagement: 4450,
+        sourceType: "MANUAL",
+        createdAt: daysAgo(7),
+      },
+      {
+        id: "camp-3-draft-4",
+        content:
+          "The most underrated L2 metric right now is sequencer uptime. Everyone's optimizing for fees but the real differentiator over the next cycle will be reliability. Downtime is the new rug.",
+        version: 1,
+        status: "POSTED",
+        confidence: 0.81,
+        predictedEngagement: 2500,
+        actualEngagement: 2980,
+        sourceType: "REPORT",
+        createdAt: daysAgo(6),
+      },
+      {
+        id: "camp-3-draft-5",
+        content:
+          "Closing thought: the modular vs monolithic debate is over. The market already voted — with fee dollars. Look at where the activity went in Q1, not where the arguments did.",
+        version: 1,
+        status: "POSTED",
+        confidence: 0.9,
+        predictedEngagement: 3200,
+        actualEngagement: 3610,
+        sourceType: "REPORT",
+        createdAt: daysAgo(5),
+      },
+    ],
+  },
+];
+
 // ── Voice Profile ────────────────────────────────────────────────────────────
 
 const voiceProfile: { profile: VoiceProfile } = {
@@ -621,32 +807,10 @@ const demoData: Record<string, unknown> = {
 
   "/api/users/team": teamMembers,
   "/api/campaigns": {
-    campaigns: [
-      {
-        id: "camp-1",
-        name: "Modular Rollups Report",
-        description: "Report-sourced campaign from Delphi's modular rollups quarterly note — drives the shared sequencer narrative with supporting trending commentary.",
-        status: "ACTIVE" as const,
-        draftCount: 3,
-        createdAt: daysAgo(7),
-      },
-      {
-        id: "camp-2",
-        name: "DeFi Market Update",
-        description: "Working campaign for the upcoming DeFi update — stablecoin payments angle plus the restaking thread idea, both still in DRAFT status.",
-        status: "DRAFT" as const,
-        draftCount: 2,
-        createdAt: daysAgo(3),
-      },
-      {
-        id: "camp-3",
-        name: "L2 Fee Wars — March Recap",
-        description: "Weekly recap thread on L2 fee compression. Blob fees, calldata optimization, and rollup economics.",
-        status: "COMPLETED" as const,
-        draftCount: 6,
-        createdAt: daysAgo(10),
-      },
-    ],
+    campaigns: demoCampaigns.map(({ drafts: campaignDrafts, ...rest }) => ({
+      ...rest,
+      draftCount: campaignDrafts.length,
+    })),
   },
 
   "/api/briefing/history": {
@@ -721,6 +885,74 @@ export function getDemoResponse(path: string, method: string = "GET", body?: unk
     if (cleanPath !== "/api/drafts/team") {
       return { draft: drafts.drafts[0] };
     }
+  }
+
+  // Campaign detail — return full campaign with drafts populated
+  if (method === "GET" && /^\/api\/campaigns\/[^/]+$/.test(cleanPath)) {
+    const id = cleanPath.split("/").pop() as string;
+    const match = demoCampaigns.find((c) => c.id === id);
+    if (match) {
+      return { campaign: match };
+    }
+    // Unknown id (e.g. freshly created in-session) — return a minimal shell
+    // with the first demo draft so the page renders something useful.
+    return {
+      campaign: {
+        id,
+        name: "New Campaign",
+        description: "Campaign created in demo mode.",
+        status: "DRAFT" as const,
+        draftCount: 1,
+        drafts: [drafts.drafts[0]],
+        createdAt: now,
+      },
+    };
+  }
+
+  // Campaign create — return a synthetic campaign the UI can route to
+  if (method === "POST" && cleanPath === "/api/campaigns") {
+    const payload = (body ?? {}) as { name?: string; description?: string };
+    return {
+      campaign: {
+        id: `camp-demo-${Date.now()}`,
+        name: payload.name || "New Campaign",
+        description: payload.description ?? null,
+        status: "DRAFT" as const,
+        draftCount: 0,
+        drafts: [],
+        createdAt: now,
+      },
+    };
+  }
+
+  // Campaign update
+  if (method === "PATCH" && /^\/api\/campaigns\/[^/]+$/.test(cleanPath)) {
+    const id = cleanPath.split("/").pop() as string;
+    const existing = demoCampaigns.find((c) => c.id === id);
+    const payload = (body ?? {}) as Partial<{
+      name: string;
+      description: string | null;
+      status: DemoCampaign["status"];
+    }>;
+    return {
+      campaign: {
+        id,
+        name: payload.name ?? existing?.name ?? "Campaign",
+        description: payload.description ?? existing?.description ?? null,
+        status: payload.status ?? existing?.status ?? ("DRAFT" as const),
+        draftCount: existing?.draftCount ?? 0,
+        drafts: existing?.drafts ?? [],
+        createdAt: existing?.createdAt ?? now,
+      },
+    };
+  }
+
+  // Campaign add/remove draft
+  if (method === "POST" && /^\/api\/campaigns\/[^/]+\/drafts$/.test(cleanPath)) {
+    return { success: true };
+  }
+  if (method === "DELETE" && /^\/api\/campaigns\/[^/]+\/drafts\/[^/]+$/.test(cleanPath)) {
+    return { success: true };
   }
 
   if (method === "POST" && cleanPath === "/api/drafts/generate") {
