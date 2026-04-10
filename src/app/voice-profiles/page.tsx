@@ -117,6 +117,8 @@ export default function VoiceProfilesPage() {
   >({});
   const [blendPreviews, setBlendPreviews] = useState<Record<string, string>>({});
   const [calibrateHandle, setCalibrateHandle] = useState("");
+  const [blendSelectMode, setBlendSelectMode] = useState(false);
+  const [blendSourceId, setBlendSourceId] = useState<string | null>(null);
   const setupPrompt = searchParams.get("prompt");
   const showSetupPrompt =
     setupPrompt === "complete-voice-setup" && !dismissedSetupPrompt;
@@ -312,6 +314,50 @@ export default function VoiceProfilesPage() {
     router.push("/crafting");
   };
 
+  const handleCreatePairedBlend = async (targetId: string) => {
+    const sourceName =
+      blendSourceId === PERSONAL_VOICE_ID
+        ? "Personal"
+        : blends.find((b) => b.id === blendSourceId)?.name ?? "Voice A";
+    const targetName =
+      targetId === PERSONAL_VOICE_ID
+        ? "Personal"
+        : blends.find((b) => b.id === targetId)?.name ?? "Voice B";
+    const blendName = `${sourceName} × ${targetName}`;
+
+    const sourceVoice: BlendVoiceInput =
+      blendSourceId === PERSONAL_VOICE_ID
+        ? { label: "My voice", percentage: 50 }
+        : { label: sourceName, percentage: 50, referenceVoiceId: blendSourceId ?? undefined };
+    const targetVoice: BlendVoiceInput =
+      targetId === PERSONAL_VOICE_ID
+        ? { label: "My voice", percentage: 50 }
+        : { label: targetName, percentage: 50, referenceVoiceId: targetId };
+
+    try {
+      await api.voice.createBlend(blendName, [sourceVoice, targetVoice]);
+      const response = await api.voice.getBlends();
+      setBlends(response.blends);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create blend");
+    } finally {
+      setBlendSelectMode(false);
+      setBlendSourceId(null);
+    }
+  };
+
+  const handleBlendSelect = (voiceId: string) => {
+    if (!blendSelectMode) {
+      setBlendSelectMode(true);
+      setBlendSourceId(voiceId);
+    } else if (voiceId === blendSourceId) {
+      setBlendSelectMode(false);
+      setBlendSourceId(null);
+    } else {
+      void handleCreatePairedBlend(voiceId);
+    }
+  };
+
   const buildBlendVoicesFromReferences = (): BlendVoiceInput[] => {
     // Personal voice always anchors the blend at 50%; remaining 50% is split
     // evenly across the user's saved reference voices. If they have no
@@ -464,6 +510,30 @@ export default function VoiceProfilesPage() {
           Pick a voice and start crafting. Each voice shapes how Atlas writes for you.
         </p>
 
+        {blendSelectMode && (
+          <div className="mb-4 flex items-center justify-between rounded-xl border border-atlas-teal/20 bg-atlas-teal/10 px-4 py-3 text-sm">
+            <span className="font-semibold text-atlas-teal">
+              Select a second voice to blend with{" "}
+              <span className="text-atlas-text">
+                {blendSourceId === PERSONAL_VOICE_ID
+                  ? "Personal Voice"
+                  : blends.find((b) => b.id === blendSourceId)?.name}
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setBlendSelectMode(false);
+                setBlendSourceId(null);
+              }}
+              aria-label="Cancel blend selection"
+              className="text-atlas-text-muted hover:text-atlas-text"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Voice Library Grid */}
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           <VoiceCard
@@ -471,20 +541,26 @@ export default function VoiceProfilesPage() {
             isActive={activeVoiceId === PERSONAL_VOICE_ID}
             isPersonal
             isSelected={selectedVoiceId === PERSONAL_VOICE_ID}
-            dimensions={personalDimensions}
+            notableDimensions={personalStandouts}
+            userHandle={user?.handle}
             onSelect={() => setSelectedVoiceId(PERSONAL_VOICE_ID)}
             onUse={() => handleUseVoice(PERSONAL_VOICE_ID)}
+            onBlend={() => handleBlendSelect(PERSONAL_VOICE_ID)}
+            blendTargetMode={blendSelectMode && blendSourceId !== PERSONAL_VOICE_ID}
           />
-          {blends.map((blend) => (
+          {recipeCards.map(({ blend, notableDimensions }) => (
             <VoiceCard
               key={blend.id}
               name={blend.name}
               isActive={activeVoiceId === blend.id}
               isPersonal={false}
               isSelected={selectedVoiceId === blend.id}
-              dimensions={personalDimensions}
+              notableDimensions={notableDimensions}
+              userHandle={user?.handle}
               onSelect={() => setSelectedVoiceId(blend.id)}
               onUse={() => handleUseVoice(blend.id)}
+              onBlend={() => handleBlendSelect(blend.id)}
+              blendTargetMode={blendSelectMode && blendSourceId !== blend.id}
             />
           ))}
           {blends.length === 0 && (
