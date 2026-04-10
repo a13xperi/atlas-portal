@@ -1,9 +1,21 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { ChatMessage } from "@/lib/oracle-types";
+import type { ChatMessage, ContentSignal } from "@/lib/oracle-types";
 import OracleAvatar from "./OracleAvatar";
 import GradientButton from "@/components/ui/GradientButton";
+import ContentSignalCard from "./ContentSignalCard";
+
+function resolveContentSignal(message: ChatMessage): ContentSignal | null {
+  const fromMetadata = message.metadata?.contentSignal;
+  if (fromMetadata) return fromMetadata;
+  // If the message is tagged as content_signal but has no structured
+  // payload, fall back to a generic "link" card derived from content.
+  if (message.type === "content_signal") {
+    return { source: "link", title: message.content };
+  }
+  return null;
+}
 
 interface OracleMessageProps {
   message: ChatMessage;

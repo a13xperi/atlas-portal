@@ -27,6 +27,39 @@ interface BriefingPreferenceInput {
   channel: string;
 }
 
+export type QueuePlatform = "twitter";
+export type QueueStatus = "queued" | "scheduled" | "published" | "failed";
+
+export interface QueueItem {
+  id: string;
+  content: string;
+  platform: QueuePlatform;
+  status: QueueStatus;
+  scheduledAt: string | null;
+  publishedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  failureReason?: string | null;
+}
+
+export interface QueueListResponse {
+  items: QueueItem[];
+  total: number;
+}
+
+export interface QueueCreateInput {
+  content: string;
+  platform?: QueuePlatform;
+  scheduledAt?: string | null;
+}
+
+export interface QueueUpdateInput {
+  content?: string;
+  scheduledAt?: string | null;
+  status?: QueueStatus;
+  failureReason?: string | null;
+}
+
 export interface QaTestRun {
   id: string;
   project: string;
@@ -152,6 +185,7 @@ export interface FeatureFlagRecord {
 }
 
 export type OnboardingTrack = "TRACK_A" | "TRACK_B";
+
 
 export class ApiError extends Error {
   statusCode: number;
@@ -459,6 +493,31 @@ export const api = {
       request<ArenaMeEntry>(`/api/arena/me?period=${period}`),
   },
 
+  queue: {
+    list: (status?: QueueStatus) =>
+      request<QueueListResponse | QueueItem[]>(
+        `/api/queue${status ? `?status=${status}` : ""}`
+      ),
+    create: (data: QueueCreateInput) =>
+      request<{ item: QueueItem } | QueueItem>("/api/queue", {
+        method: "POST",
+        body: data,
+      }),
+    update: (id: string, data: QueueUpdateInput) =>
+      request<{ item: QueueItem } | QueueItem>(`/api/queue/${id}`, {
+        method: "PATCH",
+        body: data,
+      }),
+    remove: (id: string) =>
+      request<{ success: boolean }>(`/api/queue/${id}`, {
+        method: "DELETE",
+      }),
+    publish: (id: string) =>
+      request<{ item: QueueItem } | QueueItem>(`/api/queue/${id}/publish`, {
+        method: "POST",
+      }),
+  },
+
   analytics: {
     summary: () =>
       request<{ summary: AnalyticsSummary }>("/api/analytics/summary"),
@@ -675,6 +734,7 @@ export const api = {
   },
 
 
+
   campaigns: {
     list: () =>
       request<{ campaigns: Campaign[] }>("/api/campaigns"),
@@ -768,10 +828,64 @@ export interface BlendVoice {
   referenceVoice?: ReferenceVoice | null;
 }
 
+
 export interface SavedBlend {
   id: string;
   name: string;
   voices: BlendVoice[];
+}
+
+export interface BlendedVoiceDimensions {
+  humor: number;
+  formality: number;
+  brevity: number;
+  contrarianTone: number;
+  directness: number;
+  warmth: number;
+  technicalDepth: number;
+  confidence: number;
+  evidenceOrientation: number;
+  solutionOrientation: number;
+  socialPosture: number;
+  selfPromotionalIntensity: number;
+}
+
+export interface BlendedVoiceProfile {
+  id: string;
+  primaryTwitterId: string;
+  primaryHandle: string | null;
+  additionalTwitterIds: string[];
+  additionalHandles: string[];
+  weights: Record<string, number>;
+  dimensions: BlendedVoiceDimensions;
+  styleSignals?: Record<string, unknown> | null;
+  tweetsAnalyzed: number;
+  blendSummary?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BlendedVoiceInspiration {
+  twitterId: string;
+  handle: string;
+  name: string;
+  tweetCount: number;
+  weight: number;
+}
+
+export interface VoiceBlendResponse {
+  blendedProfile: {
+    id: string;
+    primaryTwitterId: string;
+    additionalTwitterIds: string[];
+    weights: Record<string, number>;
+    tweetsAnalyzed: number;
+    blendSummary?: string | null;
+  };
+  inspirations: BlendedVoiceInspiration[];
+  dimensions: BlendedVoiceDimensions;
+  styleSignals?: Record<string, unknown> | null;
+  summary: string;
 }
 
 export interface BlendedVoiceDimensions {
