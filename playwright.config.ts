@@ -1,16 +1,17 @@
 import { defineConfig, devices } from "@playwright/test";
+import {
+  isLocalBaseURL,
+  resolvePlaywrightBaseURL,
+  resolveVercelBypassHeaders,
+} from "./e2e/playwright-env";
 
 const PORT = 3000;
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${PORT}`;
+const localBaseURL = `http://localhost:${PORT}`;
+const baseURL = resolvePlaywrightBaseURL(localBaseURL);
 const apiURL =
   process.env.NEXT_PUBLIC_API_URL ??
   "https://api-production-9bef.up.railway.app";
-
-// Vercel deployment protection bypass — see playwright-e2e.config.ts for the full
-// doc comment. Secret must be set in GitHub repo secrets + Vercel project settings.
-const vercelBypass =
-  process.env.VERCEL_AUTOMATION_BYPASS_SECRET ??
-  process.env.VERCEL_PROTECTION_BYPASS;
+const useLocalWebServer = isLocalBaseURL(baseURL);
 
 export default defineConfig({
   testDir: "./e2e",
@@ -26,12 +27,7 @@ export default defineConfig({
   },
   use: {
     baseURL,
-    extraHTTPHeaders: vercelBypass
-      ? {
-          "x-vercel-protection-bypass": vercelBypass,
-          "x-vercel-set-bypass-cookie": "true",
-        }
-      : {},
+    extraHTTPHeaders: resolveVercelBypassHeaders(),
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
@@ -43,14 +39,16 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    command: "npm run dev",
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    env: {
-      ...process.env,
-      NEXT_PUBLIC_API_URL: apiURL,
-    },
-  },
+  webServer: useLocalWebServer
+    ? {
+        command: "npm run dev",
+        url: localBaseURL,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+        env: {
+          ...process.env,
+          NEXT_PUBLIC_API_URL: apiURL,
+        },
+      }
+    : undefined,
 });

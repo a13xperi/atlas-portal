@@ -8,6 +8,12 @@
  */
 
 import { test, expect } from "./fixtures";
+import type { Page } from "@playwright/test";
+
+async function visitRoute(page: Page, route: string) {
+  await page.goto(route, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("body")).toBeVisible();
+}
 
 test.describe("Investor Walkthrough", () => {
   test("complete demo flow — every page renders with data", async ({ authedPage: page }) => {
@@ -20,14 +26,12 @@ test.describe("Investor Walkthrough", () => {
     await expect(page.getByRole("navigation")).toBeVisible();
 
     // ── Step 2: Crafting ───────────────────────────────────────────────
-    await page.goto("/crafting", { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle");
+    await visitRoute(page, "/crafting");
     // Page should render without error
     await expect(page.locator("body")).not.toBeEmpty();
 
     // ── Step 3: Arena ──────────────────────────────────────────────────
-    await page.goto("/arena", { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle");
+    await visitRoute(page, "/arena");
     await expect(page.getByText("Atlas Arena")).toBeVisible();
     // Leaderboard heading
     await expect(page.getByRole("heading", { name: "Leaderboard" })).toBeVisible();
@@ -35,28 +39,23 @@ test.describe("Investor Walkthrough", () => {
     await expect(page.getByText("Team Stats")).toBeVisible();
 
     // ── Step 4: Voice Profiles ─────────────────────────────────────────
-    await page.goto("/voice-profiles", { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle");
+    await visitRoute(page, "/voice-profiles");
     expect((await page.locator("body").textContent())?.length ?? 0).toBeGreaterThan(50);
 
     // ── Step 5: Analytics ──────────────────────────────────────────────
-    await page.goto("/analytics", { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle");
+    await visitRoute(page, "/analytics");
     expect((await page.locator("body").textContent())?.length ?? 0).toBeGreaterThan(50);
 
     // ── Step 6: Alerts ─────────────────────────────────────────────────
-    await page.goto("/alerts", { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle");
+    await visitRoute(page, "/alerts");
     expect((await page.locator("body").textContent())?.length ?? 0).toBeGreaterThan(50);
 
     // ── Step 7: Briefing ───────────────────────────────────────────────
-    await page.goto("/briefing", { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle");
+    await visitRoute(page, "/briefing");
     expect((await page.locator("body").textContent())?.length ?? 0).toBeGreaterThan(50);
 
     // ── Step 8: Admin ──────────────────────────────────────────────────
-    await page.goto("/admin", { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle");
+    await visitRoute(page, "/admin");
     await expect(page.getByText("Internal Tools")).toBeVisible();
     await expect(page.getByText("Style Tile")).toBeVisible();
     await expect(page.getByText("QA Checklist")).toBeVisible();
@@ -91,8 +90,7 @@ test.describe("Investor Walkthrough", () => {
     ];
 
     for (const route of routes) {
-      await page.goto(route, { waitUntil: "domcontentloaded" });
-      await page.waitForLoadState("networkidle");
+      await visitRoute(page, route);
     }
 
     // Filter out known non-critical errors
