@@ -817,10 +817,25 @@ export function getDemoResponse(path: string, method: string = "GET", body?: unk
 
   // Oracle agent — used by FloatingOracle agent mode
   if (method === "POST" && cleanPath === "/api/oracle/agent") {
-    return {
-      text: "I can help you draft tweets, check analytics, browse signals, tune your voice, or generate briefings. Just tell me what you need — or tap a quick action below.",
-      actions: [],
-    };
+    const agentMsgs = typeof body === "object" && body !== null && "messages" in body ? (body as Record<string, unknown>).messages : [];
+    const lastUser = Array.isArray(agentMsgs)
+      ? [...agentMsgs].reverse().find((m) => typeof m === "object" && m !== null && (m as Record<string, unknown>).role === "user")
+      : null;
+    const lastText = lastUser && typeof lastUser === "object" ? String((lastUser as Record<string, unknown>).content ?? "").toLowerCase() : "";
+
+    if (/\b(draft|tweet|write|post)\b/.test(lastText)) {
+      return { text: "On it — spinning up a draft based on your voice profile.", actions: [{ id: `act-${Date.now()}`, type: "generate_draft", input: { prompt: lastText }, requiresConfirmation: false, label: "Generate draft" }] };
+    }
+    if (/\b(analytics|stats|performance|metrics)\b/.test(lastText)) {
+      return { text: "Pulling your latest analytics summary now.", actions: [{ id: `act-${Date.now()}`, type: "get_analytics_summary", input: {}, requiresConfirmation: false, label: "Get analytics summary" }] };
+    }
+    if (/\b(trending|signals|hot|momentum)\b/.test(lastText)) {
+      return { text: "Checking the signal feed — here\'s what\'s moving right now.", actions: [{ id: `act-${Date.now()}`, type: "get_trending", input: {}, requiresConfirmation: false, label: "Get trending signals" }] };
+    }
+    if (/\b(voice|tone|style|profile)\b/.test(lastText)) {
+      return { text: "Grabbing your current voice profile so we can tune it together.", actions: [{ id: `act-${Date.now()}`, type: "get_voice_profile", input: {}, requiresConfirmation: false, label: "Get voice profile" }] };
+    }
+    return { text: "I can help you draft tweets, check analytics, browse signals, tune your voice, or generate briefings. Just tell me what you need — or tap a quick action below.", actions: [] };
   }
 
   // Briefing generate
