@@ -25,6 +25,21 @@ interface ReferenceVoicesSectionProps {
   references: ReferenceVoice[];
 }
 
+function normalizeTwitterHandle(handle?: string | null) {
+  const trimmedHandle = handle?.trim();
+
+  if (!trimmedHandle) {
+    return "";
+  }
+
+  const urlMatch = trimmedHandle.match(
+    /(?:twitter\.com|x\.com)\/([A-Za-z0-9_]+)/i
+  );
+  const extractedHandle = urlMatch?.[1] ?? trimmedHandle;
+
+  return extractedHandle.replace(/^@+/, "");
+}
+
 export default function ReferenceVoicesSection({
   onReferencesChange,
   references,
@@ -128,7 +143,9 @@ export default function ReferenceVoicesSection({
       name: matchingReference?.name ?? id,
       profileImageUrl: matchingReference?.avatarUrl
         ?? (matchingReference?.handle
-          ? `https://unavatar.io/twitter/${matchingReference.handle.replace("@", "")}`
+          ? `https://unavatar.io/twitter/${normalizeTwitterHandle(
+              matchingReference.handle
+            )}`
           : null),
     });
   });
@@ -195,14 +212,14 @@ export default function ReferenceVoicesSection({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-delphi-blue-400">
-              Reference voices
+              Inspirations
             </p>
             <h2 className="mt-2 font-heading text-xl font-bold tracking-tight text-atlas-text">
-              Accounts shaping your current voice mix
+              People whose writing style you admire
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-atlas-text-secondary">
-              Atlas keeps this set in sync with onboarding and uses it as the
-              foundation for blend experiments.
+              Add a seed — someone whose voice you want Atlas to learn from.
+              Blends come later, once you have a few inspirations in place.
             </p>
           </div>
 
@@ -226,7 +243,7 @@ export default function ReferenceVoicesSection({
             >
               <span className="flex items-center gap-2">
                 <PencilLine className="h-4 w-4" />
-                Edit
+                + Add inspiration
               </span>
             </GradientButton>
           </div>
@@ -245,63 +262,66 @@ export default function ReferenceVoicesSection({
           <div className="mt-5 rounded-2xl border border-dashed border-glass-border bg-atlas-surface/40 px-4 py-8 text-center">
             <Sparkles className="mx-auto h-5 w-5 text-atlas-teal" />
             <p className="mt-3 text-sm text-atlas-text-secondary">
-              No reference voices selected yet. Pick at least two to start
-              shaping a richer voice profile.
+              Who are you inspired by? Add a seed — that becomes your voice.
             </p>
           </div>
         ) : (
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {selectedAccounts.map((account) => (
-              <div
-                key={account.id}
-                className="flex items-center gap-3 rounded-2xl border border-glass-border bg-atlas-surface/70 p-4"
-              >
-                {account.profileImageUrl && !avatarErrors[account.id] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    alt={`${account.displayName || account.name || account.handle} avatar`}
-                    className="h-12 w-12 rounded-full border border-glass-border object-cover"
-                    onError={() =>
-                      setAvatarErrors((current) => ({
-                        ...current,
-                        [account.id]: true,
-                      }))
-                    }
-                    src={account.profileImageUrl}
-                  />
-                ) : (
-                  <div
-                    aria-hidden="true"
-                    className="flex h-12 w-12 items-center justify-center rounded-full border border-atlas-teal/30 text-sm font-semibold uppercase"
-                    style={{
-                      backgroundColor: `${colors.atlasTeal}1A`,
-                      color: colors.atlasTeal,
-                    }}
-                  >
-                    {(account.handle || account.id).charAt(0)}
-                  </div>
-                )}
+            {selectedAccounts.map((account) => {
+              const normalizedHandle = normalizeTwitterHandle(account.handle);
 
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-atlas-text">
-                    {account.displayName || account.name || account.handle || account.id}
-                  </p>
-                  {account.handle ? (
-                    <a
-                      href={`https://twitter.com/${account.handle}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-0.5 text-xs text-atlas-text-secondary hover:text-atlas-teal hover:underline"
-                    >
-                      @{account.handle}
-                      <ExternalLink className="h-2.5 w-2.5" />
-                    </a>
+              return (
+                <div
+                  key={account.id}
+                  className="flex items-center gap-3 rounded-2xl border border-glass-border bg-atlas-surface/70 p-4"
+                >
+                  {account.profileImageUrl && !avatarErrors[account.id] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      alt={`${account.displayName || account.name || account.handle} avatar`}
+                      className="h-12 w-12 rounded-full border border-glass-border object-cover"
+                      onError={() =>
+                        setAvatarErrors((current) => ({
+                          ...current,
+                          [account.id]: true,
+                        }))
+                      }
+                      src={account.profileImageUrl}
+                    />
                   ) : (
-                    <p className="truncate text-xs text-atlas-text-secondary">@{account.id}</p>
+                    <div
+                      aria-hidden="true"
+                      className="flex h-12 w-12 items-center justify-center rounded-full border border-atlas-teal/30 text-sm font-semibold uppercase"
+                      style={{
+                        backgroundColor: `${colors.atlasTeal}1A`,
+                        color: colors.atlasTeal,
+                      }}
+                    >
+                      {(normalizedHandle || account.id).charAt(0)}
+                    </div>
                   )}
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-atlas-text">
+                      {account.displayName || account.name || account.handle || account.id}
+                    </p>
+                    {normalizedHandle ? (
+                      <a
+                        href={`https://twitter.com/${normalizedHandle}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-0.5 text-xs text-atlas-text-secondary hover:text-atlas-teal hover:underline"
+                      >
+                        @{normalizedHandle}
+                        <ExternalLink className="h-2.5 w-2.5" />
+                      </a>
+                    ) : (
+                      <p className="truncate text-xs text-atlas-text-secondary">@{account.id}</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -310,11 +330,11 @@ export default function ReferenceVoicesSection({
         description={
           isSaving
             ? "Saving your selections..."
-            : "Choose the reference accounts Atlas should learn from."
+            : "Pick the people whose writing style Atlas should learn from."
         }
         isOpen={isEditing}
         onClose={() => setIsEditing(false)}
-        title="Edit reference voices"
+        title="Edit inspirations"
       >
         <ReferenceVoiceSelector
           onContinue={handleSaveSelection}

@@ -6,6 +6,7 @@ import GradientButton from "@/components/ui/GradientButton";
 
 export interface NewsModeProps {
   creating?: boolean;
+  disabled?: boolean;
   error?: string | null;
   onDismissError?: () => void;
   onArticleUrlChange?: (value: string) => void;
@@ -18,6 +19,7 @@ export interface NewsModeProps {
 
 export default function NewsMode({
   creating = false,
+  disabled = false,
   error,
   onDismissError,
   onArticleUrlChange,
@@ -108,7 +110,7 @@ export default function NewsMode({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
-        <GradientButton disabled={creating} type="submit">
+        <GradientButton disabled={creating || disabled} type="submit">
           {creating ? (
             <span className="flex items-center justify-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -122,7 +124,8 @@ export default function NewsMode({
           <button
             type="button"
             onClick={() => setShowFallback(true)}
-            className="text-sm text-atlas-text-secondary transition-colors hover:text-atlas-teal"
+            disabled={disabled}
+            className="text-sm text-atlas-text-secondary transition-colors hover:text-atlas-teal disabled:cursor-not-allowed disabled:opacity-50"
           >
             Paste text instead
           </button>

@@ -202,7 +202,7 @@ test.describe("Demo Mode", () => {
 
       // Wait for the loading skeleton to resolve before asserting on content.
       await expect(
-        page.getByRole("heading", { name: /your saved voices/i }).first(),
+        page.getByRole("heading", { name: /your voices/i }).first(),
       ).toBeVisible({ timeout: 15_000 });
 
       // Demo data seeds three reference voices; assert on any one of them by

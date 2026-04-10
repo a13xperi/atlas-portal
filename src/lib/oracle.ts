@@ -4,7 +4,7 @@ import { prepareMessages } from "./oracle-messages";
 
 // ── Step transition map ────────────────────────────────────────────
 const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
-  WELCOME: null, // determined by track selection
+  WELCOME: "CONNECT_X",
   CONNECT_X: "TRACK_A_SCANNING",
   TRACK_A_SCANNING: "TRACK_A_RESULT",
   TRACK_A_RESULT: "REFERENCES",
@@ -12,7 +12,7 @@ const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
   TRACK_B_STYLE: "TRACK_B_CONTENT",
   TRACK_B_CONTENT: "TRACK_B_DIMENSIONS",
   TRACK_B_DIMENSIONS: "REFERENCES",
-  REFERENCES: "BLEND",
+  REFERENCES: "HANDOFF",
   BLEND: "HANDOFF",
   TOPICS: "HANDOFF", // legacy fallback, step skipped in flow
   HANDOFF: null, // terminal
@@ -32,7 +32,7 @@ export function getOnboardingCompletionHref(
 export function canAdvance(state: OracleState): boolean {
   switch (state.currentStep) {
     case "WELCOME":
-      return state.track !== null;
+      return true;
     case "CONNECT_X":
       return state.xConnected && state.xHandle.trim().length > 0;
     case "TRACK_A_SCANNING":
@@ -48,7 +48,7 @@ export function canAdvance(state: OracleState): boolean {
     case "TRACK_B_DIMENSIONS":
       return true;
     case "REFERENCES":
-      return state.selectedRefs.length >= 2;
+      return state.selectedRefs.length >= 1;
     case "BLEND":
       return true;
     case "TOPICS":

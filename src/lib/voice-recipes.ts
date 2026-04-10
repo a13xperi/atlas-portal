@@ -1,4 +1,4 @@
-import type { ReferenceAccount, SavedBlend } from "@/lib/api";
+import type { BlendVoice, ReferenceAccount, SavedBlend } from "@/lib/api";
 import {
   DEFAULT_VOICE_DIMENSIONS,
   pickVoiceDimensions,
@@ -222,4 +222,39 @@ export function getVoiceDimensionLabel(field: VoiceDimensionField) {
 
 export function normalizeReferenceSelectionKey(value?: string | null) {
   return normalizeVoiceKey(value);
+}
+
+export function buildReferenceAccountLookup(accounts: ReferenceAccount[]) {
+  return buildReferenceLookup(accounts);
+}
+
+/**
+ * Resolve the ReferenceAccount that corresponds to a blend voice so we can
+ * display avatars + Twitter profile links on recipe cards even when the
+ * backend did not attach a full `referenceVoice` object to the blend voice.
+ *
+ * Returns `null` when the voice is the user's personal voice or cannot be
+ * matched to any known account.
+ */
+export function resolveReferenceAccountForVoice(
+  voice: Pick<BlendVoice, "label" | "referenceVoice">,
+  lookup: Map<string, ReferenceAccount>
+): ReferenceAccount | null {
+  if (isPersonalVoiceSource(voice.label)) {
+    return null;
+  }
+
+  const explicit = voice.referenceVoice;
+
+  return (
+    lookup.get(normalizeVoiceKey(explicit?.id)) ||
+    lookup.get(normalizeVoiceKey(explicit?.handle)) ||
+    lookup.get(normalizeVoiceKey(explicit?.name)) ||
+    lookup.get(normalizeVoiceKey(voice.label)) ||
+    null
+  );
+}
+
+export function isPersonalVoiceLabel(label?: string | null) {
+  return isPersonalVoiceSource(label);
 }

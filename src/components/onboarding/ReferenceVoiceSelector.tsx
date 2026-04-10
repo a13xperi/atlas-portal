@@ -25,7 +25,7 @@ type CategoryFilter = "All" | ReferenceAccountCategory;
 
 export default function ReferenceVoiceSelector({
   accounts,
-  minRequired = 2,
+  minRequired = 1,
   onContinue,
   onSelectionChange,
   selected,
@@ -114,7 +114,7 @@ export default function ReferenceVoiceSelector({
           Pick your reference voices
         </h2>
         <p className="mt-2 text-sm leading-6 text-atlas-text-secondary">
-          Choose at least {minRequired} accounts Atlas should learn from.
+          Choose at least {minRequired} account to get started. You can add more later.
         </p>
       </div>
 

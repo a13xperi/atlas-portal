@@ -24,14 +24,10 @@ import {
   pickVoiceDimensions,
   type VoiceDimensions,
 } from "@/lib/voice-profile-dimensions";
-import {
-  buildReferenceBlendVoices,
-  REFERENCE_ACCOUNT_FALLBACK,
-} from "@/lib/reference-accounts";
+import { REFERENCE_ACCOUNT_FALLBACK } from "@/lib/reference-accounts";
 import {
   buildBlendFingerprint,
   getNotableVoiceDimensions,
-  normalizeReferenceSelectionKey,
 } from "@/lib/voice-recipes";
 
 const PERSONAL_VOICE_ID = "__personal__";
@@ -59,6 +55,44 @@ function getActiveRecipeLabel(
   return blends.find((blend) => blend.id === activeVoiceId)?.name ?? "Personal Voice";
 }
 
+const BLEND_PREVIEW_DIMENSIONS: Array<[keyof VoiceDimensions, string]> = [
+  ["humor", "Humor"],
+  ["formality", "Formality"],
+  ["brevity", "Brevity"],
+  ["contrarianTone", "Contrarian tone"],
+  ["directness", "Directness"],
+  ["warmth", "Warmth"],
+  ["technicalDepth", "Technical depth"],
+  ["confidence", "Confidence"],
+  ["evidenceOrientation", "Evidence orientation"],
+  ["solutionOrientation", "Solution orientation"],
+  ["socialPosture", "Social posture"],
+  ["selfPromotionalIntensity", "Self-promotion"],
+];
+
+function buildBlendPreviewPrompt(blend: SavedBlend, dimensions: VoiceDimensions) {
+  const composition = blend.voices
+    .map((voice) => `${voice.percentage}% ${voice.label}`)
+    .join(", ");
+  const dimensionSummary = BLEND_PREVIEW_DIMENSIONS.map(
+    ([field, label]) => `${label}: ${formatVoiceDimensionValue(dimensions[field])}`
+  ).join(", ");
+
+  return [
+    "Write one original sample tweet for a crypto analyst.",
+    `Match this saved Atlas voice recipe: ${blend.name}.`,
+    `Blend composition: ${composition}.`,
+    `Voice fingerprint: ${dimensionSummary}.`,
+    "Keep it under 260 characters.",
+    "No hashtags, no thread marker, and no surrounding quotation marks.",
+    "Make it feel publishable right now, with a specific point of view.",
+  ].join(" ");
+}
+
+function sanitizeBlendPreview(text: string) {
+  return text.trim().replace(/^"+|"+$/g, "");
+}
+
 export default function VoiceProfilesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -77,7 +111,14 @@ export default function VoiceProfilesPage() {
   const [error, setError] = useState<string | null>(null);
   const [dismissedSetupPrompt, setDismissedSetupPrompt] = useState(false);
   const [showCalibrationInput, setShowCalibrationInput] = useState(false);
+  const [previewingBlendId, setPreviewingBlendId] = useState<string | null>(null);
+  const [blendPreviewErrors, setBlendPreviewErrors] = useState<
+    Record<string, string>
+  >({});
+  const [blendPreviews, setBlendPreviews] = useState<Record<string, string>>({});
   const [calibrateHandle, setCalibrateHandle] = useState("");
+  const [blendSelectMode, setBlendSelectMode] = useState(false);
+  const [blendSourceId, setBlendSourceId] = useState<string | null>(null);
   const setupPrompt = searchParams.get("prompt");
   const showSetupPrompt =
     setupPrompt === "complete-voice-setup" && !dismissedSetupPrompt;
@@ -208,6 +249,61 @@ export default function VoiceProfilesPage() {
     [activeVoiceId, blends]
   );
 
+  const handlePreviewBlend = useCallback(
+    async (blend: SavedBlend, dimensions: VoiceDimensions) => {
+      if (previewingBlendId) {
+        return;
+      }
+
+      setPreviewingBlendId(blend.id);
+      setBlendPreviewErrors((current) => {
+        const nextErrors = { ...current };
+        delete nextErrors[blend.id];
+        return nextErrors;
+      });
+
+      try {
+        const response = await api.oracle.chat({
+          page: "voice-profiles",
+          messages: [
+            {
+              role: "user",
+              content: buildBlendPreviewPrompt(blend, dimensions),
+            },
+          ],
+        });
+        const previewText = sanitizeBlendPreview(response.text);
+
+        if (!previewText) {
+          throw new Error("Atlas returned an empty sample tweet.");
+        }
+
+        setBlendPreviews((current) => ({
+          ...current,
+          [blend.id]: previewText,
+        }));
+        setBlendPreviewErrors((current) => {
+          const nextErrors = { ...current };
+          delete nextErrors[blend.id];
+          return nextErrors;
+        });
+      } catch (previewError: unknown) {
+        setBlendPreviewErrors((current) => ({
+          ...current,
+          [blend.id]:
+            previewError instanceof Error
+              ? previewError.message
+              : "Couldn't generate a sample tweet for this voice.",
+        }));
+      } finally {
+        setPreviewingBlendId((current) =>
+          current === blend.id ? null : current
+        );
+      }
+    },
+    [previewingBlendId]
+  );
+
   const handleUseVoice = (voiceId: string) => {
     setActiveVoiceId(voiceId);
     if (voiceId === PERSONAL_VOICE_ID) {
@@ -216,6 +312,50 @@ export default function VoiceProfilesPage() {
       window.localStorage.setItem("atlas_active_blend", voiceId);
     }
     router.push("/crafting");
+  };
+
+  const handleCreatePairedBlend = async (targetId: string) => {
+    const sourceName =
+      blendSourceId === PERSONAL_VOICE_ID
+        ? "Personal"
+        : blends.find((b) => b.id === blendSourceId)?.name ?? "Voice A";
+    const targetName =
+      targetId === PERSONAL_VOICE_ID
+        ? "Personal"
+        : blends.find((b) => b.id === targetId)?.name ?? "Voice B";
+    const blendName = `${sourceName} × ${targetName}`;
+
+    const sourceVoice: BlendVoiceInput =
+      blendSourceId === PERSONAL_VOICE_ID
+        ? { label: "My voice", percentage: 50 }
+        : { label: sourceName, percentage: 50, referenceVoiceId: blendSourceId ?? undefined };
+    const targetVoice: BlendVoiceInput =
+      targetId === PERSONAL_VOICE_ID
+        ? { label: "My voice", percentage: 50 }
+        : { label: targetName, percentage: 50, referenceVoiceId: targetId };
+
+    try {
+      await api.voice.createBlend(blendName, [sourceVoice, targetVoice]);
+      const response = await api.voice.getBlends();
+      setBlends(response.blends);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create blend");
+    } finally {
+      setBlendSelectMode(false);
+      setBlendSourceId(null);
+    }
+  };
+
+  const handleBlendSelect = (voiceId: string) => {
+    if (!blendSelectMode) {
+      setBlendSelectMode(true);
+      setBlendSourceId(voiceId);
+    } else if (voiceId === blendSourceId) {
+      setBlendSelectMode(false);
+      setBlendSourceId(null);
+    } else {
+      void handleCreatePairedBlend(voiceId);
+    }
   };
 
   const buildBlendVoicesFromReferences = (): BlendVoiceInput[] => {
@@ -370,6 +510,30 @@ export default function VoiceProfilesPage() {
           Pick a voice and start crafting. Each voice shapes how Atlas writes for you.
         </p>
 
+        {blendSelectMode && (
+          <div className="mb-4 flex items-center justify-between rounded-xl border border-atlas-teal/20 bg-atlas-teal/10 px-4 py-3 text-sm">
+            <span className="font-semibold text-atlas-teal">
+              Select a second voice to blend with{" "}
+              <span className="text-atlas-text">
+                {blendSourceId === PERSONAL_VOICE_ID
+                  ? "Personal Voice"
+                  : blends.find((b) => b.id === blendSourceId)?.name}
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setBlendSelectMode(false);
+                setBlendSourceId(null);
+              }}
+              aria-label="Cancel blend selection"
+              className="text-atlas-text-muted hover:text-atlas-text"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Voice Library Grid */}
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           <VoiceCard
@@ -377,40 +541,48 @@ export default function VoiceProfilesPage() {
             isActive={activeVoiceId === PERSONAL_VOICE_ID}
             isPersonal
             isSelected={selectedVoiceId === PERSONAL_VOICE_ID}
-            dimensions={personalDimensions}
+            notableDimensions={personalStandouts}
+            userHandle={user?.handle}
             onSelect={() => setSelectedVoiceId(PERSONAL_VOICE_ID)}
             onUse={() => handleUseVoice(PERSONAL_VOICE_ID)}
+            onBlend={() => handleBlendSelect(PERSONAL_VOICE_ID)}
+            blendTargetMode={blendSelectMode && blendSourceId !== PERSONAL_VOICE_ID}
           />
-          {blends.map((blend) => (
+          {recipeCards.map(({ blend, notableDimensions }) => (
             <VoiceCard
               key={blend.id}
               name={blend.name}
               isActive={activeVoiceId === blend.id}
               isPersonal={false}
               isSelected={selectedVoiceId === blend.id}
-              dimensions={personalDimensions}
+              notableDimensions={notableDimensions}
+              userHandle={user?.handle}
               onSelect={() => setSelectedVoiceId(blend.id)}
               onUse={() => handleUseVoice(blend.id)}
+              onBlend={() => handleBlendSelect(blend.id)}
+              blendTargetMode={blendSelectMode && blendSourceId !== blend.id}
             />
           ))}
-          {blends.length === 0 && (
+          {blends.length === 0 && references.length > 0 && (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-glass-border bg-atlas-surface/40 p-5 text-center">
               <Sparkles className="mx-auto h-5 w-5 text-atlas-teal" aria-hidden="true" />
               <p className="mt-2 text-sm font-semibold text-atlas-text-secondary">No blends yet</p>
-              <p className="mt-1 text-[11px] text-atlas-text-muted">Combine reference voices to create your own style</p>
+              <p className="mt-1 text-[11px] text-atlas-text-muted">Combine inspirations to create your own style</p>
             </div>
           )}
-          <button
-            type="button"
-            onClick={() => setEditorMode("create")}
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-glass-border p-5 text-atlas-text-muted transition-colors hover:border-atlas-teal/40 hover:text-atlas-teal"
-          >
-            <Plus className="h-6 w-6" aria-hidden="true" />
-            <span className="text-xs font-semibold">New Voice</span>
-            {blends.length === 0 && (
-              <span className="text-[10px] text-atlas-text-muted">Blend references into custom voices</span>
-            )}
-          </button>
+          {references.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setEditorMode("create")}
+              className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-glass-border p-5 text-atlas-text-muted transition-colors hover:border-atlas-teal/40 hover:text-atlas-teal"
+            >
+              <Plus className="h-6 w-6" aria-hidden="true" />
+              <span className="text-xs font-semibold">New Voice</span>
+              {blends.length === 0 && (
+                <span className="text-[10px] text-atlas-text-muted">Blend inspirations into custom voices</span>
+              )}
+            </button>
+          )}
         </div>
 
         <section className="mt-10">
@@ -457,6 +629,12 @@ export default function VoiceProfilesPage() {
                   isActive={activeVoiceId === blend.id}
                   userHandle={user?.handle}
                   onUse={() => handleUseVoice(blend.id)}
+                  onPreviewSample={() =>
+                    void handlePreviewBlend(blend, dimensions)
+                  }
+                  previewError={blendPreviewErrors[blend.id]}
+                  previewLoading={previewingBlendId === blend.id}
+                  previewText={blendPreviews[blend.id]}
                   onEdit={() => {
                     setEditorBlendId(blend.id);
                     setEditorMode("edit-blend");
