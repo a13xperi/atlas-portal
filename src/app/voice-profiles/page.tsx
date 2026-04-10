@@ -507,8 +507,19 @@ export default function VoiceProfilesPage() {
         <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">Voice Studio</p>
         <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight text-atlas-text">Your Voices</h1>
         <p className="mt-1 text-sm text-atlas-text-secondary">
-          Pick a voice and start crafting. Each voice shapes how Atlas writes for you.
+          Add inspirations, then blend them into voices you can craft with.
         </p>
+
+        {/* Inspirations — seed your voice before seeing blends */}
+        <div className="mt-8" data-tour="reference-voices">
+          <ReferenceVoicesSection
+            references={references}
+            onReferencesChange={setReferences}
+          />
+        </div>
+
+        {/* Blends — only shown after user has added at least one inspiration */}
+        <div className="mt-10 border-t border-glass-border pt-10">
 
         {blendSelectMode && (
           <div className="mb-4 flex items-center justify-between rounded-xl border border-atlas-teal/20 bg-atlas-teal/10 px-4 py-3 text-sm">
@@ -589,10 +600,10 @@ export default function VoiceProfilesPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
-                Your Saved Voices
+                Your Blends
               </p>
               <h2 className="mt-2 font-heading text-2xl font-semibold text-atlas-text">
-                Individual creator voices and custom blends for crafting
+                Mix your inspirations into custom voices for crafting
               </h2>
             </div>
             <div className="rounded-full border border-glass-border bg-atlas-surface/60 px-4 py-2 text-sm text-atlas-text-secondary">
@@ -644,31 +655,27 @@ export default function VoiceProfilesPage() {
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={() => setEditorMode("create")}
-            className="mt-6 flex w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-glass-border bg-atlas-surface/30 px-6 py-10 text-center transition-colors hover:border-atlas-teal/40 hover:bg-atlas-surface/50"
-          >
-            <span className="flex h-12 w-12 items-center justify-center rounded-full border border-atlas-teal/30 bg-atlas-teal/10 text-atlas-teal">
-              <Plus className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <div>
-              <p className="font-heading text-xl font-semibold text-atlas-text">
-                Add a Creator Voice
-              </p>
-              <p className="mt-1 text-sm text-atlas-text-secondary">
-                Pick a creator from your follows and shape their voice style.
-              </p>
-            </div>
-          </button>
+          {references.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setEditorMode("create")}
+              className="mt-6 flex w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-glass-border bg-atlas-surface/30 px-6 py-10 text-center transition-colors hover:border-atlas-teal/40 hover:bg-atlas-surface/50"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-full border border-atlas-teal/30 bg-atlas-teal/10 text-atlas-teal">
+                <Plus className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="font-heading text-xl font-semibold text-atlas-text">
+                  Create a Blend
+                </p>
+                <p className="mt-1 text-sm text-atlas-text-secondary">
+                  Mix your inspirations into a custom voice for crafting.
+                </p>
+              </div>
+            </button>
+          )}
         </section>
-
-        <div className="mt-10 pb-24" data-tour="reference-voices">
-          <ReferenceVoicesSection
-            references={references}
-            onReferencesChange={setReferences}
-          />
-        </div>
+        </div>{/* end blends wrapper */}
 
         <VoiceEditorModal
           isOpen={editorMode !== null}
