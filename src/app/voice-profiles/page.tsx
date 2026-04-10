@@ -254,8 +254,19 @@ export default function VoiceProfilesPage() {
       setProfile(response.profile);
       setCalibrateHandle("");
       setShowCalibrationInput(false);
-    } catch {
-      setError("Calibration failed. Check the handle and try again.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("429") || msg.toLowerCase().includes("rate limit")) {
+        setError("Twitter API rate limit hit — try again in a few minutes.");
+      } else if (msg.includes("404") || msg.toLowerCase().includes("not found")) {
+        setError(`@${nextHandle} not found. Check the handle and try again.`);
+      } else if (msg.includes("403") || msg.toLowerCase().includes("protected")) {
+        setError(`@${nextHandle} has a protected account — tweets aren't public.`);
+      } else if (msg.toLowerCase().includes("no tweets")) {
+        setError(`@${nextHandle} has no public tweets to analyze.`);
+      } else {
+        setError("Calibration failed. Check the handle and try again.");
+      }
     }
   };
 
