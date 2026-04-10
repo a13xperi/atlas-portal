@@ -108,21 +108,20 @@ export default function VoiceCard({
         : "border-glass-border bg-glass/50 backdrop-blur-xl hover:border-atlas-teal/40",
   ].join(" ");
 
+  void showDetails; // reserved for future use
+
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      aria-pressed={isSelected}
-      onClick={onSelect}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onSelect();
-        }
-      }}
-      className={containerClass}
-    >
-      <div className="flex items-start justify-between gap-2">
+    <div className={containerClass}>
+      {/* Invisible overlay button for card selection — avoids nested-interactive a11y violation */}
+      <button
+        type="button"
+        aria-pressed={isSelected}
+        aria-label={`Select ${name} voice`}
+        onClick={onSelect}
+        className="absolute inset-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-atlas-teal focus:ring-inset"
+      />
+
+      <div className="relative z-10 flex items-start justify-between gap-2">
         <span
           className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
             isPersonal ? "bg-atlas-teal/15 text-atlas-teal" : "bg-glass text-atlas-text-muted"
@@ -135,10 +134,7 @@ export default function VoiceCard({
           <button
             type="button"
             aria-label={`Blend with ${name}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onBlend();
-            }}
+            onClick={onBlend}
             className="rounded-lg border border-glass-border p-1.5 text-atlas-text-muted transition-colors hover:border-atlas-teal/40 hover:text-atlas-teal"
           >
             <GitMerge className="h-3.5 w-3.5" />
@@ -146,9 +142,9 @@ export default function VoiceCard({
         )}
       </div>
 
-      <p className="mt-2 truncate font-heading text-sm font-semibold text-atlas-text">{name}</p>
+      <p className="relative z-10 mt-2 truncate font-heading text-sm font-semibold text-atlas-text">{name}</p>
 
-      <div className="mt-3 min-h-[1.75rem]">
+      <div className="relative z-10 mt-3 min-h-[1.75rem]">
         {recipePills.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {recipePills.map((pill) => (
@@ -168,13 +164,10 @@ export default function VoiceCard({
         )}
       </div>
 
-      <div className="mt-3">
+      <div className="relative z-10 mt-3">
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            void loadPreview();
-          }}
+          onClick={() => void loadPreview()}
           disabled={previewLoading}
           className="inline-flex items-center gap-1 rounded-lg border border-glass-border px-2 py-1 text-[11px] font-medium text-atlas-text-secondary transition-colors hover:border-atlas-teal/40 hover:text-atlas-teal disabled:cursor-not-allowed disabled:opacity-60"
         >
@@ -195,14 +188,11 @@ export default function VoiceCard({
         )}
       </div>
 
-      <div className="mt-auto pt-4">
+      <div className="relative z-10 mt-auto pt-4">
         {blendTargetMode ? (
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onUse();
-            }}
+            onClick={onUse}
             className="w-full rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-3 py-2 text-xs font-semibold text-atlas-bg transition-opacity hover:opacity-90"
           >
             Mix with this
@@ -210,10 +200,7 @@ export default function VoiceCard({
         ) : (
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onUse();
-            }}
+            onClick={onUse}
             disabled={isActive}
             className={`w-full rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
               isActive
