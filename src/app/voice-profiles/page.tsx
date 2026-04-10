@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Sparkles, Wand2 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
+import TweetTinderSection from "./tweet-tinder-section";
 import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
 import RecipeCard from "@/components/voice-profiles/RecipeCard";
 import VoiceCard from "@/components/voice-profiles/VoiceCard";
@@ -481,6 +482,11 @@ export default function VoiceProfilesPage() {
             setEditorBlendId(null);
           }}
         />
+
+        {/* Tweet Tinder — voice calibration via liked tweets */}
+        <div className="mt-8">
+          <TweetTinderSection />
+        </div>
       </div>
     </AppShell>
   );
