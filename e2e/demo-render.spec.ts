@@ -68,7 +68,7 @@ const PAGES: Array<{
 }> = [
   { name: "Dashboard", path: "/dashboard", expectText: /welcome back/i },
   { name: "Crafting", path: "/crafting", expectText: /craft|draft|tweet|write/i },
-  { name: "Voice Profiles", path: "/voice-profiles", expectText: /voice/i },
+  { name: "Voice Lab", path: "/voice-profiles", expectText: /voice/i },
   { name: "Team Library", path: "/team-library", expectText: /team|library/i },
   { name: "Alerts", path: "/alerts", expectText: /alert|signal|momentum/i },
   { name: "Analytics", path: "/analytics", expectText: /analytics|engagement/i },
