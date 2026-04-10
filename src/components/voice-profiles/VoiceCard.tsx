@@ -108,8 +108,6 @@ export default function VoiceCard({
         : "border-glass-border bg-glass/50 backdrop-blur-xl hover:border-atlas-teal/40",
   ].join(" ");
 
-  void showDetails; // reserved for future use
-
   return (
     <div className={containerClass}>
       {/* Invisible overlay button for card selection — avoids nested-interactive a11y violation */}
@@ -144,23 +142,34 @@ export default function VoiceCard({
 
       <p className="relative z-10 mt-2 truncate font-heading text-sm font-semibold text-atlas-text">{name}</p>
 
-      <div className="relative z-10 mt-3 min-h-[1.75rem]">
-        {recipePills.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {recipePills.map((pill) => (
-              <span
-                key={pill.key}
-                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${pill.pillClass}`}
-              >
-                <span className="text-atlas-text-secondary">{pill.label}:</span>
-                <span className="ml-1">{pill.qualifier}</span>
+      <div className="relative z-10 mt-3">
+        <button
+          type="button"
+          onClick={() => setShowDetails((v) => !v)}
+          className="text-[10px] text-atlas-text-muted hover:text-atlas-text-secondary transition-colors"
+        >
+          {showDetails ? "Hide details ▴" : "Show details ▾"}
+        </button>
+        {showDetails && (
+          <div className="mt-2 min-h-[1.75rem]">
+            {recipePills.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {recipePills.map((pill) => (
+                  <span
+                    key={pill.key}
+                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${pill.pillClass}`}
+                  >
+                    <span className="text-atlas-text-secondary">{pill.label}:</span>
+                    <span className="ml-1">{pill.qualifier}</span>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="inline-flex rounded-full border border-dashed border-glass-border px-2 py-0.5 text-[10px] text-atlas-text-muted">
+                No profile yet
               </span>
-            ))}
+            )}
           </div>
-        ) : (
-          <span className="inline-flex rounded-full border border-dashed border-glass-border px-2 py-0.5 text-[10px] text-atlas-text-muted">
-            No profile yet
-          </span>
         )}
       </div>
 
