@@ -324,38 +324,10 @@ export default function OracleChat() {
             ],
           });
         }
-        // Fetch personalized LLM commentary (supplementary)
-        api.oracle.message({
-          track: "a",
-          step: "TRACK_A_SCANNING",
-          action: "scan-complete",
-          context: {
-            dimensions: {
-              humor: profile.humor ?? 50, formality: profile.formality ?? 50,
-              brevity: profile.brevity ?? 50, contrarianTone: profile.contrarianTone ?? 50,
-              directness: profile.directness ?? 50, warmth: profile.warmth ?? 50,
-              technicalDepth: profile.technicalDepth ?? 50, confidence: profile.confidence ?? 50,
-              evidenceOrientation: profile.evidenceOrientation ?? 50,
-              solutionOrientation: profile.solutionOrientation ?? 50,
-              socialPosture: profile.socialPosture ?? 50,
-              selfPromotionalIntensity: profile.selfPromotionalIntensity ?? 50,
-            },
-            calibrationResult: { analysis: calibration.analysis, tweetsAnalyzed: calibration.tweetsAnalyzed },
-            handle: state.xHandle,
-          },
-        }).then((r) => {
-          if (r.llmGenerated && r.messages.length > 0) {
-            dispatch({
-              type: "ENQUEUE_MESSAGES",
-              messages: r.messages.map((m, i) => ({
-                id: `llm-${Date.now()}-${i}`,
-                role: "oracle" as const,
-                content: m.content,
-                timestamp: Date.now(),
-              })),
-            });
-          }
-        }).catch(() => { /* LLM is optional */ });
+        // NOTE: Supplementary LLM oracle.message() call intentionally removed.
+        // Anil feedback (Apr 10): don't generate tweet content until after
+        // HANDOFF is complete and a voice blend is configured. The calibration
+        // analysis above is sufficient commentary during onboarding.
       } catch (err) {
         console.error("Calibration failed:", err);
         // Surface a friendly Oracle message, then silently advance so the
