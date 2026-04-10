@@ -239,7 +239,10 @@ export default function VoiceProfilesPage() {
   };
 
   const handleCalibrate = async () => {
-    const nextHandle = calibrateHandle.trim().replace("@", "");
+    const raw = calibrateHandle.trim();
+    // Accept full X/Twitter URLs — extract the handle from the path
+    const urlMatch = raw.match(/(?:twitter\.com|x\.com)\/([A-Za-z0-9_]+)/);
+    const nextHandle = (urlMatch ? urlMatch[1] : raw).replace("@", "");
 
     if (!nextHandle) {
       return;
