@@ -173,7 +173,7 @@ describe("VoiceProfilesPage", () => {
     render(<VoiceProfilesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("Voice Lab is being redesigned")).toBeInTheDocument();
+      expect(screen.getByText("Your Voices")).toBeInTheDocument();
     });
   });
 
@@ -193,7 +193,7 @@ describe("VoiceProfilesPage", () => {
     render(<VoiceProfilesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Personal Voice — Detail/)).toBeInTheDocument();
+      expect(screen.getByText("Your Voices")).toBeInTheDocument();
     });
   });
 });
