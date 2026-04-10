@@ -66,7 +66,8 @@ test.describe("Investor Walkthrough", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
     // Type "arena" to search
     await page.getByRole("dialog").getByRole("textbox").fill("arena");
-    await expect(page.getByText("Arena")).toBeVisible();
+    // Scope to dialog to avoid strict mode violation — "Arena" appears in NavBar too
+    await expect(page.getByRole("dialog").getByText("Arena").first()).toBeVisible();
     // Close palette
     await page.keyboard.press("Escape");
   });
