@@ -162,12 +162,12 @@ export default function TourSpotlight({
             <div className="flex items-center gap-2">
               <button type="button" onClick={onSkip} className="px-2 py-1 text-[11px] text-atlas-text-muted hover:text-atlas-text">Skip tour</button>
               {onPrev && (
-                <button type="button" onClick={onPrev} className="flex h-7 w-7 items-center justify-center rounded-lg border border-glass-border text-atlas-text-muted hover:text-atlas-text">
-                  <ChevronLeft className="h-3.5 w-3.5" />
+                <button type="button" onClick={onPrev} aria-label="Previous step" className="flex h-7 w-7 items-center justify-center rounded-lg border border-glass-border text-atlas-text-muted hover:text-atlas-text">
+                  <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               )}
               <button type="button" onClick={onNext} className="flex items-center gap-1 rounded-lg bg-atlas-teal/20 px-3 py-1.5 text-xs font-medium text-atlas-teal hover:bg-atlas-teal/30">
-                {isLastStep ? "Done" : <>Next <ChevronRight className="h-3 w-3" /></>}
+                {isLastStep ? "Done" : <>Next <ChevronRight className="h-3 w-3" aria-hidden="true" /></>}
               </button>
             </div>
           </div>
@@ -176,7 +176,7 @@ export default function TourSpotlight({
 
       {/* Close X */}
       <button type="button" onClick={onSkip} className="fixed right-4 top-4" style={{ pointerEvents: "auto", zIndex: 201 }} aria-label="Close tour">
-        <X className="h-5 w-5 text-atlas-text-muted transition-colors hover:text-atlas-text" />
+        <X className="h-5 w-5 text-atlas-text-muted transition-colors hover:text-atlas-text" aria-hidden="true" />
       </button>
     </div>
   );

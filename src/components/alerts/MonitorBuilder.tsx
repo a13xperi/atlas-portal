@@ -146,6 +146,7 @@ export default function MonitorBuilder({
               <div className="mt-2 flex gap-2">
                 <input
                   type="text"
+                  aria-label="Keyword"
                   value={keywordInput}
                   onChange={(e) => setKeywordInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -176,6 +177,7 @@ export default function MonitorBuilder({
                       <button
                         type="button"
                         onClick={() => handleRemoveKeyword(kw)}
+                        aria-label={`Remove keyword ${kw}`}
                         className="ml-0.5 text-atlas-teal/60 hover:text-atlas-teal"
                       >
                         &times;
@@ -192,6 +194,7 @@ export default function MonitorBuilder({
               </p>
               <input
                 type="text"
+                aria-label={monitorType === "ACCOUNT" ? "X Handle" : "Topic"}
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder={

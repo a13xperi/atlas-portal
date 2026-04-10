@@ -363,7 +363,7 @@ export default function VoiceProfilesPage() {
           ))}
           {blends.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-glass-border bg-atlas-surface/40 p-5 text-center">
-              <Sparkles className="mx-auto h-5 w-5 text-atlas-teal" />
+              <Sparkles className="mx-auto h-5 w-5 text-atlas-teal" aria-hidden="true" />
               <p className="mt-2 text-sm font-semibold text-atlas-text-secondary">No blends yet</p>
               <p className="mt-1 text-[11px] text-atlas-text-muted">Combine reference voices to create your own style</p>
             </div>
@@ -373,7 +373,7 @@ export default function VoiceProfilesPage() {
             onClick={() => setEditorMode("create")}
             className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-glass-border p-5 text-atlas-text-muted transition-colors hover:border-atlas-teal/40 hover:text-atlas-teal"
           >
-            <Plus className="h-6 w-6" />
+            <Plus className="h-6 w-6" aria-hidden="true" />
             <span className="text-xs font-semibold">New Voice</span>
             {blends.length === 0 && (
               <span className="text-[10px] text-atlas-text-muted">Blend references into custom voices</span>
@@ -401,7 +401,7 @@ export default function VoiceProfilesPage() {
 
           {recipeCards.length === 0 ? (
             <div className="mt-6 rounded-2xl border border-dashed border-glass-border bg-atlas-surface/40 px-6 py-12 text-center">
-              <Sparkles className="mx-auto h-6 w-6 text-atlas-teal" />
+              <Sparkles className="mx-auto h-6 w-6 text-atlas-teal" aria-hidden="true" />
               <h3 className="mt-4 font-heading text-xl font-semibold text-atlas-text">
                 No voice recipes yet
               </h3>
@@ -440,7 +440,7 @@ export default function VoiceProfilesPage() {
             className="mt-6 flex w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-glass-border bg-atlas-surface/30 px-6 py-10 text-center transition-colors hover:border-atlas-teal/40 hover:bg-atlas-surface/50"
           >
             <span className="flex h-12 w-12 items-center justify-center rounded-full border border-atlas-teal/30 bg-atlas-teal/10 text-atlas-teal">
-              <Plus className="h-5 w-5" />
+              <Plus className="h-5 w-5" aria-hidden="true" />
             </span>
             <div>
               <p className="font-heading text-xl font-semibold text-atlas-text">

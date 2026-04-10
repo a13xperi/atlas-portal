@@ -35,7 +35,7 @@ export default function SwipeActions({ onSkip, onLike, disabled }: SwipeActionsP
         aria-label="Skip tweet"
         className="flex h-14 w-14 items-center justify-center rounded-full border border-glass-border bg-atlas-surface text-red-400 transition-all hover:border-red-400/50 hover:bg-red-400/10 hover:scale-110 active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
       >
-        <X className="h-6 w-6" />
+        <X className="h-6 w-6" aria-hidden="true" />
       </button>
 
       <button
@@ -45,7 +45,7 @@ export default function SwipeActions({ onSkip, onLike, disabled }: SwipeActionsP
         aria-label="Like tweet"
         className="flex h-14 w-14 items-center justify-center rounded-full border border-glass-border bg-atlas-surface text-green-400 transition-all hover:border-green-400/50 hover:bg-green-400/10 hover:scale-110 active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
       >
-        <Heart className="h-6 w-6" />
+        <Heart className="h-6 w-6" aria-hidden="true" />
       </button>
     </div>
   );
