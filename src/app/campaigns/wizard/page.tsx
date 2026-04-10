@@ -46,6 +46,8 @@ const ANGLE_COLORS: Record<string, string> = {
   explainer: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
 };
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://api-production-9bef.up.railway.app";
+
 export default function CampaignWizardPage() {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,13 +78,29 @@ export default function CampaignWizardPage() {
       const text = await file.text();
       setContent(text);
     } else if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
-      // For PDFs, read as text — real PDF parsing happens server-side
-      // but for now we read what we can from the file
-      const text = await file.text();
-      if (text.trim().length > 50) {
-        setContent(text);
-      } else {
+      // Send to backend for proper PDF text extraction
+      try {
+        setStatusText("Extracting PDF text…");
+        const form = new FormData();
+        form.append("file", file);
+        const accessToken = typeof window !== "undefined" ? sessionStorage.getItem("atlas_access_token") : null;
+        const res = await fetch(`${API_URL}/api/upload/extract-text`, {
+          method: "POST",
+          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+          credentials: "include",
+          body: form,
+        });
+        if (!res.ok) throw new Error("PDF extraction failed");
+        const { text: extracted } = (await res.json()) as { text: string };
+        if (extracted.trim().length > 50) {
+          setContent(extracted);
+        } else {
+          setError("PDF appeared empty. Try pasting the content directly.");
+        }
+      } catch {
         setError("Could not extract text from this PDF. Try pasting the content directly.");
+      } finally {
+        setStatusText("");
       }
     } else {
       const text = await file.text();

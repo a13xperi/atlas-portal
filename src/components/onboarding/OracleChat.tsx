@@ -31,7 +31,7 @@ import ContentSignalsPreview from "./ContentSignalsPreview";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import GradientButton from "@/components/ui/GradientButton";
 import ContentInput from "@/components/ui/ContentInput";
-import { Loader2 } from "lucide-react";
+import { CheckCircle, Loader2 } from "lucide-react";
 
 const referenceAccountLookup = getReferenceAccountLookup(
   REFERENCE_ACCOUNT_FALLBACK
@@ -324,38 +324,10 @@ export default function OracleChat() {
             ],
           });
         }
-        // Fetch personalized LLM commentary (supplementary)
-        api.oracle.message({
-          track: "a",
-          step: "TRACK_A_SCANNING",
-          action: "scan-complete",
-          context: {
-            dimensions: {
-              humor: profile.humor ?? 50, formality: profile.formality ?? 50,
-              brevity: profile.brevity ?? 50, contrarianTone: profile.contrarianTone ?? 50,
-              directness: profile.directness ?? 50, warmth: profile.warmth ?? 50,
-              technicalDepth: profile.technicalDepth ?? 50, confidence: profile.confidence ?? 50,
-              evidenceOrientation: profile.evidenceOrientation ?? 50,
-              solutionOrientation: profile.solutionOrientation ?? 50,
-              socialPosture: profile.socialPosture ?? 50,
-              selfPromotionalIntensity: profile.selfPromotionalIntensity ?? 50,
-            },
-            calibrationResult: { analysis: calibration.analysis, tweetsAnalyzed: calibration.tweetsAnalyzed },
-            handle: state.xHandle,
-          },
-        }).then((r) => {
-          if (r.llmGenerated && r.messages.length > 0) {
-            dispatch({
-              type: "ENQUEUE_MESSAGES",
-              messages: r.messages.map((m, i) => ({
-                id: `llm-${Date.now()}-${i}`,
-                role: "oracle" as const,
-                content: m.content,
-                timestamp: Date.now(),
-              })),
-            });
-          }
-        }).catch(() => { /* LLM is optional */ });
+        // NOTE: Supplementary LLM oracle.message() call intentionally removed.
+        // Anil feedback (Apr 10): don't generate tweet content until after
+        // HANDOFF is complete and a voice blend is configured. The calibration
+        // analysis above is sufficient commentary during onboarding.
       } catch (err) {
         console.error("Calibration failed:", err);
         // Surface a friendly Oracle message, then silently advance so the
@@ -387,7 +359,11 @@ export default function OracleChat() {
           return (
             <div className="bg-atlas-surface rounded-2xl p-4 space-y-2">
               <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
+                {state.calibrationResult ? (
+                  <CheckCircle className="h-4 w-4 text-atlas-teal" />
+                ) : (
+                  <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
+                )}
                 <span className="text-sm text-atlas-text-secondary">
                   {state.calibrationResult
                     ? `Calibrated from ${state.calibrationResult.tweetsAnalyzed} tweets`
@@ -627,11 +603,11 @@ export default function OracleChat() {
   const actionConfig = getActionZoneConfig();
 
   return (
-    <div className="flex h-screen flex-col bg-gradient-to-b from-atlas-bg via-atlas-nav to-atlas-bg">
+    <div className="flex h-screen flex-col bg-gradient-to-b from-atlas-bg via-atlas-nav to-atlas-bg pt-14">
       <NavBar variant="onboarding" />
 
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-glass-border bg-atlas-nav/50 backdrop-blur-xl">
+      <div className="flex items-center gap-3 px-4 sm:px-6 py-3 border-b border-glass-border bg-atlas-nav/50 backdrop-blur-xl">
         <OracleAvatar size="md" />
         <div>
           <h1 className="font-heading font-bold text-sm text-atlas-text">
@@ -642,7 +618,7 @@ export default function OracleChat() {
       </div>
 
       {/* Message list */}
-      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-8 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 pt-6 pb-8 space-y-4">
         {state.messages.map((msg, i) => (
           <OracleMessage
             key={msg.id}

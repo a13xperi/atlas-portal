@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page, type Route } from "@playwright/test";
+import { vercelBypassCookies } from "./fixtures";
 
 // Use origin-agnostic glob patterns so stubs work whether the browser hits the
 // cross-origin Railway backend directly OR the Next.js rewrite proxy on localhost.
@@ -480,19 +481,8 @@ test.describe("Route smoke tests", () => {
       const cookies: Array<{ name: string; value: string; domain: string; path: string }> = [
         { name: "atlas_session", value: "1", domain: url.hostname, path: "/" },
         { name: "atlas_access_token", value: "1", domain: url.hostname, path: "/" },
+        ...vercelBypassCookies(url.hostname),
       ];
-      // Bypass Vercel deployment protection on preview URLs
-      const vercelBypass =
-        process.env.VERCEL_AUTOMATION_BYPASS_SECRET ??
-        process.env.VERCEL_PROTECTION_BYPASS;
-      if (vercelBypass) {
-        cookies.push({
-          name: "_vercel_password",
-          value: vercelBypass,
-          domain: url.hostname,
-          path: "/",
-        });
-      }
       await context.addCookies(cookies);
 
       // Seed feature-flag localStorage BEFORE any page script runs so

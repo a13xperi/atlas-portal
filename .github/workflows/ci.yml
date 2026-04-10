@@ -21,9 +21,149 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  resolve-preview:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    outputs:
+      preview_url: ${{ steps.resolve.outputs.url }}
+    permissions:
+      contents: read
+      deployments: read
+      pull-requests: read
+    steps:
+      - name: Resolve Vercel preview URL
+        id: resolve
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pullRequest = context.payload.pull_request;
+
+            if (!pullRequest) {
+              core.setFailed("Missing pull request payload.");
+              return;
+            }
+
+            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+            function normalizeUrl(rawUrl) {
+              if (!rawUrl) return null;
+              const withProtocol = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`;
+              const normalized = withProtocol.replace(/\/$/, "");
+
+              try {
+                const parsed = new URL(normalized);
+                if (!parsed.hostname.endsWith(".vercel.app")) return null;
+                return parsed.toString().replace(/\/$/, "");
+              } catch {
+                return null;
+              }
+            }
+
+            function extractPreviewUrl(body) {
+              if (!body) return null;
+
+              const markdownMatch = body.match(/\[Preview\]\((https:\/\/[^)]+\.vercel\.app)\)/i);
+              if (markdownMatch?.[1]) {
+                return normalizeUrl(markdownMatch[1]);
+              }
+
+              const genericMatch = body.match(/https:\/\/[^\s)]+\.vercel\.app/gi);
+              if (!genericMatch) return null;
+
+              for (const candidate of genericMatch.reverse()) {
+                const normalized = normalizeUrl(candidate);
+                if (normalized) return normalized;
+              }
+
+              return null;
+            }
+
+            async function findDeploymentPreviewUrl() {
+              const deployments = await github.paginate(
+                github.rest.repos.listDeployments,
+                {
+                  owner,
+                  repo,
+                  sha: pullRequest.head.sha,
+                  per_page: 100,
+                },
+              );
+
+              for (const deployment of deployments) {
+                const statuses = await github.paginate(
+                  github.rest.repos.listDeploymentStatuses,
+                  {
+                    owner,
+                    repo,
+                    deployment_id: deployment.id,
+                    per_page: 100,
+                  },
+                );
+
+                for (const status of statuses) {
+                  const normalized =
+                    normalizeUrl(status.environment_url) ||
+                    normalizeUrl(status.target_url);
+
+                  if (
+                    normalized &&
+                    ["success", "ready"].includes(status.state)
+                  ) {
+                    return normalized;
+                  }
+                }
+              }
+
+              return null;
+            }
+
+            async function findCommentPreviewUrl() {
+              const comments = await github.paginate(
+                github.rest.issues.listComments,
+                {
+                  owner,
+                  repo,
+                  issue_number: pullRequest.number,
+                  per_page: 100,
+                },
+              );
+
+              for (const comment of comments.reverse()) {
+                if (comment.user?.login !== "vercel[bot]") continue;
+
+                const normalized = extractPreviewUrl(comment.body);
+                if (normalized) return normalized;
+              }
+
+              return null;
+            }
+
+            for (let attempt = 1; attempt <= 30; attempt += 1) {
+              const previewUrl =
+                (await findDeploymentPreviewUrl()) ||
+                (await findCommentPreviewUrl());
+
+              if (previewUrl) {
+                core.setOutput("url", previewUrl);
+                core.info(`Using Vercel preview URL: ${previewUrl}`);
+                return;
+              }
+
+              core.info(
+                `Vercel preview URL not ready yet (attempt ${attempt}/30). Waiting 10 seconds...`,
+              );
+              await sleep(10_000);
+            }
+
+            core.setFailed(
+              `Unable to resolve a ready Vercel preview URL for PR #${pullRequest.number}.`,
+            );
+
   e2e:
     runs-on: ubuntu-latest
-    needs: check
+    needs: [check, resolve-preview]
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
@@ -35,7 +175,9 @@ jobs:
       - run: npx playwright install chromium --with-deps
       - run: npm run test:e2e
         env:
-          VERCEL_PROTECTION_BYPASS: ${{ secrets.VERCEL_PROTECTION_BYPASS }}
+          PLAYWRIGHT_BASE_URL: ${{ needs.resolve-preview.outputs.preview_url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET || secrets.VERCEL_PROTECTION_BYPASS }}
+          VERCEL_PROTECTION_BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET || secrets.VERCEL_PROTECTION_BYPASS }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

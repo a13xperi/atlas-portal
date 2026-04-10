@@ -65,7 +65,7 @@ export default function VoiceDimensionSections({
                   percentage={resolvedValues[dimension.field] ?? 50}
                   interactive={interactive}
                   onChange={(value) => onChange?.(dimension.field, value)}
-                  step={10}
+                  step={1}
                   valueLabel={formatVoiceDimensionValue(
                     resolvedValues[dimension.field] ?? 50
                   )}
