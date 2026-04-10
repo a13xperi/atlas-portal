@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Link2, Newspaper, Twitter } from "lucide-react";
+import { FileText, Link2, MessageCircle, Newspaper } from "lucide-react";
 
 export type ContentSignalSource = "article" | "report" | "tweet" | "link";
 
@@ -36,7 +36,7 @@ const SOURCE_META: Record<
 > = {
   article: { label: "Article", Icon: Newspaper },
   report: { label: "Report", Icon: FileText },
-  tweet: { label: "Tweet", Icon: Twitter },
+  tweet: { label: "Tweet", Icon: MessageCircle },
   link: { label: "Link", Icon: Link2 },
 };
 
