@@ -50,7 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [a11y, errors, performance]
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -59,13 +59,36 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install chromium --with-deps
-      - run: npx playwright test --config=playwright-e2e.config.ts --project=${{ matrix.project }}
+      - run: npx playwright test --config=playwright-e2e.config.ts --shard=${{ matrix.shard }}/4 --reporter=blob
         env:
           VERCEL_PROTECTION_BYPASS: ${{ secrets.VERCEL_PROTECTION_BYPASS }}
           PLAYWRIGHT_BASE_URL: https://delphi-atlas-git-${{ github.head_ref }}-alex-peris-projects.vercel.app
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
-          name: e2e-${{ matrix.project }}-report
-          path: test-results/
+          name: blob-report-shard-${{ matrix.shard }}
+          path: blob-report/
+          retention-days: 14
+
+  e2e-extended-merge-reports:
+    runs-on: ubuntu-latest
+    needs: e2e-extended
+    if: github.event_name == 'pull_request' && always()
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: blob-report-shard-*
+          merge-multiple: true
+          path: blob-reports/
+      - run: npx playwright merge-reports --reporter=html ./blob-reports
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e2e-extended-report
+          path: playwright-report/
           retention-days: 14
