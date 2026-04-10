@@ -852,6 +852,17 @@ const demoData: Record<string, unknown> = {
     badge: null,
   },
 
+  "/api/drafts/queue": {
+    queue: [
+      { id: "demo-q-1", content: "ETH staking yields are compressing but that's actually bullish. It means the network is maturing and validators are playing a longer game. The yield farmers leave, the believers stay.", version: 1, status: "APPROVED", confidence: 0.87, predictedEngagement: 8.4, actualEngagement: null, sourceType: "MANUAL" as const, createdAt: daysAgo(1), _score: 0.92, suggestedAt: new Date(Date.now() + 1 * 3600000).toISOString() },
+      { id: "demo-q-2", content: "The carry trade is back — and this time it's denominated in stablecoins. Banks aren't ready for a world where yield on-chain is 2x what they offer off-chain.", version: 1, status: "DRAFT", confidence: 0.76, predictedEngagement: 7.1, actualEngagement: null, sourceType: "REPORT" as const, createdAt: daysAgo(2), _score: 0.84, suggestedAt: new Date(Date.now() + 5 * 3600000).toISOString() },
+      { id: "demo-q-3", content: "L2 fees just hit an all-time low. The rollup wars are doing exactly what competition is supposed to do — drive costs down while throughput goes up. Users win.", version: 2, status: "APPROVED", confidence: 0.81, predictedEngagement: 9.3, actualEngagement: null, sourceType: "MANUAL" as const, createdAt: daysAgo(1), _score: 0.79, suggestedAt: new Date(Date.now() + 24 * 3600000).toISOString() },
+      { id: "demo-q-4", content: "Everyone wants to be a contrarian until the contrarian trade actually works. Then they call it obvious. The blob fee thesis has been in our research for 6 months.", version: 1, status: "DRAFT", confidence: 0.69, predictedEngagement: 5.8, actualEngagement: null, sourceType: "MANUAL" as const, createdAt: daysAgo(3), _score: 0.71, suggestedAt: new Date(Date.now() + 48 * 3600000).toISOString() },
+    ],
+    total: 4,
+    nextUp: { id: "demo-q-1", content: "ETH staking yields are compressing but that's actually bullish. It means the network is maturing and validators are playing a longer game. The yield farmers leave, the believers stay.", version: 1, status: "APPROVED", confidence: 0.87, predictedEngagement: 8.4, actualEngagement: null, sourceType: "MANUAL" as const, createdAt: daysAgo(1), _score: 0.92, suggestedAt: new Date(Date.now() + 1 * 3600000).toISOString() },
+  },
+
   "/api/briefing/latest": {
     id: "b1",
     date: "2026-04-04",
