@@ -331,7 +331,7 @@ export default function VoiceProfilesPage() {
           Voice Lab
         </p>
         <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-atlas-text sm:text-4xl">
-          Your Voice Recipes
+          Your Saved Voices
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-atlas-text-secondary">
           Explore saved voice recipes, compare their fingerprints, and pick the
@@ -385,10 +385,10 @@ export default function VoiceProfilesPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
-                Your Voice Recipes
+                Your Saved Voices
               </p>
               <h2 className="mt-2 font-heading text-2xl font-semibold text-atlas-text">
-                Recipe cards for every saved blend
+                Individual creator voices and custom blends for crafting
               </h2>
             </div>
             <div className="rounded-full border border-glass-border bg-atlas-surface/60 px-4 py-2 text-sm text-atlas-text-secondary">
@@ -406,8 +406,7 @@ export default function VoiceProfilesPage() {
                 No voice recipes yet
               </h3>
               <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-atlas-text-secondary">
-                Save a blend to turn your references into reusable recipes with
-                a clear composition and dimension fingerprint.
+                Save a creator voice or blend to use it in the Crafting Station.
               </p>
             </div>
           ) : (
@@ -445,11 +444,10 @@ export default function VoiceProfilesPage() {
             </span>
             <div>
               <p className="font-heading text-xl font-semibold text-atlas-text">
-                Create New Recipe
+                Add a Creator Voice
               </p>
               <p className="mt-1 text-sm text-atlas-text-secondary">
-                Start a new saved blend from your current voice plus selected
-                references.
+                Pick a creator from your follows and shape their voice style.
               </p>
             </div>
           </button>

@@ -165,7 +165,7 @@ describe("VoiceProfilesPage", () => {
     render(<VoiceProfilesPage />);
 
     expect(await screen.findByText("No voice recipes yet")).toBeInTheDocument();
-    expect(screen.getByText("Create New Recipe")).toBeInTheDocument();
+    expect(screen.getByText("Add a Creator Voice")).toBeInTheDocument();
     expect(screen.getByText("Hasu")).toBeInTheDocument();
   });
 
