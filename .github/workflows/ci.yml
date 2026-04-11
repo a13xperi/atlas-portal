@@ -215,7 +215,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [a11y, errors, performance]
+        include:
+            - project: a11y
+            - project: errors
+            - project: performance
+            - project: visual
+              # Visual tests require Linux baselines committed via the
+              # update-visual-baselines workflow. Allow failures until
+              # baselines exist — they will then lock in automatically.
+              continue_on_error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -249,6 +257,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npx playwright test --config=playwright-e2e.config.ts --project=${{ matrix.project }}
+        continue-on-error: ${{ matrix.continue_on_error == true }}
         env:
           VERCEL_PROTECTION_BYPASS: ${{ secrets.VERCEL_PROTECTION_BYPASS }}
       - uses: actions/upload-artifact@v4
