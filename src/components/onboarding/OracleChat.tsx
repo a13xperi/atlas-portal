@@ -550,7 +550,7 @@ export default function OracleChat() {
                     setOauthLoading(false);
                   }
                 }}
-                className="w-full rounded-xl bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full rounded-xl bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-6 py-3 text-sm font-semibold text-atlas-bg transition-opacity hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {oauthLoading ? (
                   <>
