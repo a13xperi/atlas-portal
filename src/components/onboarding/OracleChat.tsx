@@ -526,6 +526,9 @@ export default function OracleChat() {
           );
 
         case "x-oauth":
+          // Once we've moved past CONNECT_X, hide this widget from message history.
+          // The button must disappear after skip-x so tests and the UX are consistent.
+          if (state.currentStep !== "CONNECT_X") return null;
           return (
             <div className="bg-atlas-surface rounded-2xl p-6 space-y-4">
               <button
