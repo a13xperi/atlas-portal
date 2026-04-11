@@ -128,16 +128,18 @@ test.describe("Voice Lab (voice-profiles) — recipe cards + blend UI", () => {
   test("voice recipe cards are visible with blend names", async ({ page }) => {
     await page.goto("/voice-profiles", { waitUntil: "domcontentloaded" });
 
-    // Recipe cards for the mock blends should be rendered
-    await expect(page.getByText("Macro Desk")).toBeVisible({ timeout: 8000 });
-    await expect(page.getByText("Research Mode")).toBeVisible({ timeout: 5000 });
+    // Recipe cards for the mock blends should be rendered.
+    // Use .first() — "Macro Desk" appears in recipe card <p>, blend <h3>, and compare <option>.
+    await expect(page.getByText("Macro Desk").first()).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText("Research Mode").first()).toBeVisible({ timeout: 5000 });
   });
 
   test("blend pair-select UI appears on /voice-profiles", async ({ page }) => {
     await page.goto("/voice-profiles", { waitUntil: "domcontentloaded" });
 
-    // The page renders blend cards showing voice pair percentages
-    await expect(page.getByText("Macro Desk")).toBeVisible({ timeout: 8000 });
+    // The page renders blend cards showing voice pair percentages.
+    // Use .first() — "Macro Desk" appears in multiple elements (card, heading, option).
+    await expect(page.getByText("Macro Desk").first()).toBeVisible({ timeout: 8000 });
 
     // Each blend shows voice pair labels (My voice + reference)
     await expect(page.getByText("My voice")).toBeVisible({ timeout: 5000 });
