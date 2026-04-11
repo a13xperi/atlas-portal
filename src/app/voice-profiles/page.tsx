@@ -97,6 +97,10 @@ export default function VoiceProfilesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  // Role gate: blend create/edit controls are only available to MANAGER/ADMIN.
+  // ANALYST users can still view recipe cards, preview, and apply blends —
+  // they just can't mutate them.
+  const canManageBlends = user?.role === "MANAGER" || user?.role === "ADMIN";
   const [profile, setProfile] = useState<VoiceProfile | null>(null);
   const [referenceAccounts, setReferenceAccounts] = useState<ReferenceAccount[]>(
     REFERENCE_ACCOUNT_FALLBACK
@@ -629,8 +633,16 @@ export default function VoiceProfilesPage() {
             userHandle={user?.handle}
             onSelect={() => setSelectedVoiceId(PERSONAL_VOICE_ID)}
             onUse={() => handleUseVoice(PERSONAL_VOICE_ID)}
-            onBlend={() => handleBlendSelect(PERSONAL_VOICE_ID)}
-            blendTargetMode={blendSelectMode && blendSourceId !== PERSONAL_VOICE_ID}
+            onBlend={
+              canManageBlends
+                ? () => handleBlendSelect(PERSONAL_VOICE_ID)
+                : undefined
+            }
+            blendTargetMode={
+              canManageBlends &&
+              blendSelectMode &&
+              blendSourceId !== PERSONAL_VOICE_ID
+            }
           />
           {recipeCards.map(({ blend, notableDimensions }) => (
             <VoiceCard
@@ -643,8 +655,12 @@ export default function VoiceProfilesPage() {
               userHandle={user?.handle}
               onSelect={() => setSelectedVoiceId(blend.id)}
               onUse={() => handleUseVoice(blend.id)}
-              onBlend={() => handleBlendSelect(blend.id)}
-              blendTargetMode={blendSelectMode && blendSourceId !== blend.id}
+              onBlend={
+                canManageBlends ? () => handleBlendSelect(blend.id) : undefined
+              }
+              blendTargetMode={
+                canManageBlends && blendSelectMode && blendSourceId !== blend.id
+              }
             />
           ))}
           {blends.length === 0 && references.length > 0 && (
@@ -654,7 +670,7 @@ export default function VoiceProfilesPage() {
               <p className="mt-1 text-[11px] text-atlas-text-muted">Combine inspirations to create your own style</p>
             </div>
           )}
-          {references.length > 0 && (
+          {references.length > 0 && canManageBlends && (
             <button
               type="button"
               onClick={() => setEditorMode("create")}
@@ -719,16 +735,20 @@ export default function VoiceProfilesPage() {
                   previewError={blendPreviewErrors[blend.id]}
                   previewLoading={previewingBlendId === blend.id}
                   previewText={blendPreviews[blend.id]}
-                  onEdit={() => {
-                    setEditorBlendId(blend.id);
-                    setEditorMode("edit-blend");
-                  }}
+                  onEdit={
+                    canManageBlends
+                      ? () => {
+                          setEditorBlendId(blend.id);
+                          setEditorMode("edit-blend");
+                        }
+                      : undefined
+                  }
                 />
               ))}
             </div>
           )}
 
-          {references.length > 0 && (
+          {references.length > 0 && canManageBlends && (
             <button
               type="button"
               onClick={() => setEditorMode("create")}
