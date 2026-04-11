@@ -80,23 +80,26 @@ describe("NavBar", () => {
       "aria-current",
       "page"
     );
-    // Core 4 tabs: Crafting, Voices, Library, Arena
+    // Core 7 tabs visible to all roles (DM-322): Dashboard, Crafting, Voices, Analytics, Signals, Library, Arena
     expect(screen.getByRole("link", { name: "Voices" })).not.toHaveAttribute(
       "aria-current"
     );
+    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Analytics" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Signals" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Library" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Arena" })).toBeInTheDocument();
-    // Hidden tabs should not appear in nav
-    expect(screen.queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
+    // Non-core tabs should not appear in nav
     expect(screen.queryByRole("link", { name: "Feed" })).not.toBeInTheDocument();
   });
 
-  it("hides Analytics and Signals tabs for ANALYST role", () => {
+  it("shows Analytics and Signals for all roles including ANALYST (DM-322)", () => {
     render(<NavBar variant="app" />);
 
-    expect(screen.queryByRole("link", { name: "Analytics" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Signals" })).not.toBeInTheDocument();
-    // Core tabs still visible
+    // DM-322: Analytics and Signals are now core tabs visible to all roles
+    expect(screen.getByRole("link", { name: "Analytics" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Signals" })).toBeInTheDocument();
+    // Other core tabs visible
     expect(screen.getByRole("link", { name: "Crafting" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Voices" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Library" })).toBeInTheDocument();
