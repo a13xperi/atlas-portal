@@ -23,12 +23,11 @@ test.describe("Comprehensive Coverage", () => {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   test.describe("Authentication", () => {
-    test("register new account → form visible on landing page", async ({ page }) => {
+    test("landing page shows X login button", async ({ page }) => {
+      // Atlas uses X OAuth — no email/password form. Just "Continue with X".
       await page.goto("/");
       await expect(page.getByRole("heading", { name: "ATLAS" })).toBeVisible();
-      await expect(page.getByPlaceholder("you@example.com")).toBeVisible();
-      await expect(page.getByPlaceholder("Min 6 characters")).toBeVisible();
-      await expect(page.getByRole("button", { name: "Sign In" })).toBeVisible();
+      await expect(page.getByRole("button", { name: /Continue with X/i })).toBeVisible();
     });
 
     test("login with valid credentials → redirects to dashboard", async ({ page, context }) => {
@@ -45,21 +44,9 @@ test.describe("Comprehensive Coverage", () => {
       await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
     });
 
-    test("login with invalid credentials → shows error", async ({ page }) => {
-      await page.route("**/api/auth/me", (route) =>
-        route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ error: "Unauthorized" }) })
-      );
-      await page.route("**/api/auth/refresh", (route) =>
-        route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ error: "Invalid refresh token" }) })
-      );
-      await page.route("**/api/auth/login", (route) =>
-        route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ error: "Invalid credentials" }) })
-      );
-      await page.goto("/");
-      await page.getByPlaceholder("you@example.com").fill("wrong@email.com");
-      await page.getByPlaceholder("Min 6 characters").fill("badpassword");
-      await page.getByRole("button", { name: "Sign In" }).click();
-      await expect(page.getByText("Invalid credentials")).toBeVisible({ timeout: 8000 });
+    test.skip("login with invalid credentials → shows error", async () => {
+      // Atlas uses X OAuth — no email/password login form exists.
+      // Error handling for failed X OAuth is tested via the /auth/x/callback path.
     });
 
     test.skip("logout → clears session and redirects to login", async () => {
