@@ -71,6 +71,16 @@ export default function VoiceCard({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
 
+  const [showCompare, setShowCompare] = useState(false);
+  const [compareTopic, setCompareTopic] = useState("");
+  const [compareLoading, setCompareLoading] = useState(false);
+  const [compareTheirs, setCompareTheirs] = useState<string | null>(null);
+  const [compareMine, setCompareMine] = useState<string | null>(null);
+  const [compareTheirsError, setCompareTheirsError] = useState<string | null>(null);
+  const [compareMineError, setCompareMineError] = useState<string | null>(null);
+
+  const canCompare = !isPersonal && !blendTargetMode;
+
   const recipePills = useMemo<RecipePill[]>(() => {
     if (notableDimensions && notableDimensions.length > 0) return toRecipePills(notableDimensions);
     if (dimensions) return toRecipePills(getNotableVoiceDimensions(dimensions, 3));
@@ -98,6 +108,54 @@ export default function VoiceCard({
       setPreviewLoading(false);
     }
   }, [name, previewLoading]);
+
+  const runCompare = useCallback(async () => {
+    const topic = compareTopic.trim();
+    if (!topic || compareLoading) return;
+
+    setCompareLoading(true);
+    setCompareTheirs(null);
+    setCompareMine(null);
+    setCompareTheirsError(null);
+    setCompareMineError(null);
+
+    const [theirsResult, mineResult] = await Promise.allSettled([
+      api.oracle.chat({
+        page: "voice-compare",
+        messages: [
+          {
+            role: "user",
+            content: `Write a single tweet about "${topic}" in the voice style of ${name}. Stay under 280 characters.`,
+          },
+        ],
+      }),
+      api.drafts.generate(topic, "MANUAL"),
+    ]);
+
+    if (theirsResult.status === "fulfilled") {
+      setCompareTheirs(theirsResult.value.text?.trim() ?? "");
+    } else {
+      setCompareTheirsError(
+        theirsResult.reason instanceof Error
+          ? theirsResult.reason.message
+          : "Failed to generate their voice.",
+      );
+    }
+
+    if (mineResult.status === "fulfilled") {
+      setCompareMine(mineResult.value.draft?.content?.trim() ?? "");
+    } else {
+      setCompareMineError(
+        mineResult.reason instanceof Error
+          ? mineResult.reason.message
+          : "Failed to generate your voice.",
+      );
+    }
+
+    setCompareLoading(false);
+  }, [compareTopic, compareLoading, name]);
+
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
   const containerClass = [
     "relative flex flex-col rounded-2xl border p-5 text-left transition-all cursor-pointer",
@@ -132,7 +190,10 @@ export default function VoiceCard({
           <button
             type="button"
             aria-label={`Blend with ${name}`}
-            onClick={onBlend}
+            onClick={(e) => {
+              stop(e);
+              onBlend();
+            }}
             className="rounded-lg border border-glass-border p-1.5 text-atlas-text-muted transition-colors hover:border-atlas-teal/40 hover:text-atlas-teal"
           >
             <GitMerge className="h-3.5 w-3.5" />
@@ -145,7 +206,10 @@ export default function VoiceCard({
       <div className="relative z-10 mt-3">
         <button
           type="button"
-          onClick={() => setShowDetails((v) => !v)}
+          onClick={(e) => {
+            stop(e);
+            setShowDetails((v) => !v);
+          }}
           className="text-[10px] text-atlas-text-muted hover:text-atlas-text-secondary transition-colors"
         >
           {showDetails ? "Hide details ▴" : "Show details ▾"}
@@ -176,7 +240,10 @@ export default function VoiceCard({
       <div className="relative z-10 mt-3">
         <button
           type="button"
-          onClick={() => void loadPreview()}
+          onClick={(e) => {
+            stop(e);
+            void loadPreview();
+          }}
           disabled={previewLoading}
           className="inline-flex items-center gap-1 rounded-lg border border-glass-border px-2 py-1 text-[11px] font-medium text-atlas-text-secondary transition-colors hover:border-atlas-teal/40 hover:text-atlas-teal disabled:cursor-not-allowed disabled:opacity-60"
         >
@@ -197,11 +264,111 @@ export default function VoiceCard({
         )}
       </div>
 
+      {canCompare && (
+        <div className="relative z-10 mt-3">
+          <button
+            type="button"
+            onClick={(e) => {
+              stop(e);
+              setShowCompare((v) => !v);
+            }}
+            className="text-[10px] text-atlas-text-muted hover:text-atlas-text-secondary transition-colors"
+          >
+            {showCompare ? "Hide compare ▴" : "Compare vs mine ▾"}
+          </button>
+
+          {showCompare && (
+            <div className="mt-2 space-y-2">
+              <div className="flex items-start gap-2">
+                <textarea
+                  value={compareTopic}
+                  onChange={(e) => {
+                    stop(e);
+                    setCompareTopic(e.target.value);
+                  }}
+                  onClick={stop}
+                  onFocus={stop}
+                  rows={2}
+                  maxLength={200}
+                  placeholder="Enter a topic to compare…"
+                  className="flex-1 resize-none rounded-lg border border-glass-border bg-atlas-surface px-2 py-1.5 text-[11px] text-atlas-text placeholder:text-atlas-text-muted focus:border-atlas-teal/40 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    stop(e);
+                    void runCompare();
+                  }}
+                  disabled={compareLoading || compareTopic.trim().length === 0}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-atlas-teal/30 bg-atlas-teal/10 px-2 py-1 text-[11px] font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {compareLoading ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3 w-3" />
+                  )}
+                  <span>{compareLoading ? "Comparing…" : "Compare"}</span>
+                </button>
+              </div>
+
+              {(compareLoading ||
+                compareTheirs ||
+                compareMine ||
+                compareTheirsError ||
+                compareMineError) && (
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Their voice */}
+                  <div className="rounded-lg border border-glass-border bg-atlas-surface px-2 py-1.5">
+                    <p className="mb-1 text-[9px] font-semibold uppercase tracking-wide text-atlas-text-muted">
+                      {name}
+                    </p>
+                    {compareLoading && !compareTheirs && !compareTheirsError ? (
+                      <div className="flex items-center gap-1 text-[11px] text-atlas-text-muted">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>Writing…</span>
+                      </div>
+                    ) : compareTheirsError ? (
+                      <p className="text-[11px] text-atlas-error">{compareTheirsError}</p>
+                    ) : compareTheirs ? (
+                      <p className="text-[11px] italic text-atlas-text-secondary">
+                        {compareTheirs}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {/* Your voice */}
+                  <div className="rounded-lg border border-atlas-teal/30 bg-atlas-teal/10 px-2 py-1.5">
+                    <p className="mb-1 text-[9px] font-semibold uppercase tracking-wide text-atlas-teal">
+                      Your voice
+                    </p>
+                    {compareLoading && !compareMine && !compareMineError ? (
+                      <div className="flex items-center gap-1 text-[11px] text-atlas-text-muted">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>Writing…</span>
+                      </div>
+                    ) : compareMineError ? (
+                      <p className="text-[11px] text-atlas-error">{compareMineError}</p>
+                    ) : compareMine ? (
+                      <p className="text-[11px] italic text-atlas-text-secondary">
+                        {compareMine}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="relative z-10 mt-auto pt-4">
         {blendTargetMode ? (
           <button
             type="button"
-            onClick={onUse}
+            onClick={(e) => {
+              stop(e);
+              onUse();
+            }}
             className="w-full rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-3 py-2 text-xs font-semibold text-atlas-bg transition-opacity hover:opacity-90"
           >
             Mix with this
@@ -209,7 +376,10 @@ export default function VoiceCard({
         ) : (
           <button
             type="button"
-            onClick={onUse}
+            onClick={(e) => {
+              stop(e);
+              onUse();
+            }}
             disabled={isActive}
             className={`w-full rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
               isActive
