@@ -778,7 +778,7 @@ export const api = {
         follows: response.follows.map(mapTwitterFollow),
       };
     },
-    likes: () => request<any[]>("/api/twitter/likes"),
+    likes: () => request<{ likes: TwitterLike[]; cached: boolean }>("/api/twitter/likes"),
   },
 
 
@@ -877,6 +877,16 @@ export interface TwitterFollow {
   bio: string | null;
   avatarUrl: string | null;
   followerCount: number;
+}
+
+export interface TwitterLike {
+  id: string;
+  text: string;
+  author_handle: string | null;
+  author_avatar: string | null;
+  created_at: string | null;
+  like_count: number;
+  retweet_count: number;
 }
 
 export interface BlendVoice {
