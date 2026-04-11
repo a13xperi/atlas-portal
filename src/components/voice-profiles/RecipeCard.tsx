@@ -23,7 +23,7 @@ interface RecipeCardProps {
   fingerprintDescription: string;
   notableDimensions: VoiceDimensionSnapshot[];
   isActive: boolean;
-  onEdit: () => void;
+  onEdit?: () => void;
   onPreviewSample: () => void;
   onUse: () => void;
   previewError?: string | null;
@@ -317,14 +317,16 @@ export default function RecipeCard({
           <Sparkles className="h-4 w-4" />
           {isActive ? "Active in Crafting" : "Use in Crafting"}
         </button>
-        <button
-          type="button"
-          onClick={onEdit}
-          className="inline-flex items-center gap-2 rounded-xl border border-glass-border bg-transparent px-4 py-2 text-sm font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal/40 hover:text-atlas-text"
-        >
-          <PencilLine className="h-4 w-4" />
-          Edit
-        </button>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex items-center gap-2 rounded-xl border border-glass-border bg-transparent px-4 py-2 text-sm font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal/40 hover:text-atlas-text"
+          >
+            <PencilLine className="h-4 w-4" />
+            Edit
+          </button>
+        )}
       </div>
 
       {previewText || previewError ? (
