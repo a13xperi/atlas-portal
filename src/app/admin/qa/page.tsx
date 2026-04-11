@@ -378,6 +378,8 @@ function QaContent() {
             note: prev[test.id]?.note ?? "",
             tester: testerInitials,
             timestamp: new Date().toISOString(),
+            severity: prev[test.id]?.severity,
+            userFeedback: prev[test.id]?.userFeedback,
           };
         }
         scheduleSave(next);
@@ -575,6 +577,7 @@ function QaContent() {
               onMark={markTest}
               onNote={setNote}
               onMarkAll={markAllInSection}
+              onSeverity={setSeverity}
               canEdit={canEdit}
             />
           ))}
@@ -595,6 +598,7 @@ function SectionCard({
   onMark,
   onNote,
   onMarkAll,
+  onSeverity,
   canEdit,
 }: {
   section: TestSection;
@@ -604,6 +608,7 @@ function SectionCard({
   onMark: (id: string, status: TestStatus) => void;
   onNote: (id: string, note: string) => void;
   onMarkAll: (sectionId: string, status: TestStatus) => void;
+  onSeverity: (id: string, severity: Severity | "") => void;
   canEdit: boolean;
 }) {
   const badge = sectionBadge(section.tests, results);
@@ -653,6 +658,7 @@ function SectionCard({
               result={results[test.id]}
               onMark={onMark}
               onNote={onNote}
+              onSeverity={onSeverity}
               canEdit={canEdit}
             />
           ))}
@@ -671,12 +677,14 @@ function TestCard({
   result,
   onMark,
   onNote,
+  onSeverity,
   canEdit,
 }: {
   test: TestCase;
   result?: TestResult;
   onMark: (id: string, status: TestStatus) => void;
   onNote: (id: string, note: string) => void;
+  onSeverity: (id: string, severity: Severity | "") => void;
   canEdit: boolean;
 }) {
   const [showNote, setShowNote] = useState(false);
@@ -744,6 +752,20 @@ function TestCard({
             disabled={!canEdit}
           />
         </div>
+        {status === "fail" && canEdit && (
+          <select
+            value={result?.severity ?? ""}
+            onChange={(e) => onSeverity(test.id, e.target.value as Severity | "")}
+            className="rounded-md border border-glass-border bg-[#1a2235] px-2 py-1 text-xs text-atlas-text"
+            aria-label="Severity"
+          >
+            <option value="">Severity</option>
+            <option value="blocker">Blocker</option>
+            <option value="major">Major</option>
+            <option value="minor">Minor</option>
+            <option value="cosmetic">Cosmetic</option>
+          </select>
+        )}
       </div>
 
       {/* Steps toggle */}
