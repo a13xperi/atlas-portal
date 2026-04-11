@@ -172,7 +172,13 @@ export default function RecipeCard({
               ))}
             </div>
             <p className="text-sm text-atlas-text-secondary">
-              {blend.voices.length} ingredient{blend.voices.length === 1 ? "" : "s"} mixed into one writing recipe.
+              {(() => {
+                const creatorVoice = blend.voices.find(v => v.referenceVoice || v.referenceVoiceId);
+                if (blend.voices.length === 2 && creatorVoice) {
+                  return `Modeled after ${creatorVoice.label}`;
+                }
+                return `${blend.voices.length} voice${blend.voices.length === 1 ? "" : "s"} blended`;
+              })()}
             </p>
           </div>
         </div>
