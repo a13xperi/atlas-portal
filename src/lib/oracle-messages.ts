@@ -66,15 +66,6 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
     ),
   ],
 
-  TRACK_A_RATE: [
-    msg(
-      "oracle",
-      "I generated a few tweets in your voice. Rate them — thumbs up means more like you, thumbs down means less.",
-      {
-        component: { type: "tweet-ratings" },
-      }
-    ),
-  ],
 
   TRACK_B_STYLE: [
     msg(
