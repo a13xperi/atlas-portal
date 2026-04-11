@@ -15,7 +15,7 @@ const useLocalWebServer = isLocalBaseURL(baseURL);
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: ["smoke.spec.ts", "investor-walkthrough.spec.ts", "demo-mode.spec.ts", "demo-render.spec.ts", "tour.spec.ts", "dashboard.spec.ts", "onboarding.spec.ts", "oracle.spec.ts", "voice-library.spec.ts", "track-b.spec.ts"],
+  testMatch: ["smoke.spec.ts", "investor-walkthrough.spec.ts", "demo-mode.spec.ts", "demo-render.spec.ts", "tour.spec.ts", "dashboard.spec.ts", "onboarding.spec.ts", "oracle.spec.ts", "voice-library.spec.ts", "track-b.spec.ts", "comprehensive.spec.ts"],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
