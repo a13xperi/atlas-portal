@@ -36,7 +36,7 @@ interface VoiceEditorModalProps {
   initialDimensions?: VoiceDimensions;
   saveDisabled?: boolean;
   saveNotice?: string;
-  onSave: (name: string, dimensions: VoiceDimensions) => Promise<void>;
+  onSave: (name: string, dimensions: VoiceDimensions, selectedFollow: TwitterFollow | null) => Promise<void>;
   onClose: () => void;
 }
 
@@ -150,7 +150,7 @@ export default function VoiceEditorModal({
 
     setSaving(true);
     try {
-      await onSave(voiceName, dimensions);
+      await onSave(voiceName, dimensions, mode === "create" ? selectedFollow : null);
       onClose();
     } finally {
       setSaving(false);

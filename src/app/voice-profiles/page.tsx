@@ -16,6 +16,7 @@ import {
   type ReferenceAccount,
   type ReferenceVoice,
   type SavedBlend,
+  type TwitterFollow,
   type VoiceProfile,
 } from "@/lib/api";
 import {
@@ -425,7 +426,7 @@ export default function VoiceProfilesPage() {
     ];
   };
 
-  const handleSaveVoice = async (name: string, dimensions: VoiceDimensions) => {
+  const handleSaveVoice = async (name: string, dimensions: VoiceDimensions, selectedFollow: TwitterFollow | null) => {
     try {
       if (editorMode === "edit-personal") {
         const response = await api.voice.updateProfile(dimensions);
@@ -443,8 +444,33 @@ export default function VoiceProfilesPage() {
         return;
       }
 
-      // create mode: build a real blend from saved reference voices and persist.
-      const voices = buildBlendVoicesFromReferences();
+      // create mode: if a single creator was picked, build a 50/50 blend of
+      // the user's personal voice + that one creator. Otherwise fall back to
+      // distributing across all saved reference voices.
+      let voices: BlendVoiceInput[];
+      if (selectedFollow) {
+        // Ensure the creator exists as a reference voice, then use its ID.
+        const existingRef = references.find(
+          (ref) => ref.handle?.replace(/^@/, "").toLowerCase() === selectedFollow.handle.toLowerCase()
+        );
+        let refId: string;
+        if (existingRef) {
+          refId = existingRef.id;
+        } else {
+          const { voice: newRef } = await api.voice.addReference(
+            selectedFollow.displayName || selectedFollow.handle,
+            selectedFollow.handle
+          );
+          refId = newRef.id;
+        }
+        voices = [
+          { label: "My voice", percentage: 50 },
+          { label: selectedFollow.displayName || selectedFollow.handle, percentage: 50, referenceVoiceId: refId },
+        ];
+      } else {
+        voices = buildBlendVoicesFromReferences();
+      }
+
       await api.voice.createBlend(name, voices);
       const response = await api.voice.getBlends();
       setBlends(response.blends);
