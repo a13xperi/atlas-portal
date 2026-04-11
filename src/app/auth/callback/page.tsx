@@ -2,12 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { setAccessToken, api } from "@/lib/api";
+import { api } from "@/lib/api";
 
 /**
  * /auth/callback — handles server-side OAuth redirects.
- * Backend redirects here with ?token=JWT&provider=twitter after successful OAuth.
- * Stores the token, validates the session, and redirects to dashboard.
+ *
+ * Security (C-5): Backend sets an HttpOnly `atlas_session` cookie via
+ * setAuthCookies() BEFORE redirecting the browser here. The portal no longer
+ * reads a JWT from the query string — doing so would expose the token in
+ * URL history, referer headers, and server/CDN logs.
+ *
+ * Backend now redirects to `/auth/callback?provider=twitter` (no ?token=).
+ * We validate the session by calling /me (which sends the HttpOnly cookie
+ * automatically via `credentials: "include"`) and route to dashboard or
+ * onboarding based on the user's state.
  */
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -16,8 +24,6 @@ export default function AuthCallbackPage() {
   const [message, setMessage] = useState("Signing you in...");
 
   useEffect(() => {
-    const token = searchParams.get("token");
-    const provider = searchParams.get("provider");
     const error = searchParams.get("error");
 
     if (error) {
@@ -32,18 +38,14 @@ export default function AuthCallbackPage() {
       return;
     }
 
-    if (!token) {
-      setStatus("error");
-      setMessage("Missing authentication token. Please try again.");
-      return;
-    }
-
-    // Store the JWT
-    setAccessToken(token);
-    document.cookie = "atlas_access_token=1; path=/; max-age=86400; SameSite=Lax";
+    // Mirror the HttpOnly atlas_session cookie set by the backend with a
+    // client-readable flag so the Next.js middleware can gate protected
+    // routes on the frontend origin. The HttpOnly cookie (set by the
+    // backend domain) carries the real credential; this is a hint only.
     document.cookie = "atlas_session=1; path=/; max-age=604800; SameSite=Lax";
 
-    // Validate session by calling /me
+    // Validate session by calling /me — this sends the HttpOnly cookie
+    // via `credentials: "include"` in the api client.
     api.auth.me()
       .then((res) => {
         setStatus("success");
@@ -62,7 +64,6 @@ export default function AuthCallbackPage() {
       .catch(() => {
         setStatus("error");
         setMessage("Session validation failed. Please try again.");
-        setAccessToken(null);
         document.cookie = "atlas_session=; path=/; max-age=0";
       });
   }, [searchParams, router]);
