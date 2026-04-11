@@ -49,6 +49,10 @@ import {
   TweetDraft,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import {
+  MIN_TWEETS_FOR_VOICE_CALIBRATION,
+  useVoiceGate,
+} from "@/lib/useVoiceGate";
 import OracleWidget from "@/components/oracle/OracleWidget";
 import OracleCraftingHints from "@/components/oracle/OracleCraftingHints";
 import OracleInspector from "@/components/oracle/OracleInspector";
@@ -70,7 +74,7 @@ const TWEET_TEMPLATES = [
 
 const NEWS_SOURCE_PREFIX = "source:";
 const VOICE_COMPARISON_DELTA = { humor: 20 } as const;
-const MIN_TWEETS_FOR_CRAFTING = 3;
+const MIN_TWEETS_FOR_CRAFTING = MIN_TWEETS_FOR_VOICE_CALIBRATION;
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
 type DraftSourceType = "REPORT" | "ARTICLE" | "MANUAL";
@@ -363,13 +367,10 @@ function CraftingPage() {
     currentBrevity,
     currentContrarianTone
   );
-  const voiceTweetsAnalyzed = user?.voiceProfile?.tweetsAnalyzed ?? 0;
-  const isVoiceCalibrationBlocked =
-    !user?.voiceProfile || voiceTweetsAnalyzed < MIN_TWEETS_FOR_CRAFTING;
-  const calibrationTweetsRemaining = Math.max(
-    MIN_TWEETS_FOR_CRAFTING - voiceTweetsAnalyzed,
-    0
-  );
+  const voiceGate = useVoiceGate();
+  const isVoiceCalibrationBlocked = voiceGate.isBlocked;
+  const voiceTweetsAnalyzed = voiceGate.tweetsAnalyzed;
+  const calibrationTweetsRemaining = voiceGate.tweetsRemaining;
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -720,6 +721,7 @@ function CraftingPage() {
 
   const handleCompareInAnotherVoice = useCallback(async () => {
     if (!activeDraft || !compareBlendId) return;
+    if (isVoiceCalibrationBlocked) return;
 
     const targetBlend = blends.find((blend) => blend.id === compareBlendId);
     if (!targetBlend) return;
@@ -750,7 +752,7 @@ function CraftingPage() {
     } finally {
       setCompareBlendLoading(false);
     }
-  }, [activeDraft, blends, compareBlendId]);
+  }, [activeDraft, blends, compareBlendId, isVoiceCalibrationBlocked]);
 
   const handleUseComparisonDraft = useCallback(() => {
     if (!activeDraft || !compareBlendDraft) return;
@@ -1325,28 +1327,32 @@ function CraftingPage() {
       {isVoiceCalibrationBlocked ? (
         <div
           role="alert"
-          className="mt-6 rounded-2xl border border-atlas-warning/30 bg-atlas-warning/10 px-4 py-4 text-sm text-atlas-warning"
+          data-testid="voice-calibration-gate"
+          className="mt-6 flex flex-col gap-4 rounded-2xl border border-atlas-warning/30 bg-atlas-warning/10 px-4 py-4 text-sm text-atlas-warning sm:flex-row sm:items-center sm:justify-between"
         >
-          <p className="font-semibold text-atlas-text">
-            Voice calibration is not ready for drafting yet.
-          </p>
-          <p className="mt-1 text-atlas-text-secondary">
-            {!user?.voiceProfile
-              ? "Complete onboarding to set up your voice, then tweet generation unlocks here."
-              : <>
-                  Atlas needs at least {MIN_TWEETS_FOR_CRAFTING} analyzed tweets before
-                  it unlocks generation here. You have {voiceTweetsAnalyzed}, so add{" "}
-                  {calibrationTweetsRemaining} more in{" "}
-                  <Link
-                    href="/voice-profiles"
-                    className="font-semibold text-atlas-teal hover:underline"
-                  >
-                    Voice Lab
-                  </Link>
-                  .
-                </>
-            }
-          </p>
+          <div>
+            <p className="font-semibold text-atlas-text">
+              {voiceGate.reason === "no_profile"
+                ? "Connect X and calibrate your voice to unlock tweet generation."
+                : "Voice calibration is not ready for drafting yet."}
+            </p>
+            <p className="mt-1 text-atlas-text-secondary">
+              {voiceGate.reason === "no_profile"
+                ? "Atlas writes in your voice — we need your X handle and a few sample tweets first."
+                : <>
+                    Atlas needs at least {MIN_TWEETS_FOR_CRAFTING} analyzed tweets
+                    before it unlocks generation here. You have {voiceTweetsAnalyzed},
+                    so add {calibrationTweetsRemaining} more.
+                  </>}
+            </p>
+          </div>
+          <Link
+            href={voiceGate.ctaHref}
+            data-testid="voice-calibration-cta"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-transform hover:scale-[1.02]"
+          >
+            {voiceGate.ctaLabel} →
+          </Link>
         </div>
       ) : null}
 
