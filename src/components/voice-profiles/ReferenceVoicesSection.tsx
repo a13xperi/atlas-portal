@@ -6,6 +6,7 @@ import ReferenceVoiceSelector from "@/components/onboarding/ReferenceVoiceSelect
 import GradientButton from "@/components/ui/GradientButton";
 import Modal from "@/components/ui/Modal";
 import ImportFromXFollowsModal from "@/components/voice-profiles/ImportFromXFollowsModal";
+import ImportFromXLikesModal from "@/components/voice-profiles/ImportFromXLikesModal";
 import { api, type ReferenceAccount, type ReferenceVoice } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { colors } from "@/lib/tokens";
@@ -54,6 +55,7 @@ export default function ReferenceVoicesSection({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [xLinked, setXLinked] = useState(false);
   const [isImportingFromX, setIsImportingFromX] = useState(false);
+  const [isImportingFromLikes, setIsImportingFromLikes] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -236,6 +238,18 @@ export default function ReferenceVoicesSection({
                 </span>
               </GradientButton>
             ) : null}
+            {xLinked ? (
+              <GradientButton
+                size="sm"
+                variant="outline-teal"
+                onClick={() => setIsImportingFromLikes(true)}
+              >
+                <span className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  From Your Likes
+                </span>
+              </GradientButton>
+            ) : null}
             <GradientButton
               size="sm"
               variant="outline-teal"
@@ -343,6 +357,13 @@ export default function ReferenceVoicesSection({
       <ImportFromXFollowsModal
         isOpen={isImportingFromX}
         onClose={() => setIsImportingFromX(false)}
+        references={references}
+        onReferenceAdded={handleXReferenceAdded}
+      />
+
+      <ImportFromXLikesModal
+        isOpen={isImportingFromLikes}
+        onClose={() => setIsImportingFromLikes(false)}
         references={references}
         onReferenceAdded={handleXReferenceAdded}
       />

@@ -7,7 +7,9 @@ import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import {
   canAdvance,
+  getContinueLabel,
   getOnboardingCompletionHref,
+  getTrackMeta,
   initialOracleState,
   oracleReducer,
 } from "@/lib/oracle";
@@ -20,6 +22,7 @@ import {
 
 import OracleAvatar from "./OracleAvatar";
 import OracleMessage from "./OracleMessage";
+import TrackBadge from "./TrackBadge";
 import TypingIndicator from "./TypingIndicator";
 import ActionZone from "./ActionZone";
 import NavBar from "@/components/ui/NavBar";
@@ -60,6 +63,27 @@ export default function OracleChat() {
       dispatch({ type: "SET_HANDLE", handle: user.handle.replace(/^@/, "") });
     }
   }, [user?.handle, state.xHandle]);
+
+  // Deep-link pre-select: /onboarding/track-a|track-b stores the chosen
+  // track in sessionStorage before redirecting here. Pick it up on mount
+  // so the chat skips the welcome prompt and enters the right path.
+  useEffect(() => {
+    if (state.track !== null || state.currentStep !== "WELCOME") return;
+    let preselected: string | null = null;
+    try {
+      preselected = sessionStorage.getItem("atlas_preselected_track");
+    } catch {
+      preselected = null;
+    }
+    if (preselected === "a" || preselected === "b") {
+      try {
+        sessionStorage.removeItem("atlas_preselected_track");
+      } catch {
+        /* ignore */
+      }
+      dispatch({ type: "SET_TRACK", track: preselected });
+    }
+  }, [state.track, state.currentStep]);
 
   // Detect OAuth callback return from X
   useEffect(() => {
@@ -600,7 +624,7 @@ export default function OracleChat() {
       return {
         actions: [
           {
-            label: "Continue",
+            label: getContinueLabel(step, state.track),
             value: "continue",
             variant: "primary" as const,
           },
@@ -613,6 +637,7 @@ export default function OracleChat() {
   };
 
   const actionConfig = getActionZoneConfig();
+  const trackMeta = getTrackMeta(state.track);
 
   return (
     <div className="flex h-screen flex-col bg-gradient-to-b from-atlas-bg via-atlas-nav to-atlas-bg pt-14">
@@ -621,12 +646,13 @@ export default function OracleChat() {
       {/* Header */}
       <div className="flex items-center gap-3 px-4 sm:px-6 py-3 border-b border-glass-border bg-atlas-nav/50 backdrop-blur-xl">
         <OracleAvatar size="md" />
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="font-heading font-bold text-sm text-atlas-text">
             The Oracle
           </h1>
           <p className="text-xs text-atlas-teal">DELPHI OS</p>
         </div>
+        <TrackBadge meta={trackMeta} />
       </div>
 
       {/* Message list */}
