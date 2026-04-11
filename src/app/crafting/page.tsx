@@ -364,8 +364,13 @@ function CraftingPage() {
     currentContrarianTone
   );
   const voiceTweetsAnalyzed = user?.voiceProfile?.tweetsAnalyzed ?? 0;
+  // Block crafting until HANDOFF is complete (onboardingTrack set) AND voice is
+  // calibrated. This prevents premature tweet generation before the user has
+  // fed voices and finished onboarding (Anil feedback Apr 10).
   const isVoiceCalibrationBlocked =
-    !user?.voiceProfile || voiceTweetsAnalyzed < MIN_TWEETS_FOR_CRAFTING;
+    !user?.onboardingTrack ||
+    !user?.voiceProfile ||
+    voiceTweetsAnalyzed < MIN_TWEETS_FOR_CRAFTING;
   const calibrationTweetsRemaining = Math.max(
     MIN_TWEETS_FOR_CRAFTING - voiceTweetsAnalyzed,
     0
