@@ -206,7 +206,7 @@ export function CraftingAdvisor({
               className={`
                 w-full py-3 rounded-xl text-sm font-semibold transition-all duration-200
                 ${canGenerate
-                  ? 'bg-gradient-to-r from-delphi-teal to-delphi-teal/60 text-white hover:opacity-90 active:scale-[0.99]'
+                  ? 'bg-gradient-to-r from-delphi-teal to-delphi-teal/60 text-atlas-bg hover:opacity-90 active:scale-[0.99]'
                   : 'bg-atlas-surface/50 text-white/30 cursor-not-allowed border border-glass-border'
                 }
               `}

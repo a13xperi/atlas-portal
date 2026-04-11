@@ -127,7 +127,7 @@ export default function ReferenceVoiceSelector({
             onClick={() => setActiveCategory(cat as CategoryFilter)}
             className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
               activeCategory === cat
-                ? "bg-atlas-teal text-white"
+                ? "bg-atlas-teal text-atlas-bg"
                 : "bg-atlas-surface text-atlas-text-secondary"
             }`}
           >
@@ -201,7 +201,7 @@ export default function ReferenceVoiceSelector({
               >
                 {isSelected && (
                   <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-atlas-teal">
-                    <Check className="h-3.5 w-3.5 text-white" />
+                    <Check className="h-3.5 w-3.5 text-atlas-bg" />
                   </span>
                 )}
                 {avatarUrl && !imgErrors.has(account.id) ? (

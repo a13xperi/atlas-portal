@@ -8,7 +8,7 @@ export default function NotFound() {
         <p className="text-atlas-text-secondary text-lg mt-4">Page not found</p>
         <Link
           href="/dashboard"
-          className="mt-8 inline-flex bg-gradient-to-r from-delphi-teal to-delphi-teal/60 text-white rounded-lg px-6 py-3 font-medium"
+          className="mt-8 inline-flex bg-gradient-to-r from-delphi-teal to-delphi-teal/60 text-atlas-bg rounded-lg px-6 py-3 font-medium"
         >
           Back to Dashboard
         </Link>

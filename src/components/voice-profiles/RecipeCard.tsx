@@ -311,7 +311,7 @@ export default function RecipeCard({
           className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-opacity ${
             isActive
               ? "cursor-default border border-atlas-teal/30 bg-atlas-teal/20 text-atlas-teal"
-              : "bg-gradient-to-r from-delphi-teal to-delphi-teal/60 text-white hover:opacity-90"
+              : "bg-gradient-to-r from-delphi-teal to-delphi-teal/60 text-atlas-bg hover:opacity-90"
           }`}
         >
           <Sparkles className="h-4 w-4" />
