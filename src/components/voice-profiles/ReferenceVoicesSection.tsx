@@ -290,6 +290,8 @@ export default function ReferenceVoicesSection({
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       alt={`${account.displayName || account.name || account.handle} avatar`}
+                      width={48}
+                      height={48}
                       className="h-12 w-12 rounded-full border border-glass-border object-cover"
                       onError={() =>
                         setAvatarErrors((current) => ({
