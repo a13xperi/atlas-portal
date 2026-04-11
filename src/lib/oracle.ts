@@ -2,6 +2,80 @@ import type { OracleAction, OracleState, OracleStep } from "./oracle-types";
 import { DEFAULT_VOICE_DIMENSIONS } from "./voice-profile-dimensions";
 import { prepareMessages } from "./oracle-messages";
 
+// ── Track metadata — human-first, visible to users ───────────────
+export interface TrackMeta {
+  id: "a" | "b";
+  /** Backend Prisma enum value this UI track maps to. */
+  backendEnum: "TRACK_A" | "TRACK_B";
+  /** Short badge label shown in the onboarding header. */
+  label: string;
+  /** One-sentence "what this track does" tagline — used as badge title. */
+  tagline: string;
+  /** Icon key — TrackBadge picks a lucide icon from this. */
+  iconKey: "sparkles" | "brush";
+  /** Tailwind utility applied to the badge border + text. */
+  accent: string;
+}
+
+/**
+ * Track metadata keyed by local frontend state.track value.
+ *
+ * Frontend "a" = X-first path (Connect X → scan tweets → refine).
+ * Frontend "b" = Manual path (pick a style → dial in from scratch).
+ *
+ * User-facing labels are functional ("X-Powered", "Hand-Crafted"),
+ * not letter-coded, so the copy reads naturally regardless of how the
+ * local state ids map to backend enum values.
+ */
+export const TRACK_META: Record<"a" | "b", TrackMeta> = {
+  a: {
+    id: "a",
+    backendEnum: "TRACK_B",
+    label: "X-Powered",
+    tagline: "I scan your tweets to learn your voice, then you refine.",
+    iconKey: "sparkles",
+    accent: "border-atlas-teal text-atlas-teal",
+  },
+  b: {
+    id: "b",
+    backendEnum: "TRACK_A",
+    label: "Hand-Crafted",
+    tagline: "Pick a starter style and we dial it in together from scratch.",
+    iconKey: "brush",
+    accent: "border-delphi-teal text-delphi-teal",
+  },
+};
+
+export function getTrackMeta(track: OracleState["track"]): TrackMeta | null {
+  if (!track) return null;
+  return TRACK_META[track];
+}
+
+/**
+ * Track-aware continue CTA label for each step. Human-first verbs tell
+ * the user exactly what clicking the button will do next — "Continue" is
+ * the silent fallback.
+ */
+export function getContinueLabel(
+  step: OracleStep,
+  track: OracleState["track"],
+): string {
+  switch (step) {
+    case "TRACK_A_RESULT":
+      return "Looks right — continue";
+    case "TRACK_B_STYLE":
+      return "Use this as my starting point";
+    case "TRACK_B_DIMENSIONS":
+      return "Lock in these dimensions";
+    case "REFERENCES":
+      return track === "a"
+        ? "These are my people"
+        : "These voices feel right";
+    default:
+      return "Continue";
+  }
+}
+
 // ── Step transition map ────────────────────────────────────────────
 const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
   WELCOME: "CONNECT_X",
@@ -64,7 +138,7 @@ export function initialOracleState(): OracleState {
     currentStep: "WELCOME",
     track: null,
     messages: [],
-    pendingMessages: prepareMessages("WELCOME"),
+    pendingMessages: prepareMessages("WELCOME", null),
     isTyping: false,
     xHandle: "",
     xConnected: false,
@@ -99,7 +173,7 @@ export function oracleReducer(
         track,
         currentStep: nextStep,
         messages: [...state.messages, userMsg],
-        pendingMessages: prepareMessages(nextStep),
+        pendingMessages: prepareMessages(nextStep, track),
         selfPercentage: track === "a" ? 50 : 30,
       };
     }
@@ -125,7 +199,7 @@ export function oracleReducer(
         messages: userMsg
           ? [...state.messages, userMsg]
           : state.messages,
-        pendingMessages: prepareMessages(next),
+        pendingMessages: prepareMessages(next, state.track),
         stepHistory: newHistory,
       };
     }
