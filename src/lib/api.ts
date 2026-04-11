@@ -573,6 +573,10 @@ export const api = {
       request<{ subscriptions: AlertSubscription[] }>("/api/alerts/subscriptions"),
     subscribe: (type: string, value: string, delivery?: string[]) =>
       request<{ subscription: AlertSubscription }>("/api/alerts/subscriptions", { method: "POST", body: { type, value, delivery } }),
+    toggleSubscription: (id: string) =>
+      request<{ subscription: AlertSubscription }>(`/api/alerts/subscriptions/${id}`, { method: "PATCH" }),
+    deleteSubscription: (id: string) =>
+      request<{ success: boolean }>(`/api/alerts/subscriptions/${id}`, { method: "DELETE" }),
   },
 
   briefing: {
