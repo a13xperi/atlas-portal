@@ -53,4 +53,43 @@ export interface AgentChatMessage {
   actions?: OracleAgentAction[];
   actionResults?: OracleActionResult[];
   timestamp: number;
+  /**
+   * Marks the message as ambient — emitted by Oracle without a user
+   * prompt (e.g. inline narration from OracleInspector). Ambient lines
+   * render lighter in transcripts and are deduplicated on replay.
+   */
+  ambient?: boolean;
+}
+
+/** An entity Oracle can narrate about (drafts, campaigns, tweets, signals). */
+export type InspectableEntityType =
+  | "draft"
+  | "campaign"
+  | "tweet"
+  | "signal";
+
+export interface InspectableEntity {
+  type: InspectableEntityType;
+  id: string;
+  /** Display name — draft version, campaign title, tweet preview, etc. */
+  name?: string;
+  /**
+   * Concrete attributes Oracle can speak about. All fields optional so
+   * callers only pass what they know; the narration synth handles holes.
+   */
+  meta?: {
+    status?: string;
+    score?: number;
+    wordCount?: number;
+    charCount?: number;
+    confidence?: number;
+    /** Human-readable author name (preferred over handle). */
+    authorName?: string;
+    /** X handle or similar — used only as a fallback for authorName. */
+    authorHandle?: string;
+    /** Short topic/theme label for campaigns and signals. */
+    topic?: string;
+    /** Free-form extra context the parent page wants to expose. */
+    note?: string;
+  };
 }
