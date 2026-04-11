@@ -338,8 +338,7 @@ function CraftingPage() {
   );
   const voiceTweetsAnalyzed = user?.voiceProfile?.tweetsAnalyzed ?? 0;
   const isVoiceCalibrationBlocked =
-    user?.voiceProfile?.maturity === "BEGINNER" &&
-    voiceTweetsAnalyzed < MIN_TWEETS_FOR_CRAFTING;
+    !user?.voiceProfile || voiceTweetsAnalyzed < MIN_TWEETS_FOR_CRAFTING;
   const calibrationTweetsRemaining = Math.max(
     MIN_TWEETS_FOR_CRAFTING - voiceTweetsAnalyzed,
     0
@@ -1302,16 +1301,21 @@ function CraftingPage() {
             Voice calibration is not ready for drafting yet.
           </p>
           <p className="mt-1 text-atlas-text-secondary">
-            Atlas needs at least {MIN_TWEETS_FOR_CRAFTING} analyzed tweets before
-            it unlocks generation here. You have {voiceTweetsAnalyzed}, so add{" "}
-            {calibrationTweetsRemaining} more in{" "}
-            <Link
-              href="/voice-profiles"
-              className="font-semibold text-atlas-teal hover:underline"
-            >
-              Voice Lab
-            </Link>
-            .
+            {!user?.voiceProfile
+              ? "Complete onboarding to set up your voice, then tweet generation unlocks here."
+              : <>
+                  Atlas needs at least {MIN_TWEETS_FOR_CRAFTING} analyzed tweets before
+                  it unlocks generation here. You have {voiceTweetsAnalyzed}, so add{" "}
+                  {calibrationTweetsRemaining} more in{" "}
+                  <Link
+                    href="/voice-profiles"
+                    className="font-semibold text-atlas-teal hover:underline"
+                  >
+                    Voice Lab
+                  </Link>
+                  .
+                </>
+            }
           </p>
         </div>
       ) : null}
