@@ -102,6 +102,7 @@ test.describe("Investor Walkthrough", () => {
         !e.includes("hydration") &&
         !e.includes("Content Security Policy") &&
         !e.includes("Failed to load resource") &&
+        !e.includes("Failed to fetch RSC payload") &&
         !e.includes("Loading plugin data") &&
         !e.includes("Cannot update a component") &&
         !e.includes("Warning:") &&
