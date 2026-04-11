@@ -93,10 +93,10 @@ test.describe("Onboarding — X-first flow", () => {
 
     await skipButton.click();
 
-    // After skipping X, should advance to Track B flow — X connect button gone.
+    // After skipping X, the reducer echoes "Set up manually" confirming Track B activated.
     await expect(
-      page.getByRole("button", { name: /Connect your X account/i }),
-    ).toHaveCount(0, { timeout: 10000 });
+      page.getByText("Set up manually"),
+    ).toBeVisible({ timeout: 10000 });
   });
 
   test("returns from X OAuth with x_connected=true param and advances", async ({ page }) => {
