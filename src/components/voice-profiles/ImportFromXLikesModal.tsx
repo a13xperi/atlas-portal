@@ -115,7 +115,11 @@ export default function ImportFromXLikesModal({
         creator.avatarUrl || undefined,
       );
       setRowStatus((current) => ({ ...current, [creator.handle]: "added" }));
-      onReferenceAdded(response.voice);
+      onReferenceAdded({
+        ...response.voice,
+        handle: response.voice.handle ?? creator.handle ?? undefined,
+        avatarUrl: response.voice.avatarUrl ?? creator.avatarUrl ?? undefined,
+      });
     } catch (addError: unknown) {
       setRowStatus((current) => ({ ...current, [creator.handle]: "error" }));
       setRowError((current) => ({
