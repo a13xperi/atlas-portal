@@ -45,10 +45,23 @@ test.describe("Responsive layout", () => {
     await authedPage.setViewportSize({ width: 375, height: 812 });
     await authedPage.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
-    // Desktop nav links should be hidden on mobile
-    const desktopNavLinks = authedPage.locator("nav a:visible");
-    const visibleCount = await desktopNavLinks.count();
-    // Nav links are present (current design scrolls horizontally on mobile)
-    expect(visibleCount).toBeGreaterThan(0);
+    // Wait for the nav to be present in the DOM
+    const nav = authedPage.locator("nav[aria-label='Main navigation']");
+    await expect(nav).toBeVisible({ timeout: 10_000 });
+
+    // On mobile the desktop link row is hidden (md:hidden). The nav shows
+    // either a hamburger button (Menu icon) or collapses entirely. Both are
+    // acceptable — check that the hamburger button OR the logo link is present.
+    const hamburger = authedPage.locator("button[aria-label*='sidebar'], button[aria-label*='menu' i]");
+    const logoLink = authedPage.locator("nav a[href='/dashboard']");
+
+    const hamburgerCount = await hamburger.count();
+    const logoCount = await logoLink.count();
+
+    // At minimum the logo link must be present, or a hamburger button exists
+    expect(
+      hamburgerCount + logoCount,
+      "Expected nav logo or hamburger button to be present on mobile",
+    ).toBeGreaterThan(0);
   });
 });
