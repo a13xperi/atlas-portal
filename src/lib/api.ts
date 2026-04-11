@@ -376,8 +376,8 @@ export const api = {
       request<{ accounts: ReferenceAccount[] }>("/api/voice/reference-accounts"),
     getReferences: () =>
       request<{ voices: ReferenceVoice[] }>("/api/voice/references"),
-    addReference: (name: string, handle?: string) =>
-      request<{ voice: ReferenceVoice }>("/api/voice/references", { method: "POST", body: { name, handle } }),
+    addReference: (name: string, handle?: string, avatarUrl?: string) =>
+      request<{ voice: ReferenceVoice }>("/api/voice/references", { method: "POST", body: { name, handle, avatarUrl } }),
     getBlends: () =>
       request<{ blends: SavedBlend[] }>("/api/voice/blends"),
     createBlend: (name: string, voices: BlendVoiceInput[]) =>

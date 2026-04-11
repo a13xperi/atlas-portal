@@ -115,7 +115,8 @@ export default function ImportFromXFollowsModal({
     try {
       const response = await api.voice.addReference(
         follow.displayName || follow.handle || "Reference",
-        follow.handle || undefined
+        follow.handle || undefined,
+        follow.avatarUrl || undefined,
       );
       setRowStatus((current) => ({ ...current, [follow.id]: "added" }));
       onReferenceAdded(response.voice);
