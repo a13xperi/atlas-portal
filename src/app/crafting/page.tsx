@@ -50,6 +50,7 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import OracleWidget from "@/components/oracle/OracleWidget";
+import OracleCraftingHints from "@/components/oracle/OracleCraftingHints";
 
 const CRAFTING_MODES = [
   { id: "new_post", label: "New Post" },
@@ -1245,6 +1246,9 @@ function CraftingPage() {
           }
           context="crafting"
         />
+        {activeDraft && (
+          <OracleCraftingHints draftContent={activeDraft.content} />
+        )}
       </div>
 
       <div className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:gap-0 sm:rounded-3xl sm:px-6">
