@@ -175,7 +175,11 @@ export default function ImportFromXFollowsModal({
           </p>
         </div>
       ) : (
-        <ul className="flex flex-col divide-y divide-glass-border">
+        <>
+          <p className="mb-3 text-xs text-atlas-text-secondary">
+            {follows.length} account{follows.length !== 1 ? "s" : ""} · sorted by most followers
+          </p>
+          <ul className="flex flex-col divide-y divide-glass-border">
           {follows.map((follow) => {
             const normalizedHandle = normalizeHandle(follow.handle);
             const alreadyAdded =
@@ -250,6 +254,7 @@ export default function ImportFromXFollowsModal({
             );
           })}
         </ul>
+        </>
       )}
     </Modal>
   );
