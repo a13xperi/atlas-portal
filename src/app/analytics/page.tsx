@@ -282,12 +282,17 @@ function AnalyticsPage() {
           </div>
         </div>
 
-        {topDrafts.length > 0 && (
-          <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-4">
-            <h3 className="mb-3 text-sm font-medium text-atlas-text">Top Performing Drafts</h3>
+        <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-4">
+          <h3 className="mb-3 text-sm font-medium text-atlas-text">Top Performing Drafts</h3>
+          {topDrafts.length > 0 ? (
             <div className="space-y-3">
               {topDrafts.map((draft, i) => (
-                <div key={draft.id} className="flex items-start gap-3">
+                <Link
+                  key={draft.id}
+                  href="/crafting"
+                  aria-label={`Top draft ${i + 1}: open Crafting Station`}
+                  className="flex items-start gap-3 rounded-xl p-2 -m-2 transition-colors hover:bg-white/[0.04] focus:outline-none focus:ring-2 focus:ring-atlas-teal"
+                >
                   <span
                     className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                       i === 0 ? "bg-atlas-teal/20 text-atlas-teal" : "bg-atlas-surface text-atlas-text-muted"
@@ -301,11 +306,23 @@ function AnalyticsPage() {
                       {draft.actualEngagement} engagements
                     </p>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="py-6 text-center">
+              <p className="text-sm text-atlas-text-muted">
+                Top drafts will appear here once your posted tweets accumulate engagement.
+              </p>
+              <Link
+                href="/crafting"
+                className="mt-3 inline-block text-xs font-medium text-atlas-teal hover:text-atlas-teal/80 transition-colors"
+              >
+                Head to the Crafting Station →
+              </Link>
+            </div>
+          )}
+        </div>
 
         {/* SECTION 6: Learning Log */}
         <div data-tour="analytics-learning" className="mb-6 rounded-xl border border-glass-border bg-atlas-surface p-6 sm:p-8">
