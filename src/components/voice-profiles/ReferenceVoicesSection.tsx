@@ -127,30 +127,51 @@ export default function ReferenceVoicesSection({
   }, [isEditing, selectedIds]);
 
   const catalogLookup = getReferenceAccountLookup(catalog);
-  const selectedAccounts = selectedIds.map((id) => {
-    const existingAccount = catalogLookup.get(id);
 
-    if (existingAccount) {
-      return existingAccount;
-    }
+  // Build follower count lookup from enriched reference voices (e.g. imported from X follows).
+  const followerCountByHandle = new Map<string, number>(
+    references
+      .filter((r) => r.handle && r.followerCount != null)
+      .map((r) => [
+        r.handle!.replace(/^@/, "").toLowerCase(),
+        r.followerCount as number,
+      ])
+  );
 
-    const matchingReference = references.find((reference) => {
-      const normalizedHandle = reference.handle?.replace(/^@/, "");
-      return normalizedHandle === id || reference.id === id;
+  const selectedAccounts = selectedIds
+    .map((id) => {
+      const existingAccount = catalogLookup.get(id);
+
+      if (existingAccount) {
+        return existingAccount;
+      }
+
+      const matchingReference = references.find((reference) => {
+        const normalizedHandle = reference.handle?.replace(/^@/, "");
+        return normalizedHandle === id || reference.id === id;
+      });
+
+      return normalizeReferenceAccount({
+        id,
+        handle: matchingReference?.handle ?? id,
+        name: matchingReference?.name ?? id,
+        profileImageUrl: matchingReference?.avatarUrl
+          ?? (matchingReference?.handle
+            ? `https://unavatar.io/twitter/${normalizeTwitterHandle(
+                matchingReference.handle
+              )}`
+            : null),
+      });
+    })
+    .sort((a, b) => {
+      const aCount = followerCountByHandle.get(
+        (a.handle ?? a.id).replace(/^@/, "").toLowerCase()
+      ) ?? -1;
+      const bCount = followerCountByHandle.get(
+        (b.handle ?? b.id).replace(/^@/, "").toLowerCase()
+      ) ?? -1;
+      return bCount - aCount;
     });
-
-    return normalizeReferenceAccount({
-      id,
-      handle: matchingReference?.handle ?? id,
-      name: matchingReference?.name ?? id,
-      profileImageUrl: matchingReference?.avatarUrl
-        ?? (matchingReference?.handle
-          ? `https://unavatar.io/twitter/${normalizeTwitterHandle(
-              matchingReference.handle
-            )}`
-          : null),
-    });
-  });
 
   const handleSaveSelection = async () => {
     if (isSaving) {

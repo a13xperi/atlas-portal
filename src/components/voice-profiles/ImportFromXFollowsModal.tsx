@@ -123,6 +123,7 @@ export default function ImportFromXFollowsModal({
         ...response.voice,
         handle: response.voice.handle ?? follow.handle ?? undefined,
         avatarUrl: response.voice.avatarUrl ?? follow.avatarUrl ?? undefined,
+        followerCount: response.voice.followerCount ?? follow.followerCount,
       });
     } catch (addError: unknown) {
       setRowStatus((current) => ({ ...current, [follow.id]: "error" }));

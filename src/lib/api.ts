@@ -862,6 +862,7 @@ export interface ReferenceVoice {
   handle?: string;
   avatarUrl?: string;
   isActive: boolean;
+  followerCount?: number | null;
 }
 
 export interface ReferenceAccount {
