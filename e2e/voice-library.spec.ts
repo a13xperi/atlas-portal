@@ -145,11 +145,11 @@ test.describe("Voice Lab (voice-profiles) — recipe cards + blend UI", () => {
     await expect(page.getByText("My voice").first()).toBeVisible({ timeout: 5000 });
   });
 
-  test("Voice Lab page is reachable via /voice-lab nav label", async ({ page }) => {
+  test("Voice Lab page is reachable via /voices nav label", async ({ page }) => {
     await page.goto("/voice-profiles", { waitUntil: "domcontentloaded" });
 
-    // The nav should show "Voice Lab" (renamed from "Voices")
-    const navVoiceLab = page.getByRole("link", { name: /Voice Lab/i });
-    await expect(navVoiceLab).toBeVisible({ timeout: 5000 });
+    // The nav shows "Voices" (DM-322 label)
+    const navVoices = page.getByRole("link", { name: /^Voices$/i });
+    await expect(navVoices).toBeVisible({ timeout: 5000 });
   });
 });

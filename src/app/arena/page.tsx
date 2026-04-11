@@ -50,7 +50,7 @@ function PositionBadge({ rank }: { rank: number }) {
     );
   if (rank === 2)
     return (
-      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-atlas-text-secondary/20 text-atlas-text-secondary text-sm font-bold">
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-400/20 text-slate-300 text-sm font-bold">
         2
       </span>
     );

@@ -58,9 +58,9 @@ function TeamLibraryPage() {
 
   function formatEngagement(item: TeamDraft) {
     const engagement = item.predictedEngagement ?? item.actualEngagement;
-    if (engagement == null) return "—";
+    if (engagement == null || engagement === 0) return "—";
     if (engagement >= 1000) return `${(engagement / 1000).toFixed(1)}k`;
-    return `${engagement.toFixed(1)}k`;
+    return String(Math.round(engagement));
   }
 
   const handleCopy = async (item: TeamDraft) => {
