@@ -37,25 +37,24 @@ export interface NavBarProps {
 }
 
 export const navLinks = [
-  { label: "Feed", href: "/feed", icon: Rss },
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Crafting", href: "/crafting", icon: PenTool },
   { label: "Voices", href: "/voice-profiles", icon: Mic2 },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
-  { label: "Briefing", href: "/briefing", icon: Newspaper },
   { label: "Signals", href: "/alerts", icon: Zap },
   { label: "Library", href: "/team-library", icon: BookOpen },
   { label: "Arena", href: "/arena", icon: Trophy },
+  { label: "Feed", href: "/feed", icon: Rss },
+  { label: "Briefing", href: "/briefing", icon: Newspaper },
   { label: "Campaigns", href: "/campaigns", icon: CalendarClock },
   { label: "Queue", href: "/queue", icon: ListOrdered },
 ];
 
-// Core tabs always visible in navigation (DM-322).
-// Analytics + Signals are gated behind manager/admin role.
-// Other tabs (Feed, Dashboard, Briefings, Queue, Campaigns) are hidden
-// from nav but their routes/pages remain accessible.
-const CORE_NAV_HREFS = new Set(["/crafting", "/voice-profiles", "/team-library", "/arena"]);
-const MANAGER_NAV_HREFS = new Set(["/analytics", "/alerts"]);
+// Core tabs always visible in navigation (DM-322, updated for demo flow).
+// Demo flow: Dashboard → Crafting → Voices → Analytics → Signals → Library → Arena
+// Other tabs (Feed, Briefings, Queue, Campaigns) are hidden from nav but accessible.
+const CORE_NAV_HREFS = new Set(["/dashboard", "/crafting", "/voice-profiles", "/analytics", "/alerts", "/team-library", "/arena"]);
+const MANAGER_NAV_HREFS = new Set<string>();
 
 export const coreNavLinks = navLinks.filter((link) => CORE_NAV_HREFS.has(link.href));
 
