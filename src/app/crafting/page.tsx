@@ -51,6 +51,8 @@ import {
 import { useAuth } from "@/lib/auth";
 import OracleWidget from "@/components/oracle/OracleWidget";
 import OracleCraftingHints from "@/components/oracle/OracleCraftingHints";
+import OracleInspector from "@/components/oracle/OracleInspector";
+import type { InspectableEntity } from "@/lib/oracle-agent-types";
 
 const CRAFTING_MODES = [
   { id: "new_post", label: "New Post" },
@@ -321,6 +323,30 @@ function CraftingPage() {
     1,
     Math.ceil(activeDraftWordCount / 200)
   );
+  // Entity descriptor for OracleInspector — Oracle narrates whatever is
+  // in the draft card, including real status + size so the line reflects
+  // what the user is actually looking at.
+  const inspectorEntity: InspectableEntity | null = activeDraft
+    ? {
+        type: "draft",
+        id: activeDraft.id,
+        name: `v${activeDraft.version} draft`,
+        meta: {
+          status: activeDraft.status,
+          wordCount: activeDraftWordCount,
+          charCount: activeDraft.content?.length ?? 0,
+          confidence:
+            typeof activeDraft.predictedEngagement === "number" &&
+            typeof activeDraft.actualEngagement === "number" &&
+            activeDraft.predictedEngagement > 0
+              ? Math.min(
+                  1,
+                  activeDraft.actualEngagement / activeDraft.predictedEngagement,
+                )
+              : undefined,
+        },
+      }
+    : null;
   const currentHumor = clampVoiceValue(user?.voiceProfile?.humor);
   const currentFormality = clampVoiceValue(user?.voiceProfile?.formality);
   const currentBrevity = clampVoiceValue(user?.voiceProfile?.brevity);
@@ -2210,6 +2236,15 @@ function CraftingPage() {
               <p>No drafts yet. Feed some content above to get started.</p>
             </div>
           )}
+
+          {/* Oracle inline narration — "demo money shot" (v2 Step 8).
+              Oracle whispers what it sees the moment the user lands on a
+              draft: real size + status + confidence → concrete nudge. */}
+          {inspectorEntity && !voiceComparison ? (
+            <div className="mt-3">
+              <OracleInspector entity={inspectorEntity} />
+            </div>
+          ) : null}
 
           {!voiceComparison && canReviseActiveDraft ? (
             <div className="mt-4">
