@@ -7,6 +7,7 @@ interface ActionFeedbackOptions<T> {
   successMessage?: string;
   getSuccessMessage?: (result: T) => string;
   errorMessage?: string;
+  onResult?: (message: string, type: "success" | "error") => void;
 }
 
 export function getActionErrorMessage(
@@ -62,12 +63,12 @@ export function useActionFeedback() {
           "Action completed";
 
         toast(message, "success");
+        options.onResult?.(message, "success");
         return result;
       } catch (error) {
-        toast(
-          getActionErrorMessage(error, options.errorMessage ?? "Action failed"),
-          "error"
-        );
+        const errMsg = getActionErrorMessage(error, options.errorMessage ?? "Action failed");
+        toast(errMsg, "error");
+        options.onResult?.(errMsg, "error");
         return undefined;
       } finally {
         setActionLoading(key, false);

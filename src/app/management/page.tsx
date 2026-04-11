@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { api, TeamMember, TeamAnalyst } from "@/lib/api";
 import AppShell from "@/components/layout/AppShell";
@@ -13,7 +13,15 @@ function ManagementPage() {
   const [analysts, setAnalysts] = useState<TeamAnalyst[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionBanner, setActionBanner] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { isLoading, runAction } = useActionFeedback();
+
+  const showBanner = useCallback((message: string, type: "success" | "error") => {
+    if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
+    setActionBanner({ message, type });
+    bannerTimerRef.current = setTimeout(() => setActionBanner(null), 5000);
+  }, []);
 
   const managementActionLoading =
     isLoading("push-top-profiles") ||
@@ -63,6 +71,7 @@ function ManagementPage() {
                 void runAction("push-top-profiles", api.users.pushTopProfiles, {
                   successMessage: "Top profiles pushed to team",
                   errorMessage: "Failed to push top profiles",
+                  onResult: showBanner,
                 })
               }
               className="flex items-center gap-1.5 rounded-lg border border-atlas-teal/40 bg-atlas-teal/10 px-4 py-2 text-xs font-semibold text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/15 disabled:opacity-50"
@@ -86,6 +95,7 @@ function ManagementPage() {
               onClick={() => void runAction("send-nudge", api.users.sendNudge, {
                 successMessage: "Nudge sent to all analysts",
                 errorMessage: "Failed to send nudge",
+                onResult: showBanner,
               })}
               className="flex items-center gap-1.5 rounded-lg border border-glass-border px-4 py-2 text-xs font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal disabled:opacity-50"
             >
@@ -109,6 +119,7 @@ function ManagementPage() {
                 void runAction("push-style", () => api.users.pushStyle(), {
                   successMessage: "Team style settings pushed",
                   errorMessage: "Failed to push style settings",
+                  onResult: showBanner,
                 })
               }
               className="flex items-center gap-1.5 rounded-lg border border-glass-border px-4 py-2 text-xs font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal disabled:opacity-50"
@@ -131,6 +142,21 @@ function ManagementPage() {
         {loadError && (
           <div role="alert" className="mt-4 rounded-xl border border-atlas-error/30 bg-atlas-error/10 px-4 py-3 text-sm text-atlas-error">
             {loadError}
+          </div>
+        )}
+
+        {actionBanner && (
+          <div
+            role="status"
+            aria-live="polite"
+            className={`mt-4 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+              actionBanner.type === "success"
+                ? "border-atlas-teal/30 bg-atlas-teal/10 text-atlas-teal"
+                : "border-atlas-error/30 bg-atlas-error/10 text-atlas-error"
+            }`}
+          >
+            <span aria-hidden="true">{actionBanner.type === "success" ? "✓" : "✕"}</span>
+            {actionBanner.message}
           </div>
         )}
 
