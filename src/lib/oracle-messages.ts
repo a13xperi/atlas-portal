@@ -152,12 +152,69 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
   ],
 };
 
+/**
+ * Per-track overrides for steps where the Oracle should speak differently
+ * depending on which path the user is on. Track-agnostic steps fall
+ * through to ORACLE_MESSAGES so this map only lists the intentional
+ * divergences. Human-first framing: concrete language about what the
+ * user did and what happens next.
+ */
+const TRACK_MESSAGE_OVERRIDES: Partial<
+  Record<OracleStep, Record<"a" | "b", ChatMessage[]>>
+> = {
+  REFERENCES: {
+    a: [
+      msg(
+        "oracle",
+        "I have your voice from the tweets I scanned. Now pick who you're in conversation with — people whose writing sharpens yours. You can add more later.",
+        {
+          component: { type: "references" },
+        }
+      ),
+    ],
+    b: [
+      msg(
+        "oracle",
+        "Pick a voice you want to grow toward. I'll use their style as a north star when I craft your tweets — you can swap it out anytime.",
+        {
+          component: { type: "references" },
+        }
+      ),
+    ],
+  },
+  HANDOFF: {
+    a: [
+      msg(
+        "oracle",
+        "Your voice is dialed in from real tweets. Time to craft — I'll keep learning from every draft you ship.\n\nI'm the same brain on Telegram. Drop me a report, a link, or a voice note anytime.",
+        {
+          component: { type: "handoff-telegram" },
+        }
+      ),
+    ],
+    b: [
+      msg(
+        "oracle",
+        "Your starter voice is set. We'll sharpen it every time you craft — the more you write, the tighter we get.\n\nI'm the same brain on Telegram. Drop me a report, a link, or a voice note anytime.",
+        {
+          component: { type: "handoff-telegram" },
+        }
+      ),
+    ],
+  },
+};
+
 /** Stamp messages with current time and unique IDs */
-export function prepareMessages(step: OracleStep): ChatMessage[] {
+export function prepareMessages(
+  step: OracleStep,
+  track: "a" | "b" | null = null
+): ChatMessage[] {
   const now = Date.now();
-  return ORACLE_MESSAGES[step].map((m, i) => ({
+  const override = track ? TRACK_MESSAGE_OVERRIDES[step]?.[track] : undefined;
+  const template = override ?? ORACLE_MESSAGES[step];
+  return template.map((m, i) => ({
     ...m,
-    id: `${step}-${i}-${now}`,
+    id: `${step}-${track ?? "-"}-${i}-${now}`,
     timestamp: now + i,
   }));
 }
