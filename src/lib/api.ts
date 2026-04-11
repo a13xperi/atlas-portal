@@ -700,6 +700,7 @@ export const api = {
     agent: (body: {
       messages: Array<{ role: "user" | "oracle"; content: string }>;
       page?: string;
+      sessionId?: string;
       actionResults?: Array<{
         actionId: string;
         type: string;
@@ -719,6 +720,32 @@ export const api = {
         }>;
         serverResults?: Array<{ toolCallId: string; result: unknown }>;
       }>("/api/oracle/agent", { method: "POST", body }),
+
+    /**
+     * Load the authenticated user's persistent Oracle session.
+     * Returns the last DB-persisted session (if any) plus recent messages.
+     * Used by the floating widget to hydrate conversation history on mount.
+     */
+    getSession: () =>
+      request<{
+        sessionId: string;
+        messages: Array<{
+          role: "user" | "assistant";
+          content: string;
+          timestamp: string;
+        }>;
+        context: Record<string, unknown> | null;
+      }>("/api/oracle/session"),
+
+    clearSession: () =>
+      request<{
+        sessionId: string;
+        messages: Array<{
+          role: "user" | "assistant";
+          content: string;
+          timestamp: string;
+        }>;
+      }>("/api/oracle/session", { method: "DELETE" }),
   },
 
   admin: {
