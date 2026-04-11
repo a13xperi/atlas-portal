@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
@@ -52,6 +52,9 @@ const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [dismissedCompletionBanner, setDismissedCompletionBanner] =
     useState(false);
+  const [briefingText, setBriefingText] = useState<string | null>(null);
+  const [briefingLoading, setBriefingLoading] = useState(false);
+  const briefingFiredRef = useRef(false);
   const completionBanner = searchParams.get("banner");
   const showVoiceCalibratedBanner =
     completionBanner === "voice-calibrated" && !dismissedCompletionBanner;
@@ -78,12 +81,41 @@ const searchParams = useSearchParams();
             return;
           }
 
-          setStats({
+          const nextStats = {
             drafts: response.summary?.draftsCreated ?? 0,
             posts: response.summary?.draftsPosted ?? 0,
             feedback: response.summary?.feedbackGiven ?? 0,
             reports: response.summary?.reportsIngested ?? 0,
-          });
+          };
+          setStats(nextStats);
+
+          if (!briefingFiredRef.current) {
+            briefingFiredRef.current = true;
+            setBriefingLoading(true);
+            const nudge =
+              nextStats.drafts > 0 && nextStats.posts === 0
+                ? "Nudge them to ship one."
+                : nextStats.posts > 0
+                  ? "Acknowledge momentum and suggest next action."
+                  : "Encourage them to drop their first report.";
+            api.oracle
+              .chat({
+                page: "dashboard",
+                messages: [
+                  {
+                    role: "user",
+                    content: `Generate a concise daily briefing (2-3 sentences) for ${user.displayName || user.handle || "an analyst"}. They have created ${nextStats.drafts} drafts this period, posted ${nextStats.posts} to X. ${nudge} Keep it direct, confident, and specific. No fluff.`,
+                  },
+                ],
+              })
+              .then((r) => {
+                if (!cancelled) setBriefingText(r.text);
+              })
+              .catch(() => null)
+              .finally(() => {
+                if (!cancelled) setBriefingLoading(false);
+              });
+          }
         } catch {
           if (cancelled) {
             return;
@@ -234,13 +266,16 @@ const searchParams = useSearchParams();
       <div className="mt-4" data-tour="oracle-banner">
         <OracleWidget
           message={
-            stats.drafts > 0
-              ? `You've crafted ${stats.drafts} draft${stats.drafts === 1 ? "" : "s"} this month — ${stats.posts > 0 ? `${stats.posts} made it to X. Your voice is sharpening.` : "time to post one and see how it lands."}`
-              : "Your voice profile is set up. Head to the Crafting Station and turn some alpha into a tweet."
+            briefingLoading
+              ? "Generating your briefing…"
+              : briefingText ??
+                (stats.drafts > 0
+                  ? `You've crafted ${stats.drafts} draft${stats.drafts === 1 ? "" : "s"} this month.`
+                  : "Your voice profile is set up. Head to the Crafting Station.")
           }
           context="dashboard"
-          actionLabel={stats.drafts > 0 && stats.posts === 0 ? "Pick one to ship" : "Draft your first post"}
-          onAction={() => router.push("/crafting")}
+          actionLabel="Tell me more"
+          onAction={() => window.dispatchEvent(new Event("oracle:open"))}
         />
       </div>
 

@@ -573,6 +573,10 @@ export const api = {
       request<{ subscriptions: AlertSubscription[] }>("/api/alerts/subscriptions"),
     subscribe: (type: string, value: string, delivery?: string[]) =>
       request<{ subscription: AlertSubscription }>("/api/alerts/subscriptions", { method: "POST", body: { type, value, delivery } }),
+    toggleSubscription: (id: string) =>
+      request<{ subscription: AlertSubscription }>(`/api/alerts/subscriptions/${id}`, { method: "PATCH" }),
+    deleteSubscription: (id: string) =>
+      request<{ success: boolean }>(`/api/alerts/subscriptions/${id}`, { method: "DELETE" }),
   },
 
   briefing: {
@@ -624,7 +628,7 @@ export const api = {
   users: {
     profile: () =>
       request<{ user: User }>("/api/users/profile"),
-    updateProfile: (data: { displayName?: string; email?: string; bio?: string; avatarUrl?: string; tourCompleted?: boolean; tourStep?: number }) =>
+    updateProfile: (data: { displayName?: string; email?: string; bio?: string; avatarUrl?: string; tourCompleted?: boolean; tourStep?: number; onboardingTrack?: OnboardingTrack | null }) =>
       request<{ user: User }>("/api/users/profile", { method: "PATCH", body: data }),
     team: () =>
       request<{ team: TeamMember[] }>("/api/users/team"),

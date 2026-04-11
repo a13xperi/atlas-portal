@@ -50,6 +50,9 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import OracleWidget from "@/components/oracle/OracleWidget";
+import OracleCraftingHints from "@/components/oracle/OracleCraftingHints";
+import OracleInspector from "@/components/oracle/OracleInspector";
+import type { InspectableEntity } from "@/lib/oracle-agent-types";
 
 const CRAFTING_MODES = [
   { id: "new_post", label: "New Post" },
@@ -320,6 +323,30 @@ function CraftingPage() {
     1,
     Math.ceil(activeDraftWordCount / 200)
   );
+  // Entity descriptor for OracleInspector — Oracle narrates whatever is
+  // in the draft card, including real status + size so the line reflects
+  // what the user is actually looking at.
+  const inspectorEntity: InspectableEntity | null = activeDraft
+    ? {
+        type: "draft",
+        id: activeDraft.id,
+        name: `v${activeDraft.version} draft`,
+        meta: {
+          status: activeDraft.status,
+          wordCount: activeDraftWordCount,
+          charCount: activeDraft.content?.length ?? 0,
+          confidence:
+            typeof activeDraft.predictedEngagement === "number" &&
+            typeof activeDraft.actualEngagement === "number" &&
+            activeDraft.predictedEngagement > 0
+              ? Math.min(
+                  1,
+                  activeDraft.actualEngagement / activeDraft.predictedEngagement,
+                )
+              : undefined,
+        },
+      }
+    : null;
   const currentHumor = clampVoiceValue(user?.voiceProfile?.humor);
   const currentFormality = clampVoiceValue(user?.voiceProfile?.formality);
   const currentBrevity = clampVoiceValue(user?.voiceProfile?.brevity);
@@ -338,8 +365,7 @@ function CraftingPage() {
   );
   const voiceTweetsAnalyzed = user?.voiceProfile?.tweetsAnalyzed ?? 0;
   const isVoiceCalibrationBlocked =
-    user?.voiceProfile?.maturity === "BEGINNER" &&
-    voiceTweetsAnalyzed < MIN_TWEETS_FOR_CRAFTING;
+    !user?.voiceProfile || voiceTweetsAnalyzed < MIN_TWEETS_FOR_CRAFTING;
   const calibrationTweetsRemaining = Math.max(
     MIN_TWEETS_FOR_CRAFTING - voiceTweetsAnalyzed,
     0
@@ -1246,6 +1272,9 @@ function CraftingPage() {
           }
           context="crafting"
         />
+        {activeDraft && (
+          <OracleCraftingHints draftContent={activeDraft.content} />
+        )}
       </div>
 
       <div className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:gap-0 sm:rounded-3xl sm:px-6">
@@ -1302,16 +1331,21 @@ function CraftingPage() {
             Voice calibration is not ready for drafting yet.
           </p>
           <p className="mt-1 text-atlas-text-secondary">
-            Atlas needs at least {MIN_TWEETS_FOR_CRAFTING} analyzed tweets before
-            it unlocks generation here. You have {voiceTweetsAnalyzed}, so add{" "}
-            {calibrationTweetsRemaining} more in{" "}
-            <Link
-              href="/voice-profiles"
-              className="font-semibold text-atlas-teal hover:underline"
-            >
-              Voice Lab
-            </Link>
-            .
+            {!user?.voiceProfile
+              ? "Complete onboarding to set up your voice, then tweet generation unlocks here."
+              : <>
+                  Atlas needs at least {MIN_TWEETS_FOR_CRAFTING} analyzed tweets before
+                  it unlocks generation here. You have {voiceTweetsAnalyzed}, so add{" "}
+                  {calibrationTweetsRemaining} more in{" "}
+                  <Link
+                    href="/voice-profiles"
+                    className="font-semibold text-atlas-teal hover:underline"
+                  >
+                    Voice Lab
+                  </Link>
+                  .
+                </>
+            }
           </p>
         </div>
       ) : null}
@@ -2202,6 +2236,15 @@ function CraftingPage() {
               <p>No drafts yet. Feed some content above to get started.</p>
             </div>
           )}
+
+          {/* Oracle inline narration — "demo money shot" (v2 Step 8).
+              Oracle whispers what it sees the moment the user lands on a
+              draft: real size + status + confidence → concrete nudge. */}
+          {inspectorEntity && !voiceComparison ? (
+            <div className="mt-3">
+              <OracleInspector entity={inspectorEntity} />
+            </div>
+          ) : null}
 
           {!voiceComparison && canReviseActiveDraft ? (
             <div className="mt-4">

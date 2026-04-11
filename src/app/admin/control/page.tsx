@@ -479,6 +479,27 @@ function UserManagementTab({
   setLocalRoles: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   toast: (msg: string) => void;
 }) {
+  const [savingRoles, setSavingRoles] = useState<Record<string, boolean>>({});
+  const [confirmedRoles, setConfirmedRoles] = useState<Record<string, string>>({});
+
+  const handleSaveRole = async (userId: string, role: string, originalRole: string) => {
+    setSavingRoles((prev) => ({ ...prev, [userId]: true }));
+    try {
+      await api.users.updateRole(userId, role);
+      setConfirmedRoles((prev) => ({ ...prev, [userId]: role }));
+      toast("Role updated");
+    } catch {
+      setLocalRoles((prev) => ({ ...prev, [userId]: confirmedRoles[userId] ?? originalRole }));
+      toast("Failed to update role");
+    } finally {
+      setSavingRoles((prev) => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -514,6 +535,9 @@ function UserManagementTab({
         )}
         {team.map((member, idx) => {
           const currentRole = localRoles[member.id] || member.role;
+          const baselineRole = confirmedRoles[member.id] ?? member.role;
+          const isDirty = currentRole !== baselineRole;
+          const isSaving = !!savingRoles[member.id];
           return (
             <div
               key={member.id}
@@ -566,19 +590,42 @@ function UserManagementTab({
               {/* Role selector */}
               <select
                 value={currentRole}
+                disabled={isSaving}
                 onChange={(e) => {
                   setLocalRoles((prev) => ({
                     ...prev,
                     [member.id]: e.target.value,
                   }));
-                  toast("Role change saved locally");
                 }}
-                className="rounded-lg border border-glass-border bg-atlas-surface px-2 py-1.5 text-xs text-atlas-text focus:border-atlas-teal focus:outline-none"
+                className="rounded-lg border border-glass-border bg-atlas-surface px-2 py-1.5 text-xs text-atlas-text focus:border-atlas-teal focus:outline-none disabled:opacity-50"
               >
                 <option value="ANALYST">ANALYST</option>
                 <option value="MANAGER">MANAGER</option>
                 <option value="ADMIN">ADMIN</option>
               </select>
+
+              {/* Save button — visible only when pending role differs from confirmed */}
+              {isDirty && (
+                <button
+                  type="button"
+                  aria-busy={isSaving}
+                  disabled={isSaving}
+                  onClick={() => void handleSaveRole(member.id, currentRole, member.role)}
+                  className="flex items-center gap-1.5 rounded-lg border border-atlas-teal/40 bg-atlas-teal/10 px-3 py-1.5 text-xs font-semibold text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/15 disabled:opacity-50"
+                >
+                  {isSaving ? (
+                    <>
+                      <span
+                        aria-hidden="true"
+                        className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+                      />
+                      Saving…
+                    </>
+                  ) : (
+                    "Save"
+                  )}
+                </button>
+              )}
             </div>
           );
         })}

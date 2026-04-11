@@ -117,14 +117,13 @@ export default function VoiceProfilesPage() {
     Record<string, string>
   >({});
   const [blendPreviews, setBlendPreviews] = useState<Record<string, string>>({});
-  const [previewCompareBlendId, setPreviewCompareBlendId] = useState<string | null>(null);
-  const [previewCompareLoading, setPreviewCompareLoading] = useState(false);
-  const [previewCompareError, setPreviewCompareError] = useState<string | null>(null);
-  const [previewCompareResult, setPreviewCompareResult] = useState<{
-    label: string;
-    current: string;
-    variant: string;
-  } | null>(null);
+  const [compareAllTopic, setCompareAllTopic] = useState(
+    "Bitcoin just reclaimed $100k after a brutal 3-week drawdown. Open interest is climbing again, funding is neutral, and ETF flows flipped positive yesterday."
+  );
+  const [compareAllResults, setCompareAllResults] = useState<
+    Array<{ id: string; label: string; text: string | null; error: string | null }>
+  >([]);
+  const [compareAllLoading, setCompareAllLoading] = useState(false);
   const [calibrateHandle, setCalibrateHandle] = useState("");
   const [blendSelectMode, setBlendSelectMode] = useState(false);
   const [blendSourceId, setBlendSourceId] = useState<string | null>(null);
@@ -313,47 +312,38 @@ export default function VoiceProfilesPage() {
     [previewingBlendId]
   );
 
-  const PREVIEW_SAMPLE_CONTENT =
-    "Bitcoin just reclaimed $100k after a brutal 3-week drawdown. Open interest is climbing again, funding is neutral, and the ETF flows flipped positive yesterday. Market looks like it wants higher.";
-
-  const handlePreviewCompare = useCallback(
-    async (blendId: string | null) => {
-      if (previewCompareLoading) return;
-      const targetBlend = blendId ? blends.find((b) => b.id === blendId) : null;
-      const label = targetBlend ? targetBlend.name : "Personal Voice";
-      setPreviewCompareBlendId(blendId);
-      setPreviewCompareLoading(true);
-      setPreviewCompareError(null);
-      setPreviewCompareResult(null);
-      try {
-        const [currentResponse, variantResponse] = await Promise.all([
-          api.drafts.generate({
-            sourceContent: PREVIEW_SAMPLE_CONTENT,
-            sourceType: "MANUAL",
-          }),
-          api.drafts.generate({
-            sourceContent: PREVIEW_SAMPLE_CONTENT,
-            sourceType: "MANUAL",
-            blendId: blendId ?? undefined,
-          }),
-        ]);
-        setPreviewCompareResult({
-          label,
-          current: currentResponse.draft.content,
-          variant: variantResponse.draft.content,
-        });
-      } catch (previewError: unknown) {
-        setPreviewCompareError(
-          previewError instanceof Error
-            ? previewError.message
-            : "Couldn't generate the voice comparison."
-        );
-      } finally {
-        setPreviewCompareLoading(false);
-      }
-    },
-    [blends, previewCompareLoading]
-  );
+  const handleCompareAll = useCallback(async () => {
+    if (compareAllLoading || !compareAllTopic.trim()) return;
+    const topic = compareAllTopic.trim();
+    const voiceTargets = [
+      { id: PERSONAL_VOICE_ID, label: "Personal Voice", blendId: undefined as string | undefined },
+      ...blends.map((b) => ({ id: b.id, label: b.name, blendId: b.id })),
+    ];
+    setCompareAllLoading(true);
+    setCompareAllResults(voiceTargets.map((v) => ({ id: v.id, label: v.label, text: null, error: null })));
+    const settled = await Promise.allSettled(
+      voiceTargets.map((v) =>
+        api.drafts.generate({ sourceContent: topic, sourceType: "MANUAL", blendId: v.blendId })
+      )
+    );
+    setCompareAllResults(
+      voiceTargets.map((v, i) => {
+        const r = settled[i];
+        return {
+          id: v.id,
+          label: v.label,
+          text: r.status === "fulfilled" ? r.value.draft.content : null,
+          error:
+            r.status === "rejected"
+              ? r.reason instanceof Error
+                ? r.reason.message
+                : "Generation failed"
+              : null,
+        };
+      })
+    );
+    setCompareAllLoading(false);
+  }, [blends, compareAllLoading, compareAllTopic]);
 
   const handleUseVoice = (voiceId: string) => {
     setActiveVoiceId(voiceId);
@@ -761,93 +751,116 @@ export default function VoiceProfilesPage() {
         </div>{/* end blends wrapper */}
 
         <section className="mt-10 scroll-mt-20 rounded-2xl border border-glass-border bg-atlas-surface/40 p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
-                Voice Preview
-              </p>
-              <h2 className="mt-2 font-heading text-xl font-semibold text-atlas-text">
-                Preview in my voice
-              </h2>
-              <p className="mt-1 max-w-xl text-sm text-atlas-text-secondary">
-                See how Atlas writes the same sample tweet in your current voice
-                versus a saved blend. Great for checking that calibration is
-                pulling in the right direction.
-              </p>
-            </div>
-            <div className="flex flex-col gap-2 sm:min-w-[220px]">
-              <label className="text-xs uppercase tracking-wider text-atlas-text-muted">
-                Compare against
-              </label>
-              <select
-                aria-label="Compare against a blend"
-                value={previewCompareBlendId ?? ""}
-                onChange={(e) =>
-                  setPreviewCompareBlendId(e.target.value || null)
-                }
-                className="rounded-lg border border-glass-border bg-atlas-surface px-3 py-2 text-sm text-atlas-text focus:outline-none focus:border-atlas-teal/50"
-                disabled={previewCompareLoading || blends.length === 0}
-              >
-                <option value="">
-                  {blends.length === 0
-                    ? "No blends yet"
-                    : "Pick a blend to compare"}
-                </option>
-                {blends.map((blend) => (
-                  <option key={blend.id} value={blend.id}>
-                    {blend.name}
-                  </option>
-                ))}
-              </select>
+          <div>
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
+              Voice Comparison
+            </p>
+            <h2 className="mt-2 font-heading text-xl font-semibold text-atlas-text">
+              See your topic in every voice
+            </h2>
+            <p className="mt-1 max-w-xl text-sm text-atlas-text-secondary">
+              Enter a topic or market take below. Atlas generates one tweet per
+              saved voice simultaneously so you can pick the version that lands
+              best.
+            </p>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            <textarea
+              value={compareAllTopic}
+              onChange={(e) => setCompareAllTopic(e.target.value)}
+              placeholder="Type a topic, market take, or paste raw content…"
+              rows={3}
+              maxLength={1000}
+              className="w-full resize-none rounded-xl border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-muted focus:border-atlas-teal/50 focus:outline-none"
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-atlas-text-muted">
+                {compareAllTopic.length}/1000
+              </span>
               <button
                 type="button"
-                onClick={() =>
-                  void handlePreviewCompare(previewCompareBlendId)
-                }
-                disabled={
-                  previewCompareLoading ||
-                  (blends.length > 0 && !previewCompareBlendId)
-                }
-                className="rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-4 py-2 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => void handleCompareAll()}
+                disabled={compareAllLoading || !compareAllTopic.trim()}
+                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {previewCompareLoading
-                  ? "Generating…"
-                  : "Preview in my voice"}
+                {compareAllLoading ? (
+                  <>
+                    <span
+                      className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+                      aria-hidden="true"
+                    />
+                    Generating…
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    Generate in all voices
+                  </>
+                )}
               </button>
             </div>
           </div>
 
-          <div className="mt-4 rounded-xl border border-dashed border-glass-border bg-atlas-surface/60 px-4 py-3 text-xs text-atlas-text-muted">
-            Sample: {PREVIEW_SAMPLE_CONTENT}
-          </div>
-
-          {previewCompareError && (
-            <p
-              role="alert"
-              className="mt-4 rounded-lg border border-atlas-error/30 bg-atlas-error/10 px-3 py-2 text-xs text-atlas-error"
-            >
-              {previewCompareError}
-            </p>
-          )}
-
-          {previewCompareResult && !previewCompareLoading && (
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-glass-border bg-atlas-surface/70 p-4">
-                <p className="text-xs font-medium uppercase tracking-wider text-atlas-text-muted">
-                  Your voice
-                </p>
-                <p className="mt-3 text-sm leading-6 text-atlas-text">
-                  {previewCompareResult.current}
-                </p>
-              </div>
-              <div className="rounded-xl border border-atlas-teal/40 bg-atlas-teal/5 p-4">
-                <p className="text-xs font-medium uppercase tracking-wider text-atlas-teal">
-                  {previewCompareResult.label}
-                </p>
-                <p className="mt-3 text-sm leading-6 text-atlas-text">
-                  {previewCompareResult.variant}
-                </p>
-              </div>
+          {compareAllResults.length > 0 && (
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {compareAllResults.map((result) => {
+                const isPersonal = result.id === PERSONAL_VOICE_ID;
+                const isActive = activeVoiceId === result.id;
+                return (
+                  <div
+                    key={result.id}
+                    className={`rounded-xl border p-4 transition-colors ${
+                      isPersonal
+                        ? "border-glass-border bg-atlas-surface/70"
+                        : isActive
+                        ? "border-atlas-teal/40 bg-atlas-teal/5"
+                        : "border-glass-border bg-atlas-surface/50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <p
+                        className={`text-xs font-semibold uppercase tracking-wider ${
+                          isPersonal
+                            ? "text-atlas-text-muted"
+                            : isActive
+                            ? "text-atlas-teal"
+                            : "text-atlas-text-secondary"
+                        }`}
+                      >
+                        {result.label}
+                      </p>
+                      {isActive && (
+                        <span className="rounded-full bg-atlas-teal/15 px-2 py-0.5 text-[10px] font-semibold text-atlas-teal">
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    {result.text === null && result.error === null ? (
+                      <div className="mt-3 space-y-2" aria-busy="true" aria-label="Generating tweet">
+                        <div className="h-3 w-full animate-pulse rounded bg-atlas-surface" />
+                        <div className="h-3 w-4/5 animate-pulse rounded bg-atlas-surface" />
+                        <div className="h-3 w-3/5 animate-pulse rounded bg-atlas-surface" />
+                      </div>
+                    ) : result.error ? (
+                      <p className="mt-3 text-xs text-atlas-error">{result.error}</p>
+                    ) : (
+                      <p className="mt-3 text-sm leading-6 text-atlas-text">
+                        {result.text}
+                      </p>
+                    )}
+                    {result.text && !isPersonal && (
+                      <button
+                        type="button"
+                        onClick={() => handleUseVoice(result.id)}
+                        className="mt-3 text-xs font-medium text-atlas-teal hover:underline"
+                      >
+                        Use this voice →
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>

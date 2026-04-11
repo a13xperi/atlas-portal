@@ -225,8 +225,8 @@ const mockSubscriptions = { subscriptions: [] };
 
 const mockArenaLeaderboard = {
   entries: [
-    { rank: 1, userId: "test-user-1", handle: "testanalyst", displayName: "Test User", tweetsCount: 12, engagementScore: 4800, consistencyScore: 0.9, totalScore: 9.2 },
-    { rank: 2, userId: "u1", handle: "alice", displayName: "Alice", tweetsCount: 10, engagementScore: 3900, consistencyScore: 0.8, totalScore: 7.8 },
+    { rank: 1, userId: "test-user-1", displayName: "Test User", avatarUrl: null, tweetsPublished: 12, totalEngagement: 4800, consistencyStreak: 9, badge: "Top Analyst" },
+    { rank: 2, userId: "u1", displayName: "Alice", avatarUrl: null, tweetsPublished: 10, totalEngagement: 3900, consistencyStreak: 8, badge: null },
   ],
   period: "last_30_days",
   updatedAt: new Date().toISOString(),
@@ -330,7 +330,7 @@ async function stubDataEndpoints(target: RouteTarget) {
       case "/api/arena/leaderboard":
         return json(route, mockArenaLeaderboard);
       case "/api/arena/me":
-        return json(route, { entry: mockArenaLeaderboard.entries[0] ?? null });
+        return json(route, mockArenaLeaderboard.entries[0] ?? null);
       default:
         // Catch-all for any remaining API calls (including briefing, etc.)
         if (route.request().method() === "GET") return json(route, {});

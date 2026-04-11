@@ -109,7 +109,7 @@ function createDraft(overrides: Record<string, unknown> = {}) {
 describe("CraftingPage", () => {
   beforeEach(() => {
     mockUseAuth.mockReturnValue({
-      user: { handle: "AtlasAnalyst" },
+      user: { handle: "AtlasAnalyst", voiceProfile: { tweetsAnalyzed: 12 } },
     });
 
     mockedApi.drafts.list.mockReset();

@@ -206,6 +206,15 @@ export default function OracleChat() {
           } catch {
             /* optional */
           }
+          if (state.track === "a" || state.track === "b") {
+            try {
+              await api.users.updateProfile({
+                onboardingTrack: state.track === "a" ? "TRACK_A" : "TRACK_B",
+              });
+            } catch {
+              /* optional — non-fatal */
+            }
+          }
         }
       } catch (e) {
         console.error("Persist failed:", e);

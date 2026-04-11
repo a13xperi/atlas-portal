@@ -13,9 +13,11 @@ import { api } from "@/lib/api";
 import { executeAction, summarizeResult } from "@/lib/oracle-action-executor";
 import type {
   AgentChatMessage,
+  InspectableEntity,
   OracleAgentAction,
   OracleActionResult,
 } from "@/lib/oracle-agent-types";
+import { synthesizeInspectorNarration } from "@/lib/oracle-narration";
 
 interface OracleAgentContextValue {
   messages: AgentChatMessage[];
@@ -25,6 +27,15 @@ interface OracleAgentContextValue {
   confirmAction: (actionId: string) => Promise<void>;
   rejectAction: (actionId: string) => void;
   reset: () => void;
+  /**
+   * Fire-and-forget ambient narration. Oracle observes an entity the
+   * user just touched and emits a single thinking-style line without
+   * waiting for a backend round-trip. The synthesized text is returned
+   * synchronously so inline UI (OracleInspector) can render it
+   * immediately; the same line is also appended to the transcript as
+   * an `ambient` message so the floating widget stays in sync.
+   */
+  narrate: (tag: "inspect" | "observe", entity: InspectableEntity) => string;
 }
 
 const OracleAgentContext = createContext<OracleAgentContextValue>({
@@ -35,6 +46,7 @@ const OracleAgentContext = createContext<OracleAgentContextValue>({
   confirmAction: async () => {},
   rejectAction: () => {},
   reset: () => {},
+  narrate: () => "",
 });
 
 export function useOracleAgent() {
@@ -406,6 +418,45 @@ export function OracleAgentProvider({
     setPendingActions((prev) => prev.filter((a) => a.id !== actionId));
   }, []);
 
+  const narrate = useCallback(
+    (tag: "inspect" | "observe", entity: InspectableEntity): string => {
+      // Synthesize the narration locally so Inspector renders even if
+      // the backend is cold. This is the demo hot-path — we optimize
+      // for "fast + reliable" over "clever".
+      const text = synthesizeInspectorNarration(tag, entity);
+      if (!text) return "";
+
+      // Append an ambient transcript entry. We dedupe against the very
+      // last message: if the same ambient line was just written (e.g.
+      // Inspector re-rendered under React StrictMode) we skip the push
+      // instead of doubling the transcript.
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (
+          last &&
+          last.role === "oracle" &&
+          last.ambient === true &&
+          last.text === text
+        ) {
+          return prev;
+        }
+        return [
+          ...prev,
+          {
+            id: msgId(),
+            role: "oracle" as const,
+            text,
+            timestamp: Date.now(),
+            ambient: true,
+          },
+        ];
+      });
+
+      return text;
+    },
+    [],
+  );
+
   const reset = useCallback(() => {
     setMessages([]);
     setPendingActions([]);
@@ -426,6 +477,7 @@ export function OracleAgentProvider({
         confirmAction,
         rejectAction,
         reset,
+        narrate,
       }}
     >
       {children}
