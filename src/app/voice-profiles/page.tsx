@@ -722,8 +722,8 @@ export default function VoiceProfilesPage() {
                   dimensions={dimensions}
                   fingerprintDescription={
                     blend.voices.length === 1
-                      ? "Built directly from your personal voice profile."
-                      : "Estimated from your personal voice plus matched reference archetypes in the library."
+                      ? "Derived directly from your personal voice profile."
+                      : "A blend of your personal voice and the inspirations you added."
                   }
                   notableDimensions={notableDimensions}
                   isActive={activeVoiceId === blend.id}
