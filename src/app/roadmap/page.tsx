@@ -1,6 +1,7 @@
-"use client";
-
 import AppShell from "@/components/layout/AppShell";
+
+export const dynamic = "force-static";
+export const revalidate = 86400;
 
 type Category = "crafting" | "voice" | "analytics" | "platform" | "integrations";
 type Status = "shipped" | "in-progress" | "planned";
