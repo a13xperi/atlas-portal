@@ -423,7 +423,7 @@ function CraftingPage() {
   const loadTrending = useCallback(async () => {
     try {
       const { topics } = await api.trending.topics();
-      setTrendingTopics(topics);
+      setTrendingTopics(topics ?? []);
     } catch {
       // Trending is optional — do not block the page.
     }
