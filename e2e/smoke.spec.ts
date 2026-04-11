@@ -310,7 +310,9 @@ const smokeRoutes: SmokeRoute[] = [
     path: "/telegram",
     ready: (page) =>
       page.getByRole("heading", { name: /telegram/i }).first(),
-    readyTimeout: 15_000,
+    // FeatureGate waits for auth + flag resolution (2+ render cycles after
+    // domcontentloaded). 20_000 matches voice-profiles and avoids CI flake.
+    readyTimeout: 20_000,
   },
   {
     name: "campaigns",
@@ -406,6 +408,16 @@ async function stubApi(page: Page) {
         return json(route, { alerts: [] });
       case "/api/alerts/subscriptions":
         return json(route, { subscriptions: [] });
+      case "/api/feature-flags":
+        // Return all flags enabled so FeatureGate-protected pages (telegram,
+        // campaigns, management) render their real content without the API
+        // response overriding the localStorage seed from addInitScript.
+        return json(route, {
+          flags: Object.entries(ALL_FLAGS_ENABLED).map(([key, enabled]) => ({
+            key,
+            enabled,
+          })),
+        });
       default:
         return json(route, {});
     }
