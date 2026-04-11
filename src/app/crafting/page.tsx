@@ -2463,6 +2463,16 @@ function CraftingPage() {
             </div>
           ) : null}
         </div>
+
+        {/* Mobile draft history — desktop sidebar above is hidden below lg */}
+        <div className="lg:hidden">
+          <DraftHistorySidebar
+            drafts={draftHistoryItems}
+            activeDraftId={activeDraft?.id ?? null}
+            onSelectDraft={handleSelectDraft}
+            mobile
+          />
+        </div>
       </div>
     </AppShell>
   );
