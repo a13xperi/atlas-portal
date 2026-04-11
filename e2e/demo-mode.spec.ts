@@ -180,7 +180,8 @@ test.describe("Demo Mode", () => {
     }) => {
       await enableDemo(page);
       await page.goto("/arena");
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("domcontentloaded");
+      await page.waitForTimeout(1500);
 
       await expect(page.getByText("DegenSpartan").first()).toBeVisible();
       await expect(page.getByText("CryptoHayes").first()).toBeVisible();

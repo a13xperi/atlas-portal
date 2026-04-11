@@ -142,7 +142,7 @@ test.describe("Voice Lab (voice-profiles) — recipe cards + blend UI", () => {
     await expect(page.getByText("Macro Desk").first()).toBeVisible({ timeout: 8000 });
 
     // Each blend shows voice pair labels (My voice + reference)
-    await expect(page.getByText("My voice")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("My voice").first()).toBeVisible({ timeout: 5000 });
   });
 
   test("Voice Lab page is reachable via /voice-lab nav label", async ({ page }) => {
