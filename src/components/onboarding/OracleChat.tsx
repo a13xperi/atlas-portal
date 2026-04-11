@@ -550,7 +550,19 @@ export default function OracleChat() {
               <div className="pt-2">
                 <GradientButton
                   fullWidth
-                  onClick={() => router.push("/dashboard")}
+                  onClick={() => {
+                    // Mark onboarding complete so crafting stays gated until HANDOFF.
+                    // Best-effort — navigate regardless of whether the API call succeeds.
+                    if (state.track === "a" || state.track === "b") {
+                      api.users
+                        .updateProfile({
+                          onboardingTrack:
+                            state.track === "a" ? "TRACK_A" : "TRACK_B",
+                        })
+                        .catch(() => {});
+                    }
+                    router.push(getOnboardingCompletionHref(state.track));
+                  }}
                 >
                   Go to Dashboard
                 </GradientButton>
