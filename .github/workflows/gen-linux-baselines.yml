@@ -35,11 +35,15 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
-      - name: Generate Linux visual baselines
+      - name: Generate Linux visual + responsive baselines
+        # continue-on-error so baseline PNGs are committed even if a non-snapshot
+        # functional test fails (e.g. nav hamburger assertion on a live deployment).
+        continue-on-error: true
         run: |
           npx playwright test \
             --config=playwright-e2e.config.ts \
             --project=visual \
+            --project=responsive \
             --update-snapshots
         env:
           PLAYWRIGHT_BASE_URL: ${{ inputs.base_url }}
@@ -58,6 +62,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add e2e/visual/visual-regression.spec.ts-snapshots/
+          git add e2e/responsive/responsive.spec.ts-snapshots/
           if git diff --staged --quiet; then
             echo "No snapshot changes to commit."
             echo "branch=" >> $GITHUB_OUTPUT
