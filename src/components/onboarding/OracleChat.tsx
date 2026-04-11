@@ -667,8 +667,14 @@ export default function OracleChat() {
         <TrackBadge meta={trackMeta} />
       </div>
 
-      {/* Message list */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 pt-6 pb-8 space-y-4">
+      {/* Message list — aria-live so screen readers announce Oracle replies as they arrive */}
+      <div
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions text"
+        aria-label="Oracle conversation"
+        className="flex-1 overflow-y-auto px-4 sm:px-6 pt-6 pb-8 space-y-4"
+      >
         {state.messages.map((msg, i) => (
           <OracleMessage
             key={msg.id}
