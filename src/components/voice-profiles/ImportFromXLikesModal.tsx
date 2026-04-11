@@ -109,7 +109,11 @@ export default function ImportFromXLikesModal({
     });
 
     try {
-      const response = await api.voice.addReference(creator.handle, creator.handle);
+      const response = await api.voice.addReference(
+        creator.handle,
+        creator.handle,
+        creator.avatarUrl || undefined,
+      );
       setRowStatus((current) => ({ ...current, [creator.handle]: "added" }));
       onReferenceAdded(response.voice);
     } catch (addError: unknown) {
