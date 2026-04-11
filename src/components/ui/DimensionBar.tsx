@@ -82,7 +82,7 @@ export default function DimensionBar({
           />
         ) : (
           <div
-            className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 rounded-full border-2 border-atlas-bg bg-atlas-teal shadow-md transition-all duration-200"
+            className="pointer-events-none absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-atlas-bg bg-atlas-teal shadow-md transition-all duration-200"
             style={{ left: `${clampedPercentage}%` }}
           />
         )}
