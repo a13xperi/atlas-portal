@@ -162,7 +162,7 @@ function AnalyticsPage() {
 
         {/* SECTION 1: Header */}
         <div className="mb-8">
-          <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">
+          <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
             Your Analytics
           </h1>
           <p className="text-atlas-text-secondary mt-2 max-w-2xl text-sm leading-relaxed">
