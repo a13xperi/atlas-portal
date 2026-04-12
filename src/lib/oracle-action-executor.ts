@@ -6,6 +6,7 @@ import type {
   OracleActionResult,
   OracleActionType,
 } from "@/lib/oracle-agent-types";
+import { emitPopulateDraft, emitSetDraft } from "@/lib/oracle-crafting-bridge";
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
 interface ExecutorContext {
@@ -58,6 +59,10 @@ export async function executeAction(
           (input.sourceType as string) ?? "MANUAL",
           input.blendId as string | undefined,
         );
+        // Bridge: push the generated draft into the Crafting Station UI
+        if (result.draft) {
+          emitSetDraft({ draft: result.draft as { id: string; content: string } });
+        }
         return ok(result.draft);
       }
 
@@ -104,6 +109,10 @@ export async function executeAction(
           input.draftId as string,
           input.instruction as string,
         );
+        // Bridge: push the refined draft into the Crafting Station UI
+        if (result.draft) {
+          emitSetDraft({ draft: result.draft as { id: string; content: string } });
+        }
         return ok(result.draft);
       }
 
