@@ -207,7 +207,7 @@ describe("DashboardPage", () => {
       await screen.findByRole("heading", { name: "Ready to craft your first draft?" })
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Get started by crafting your first draft")
+      screen.getByText("Drop your first report or hot take to get rolling")
     ).toBeInTheDocument();
 
     fireEvent.click(
