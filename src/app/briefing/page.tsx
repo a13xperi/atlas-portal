@@ -37,21 +37,33 @@ const chipClasses = (selected: boolean) =>
       : "border-glass-border bg-atlas-surface text-atlas-text-secondary hover:border-atlas-teal/50 hover:text-atlas-text"
   }`;
 
-function BriefingCard({ briefing, expanded, onToggle, onCraft }: { briefing: Briefing; expanded: boolean; onToggle: () => void; onCraft: () => void }) {
+function BriefingCard({ briefing, expanded, onToggle, onCraft, isLatest }: { briefing: Briefing; expanded: boolean; onToggle: () => void; onCraft: () => void; isLatest?: boolean }) {
   const date = new Date(briefing.createdAt);
   const timeAgo = getTimeAgo(date);
 
   return (
-    <GlassCard maxWidth="full" className="space-y-4">
+    <GlassCard maxWidth="full" className={`space-y-4 ${isLatest ? "border-l-2 border-l-atlas-teal bg-gradient-to-r from-atlas-teal/[0.03] to-transparent" : ""}`}>
       <button type="button" onClick={onToggle} className="flex w-full items-start justify-between text-left">
         <div className="space-y-1">
           <h2 className="font-heading font-bold tracking-tight text-xl text-atlas-text sm:text-2xl">
             {briefing.title}
           </h2>
-          <p className="flex items-center gap-2 text-xs text-atlas-text-muted">
-            <Clock className="h-3 w-3" />
-            {timeAgo}
-          </p>
+          <div className="flex items-center gap-3 text-xs text-atlas-text-muted">
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {timeAgo}
+            </span>
+            {!expanded && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onCraft(); }}
+                className="flex items-center gap-1 rounded-md bg-atlas-teal/10 px-2 py-0.5 text-[11px] font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/20"
+              >
+                <PenTool className="h-3 w-3" />
+                Craft
+              </button>
+            )}
+          </div>
         </div>
         {expanded ? (
           <ChevronUp className="mt-1 h-5 w-5 shrink-0 text-atlas-text-muted" />
@@ -232,6 +244,11 @@ function BriefingPage() {
             </div>
             <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text sm:text-4xl">
               Your Briefings
+              {briefings.length === 0 && (
+                <span className="ml-2 inline-flex items-center gap-1 align-middle rounded-full bg-atlas-teal/10 px-2.5 py-0.5 text-[10px] font-semibold text-atlas-teal ring-1 ring-atlas-teal/20">
+                  <Sparkles className="h-3 w-3" /> NEW
+                </span>
+              )}
             </h1>
             <p className="max-w-xl text-sm leading-relaxed text-atlas-text-secondary">
               A quick daily read built from your topics and the latest market moves. Hit Generate Now or schedule them to land automatically.
@@ -284,19 +301,24 @@ function BriefingPage() {
         )}
 
         {briefings.length === 0 ? (
-          <GlassCard maxWidth="full" className="py-16 text-center space-y-3">
-            <p className="font-heading text-lg font-semibold text-atlas-text">No briefings yet</p>
+          <GlassCard maxWidth="full" className="py-16 text-center space-y-4" data-tour="briefing-empty">
+            <Sparkles className="mx-auto h-10 w-10 text-atlas-teal/60" />
+            <p className="font-heading text-lg font-semibold text-atlas-text">Your briefing is ready to generate</p>
             <p className="mx-auto max-w-md text-sm leading-relaxed text-atlas-text-secondary">
-              Hit <strong className="text-atlas-text">Generate Now</strong> above to create your first briefing. Atlas will pull the latest signals from your selected topics and sources, then summarize them into a quick-read digest tailored to your interests.
+              Your personalized briefing is ready to generate. Atlas will pull the latest signals from your topics, analyze sentiment, and surface what matters most &mdash; all in under 2 minutes.
+            </p>
+            <p className="text-xs text-atlas-text-muted">
+              Hit <strong className="text-atlas-text">Generate Now</strong> above to get started.
             </p>
           </GlassCard>
         ) : (
           <div className="space-y-4">
-            {briefings.map((b) => (
+            {briefings.map((b, i) => (
               <BriefingCard
                 key={b.id}
                 briefing={b}
                 expanded={expandedId === b.id}
+                isLatest={i === 0}
                 onToggle={() => setExpandedId(expandedId === b.id ? null : b.id)}
                 onCraft={() => {
                   const content = b.summary + "\n\n" + (b.sections as BriefingSection[]).map((s) => s.emoji + " " + s.heading + "\n" + s.bullets.join("\n")).join("\n\n");
