@@ -61,7 +61,7 @@ export function middleware(request: NextRequest) {
   // - frame-ancestors 'none': same as X-Frame-Options DENY but for modern browsers
   const apiOrigin = process.env.NEXT_PUBLIC_API_URL
     ? new URL(process.env.NEXT_PUBLIC_API_URL).origin
-    : "https://api-production-9bef.up.railway.app";
+    : "";
 
   // TODO(H-2): Migrate script-src off 'unsafe-inline' by adopting per-request
   // nonces for Next.js App Router hydration scripts (see follow-up ticket
