@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useId,
   useRef,
   useState,
 } from "react";
@@ -65,6 +66,9 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
   const [activeIndex, setActiveIndex] = useState(0);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
+  const paletteId = useId();
+  const listboxId = `${paletteId}-listbox`;
+  const optionId = (index: number) => `${paletteId}-option-${index}`;
 
   // Load favorites from localStorage on mount
   useEffect(() => {
@@ -198,7 +202,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
 
           {/* Panel */}
           <div className="relative w-full max-w-lg bg-atlas-nav border border-glass-border rounded-2xl shadow-2xl overflow-hidden">
-            {/* Search input */}
+            {/* Search input — combobox pattern per WAI-ARIA 1.2 */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-glass-border">
               <Search className="w-4 h-4 text-atlas-text-muted shrink-0" aria-hidden="true" />
               <input
@@ -209,37 +213,56 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
                 placeholder="Search pages and actions…"
                 className="flex-1 bg-transparent text-sm text-atlas-text placeholder:text-atlas-text-muted outline-none"
                 aria-label="Search commands"
+                role="combobox"
+                aria-expanded={true}
+                aria-controls={listboxId}
+                aria-autocomplete="list"
+                aria-activedescendant={flatItems.length > 0 ? optionId(activeIndex) : undefined}
               />
               <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded border border-glass-border text-[10px] text-atlas-text-muted font-mono">
                 ESC
               </kbd>
             </div>
 
-            {/* Results */}
-            <div className="max-h-80 overflow-y-auto py-2" aria-label="Commands">
-              {sections.map((section) => (
-                <div key={section.heading ?? "default"}>
+            {/* Results — listbox so screen readers announce option count, selection, and active descendant */}
+            <div
+              id={listboxId}
+              role="listbox"
+              aria-label="Commands"
+              className="max-h-80 overflow-y-auto py-2"
+            >
+              {sections.map((section, sectionIdx) => (
+                <div
+                  key={section.heading ?? "default"}
+                  role="group"
+                  aria-labelledby={section.heading ? `${paletteId}-group-${sectionIdx}` : undefined}
+                >
                   {section.heading && (
-                    <p className="px-4 pt-2 pb-1 text-[10px] uppercase tracking-widest text-atlas-text-muted">
+                    <p
+                      id={`${paletteId}-group-${sectionIdx}`}
+                      className="px-4 pt-2 pb-1 text-[10px] uppercase tracking-widest text-atlas-text-muted"
+                    >
                       {section.heading}
                     </p>
                   )}
                   {section.items.map((cmd) => {
                     const idx = flatIndex++;
                     const isActive = idx === activeIndex;
+                    const descId = cmd.description ? `${optionId(idx)}-desc` : undefined;
                     return (
                       <div
                         key={cmd.id}
+                        id={optionId(idx)}
+                        role="option"
+                        aria-selected={isActive}
+                        aria-describedby={descId}
                         className={`group flex items-center gap-2 px-2 ${
                           isActive ? "bg-atlas-teal/10" : "hover:bg-white/5"
                         }`}
                         onMouseEnter={() => setActiveIndex(idx)}
+                        onClick={cmd.action}
                       >
-                        <button
-                          type="button"
-                          onClick={cmd.action}
-                          className="flex flex-1 items-center gap-3 px-2 py-2.5 text-left transition-colors"
-                        >
+                        <div className="flex flex-1 items-center gap-3 px-2 py-2.5 text-left transition-colors">
                           <cmd.icon
                             aria-hidden="true"
                             className={`w-4 h-4 shrink-0 ${isActive ? "text-atlas-teal" : "text-atlas-text-muted"}`}
@@ -249,14 +272,16 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
                               {cmd.label}
                             </p>
                             {cmd.description && (
-                              <p className="text-xs text-atlas-text-muted truncate">{cmd.description}</p>
+                              <p id={descId} className="text-xs text-atlas-text-muted truncate">
+                                {cmd.description}
+                              </p>
                             )}
                           </div>
-                        </button>
+                        </div>
                         <button
                           type="button"
                           onClick={(e) => toggleFavorite(cmd.id, e)}
-                          aria-label={favorites.has(cmd.id) ? "Remove from favorites" : "Add to favorites"}
+                          aria-label={favorites.has(cmd.id) ? `Remove ${cmd.label} from favorites` : `Add ${cmd.label} to favorites`}
                           className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-white/10"
                         >
                           {favorites.has(cmd.id)
@@ -271,7 +296,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
               ))}
 
               {query && filtered.length === 0 && (
-                <p className="px-4 py-6 text-center text-sm text-atlas-text-muted">
+                <p role="status" aria-live="polite" className="px-4 py-6 text-center text-sm text-atlas-text-muted">
                   No results for &ldquo;{query}&rdquo;
                 </p>
               )}
