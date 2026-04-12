@@ -69,7 +69,7 @@ export function middleware(request: NextRequest) {
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "img-src 'self' data: blob:",
+      "img-src 'self' data: blob: https://pbs.twimg.com https://unavatar.io",
       `connect-src 'self' ${apiOrigin} https://zoirudjyqfqvpxsrxepr.supabase.co wss:`,
       "font-src 'self' https://fonts.gstatic.com",
       "frame-ancestors 'self'",
