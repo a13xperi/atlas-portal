@@ -289,7 +289,7 @@ export default function VoiceEditorModal({
               type="button"
               onClick={() => setStep("tune")}
               disabled={!selectedFollow}
-              className="rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-6 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-6 py-2 text-sm font-semibold text-atlas-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Next →
             </button>
@@ -380,7 +380,7 @@ export default function VoiceEditorModal({
               disabled={
                 saveDisabled || saving || (mode !== "edit-personal" && !name.trim())
               }
-              className="rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-6 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-6 py-2 text-sm font-semibold text-atlas-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving ? "Saving..." : mode === "create" ? "Create Voice" : "Save Changes"}
             </button>

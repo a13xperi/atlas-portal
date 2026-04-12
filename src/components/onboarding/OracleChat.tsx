@@ -55,7 +55,6 @@ export default function OracleChat() {
   const drainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [resumeTrackAAfterOAuth, setResumeTrackAAfterOAuth] = useState(false);
-  const [tweetRatings, setTweetRatings] = useState<Record<number, 'up' | 'down' | null>>({});
 
   // Pre-fill handle from linked X profile
   useEffect(() => {
@@ -422,44 +421,6 @@ export default function OracleChat() {
             </div>
           );
 
-        case "tweet-ratings": {
-          const sampleTweets = [
-            "ETH staking yields are compressing fast. The easy alpha is gone — now it's about execution risk and DVT adoption.",
-            "Everyone's talking about L2 fees but nobody's asking why L1 gas is still this high during a bear market.",
-            "Hot take: most DeFi governance is theater. Token holders vote, whales decide.",
-            "The merge was 18 months ago and we're still arguing about MEV. Builders are the new miners.",
-          ];
-          return (
-            <div className="space-y-3">
-              {sampleTweets.map((tweet, i) => (
-                <div
-                  key={i}
-                  className="flex items-start justify-between gap-4 rounded-2xl bg-atlas-surface p-4"
-                >
-                  <p className="flex-1 text-sm text-atlas-text">{tweet}</p>
-                  <div className="flex shrink-0 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setTweetRatings(prev => ({ ...prev, [i]: prev[i] === 'up' ? null : 'up' }))}
-                      className={tweetRatings[i] === 'up' ? 'text-atlas-teal transition-colors' : 'text-atlas-text-secondary hover:text-atlas-teal transition-colors'}
-                      title="More like me"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z" /></svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTweetRatings(prev => ({ ...prev, [i]: prev[i] === 'down' ? null : 'down' }))}
-                      className={tweetRatings[i] === 'down' ? 'text-red-400 transition-colors' : 'text-atlas-text-secondary hover:text-red-400 transition-colors'}
-                      title="Less like me"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z" /></svg>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          );
-        }
 
         case "style-picker":
           return (
@@ -610,7 +571,7 @@ export default function OracleChat() {
           return null;
       }
     },
-    [oauthLoading, router, state, tweetRatings]
+    [oauthLoading, router, state]
   );
 
   // ── Determine ActionZone config per step ─────────────────────────
@@ -667,8 +628,14 @@ export default function OracleChat() {
         <TrackBadge meta={trackMeta} />
       </div>
 
-      {/* Message list */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 pt-6 pb-8 space-y-4">
+      {/* Message list — aria-live so screen readers announce Oracle replies as they arrive */}
+      <div
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions text"
+        aria-label="Oracle conversation"
+        className="flex-1 overflow-y-auto px-4 sm:px-6 pt-6 pb-8 space-y-4"
+      >
         {state.messages.map((msg, i) => (
           <OracleMessage
             key={msg.id}

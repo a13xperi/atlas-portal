@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 
 interface ModalProps {
@@ -19,6 +19,9 @@ export default function Modal({
   title,
 }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const reactId = useId();
+  const titleId = `${reactId}-title`;
+  const descriptionId = `${reactId}-description`;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -49,21 +52,21 @@ export default function Modal({
       ref={dialogRef}
       onClick={handleBackdropClick}
       className="fixed inset-0 z-50 m-auto max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-[#0A1225] p-0 shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm open:flex open:flex-col"
-      aria-labelledby="modal-title"
-      aria-describedby={description ? "modal-description" : undefined}
+      aria-labelledby={titleId}
+      aria-describedby={description ? descriptionId : undefined}
     >
       {/* Header */}
       <div className="flex items-start justify-between border-b border-white/10 p-6">
         <div>
           <h2
-            id="modal-title"
+            id={titleId}
             className="text-lg font-semibold text-white"
           >
             {title}
           </h2>
           {description && (
             <p
-              id="modal-description"
+              id={descriptionId}
               className="mt-1 text-sm text-[#a0aec0]"
             >
               {description}

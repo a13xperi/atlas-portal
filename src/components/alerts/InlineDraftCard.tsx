@@ -216,7 +216,7 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
                   <button
                     type="button"
                     onClick={handleEnqueue}
-                    className="rounded-lg bg-gradient-to-r from-delphi-blue-500 to-delphi-teal px-3 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                    className="rounded-lg bg-gradient-to-r from-delphi-blue-500 to-delphi-teal px-3 py-2 text-xs font-semibold text-atlas-bg transition-opacity hover:opacity-90"
                   >
                     Add to Queue →
                   </button>

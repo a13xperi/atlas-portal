@@ -104,7 +104,7 @@ function FeedPage() {
             <button
               type="button"
               onClick={() => router.push("/crafting")}
-              className="shrink-0 rounded-lg bg-atlas-teal px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-atlas-teal/80"
+              className="shrink-0 rounded-lg bg-atlas-teal px-4 py-2 text-sm font-semibold text-atlas-bg transition-all hover:bg-atlas-teal/80"
             >
               Post your first draft
             </button>
