@@ -209,6 +209,8 @@ export default function ReferenceVoiceSelector({
                   <img
                     src={avatarUrl}
                     alt={`${label} avatar`}
+                    width={64}
+                    height={64}
                     className="mx-auto h-16 w-16 rounded-full object-cover"
                     onError={() => setImgErrors((prev) => new Set(prev).add(account.id))}
                   />

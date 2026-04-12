@@ -460,6 +460,8 @@ export default function VoiceLabInspirationPicker({
                         <img
                           src={follow.avatarUrl}
                           alt={`${follow.displayName} avatar`}
+                          width={56}
+                          height={56}
                           className="h-14 w-14 rounded-full border border-glass-border object-cover"
                         />
                       ) : (

@@ -106,9 +106,12 @@ export default function TweetCard({ tweet, onSwipe, isTop, stackIndex }: TweetCa
             {/* Author row */}
             <div className="flex items-center gap-3">
               {tweet.author_avatar ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={tweet.author_avatar}
                   alt={tweet.author_handle}
+                  width={32}
+                  height={32}
                   className="h-8 w-8 rounded-full object-cover"
                 />
               ) : (
