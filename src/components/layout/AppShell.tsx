@@ -2,10 +2,15 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import NavBar from "@/components/ui/NavBar";
-import FloatingOracle from "@/components/oracle/FloatingOracle";
 import { useAuth } from "@/lib/auth";
 import { gradients } from "@/lib/tokens";
+
+const FloatingOracle = dynamic(
+  () => import("@/components/oracle/FloatingOracle"),
+  { ssr: false, loading: () => null },
+);
 
 export interface AppShellProps {
   children: React.ReactNode;
