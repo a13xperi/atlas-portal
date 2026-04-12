@@ -677,11 +677,26 @@ export default function VoiceProfilesPage() {
           </div>
         )}
 
-        <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">Voice Studio</p>
-        <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight text-atlas-text">Your Voices</h1>
-        <p className="mt-1 text-sm text-atlas-text-secondary">
-          Pick writers you admire, then mix their style with yours.
-        </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">Voice Studio</p>
+            <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight text-atlas-text">Your Voices</h1>
+            <p className="mt-1 text-sm text-atlas-text-secondary">
+              Add inspirations, blend them with your style, then craft.
+            </p>
+          </div>
+          {profile && (
+            <div className="flex items-center gap-3 rounded-2xl border border-glass-border bg-atlas-surface/60 px-4 py-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-atlas-teal/15 text-sm font-bold text-atlas-teal">
+                {activeRecipeLabel.charAt(0)}
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-atlas-text-muted">Crafting with</p>
+                <p className="text-sm font-semibold text-atlas-text">{activeRecipeLabel}</p>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Inspirations — seed your voice before seeing blends */}
         <div className="mt-8 scroll-mt-20" data-tour="reference-voices">
@@ -788,7 +803,7 @@ export default function VoiceProfilesPage() {
                 Your Blends
               </p>
               <h2 className="mt-2 font-heading text-2xl font-semibold text-atlas-text">
-                Mix your inspirations into custom voices for crafting
+                Voice recipes for crafting
               </h2>
             </div>
             <div className="rounded-full border border-glass-border bg-atlas-surface/60 px-4 py-2 text-sm text-atlas-text-secondary">
