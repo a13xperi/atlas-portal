@@ -33,7 +33,7 @@ const BRIEF_TYPES = [
 const chipClasses = (selected: boolean) =>
   `inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
     selected
-      ? "border-atlas-teal bg-atlas-teal text-atlas-text shadow-sm shadow-atlas-teal/30"
+      ? "border-atlas-teal bg-atlas-teal text-atlas-bg shadow-sm shadow-atlas-teal/30"
       : "border-glass-border bg-atlas-surface text-atlas-text-secondary hover:border-atlas-teal/50 hover:text-atlas-text"
   }`;
 

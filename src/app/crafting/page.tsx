@@ -2285,7 +2285,7 @@ function CraftingPage() {
                     onClick={handleToggleCompareMode}
                     className={`rounded px-2 py-1 text-xs ${
                       compareMode
-                        ? "bg-atlas-teal text-white"
+                        ? "bg-atlas-teal text-atlas-bg"
                         : "text-atlas-text-secondary hover:text-atlas-text"
                     }`}
                   >

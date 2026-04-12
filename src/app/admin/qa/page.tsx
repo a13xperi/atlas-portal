@@ -493,7 +493,7 @@ function QaContent() {
             )}
             <button
               onClick={exportMarkdown}
-              className="rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-4 py-1.5 text-xs font-semibold text-white shadow-lg shadow-atlas-teal/20 transition-transform hover:scale-[1.03]"
+              className="rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-4 py-1.5 text-xs font-semibold text-atlas-bg shadow-lg shadow-atlas-teal/20 transition-transform hover:scale-[1.03]"
             >
               Export Markdown
             </button>

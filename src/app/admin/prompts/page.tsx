@@ -326,7 +326,7 @@ function PromptCard({
             <button
               onClick={onRunTest}
               disabled={test.loading}
-              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-atlas-teal/20 transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-4 py-2 text-xs font-semibold text-atlas-bg shadow-lg shadow-atlas-teal/20 transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {test.loading ? (
                 <>
