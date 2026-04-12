@@ -35,10 +35,10 @@ function AnalyticsPage() {
     setError(null);
     const errors: string[] = [];
     Promise.all([
-      api.analytics.summary().then((r) => setSummary(r.summary ?? null)).catch((e: Error) => { errors.push(e.message); }),
-      api.analytics.learningLog().then((r) => setLogEntries(r.entries ?? [])).catch(() => {}),
-      api.analytics.engagementDaily().then((r) => setEngagementDays(r.days ?? [])).catch(() => {}),
-      api.analytics.activityDaily().then((r) => setActivityDays(r.days ?? [])).catch(() => {}),
+      api.analytics.summary().then((r) => setSummary(r?.summary ?? null)).catch((e: Error) => { errors.push(e.message); }),
+      api.analytics.learningLog().then((r) => setLogEntries(r?.entries ?? [])).catch(() => {}),
+      api.analytics.engagementDaily().then((r) => setEngagementDays(r?.days ?? [])).catch(() => {}),
+      api.analytics.activityDaily().then((r) => setActivityDays(r?.days ?? [])).catch(() => {}),
     ])
       .then(() => { if (errors.length > 0) setError(errors[0]); })
       .finally(() => setLoading(false));
@@ -48,7 +48,7 @@ function AnalyticsPage() {
     if (authLoading || !user) return;
     api.drafts.list("POSTED")
       .then((res) => {
-        const sorted = (res.drafts ?? [])
+        const sorted = (res?.drafts ?? [])
           .filter((draft) => draft.actualEngagement != null)
           .sort((a, b) => (b.actualEngagement ?? 0) - (a.actualEngagement ?? 0))
           .slice(0, 3);
@@ -94,7 +94,7 @@ function AnalyticsPage() {
     printWindow.print();
   };
 
-  const activityCounts = activityDays.map((day) => day.count);
+  const activityCounts = (activityDays ?? []).map((day) => day.count ?? 0);
   const activityMax = activityCounts.length > 0 ? Math.max(...activityCounts) : 0;
 
   // When the analytics API reports zero drafts but we can confirm posted drafts exist from
@@ -208,8 +208,8 @@ function AnalyticsPage() {
                   <div
                     key={i}
                     aria-hidden="true"
-                    className={`flex-1 rounded-sm ${d.count > 0 ? "bg-atlas-teal/40" : ""}`}
-                    style={{ height: d.count > 0 && activityMax > 0 ? `${(d.count / activityMax) * 100}%` : "0px" }}
+                    className={`flex-1 rounded-sm ${(d.count ?? 0) > 0 ? "bg-atlas-teal/40" : ""}`}
+                    style={{ height: (d.count ?? 0) > 0 && activityMax > 0 ? `${((d.count ?? 0) / activityMax) * 100}%` : "0px" }}
                   />
                 ))}
               </div>
