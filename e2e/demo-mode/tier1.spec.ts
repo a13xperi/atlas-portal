@@ -14,7 +14,7 @@
  * Plus an auth-gate test (no cookies → redirect to /).
  */
 
-import { test as fixtureTest, expect, stubAuth, stubDataEndpoints } from "../fixtures";
+import { test as fixtureTest, expect, stubAuth, stubDataEndpoints, vercelBypassCookies } from "../fixtures";
 import { type Page } from "@playwright/test";
 
 // ---------------------------------------------------------------------------
@@ -29,6 +29,7 @@ const test = fixtureTest.extend<{ demoPage: Page }>({
     await context.addCookies([
       { name: "atlas_access_token", value: "1", domain: url.hostname, path: "/" },
       { name: "atlas_session", value: "1", domain: url.hostname, path: "/" },
+      ...vercelBypassCookies(url.hostname),
     ]);
 
     // Stub auth + data endpoints (network never touched)
