@@ -109,7 +109,7 @@ export default function FloatingOracle() {
 
   return (
     <>
-      <style jsx global>{`
+      <style>{`
         @keyframes subtle-bounce {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-4px); }
