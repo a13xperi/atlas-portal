@@ -382,23 +382,27 @@ const searchParams = useSearchParams();
       </div>
 
       {isEnabled("briefing") && (
-      <Link
-        href="/briefing"
-        className="mt-8 flex items-center justify-between rounded-2xl border border-atlas-teal/20 bg-gradient-to-r from-atlas-teal/5 to-transparent p-5 ring-1 ring-atlas-teal/10 transition-all hover:ring-atlas-teal/30 hover:shadow-lg hover:shadow-atlas-teal/5"
+      <div
+        data-tour="dashboard-brief-promo"
+        className="mt-8 rounded-2xl border border-atlas-teal/20 border-l-2 border-l-atlas-teal bg-gradient-to-r from-atlas-teal/5 to-transparent p-6 ring-1 ring-atlas-teal/10 transition-all hover:ring-atlas-teal/30 hover:shadow-lg hover:shadow-atlas-teal/5"
       >
-        <div className="flex items-center gap-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-atlas-teal/10">
-            <Sparkles className="h-5 w-5 text-atlas-teal" />
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-atlas-teal/10">
+              <Sparkles className="h-6 w-6 text-atlas-teal" />
+            </div>
+            <div>
+              <p className="text-base font-semibold text-atlas-text">Morning Brief</p>
+              <p className="mt-0.5 text-sm text-atlas-text-secondary">Get your personalized morning digest &mdash; AI-powered signals and tweet ideas</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-atlas-text">Brief: AI-powered tweet ideas</p>
-            <p className="text-xs text-atlas-text-secondary">Pick sources, get tweet angles instantly. Zero thinking required.</p>
-          </div>
+          <GradientButton size="sm" onClick={() => router.push("/briefing")}>
+            <span className="flex items-center gap-1.5">
+              Try Brief <ArrowRight className="h-3.5 w-3.5" />
+            </span>
+          </GradientButton>
         </div>
-        <div className="flex items-center gap-1 text-xs font-medium text-atlas-teal">
-          Try Brief <ArrowRight className="h-3.5 w-3.5" />
-        </div>
-      </Link>
+      </div>
       )}
 
       <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
