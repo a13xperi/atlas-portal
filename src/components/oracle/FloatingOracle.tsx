@@ -157,7 +157,7 @@ export default function FloatingOracle() {
           role="dialog"
           aria-modal="false"
           aria-labelledby={`${panelTitleId}-heading`}
-          className="fixed bottom-6 right-6 z-50 flex w-[360px] max-h-[520px] flex-col rounded-2xl border border-glass-border bg-atlas-nav shadow-2xl shadow-black/40"
+          className="fixed bottom-6 right-6 z-50 flex w-[calc(100vw-2rem)] max-w-[360px] max-h-[520px] flex-col rounded-2xl border border-glass-border bg-atlas-nav shadow-2xl shadow-black/40"
         >
           {/* Header */}
           <div className="flex items-center gap-3 border-b border-glass-border px-4 py-3">
