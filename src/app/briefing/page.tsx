@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Loader2, Settings, RefreshCw, Clock, ChevronDown, ChevronUp, PenTool, Sparkles } from "lucide-react";
 import GlassCard from "@/components/ui/GlassCard";
 import GradientButton from "@/components/ui/GradientButton";
-import AppShell from "@/components/layout/AppShell";
 import FeatureGate from "@/components/ui/FeatureGate";
 import { useRouter } from "next/navigation";
 import { api, Briefing, BriefingSection } from "@/lib/api";
@@ -190,18 +189,15 @@ function BriefingPage() {
 
   if (loading) {
     return (
-      <AppShell>
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-atlas-teal" />
-        </div>
-      </AppShell>
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-atlas-teal" />
+      </div>
     );
   }
 
   if (!hasPreferences) {
     return (
-      <AppShell>
-        <div className="mx-auto max-w-3xl py-8 space-y-6">
+      <div className="mx-auto max-w-3xl py-8 space-y-6">
           <header className="space-y-3" data-tour="briefing-header">
             <div className="flex items-center gap-2">
               <p className="text-sm font-semibold uppercase tracking-[0.24em] text-atlas-teal">Morning Briefing</p>
@@ -226,14 +222,12 @@ function BriefingPage() {
             onDeliveryTimeChange={(t) => { setSaved(false); setDeliveryTime(t); }}
             onSave={handleSavePreferences}
           />
-        </div>
-      </AppShell>
+      </div>
     );
   }
 
   return (
-    <AppShell>
-      <div className="mx-auto max-w-3xl py-8 space-y-6">
+    <div className="mx-auto max-w-3xl py-8 space-y-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between" data-tour="briefing-header">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -328,8 +322,7 @@ function BriefingPage() {
             ))}
           </div>
         )}
-      </div>
-    </AppShell>
+    </div>
   );
 }
 
