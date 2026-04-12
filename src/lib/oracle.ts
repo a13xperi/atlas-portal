@@ -82,7 +82,6 @@ const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
   CONNECT_X: "TRACK_A_SCANNING",
   TRACK_A_SCANNING: "TRACK_A_RESULT",
   TRACK_A_RESULT: "REFERENCES",
-  TRACK_A_RATE: "REFERENCES", // legacy fallback, step skipped in flow
   TRACK_B_STYLE: "TRACK_B_CONTENT",
   TRACK_B_CONTENT: "TRACK_B_DIMENSIONS",
   TRACK_B_DIMENSIONS: "REFERENCES",
@@ -112,8 +111,6 @@ export function canAdvance(state: OracleState): boolean {
     case "TRACK_A_SCANNING":
       return state.calibrationResult !== null;
     case "TRACK_A_RESULT":
-      return true;
-    case "TRACK_A_RATE":
       return true;
     case "TRACK_B_STYLE":
       return state.selectedStyle !== null;

@@ -703,9 +703,9 @@ export default function VoiceProfilesPage() {
               className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-glass-border p-5 text-atlas-text-muted transition-colors hover:border-atlas-teal/40 hover:text-atlas-teal"
             >
               <Plus className="h-6 w-6" aria-hidden="true" />
-              <span className="text-xs font-semibold">New Voice</span>
+              <span className="text-xs font-semibold">New Creator Voice</span>
               {blends.length === 0 && (
-                <span className="text-[10px] text-atlas-text-muted">Blend inspirations into custom voices</span>
+                <span className="text-[10px] text-atlas-text-muted">Start from a single creator you follow</span>
               )}
             </button>
           )}
@@ -746,11 +746,14 @@ export default function VoiceProfilesPage() {
                   key={blend.id}
                   blend={blend}
                   dimensions={dimensions}
-                  fingerprintDescription={
-                    blend.voices.length === 1
-                      ? "Derived directly from your personal voice profile."
-                      : "A blend of your personal voice and the inspirations you added."
-                  }
+                  fingerprintDescription={(() => {
+                    if (blend.voices.length === 1) return "Derived directly from your personal voice profile.";
+                    const creatorVoice = blend.voices.find(v => v.referenceVoiceId);
+                    if (blend.voices.length === 2 && creatorVoice) {
+                      return `Modeled after ${creatorVoice.label}.`;
+                    }
+                    return `A blend of your personal voice and ${blend.voices.length - 1} inspiration${blend.voices.length - 1 === 1 ? "" : "s"}.`;
+                  })()}
                   notableDimensions={notableDimensions}
                   isActive={activeVoiceId === blend.id}
                   userHandle={user?.handle}
@@ -785,10 +788,10 @@ export default function VoiceProfilesPage() {
               </span>
               <div>
                 <p className="font-heading text-xl font-semibold text-atlas-text">
-                  Create a Blend
+                  Create New Voice
                 </p>
                 <p className="mt-1 text-sm text-atlas-text-secondary">
-                  Mix your inspirations into a custom voice for crafting.
+                  Start from a creator you follow. Mix with others as an optional step.
                 </p>
               </div>
             </button>
