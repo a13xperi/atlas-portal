@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus, Sparkles, Wand2 } from "lucide-react";
+import { Check, Loader2, Plus, Sparkles, Wand2, X } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import TweetTinderSection from "./tweet-tinder-section";
 import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
@@ -129,6 +129,13 @@ export default function VoiceProfilesPage() {
     Array<{ id: string; label: string; text: string | null; error: string | null }>
   >([]);
   const [compareAllLoading, setCompareAllLoading] = useState(false);
+  const [compareVsMineBlendId, setCompareVsMineBlendId] = useState<string | null>(null);
+  const [compareVsMineResults, setCompareVsMineResults] = useState<{
+    personal: { text: string | null; error: string | null };
+    blend: { text: string | null; error: string | null; label: string };
+  } | null>(null);
+  const [compareVsMineLoading, setCompareVsMineLoading] = useState(false);
+  const comparisonSectionRef = useRef<HTMLDivElement>(null);
   const [calibrateHandle, setCalibrateHandle] = useState("");
   const [blendSelectMode, setBlendSelectMode] = useState(false);
   const [blendSourceId, setBlendSourceId] = useState<string | null>(null);
@@ -349,6 +356,69 @@ export default function VoiceProfilesPage() {
     );
     setCompareAllLoading(false);
   }, [blends, compareAllLoading, compareAllTopic]);
+
+  const handleCompareVsMine = useCallback(
+    async (blendId: string) => {
+      if (compareVsMineLoading) return;
+      const blend = blends.find((b) => b.id === blendId);
+      if (!blend) return;
+
+      setCompareVsMineBlendId(blendId);
+      setCompareVsMineLoading(true);
+      setCompareVsMineResults(null);
+
+      const topic =
+        compareAllTopic.trim() ||
+        "Bitcoin just reclaimed $100k after a brutal 3-week drawdown.";
+
+      const [personalResult, blendResult] = await Promise.allSettled([
+        api.drafts.generate({
+          sourceContent: topic,
+          sourceType: "MANUAL",
+        }),
+        api.drafts.generate({
+          sourceContent: topic,
+          sourceType: "MANUAL",
+          blendId,
+        }),
+      ]);
+
+      setCompareVsMineResults({
+        personal: {
+          text:
+            personalResult.status === "fulfilled"
+              ? personalResult.value.draft.content
+              : null,
+          error:
+            personalResult.status === "rejected"
+              ? personalResult.reason instanceof Error
+                ? personalResult.reason.message
+                : "Generation failed"
+              : null,
+        },
+        blend: {
+          text:
+            blendResult.status === "fulfilled"
+              ? blendResult.value.draft.content
+              : null,
+          error:
+            blendResult.status === "rejected"
+              ? blendResult.reason instanceof Error
+                ? blendResult.reason.message
+                : "Generation failed"
+              : null,
+          label: blend.name,
+        },
+      });
+
+      setCompareVsMineLoading(false);
+
+      setTimeout(() => {
+        comparisonSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    },
+    [blends, compareAllTopic, compareVsMineLoading]
+  );
 
   const handleUseVoice = (voiceId: string) => {
     setActiveVoiceId(voiceId);
@@ -757,6 +827,9 @@ export default function VoiceProfilesPage() {
                   notableDimensions={notableDimensions}
                   isActive={activeVoiceId === blend.id}
                   userHandle={user?.handle}
+                  onCompareVsMine={() =>
+                    void handleCompareVsMine(blend.id)
+                  }
                   onUse={() => handleUseVoice(blend.id)}
                   onPreviewSample={() =>
                     void handlePreviewBlend(blend, dimensions)
@@ -799,7 +872,7 @@ export default function VoiceProfilesPage() {
         </section>
         </div>{/* end blends wrapper */}
 
-        <section className="mt-10 scroll-mt-20 rounded-2xl border border-glass-border bg-atlas-surface/40 p-6">
+        <section ref={comparisonSectionRef} className="mt-10 scroll-mt-20 rounded-2xl border border-glass-border bg-atlas-surface/40 p-6">
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
               Voice Comparison
@@ -835,10 +908,7 @@ export default function VoiceProfilesPage() {
               >
                 {compareAllLoading ? (
                   <>
-                    <span
-                      className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
-                      aria-hidden="true"
-                    />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
                     Generating…
                   </>
                 ) : (
@@ -851,6 +921,94 @@ export default function VoiceProfilesPage() {
             </div>
           </div>
 
+
+          {/* Compare vs Mine — focused 2-column comparison */}
+          {(compareVsMineLoading || compareVsMineResults) && (
+            <div className="mt-6 rounded-2xl border border-atlas-teal/20 bg-atlas-teal/5 p-5">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-atlas-text">
+                  Comparing:{" "}
+                  <span className="text-atlas-text-secondary">
+                    Personal Voice vs.{" "}
+                    {compareVsMineResults?.blend.label ??
+                      blends.find((b) => b.id === compareVsMineBlendId)?.name ??
+                      "Blend"}
+                  </span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCompareVsMineResults(null);
+                    setCompareVsMineBlendId(null);
+                    setCompareVsMineLoading(false);
+                  }}
+                  aria-label="Dismiss comparison"
+                  className="rounded-lg p-1 text-atlas-text-muted transition-colors hover:bg-atlas-surface/60 hover:text-atlas-text"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {compareVsMineLoading ? (
+                <div className="mt-4 flex items-center justify-center gap-2 py-8 text-sm text-atlas-text-muted">
+                  <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
+                  Generating comparison...
+                </div>
+              ) : compareVsMineResults ? (
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div
+                    className="rounded-2xl border border-glass-border bg-atlas-surface/60 p-4"
+                    aria-label="Personal voice result"
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-wider text-atlas-text-muted">
+                      Personal Voice
+                    </p>
+                    {compareVsMineResults.personal.error ? (
+                      <p className="mt-3 text-xs text-atlas-error">
+                        {compareVsMineResults.personal.error}
+                      </p>
+                    ) : compareVsMineResults.personal.text ? (
+                      <p className="mt-3 text-sm leading-6 text-atlas-text">
+                        {compareVsMineResults.personal.text}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div
+                    className="rounded-2xl border border-atlas-teal/30 bg-atlas-surface/60 p-4"
+                    aria-label={`${compareVsMineResults.blend.label} result`}
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-wider text-atlas-teal">
+                      {compareVsMineResults.blend.label}
+                    </p>
+                    {compareVsMineResults.blend.error ? (
+                      <p className="mt-3 text-xs text-atlas-error">
+                        {compareVsMineResults.blend.error}
+                      </p>
+                    ) : compareVsMineResults.blend.text ? (
+                      <>
+                        <p className="mt-3 text-sm leading-6 text-atlas-text">
+                          {compareVsMineResults.blend.text}
+                        </p>
+                        {compareVsMineBlendId && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleUseVoice(compareVsMineBlendId)
+                            }
+                            className="mt-3 text-xs font-medium text-atlas-teal hover:underline"
+                          >
+                            Use this voice →
+                          </button>
+                        )}
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+
           {compareAllResults.length > 0 && (
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {compareAllResults.map((result) => {
@@ -859,13 +1017,14 @@ export default function VoiceProfilesPage() {
                 return (
                   <div
                     key={result.id}
-                    className={`rounded-xl border p-4 transition-colors ${
+                    className={`rounded-2xl border p-4 transition-colors ${
                       isPersonal
                         ? "border-glass-border bg-atlas-surface/70"
                         : isActive
                         ? "border-atlas-teal/40 bg-atlas-teal/5"
                         : "border-glass-border bg-atlas-surface/50"
                     }`}
+                    aria-label={`${result.label} comparison result`}
                   >
                     <div className="flex items-center justify-between">
                       <p
@@ -886,10 +1045,8 @@ export default function VoiceProfilesPage() {
                       )}
                     </div>
                     {result.text === null && result.error === null ? (
-                      <div className="mt-3 space-y-2" aria-busy="true" aria-label="Generating tweet">
-                        <div className="h-3 w-full animate-pulse rounded bg-atlas-surface" />
-                        <div className="h-3 w-4/5 animate-pulse rounded bg-atlas-surface" />
-                        <div className="h-3 w-3/5 animate-pulse rounded bg-atlas-surface" />
+                      <div className="mt-3 flex items-center justify-center py-4" aria-busy="true" aria-label="Generating tweet">
+                        <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
                       </div>
                     ) : result.error ? (
                       <p className="mt-3 text-xs text-atlas-error">{result.error}</p>
@@ -897,6 +1054,12 @@ export default function VoiceProfilesPage() {
                       <p className="mt-3 text-sm leading-6 text-atlas-text">
                         {result.text}
                       </p>
+                    )}
+                    {result.text && isPersonal && activeVoiceId === PERSONAL_VOICE_ID && (
+                      <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-atlas-teal">
+                        <Check className="h-3 w-3" />
+                        Active
+                      </span>
                     )}
                     {result.text && !isPersonal && (
                       <button
