@@ -369,7 +369,7 @@ function CraftingPage() {
     currentBrevity,
     currentContrarianTone
   );
-  const voiceGate = useVoiceGate();
+  const voiceGate = useVoiceGate({ existingDraftCount: drafts.length });
   const isVoiceCalibrationBlocked = voiceGate.isBlocked;
   const voiceTweetsAnalyzed = voiceGate.tweetsAnalyzed;
   const calibrationTweetsRemaining = voiceGate.tweetsRemaining;
@@ -446,6 +446,58 @@ function CraftingPage() {
       }
     };
   }, []);
+
+  // Oracle-Crafting Bridge: listen for events from Oracle actions
+  useEffect(() => {
+    const handlePopulateDraft = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { content: string };
+      if (detail?.content) {
+        setDraftInputText(detail.content);
+        draftInputValueRef.current = detail.content;
+      }
+    };
+
+    const handleApplyFeedback = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { feedback: string };
+      if (detail?.feedback) {
+        setFeedback(detail.feedback);
+        // Auto-focus the feedback input so the user can hit Enter
+        setTimeout(() => {
+          document.getElementById("feedback-input")?.focus();
+        }, 100);
+      }
+    };
+
+    const handleSetDraft = (e: Event) => {
+      const detail = (e as CustomEvent).detail as {
+        draft: { id: string; content: string; [key: string]: unknown };
+      };
+      if (detail?.draft) {
+        // Refresh drafts list so the new/updated draft shows up
+        loadDrafts();
+        // Set as active draft if it has the expected shape
+        const incoming = detail.draft as unknown as TweetDraft;
+        if (incoming.id && incoming.content) {
+          setActiveDraft(incoming);
+          setDraftVersions((prev) => {
+            const exists = prev.some((d) => d.id === incoming.id);
+            return exists
+              ? prev.map((d) => (d.id === incoming.id ? incoming : d))
+              : [incoming, ...prev];
+          });
+        }
+      }
+    };
+
+    window.addEventListener("oracle:populate-draft", handlePopulateDraft);
+    window.addEventListener("oracle:apply-feedback", handleApplyFeedback);
+    window.addEventListener("oracle:set-draft", handleSetDraft);
+    return () => {
+      window.removeEventListener("oracle:populate-draft", handlePopulateDraft);
+      window.removeEventListener("oracle:apply-feedback", handleApplyFeedback);
+      window.removeEventListener("oracle:set-draft", handleSetDraft);
+    };
+  }, [loadDrafts]);
 
   useEffect(() => {
     if (!compareMode) {
@@ -1286,7 +1338,15 @@ function CraftingPage() {
           context="crafting"
         />
         {activeDraft && (
-          <OracleCraftingHints draftContent={activeDraft.content} />
+          <OracleCraftingHints
+            draftContent={activeDraft.content}
+            onApplyHint={(hint) => {
+              setFeedback(hint);
+              setTimeout(() => {
+                document.getElementById("feedback-input")?.focus();
+              }, 100);
+            }}
+          />
         )}
       </div>
 
@@ -1344,16 +1404,16 @@ function CraftingPage() {
           <div>
             <p className="font-semibold text-atlas-text">
               {voiceGate.reason === "no_profile"
-                ? "Connect X and calibrate your voice to unlock tweet generation."
-                : "Voice calibration is not ready for drafting yet."}
+                ? "Connect your X account to unlock tweet generation."
+                : "Calibrate your voice to start drafting."}
             </p>
             <p className="mt-1 text-atlas-text-secondary">
               {voiceGate.reason === "no_profile"
-                ? "Atlas writes in your voice — we need your X handle and a few sample tweets first."
+                ? "Atlas writes in your voice — connect X so we can analyze your writing style."
                 : <>
-                    Atlas needs at least {MIN_TWEETS_FOR_CRAFTING} analyzed tweets
-                    before it unlocks generation here. You have {voiceTweetsAnalyzed},
-                    so add {calibrationTweetsRemaining} more.
+                    Go to the Voice Lab, enter your X handle, and Atlas will
+                    analyze your tweets to learn your style. Takes about 30
+                    seconds.
                   </>}
             </p>
           </div>
