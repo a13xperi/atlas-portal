@@ -50,6 +50,18 @@ export interface VoiceGateState {
   ctaLabel: string;
 }
 
+export interface VoiceGateOptions {
+  /**
+   * When > 0, the gate is bypassed for the "insufficient_tweets" reason.
+   * If the user has previously generated drafts, their voice profile was
+   * clearly working at some point — blocking them now (e.g. after a DB
+   * migration that reset tweetsAnalyzed) is a worse UX than letting them
+   * continue. The "no_profile" reason is never bypassed since that means
+   * the user truly has no voice data.
+   */
+  existingDraftCount?: number;
+}
+
 /**
  * Single source of truth for the "voice must be calibrated before tweet
  * generation" rule. Reads from the auth context and returns a snapshot
@@ -59,9 +71,15 @@ export interface VoiceGateState {
  * `api.drafts.generate`. Mirrors the backend guard at POST /api/drafts/generate
  * (HTTP 422 / VOICE_NOT_CALIBRATED), so the frontend can fail fast without
  * waiting on a round-trip.
+ *
+ * Accepts an optional `existingDraftCount` — when the user already has
+ * generated drafts the "insufficient_tweets" gate is lifted because the
+ * voice model was clearly functional at some point (the tweetsAnalyzed
+ * counter may have been reset by a DB migration or seed re-run).
  */
-export function useVoiceGate(): VoiceGateState {
+export function useVoiceGate(options?: VoiceGateOptions): VoiceGateState {
   const { user } = useAuth();
+  const existingDraftCount = options?.existingDraftCount ?? 0;
 
   const profile = user?.voiceProfile ?? null;
   const tweetsAnalyzed = profile?.tweetsAnalyzed ?? 0;
@@ -70,7 +88,11 @@ export function useVoiceGate(): VoiceGateState {
   if (!profile) {
     reason = "no_profile";
   } else if (tweetsAnalyzed < MIN_TWEETS_FOR_VOICE_CALIBRATION) {
-    reason = "insufficient_tweets";
+    // If the user already has drafts, their voice was calibrated before —
+    // don't block them just because tweetsAnalyzed got reset.
+    if (existingDraftCount === 0) {
+      reason = "insufficient_tweets";
+    }
   }
 
   const isBlocked = reason !== null;
