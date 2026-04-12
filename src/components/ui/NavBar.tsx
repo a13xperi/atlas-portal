@@ -241,6 +241,8 @@ export default function NavBar({ variant }: NavBarProps) {
                   <img
                     src={user.avatarUrl}
                     alt={`${user.displayName || user.handle} avatar`}
+                    width={32}
+                    height={32}
                     className="h-full w-full rounded-full object-cover"
                   />
                 ) : (
