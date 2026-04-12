@@ -271,11 +271,10 @@ describe("CraftingPage", () => {
       screen.queryByText("No drafts yet. Generate your first tweet above.")
     ).not.toBeInTheDocument();
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: /Second draft copy frames ETH strength as the cleaner momentum trade/i,
-      })
-    );
+    const draftButtons = await screen.findAllByRole("button", {
+      name: /Second draft copy frames ETH strength as the cleaner momentum trade/i,
+    });
+    fireEvent.click(draftButtons[0]);
 
     await waitFor(() => expect(generatedDraft).toHaveValue(secondDraft.content));
   });
