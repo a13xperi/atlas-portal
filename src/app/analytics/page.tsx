@@ -140,8 +140,8 @@ function AnalyticsPage() {
     return (
       <AppShell>
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">No analytics data yet</h2>
-          <p className="mt-2 text-atlas-text-secondary">Start crafting drafts to see your analytics here.</p>
+          <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Nothing here yet</h2>
+          <p className="mt-2 text-atlas-text-secondary">Craft your first draft and the numbers will start rolling in.</p>
         </div>
       </AppShell>
     );
@@ -166,7 +166,7 @@ function AnalyticsPage() {
             Your Analytics
           </h1>
           <p className="text-atlas-text-secondary mt-2 max-w-2xl text-sm leading-relaxed">
-            Track how Atlas learns your voice over time. The charts below show how accurately Atlas predicts your tweet engagement, how your writing style is evolving, and where your best-performing content comes from. The more you draft and give feedback, the sharper these predictions get.
+            See how your voice is evolving and which content hits hardest. Atlas gets sharper with every draft you write and every piece of feedback you give.
           </p>
         </div>
 
@@ -216,12 +216,12 @@ function AnalyticsPage() {
             );
           })() : (
             <div className="mt-6 h-8 flex items-center justify-center">
-              <p className="text-xs text-atlas-text-muted">Activity data will appear as you create drafts</p>
+              <p className="text-xs text-atlas-text-muted">Your activity chart shows up once you start drafting</p>
             </div>
           )}
           <p className="text-atlas-text-muted text-sm italic mt-3">
             {allZero
-              ? "Head to the Crafting Station to create your first draft — your analytics will populate as you go."
+              ? "Drop a report or hot take in the Crafting Station — your stats will light up from there."
               : "The more you use Atlas, the better it gets."}
           </p>
         </div>
@@ -264,7 +264,7 @@ function AnalyticsPage() {
                 }
               ) : (
                 <div className="flex-1 flex items-center justify-center">
-                  <p className="text-xs text-atlas-text-muted italic">Confidence data builds as you create and refine drafts</p>
+                  <p className="text-xs text-atlas-text-muted italic">Confidence scores appear after a few rounds of drafting</p>
                 </div>
               )}
             </div>
@@ -276,7 +276,7 @@ function AnalyticsPage() {
               </p>
             ) : (
               <p className="font-heading font-medium text-base text-atlas-text-muted italic leading-relaxed">
-                Model insights will appear here as your usage history grows.
+                Keep drafting — Atlas will surface patterns in your writing here.
               </p>
             )}
           </div>
