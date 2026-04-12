@@ -184,10 +184,13 @@ export default function RecipeCard({
         </div>
         <div className="rounded-2xl border border-glass-border bg-atlas-surface/60 px-3 py-2 text-right">
           <p className="text-[11px] uppercase tracking-[0.18em] text-atlas-text-muted">
-            Blend
+            Ratio
           </p>
-          <p className="mt-1 text-lg font-semibold text-atlas-text">
-            {blend.voices.reduce((sum, voice) => sum + voice.percentage, 0)}%
+          <p className="mt-1 text-lg font-semibold tabular-nums text-atlas-text">
+            {blend.voices.map((v) => String(v.percentage)).join("/")}
+          </p>
+          <p className="text-[10px] text-atlas-text-muted">
+            {blend.voices.length} voice{blend.voices.length === 1 ? "" : "s"}
           </p>
         </div>
       </div>
@@ -202,7 +205,7 @@ export default function RecipeCard({
           </p>
         </div>
         <div className="mt-3 overflow-hidden rounded-full border border-glass-border bg-atlas-bg/70">
-          <div className="flex h-4">
+          <div className="flex h-3">
             {blend.voices.map((voice, index) => (
               <div
                 key={`${blend.id}-${voice.label}`}

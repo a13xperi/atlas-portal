@@ -1145,6 +1145,20 @@ export interface DailyActivity {
   count: number;
 }
 
+export interface DraftPerformance {
+  predicted: number;
+  actual: number;
+  deltaPct: number;
+  metrics: {
+    impressions: number;
+    likes: number;
+    retweets: number;
+    replies: number;
+    bookmarks: number;
+  };
+  percentile: number;
+}
+
 export interface DailyTeamEngagement {
   date: string;
   dayLabel: string;

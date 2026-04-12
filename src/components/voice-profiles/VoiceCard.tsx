@@ -69,17 +69,6 @@ export default function VoiceCard({
   const [previewText, setPreviewText] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
-
-  const [showCompare, setShowCompare] = useState(false);
-  const [compareTopic, setCompareTopic] = useState("");
-  const [compareLoading, setCompareLoading] = useState(false);
-  const [compareTheirs, setCompareTheirs] = useState<string | null>(null);
-  const [compareMine, setCompareMine] = useState<string | null>(null);
-  const [compareTheirsError, setCompareTheirsError] = useState<string | null>(null);
-  const [compareMineError, setCompareMineError] = useState<string | null>(null);
-
-  const canCompare = !isPersonal && !blendTargetMode;
 
   const recipePills = useMemo<RecipePill[]>(() => {
     if (notableDimensions && notableDimensions.length > 0) return toRecipePills(notableDimensions);
@@ -97,7 +86,7 @@ export default function VoiceCard({
         messages: [
           {
             role: "user",
-            content: `Write a 2-sentence sample tweet in this voice style: ${name}. Be concise and demonstrate the voice clearly.`,
+            content: "Write a 2-sentence sample tweet in this voice style: " + name + ". Be concise and demonstrate the voice clearly.",
           },
         ],
       });
@@ -109,91 +98,49 @@ export default function VoiceCard({
     }
   }, [name, previewLoading]);
 
-  const runCompare = useCallback(async () => {
-    const topic = compareTopic.trim();
-    if (!topic || compareLoading) return;
-
-    setCompareLoading(true);
-    setCompareTheirs(null);
-    setCompareMine(null);
-    setCompareTheirsError(null);
-    setCompareMineError(null);
-
-    const [theirsResult, mineResult] = await Promise.allSettled([
-      api.oracle.chat({
-        page: "voice-compare",
-        messages: [
-          {
-            role: "user",
-            content: `Write a single tweet about "${topic}" in the voice style of ${name}. Stay under 280 characters.`,
-          },
-        ],
-      }),
-      api.drafts.generate(topic, "MANUAL"),
-    ]);
-
-    if (theirsResult.status === "fulfilled") {
-      setCompareTheirs(theirsResult.value.text?.trim() ?? "");
-    } else {
-      setCompareTheirsError(
-        theirsResult.reason instanceof Error
-          ? theirsResult.reason.message
-          : "Failed to generate their voice.",
-      );
-    }
-
-    if (mineResult.status === "fulfilled") {
-      setCompareMine(mineResult.value.draft?.content?.trim() ?? "");
-    } else {
-      setCompareMineError(
-        mineResult.reason instanceof Error
-          ? mineResult.reason.message
-          : "Failed to generate your voice.",
-      );
-    }
-
-    setCompareLoading(false);
-  }, [compareTopic, compareLoading, name]);
-
-  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
-
   const containerClass = [
-    "relative flex flex-col rounded-2xl border p-5 text-left transition-all cursor-pointer",
+    "relative flex flex-col rounded-2xl border p-5 text-left transition-all cursor-pointer group",
     blendTargetMode
       ? "border-atlas-teal/50 bg-atlas-surface ring-2 ring-atlas-teal/40 ring-offset-1 ring-offset-atlas-bg"
-      : isSelected
-        ? "border-atlas-teal ring-1 ring-atlas-teal bg-atlas-surface"
-        : "border-glass-border bg-glass/50 backdrop-blur-xl hover:border-atlas-teal/40",
+      : isActive
+        ? "border-atlas-teal/60 ring-1 ring-atlas-teal/30 bg-atlas-surface shadow-[0_0_12px_rgba(78,205,196,0.08)]"
+        : isSelected
+          ? "border-atlas-teal ring-1 ring-atlas-teal bg-atlas-surface"
+          : "border-glass-border bg-glass/50 backdrop-blur-xl hover:border-atlas-teal/40",
   ].join(" ");
 
   return (
     <div className={containerClass}>
-      {/* Invisible overlay button for card selection — avoids nested-interactive a11y violation */}
+      {/* Invisible overlay button for card selection */}
       <button
         type="button"
         aria-pressed={isSelected}
-        aria-label={`Select ${name} voice`}
+        aria-label={"Select " + name + " voice"}
         onClick={onSelect}
         className="absolute inset-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-atlas-teal focus:ring-inset"
       />
 
       <div className="relative z-10 flex items-start justify-between gap-2">
-        <span
-          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-            isPersonal ? "bg-atlas-teal/15 text-atlas-teal" : "bg-glass text-atlas-text-muted"
-          }`}
-        >
-          {isPersonal ? "Personal" : "Voice"}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span
+            className={"inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide " + (
+              isPersonal ? "bg-atlas-teal/15 text-atlas-teal" : "bg-glass text-atlas-text-muted"
+            )}
+          >
+            {isPersonal ? "Personal" : "Voice"}
+          </span>
+          {isActive && (
+            <span className="inline-flex items-center rounded-full bg-atlas-teal/15 px-2 py-0.5 text-[10px] font-semibold text-atlas-teal">
+              Active
+            </span>
+          )}
+        </div>
 
         {onBlend && !blendTargetMode && (
           <button
             type="button"
-            aria-label={`Blend with ${name}`}
-            onClick={(e) => {
-              stop(e);
-              onBlend();
-            }}
+            aria-label={"Blend with " + name}
+            onClick={onBlend}
             className="rounded-lg border border-glass-border p-1.5 text-atlas-text-muted transition-colors hover:border-atlas-teal/40 hover:text-atlas-teal"
           >
             <GitMerge className="h-3.5 w-3.5" />
@@ -203,52 +150,36 @@ export default function VoiceCard({
 
       <p className="relative z-10 mt-2 truncate font-heading text-sm font-semibold text-atlas-text">{name}</p>
 
-      <div className="relative z-10 mt-3">
-        <button
-          type="button"
-          onClick={(e) => {
-            stop(e);
-            setShowDetails((v) => !v);
-          }}
-          className="text-[10px] text-atlas-text-muted hover:text-atlas-text-secondary transition-colors"
-        >
-          {showDetails ? "Hide details ▴" : "Show details ▾"}
-        </button>
-        {showDetails && (
-          <div className="mt-2 min-h-[1.75rem]">
-            {recipePills.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {recipePills.map((pill) => (
-                  <span
-                    key={pill.key}
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${pill.pillClass}`}
-                  >
-                    <span className="text-atlas-text-secondary">{pill.label}:</span>
-                    <span className="ml-1">{pill.qualifier}</span>
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <span className="inline-flex rounded-full border border-dashed border-glass-border px-2 py-0.5 text-[10px] text-atlas-text-muted">
-                No profile yet
+      {/* Dimension pills — always visible for at-a-glance voice signature */}
+      <div className="relative z-10 mt-3 min-h-[1.75rem]">
+        {recipePills.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {recipePills.map((pill) => (
+              <span
+                key={pill.key}
+                className={"inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium " + pill.pillClass}
+              >
+                <span className="text-atlas-text-secondary">{pill.label}:</span>
+                <span className="ml-1">{pill.qualifier}</span>
               </span>
-            )}
+            ))}
           </div>
+        ) : (
+          <span className="inline-flex rounded-full border border-dashed border-glass-border px-2 py-0.5 text-[10px] text-atlas-text-muted">
+            No profile yet
+          </span>
         )}
       </div>
 
       <div className="relative z-10 mt-3">
         <button
           type="button"
-          onClick={(e) => {
-            stop(e);
-            void loadPreview();
-          }}
+          onClick={() => void loadPreview()}
           disabled={previewLoading}
           className="inline-flex items-center gap-1 rounded-lg border border-glass-border px-2 py-1 text-[11px] font-medium text-atlas-text-secondary transition-colors hover:border-atlas-teal/40 hover:text-atlas-teal disabled:cursor-not-allowed disabled:opacity-60"
         >
           {previewLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-          <span>{previewLoading ? "Previewing…" : "Preview"}</span>
+          <span>{previewLoading ? "Previewing..." : "Preview"}</span>
         </button>
 
         {previewError && (
@@ -264,111 +195,11 @@ export default function VoiceCard({
         )}
       </div>
 
-      {canCompare && (
-        <div className="relative z-10 mt-3">
-          <button
-            type="button"
-            onClick={(e) => {
-              stop(e);
-              setShowCompare((v) => !v);
-            }}
-            className="text-[10px] text-atlas-text-muted hover:text-atlas-text-secondary transition-colors"
-          >
-            {showCompare ? "Hide compare ▴" : "Compare vs mine ▾"}
-          </button>
-
-          {showCompare && (
-            <div className="mt-2 space-y-2">
-              <div className="flex items-start gap-2">
-                <textarea
-                  value={compareTopic}
-                  onChange={(e) => {
-                    stop(e);
-                    setCompareTopic(e.target.value);
-                  }}
-                  onClick={stop}
-                  onFocus={stop}
-                  rows={2}
-                  maxLength={200}
-                  placeholder="Enter a topic to compare…"
-                  className="flex-1 resize-none rounded-lg border border-glass-border bg-atlas-surface px-2 py-1.5 text-[11px] text-atlas-text placeholder:text-atlas-text-muted focus:border-atlas-teal/40 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    stop(e);
-                    void runCompare();
-                  }}
-                  disabled={compareLoading || compareTopic.trim().length === 0}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-atlas-teal/30 bg-atlas-teal/10 px-2 py-1 text-[11px] font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/20 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {compareLoading ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-3 w-3" />
-                  )}
-                  <span>{compareLoading ? "Comparing…" : "Compare"}</span>
-                </button>
-              </div>
-
-              {(compareLoading ||
-                compareTheirs ||
-                compareMine ||
-                compareTheirsError ||
-                compareMineError) && (
-                <div className="grid grid-cols-2 gap-2">
-                  {/* Their voice */}
-                  <div className="rounded-lg border border-glass-border bg-atlas-surface px-2 py-1.5">
-                    <p className="mb-1 text-[9px] font-semibold uppercase tracking-wide text-atlas-text-muted">
-                      {name}
-                    </p>
-                    {compareLoading && !compareTheirs && !compareTheirsError ? (
-                      <div className="flex items-center gap-1 text-[11px] text-atlas-text-muted">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        <span>Writing…</span>
-                      </div>
-                    ) : compareTheirsError ? (
-                      <p className="text-[11px] text-atlas-error">{compareTheirsError}</p>
-                    ) : compareTheirs ? (
-                      <p className="text-[11px] italic text-atlas-text-secondary">
-                        {compareTheirs}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  {/* Your voice */}
-                  <div className="rounded-lg border border-atlas-teal/30 bg-atlas-teal/10 px-2 py-1.5">
-                    <p className="mb-1 text-[9px] font-semibold uppercase tracking-wide text-atlas-teal">
-                      Your voice
-                    </p>
-                    {compareLoading && !compareMine && !compareMineError ? (
-                      <div className="flex items-center gap-1 text-[11px] text-atlas-text-muted">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        <span>Writing…</span>
-                      </div>
-                    ) : compareMineError ? (
-                      <p className="text-[11px] text-atlas-error">{compareMineError}</p>
-                    ) : compareMine ? (
-                      <p className="text-[11px] italic text-atlas-text-secondary">
-                        {compareMine}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
       <div className="relative z-10 mt-auto pt-4">
         {blendTargetMode ? (
           <button
             type="button"
-            onClick={(e) => {
-              stop(e);
-              onUse();
-            }}
+            onClick={onUse}
             className="w-full rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-3 py-2 text-xs font-semibold text-atlas-bg transition-opacity hover:opacity-90"
           >
             Mix with this
@@ -376,16 +207,13 @@ export default function VoiceCard({
         ) : (
           <button
             type="button"
-            onClick={(e) => {
-              stop(e);
-              onUse();
-            }}
+            onClick={onUse}
             disabled={isActive}
-            className={`w-full rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+            className={"w-full rounded-lg px-3 py-2 text-xs font-semibold transition-colors " + (
               isActive
                 ? "cursor-default border border-atlas-teal/30 bg-atlas-teal/15 text-atlas-teal"
                 : "border border-glass-border text-atlas-text-secondary hover:border-atlas-teal hover:text-atlas-teal"
-            }`}
+            )}
           >
             {isActive ? "Active" : "Craft with this voice"}
           </button>
