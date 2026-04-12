@@ -300,12 +300,12 @@ export default function RecipeCard({
         >
           {previewLoading ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               Generating sample...
             </>
           ) : (
             <>
-              <Sparkles className="h-4 w-4" />
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
               {previewText ? "Regenerate sample" : "Preview in this voice"}
             </>
           )}
@@ -320,7 +320,7 @@ export default function RecipeCard({
               : "bg-gradient-to-r from-delphi-teal to-delphi-teal/60 text-atlas-bg hover:opacity-90"
           }`}
         >
-          <Sparkles className="h-4 w-4" />
+          <Sparkles className="h-4 w-4" aria-hidden="true" />
           {isActive ? "Active in Crafting" : "Use in Crafting"}
         </button>
         {onEdit && (
@@ -329,7 +329,7 @@ export default function RecipeCard({
             onClick={onEdit}
             className="inline-flex items-center gap-2 rounded-xl border border-glass-border bg-transparent px-4 py-2 text-sm font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal/40 hover:text-atlas-text"
           >
-            <PencilLine className="h-4 w-4" />
+            <PencilLine className="h-4 w-4" aria-hidden="true" />
             Edit
           </button>
         )}

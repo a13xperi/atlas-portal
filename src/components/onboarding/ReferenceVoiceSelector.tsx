@@ -125,6 +125,7 @@ export default function ReferenceVoiceSelector({
           <button
             key={cat}
             type="button"
+            aria-pressed={activeCategory === cat}
             onClick={() => setActiveCategory(cat as CategoryFilter)}
             className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
               activeCategory === cat
@@ -155,10 +156,11 @@ export default function ReferenceVoiceSelector({
           {customHandle && (
             <button
               type="button"
+              aria-label="Clear custom handle"
               onClick={() => { setCustomHandle(""); setCustomError(""); }}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-atlas-text-muted hover:text-atlas-text"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           )}
         </div>
@@ -231,7 +233,7 @@ export default function ReferenceVoiceSelector({
                       className="inline-flex items-center gap-0.5 hover:text-atlas-teal hover:underline"
                     >
                       @{account.handle}
-                      <ExternalLink className="h-2.5 w-2.5" />
+                      <ExternalLink className="h-2.5 w-2.5" aria-hidden="true" />
                     </a>
                   ) : "\u00A0"}
                 </p>

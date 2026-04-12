@@ -126,6 +126,7 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
         {!isOpen && (
           <button
             type="button"
+            aria-expanded={false}
             onClick={handleOpen}
             className="rounded-lg border border-atlas-teal/40 bg-atlas-teal/10 px-3 py-2 text-xs font-semibold text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/15"
           >
@@ -154,6 +155,7 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
               </div>
               <button
                 type="button"
+                aria-expanded={true}
                 onClick={() => setIsOpen(false)}
                 className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-text-secondary transition-colors hover:text-atlas-text"
               >
@@ -188,7 +190,7 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
             )}
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className={`text-xs font-medium ${characterCountClassName}`}>
+              <p aria-live="polite" className={`text-xs font-medium ${characterCountClassName}`}>
                 {characterCount}/{POST_CHARACTER_LIMIT} characters
               </p>
               <div className="flex flex-wrap items-center justify-end gap-2">

@@ -75,11 +75,12 @@ export default function Modal({
           )}
         </div>
         <button
+          type="button"
           onClick={onClose}
           aria-label="Close modal"
           className="ml-4 flex-shrink-0 rounded-lg p-1.5 text-[#718096] transition-colors hover:bg-white/10 hover:text-white"
         >
-          <X size={18} />
+          <X size={18} aria-hidden="true" />
         </button>
       </div>
 

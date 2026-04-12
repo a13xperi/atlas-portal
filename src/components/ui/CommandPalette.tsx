@@ -299,7 +299,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
                           type="button"
                           onClick={(e) => toggleFavorite(cmd.id, e)}
                           aria-label={favorites.has(cmd.id) ? `Remove ${cmd.label} from favorites` : `Add ${cmd.label} to favorites`}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-white/10"
+                          className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity p-1 rounded hover:bg-white/10"
                         >
                           {favorites.has(cmd.id)
                             ? <Star className="w-3.5 h-3.5 text-atlas-warning fill-atlas-warning" aria-hidden="true" />

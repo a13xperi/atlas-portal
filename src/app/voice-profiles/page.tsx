@@ -825,6 +825,7 @@ export default function VoiceProfilesPage() {
 
           <div className="mt-5 space-y-3">
             <textarea
+              aria-label="Topic for voice comparison"
               value={compareAllTopic}
               onChange={(e) => setCompareAllTopic(e.target.value)}
               placeholder="Type a topic, market take, or paste raw content…"
@@ -901,7 +902,7 @@ export default function VoiceProfilesPage() {
                         <div className="h-3 w-3/5 animate-pulse rounded bg-atlas-surface" />
                       </div>
                     ) : result.error ? (
-                      <p className="mt-3 text-xs text-atlas-error">{result.error}</p>
+                      <p role="alert" className="mt-3 text-xs text-atlas-error">{result.error}</p>
                     ) : (
                       <p className="mt-3 text-sm leading-6 text-atlas-text">
                         {result.text}
@@ -910,6 +911,7 @@ export default function VoiceProfilesPage() {
                     {result.text && !isPersonal && (
                       <button
                         type="button"
+                        aria-label={`Use ${result.label} voice`}
                         onClick={() => handleUseVoice(result.id)}
                         className="mt-3 text-xs font-medium text-atlas-teal hover:underline"
                       >

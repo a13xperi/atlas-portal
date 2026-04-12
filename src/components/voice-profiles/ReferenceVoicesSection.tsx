@@ -271,7 +271,7 @@ export default function ReferenceVoicesSection({
 
         {selectedAccounts.length === 0 ? (
           <div className="mt-5 rounded-2xl border border-dashed border-glass-border bg-atlas-surface/40 px-4 py-8 text-center">
-            <Sparkles className="mx-auto h-5 w-5 text-atlas-teal" />
+            <Sparkles className="mx-auto h-5 w-5 text-atlas-teal" aria-hidden="true" />
             <p className="mt-3 text-sm text-atlas-text-secondary">
               Pick creators whose writing style you admire — Atlas learns from them to shape your voice.
             </p>
@@ -324,7 +324,7 @@ export default function ReferenceVoicesSection({
                         className="inline-flex items-center gap-0.5 text-xs text-atlas-text-secondary hover:text-atlas-teal hover:underline"
                       >
                         @{normalizedHandle}
-                        <ExternalLink className="h-2.5 w-2.5" />
+                        <ExternalLink className="h-2.5 w-2.5" aria-hidden="true" />
                       </a>
                     ) : (
                       <p className="truncate text-xs text-atlas-text-secondary">@{account.id}</p>
