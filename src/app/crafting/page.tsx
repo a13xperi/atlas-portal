@@ -60,6 +60,7 @@ import OracleCraftingHints from "@/components/oracle/OracleCraftingHints";
 import OracleInspector from "@/components/oracle/OracleInspector";
 import CharacterCounter from "@/components/crafting/CharacterCounter";
 import type { InspectableEntity } from "@/lib/oracle-agent-types";
+import { useToast } from "@/components/ui/Toast";
 
 const CRAFTING_MODES = [
   { id: "new_post", label: "New Post" },
@@ -235,6 +236,7 @@ function CraftingPage() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   const voiceModeLabelId = useId();
   const savedBlendLabelId = useId();
   const blendIntensityLabelId = useId();
@@ -667,7 +669,12 @@ function CraftingPage() {
     hasSource: boolean,
     angle?: string | null
   ) => {
-    if (!user || isVoiceCalibrationBlocked) return false;
+    if (!user || isVoiceCalibrationBlocked) {
+      if (isVoiceCalibrationBlocked) {
+        toast("Complete voice calibration before generating drafts.", "warning");
+      }
+      return false;
+    }
 
     setError(null);
     const { isValid, trimmedContent } = validateDraftSubmission(content, hasSource);
@@ -705,6 +712,7 @@ function CraftingPage() {
     commitDraft,
     isVoiceCalibrationBlocked,
     selectedBlendId,
+    toast,
     user,
     validateDraftSubmission,
   ]);
@@ -1131,6 +1139,9 @@ function CraftingPage() {
 
   const handleCompareVoices = async (text = draftInputValueRef.current) => {
     if (!user || isVoiceCalibrationBlocked) {
+      if (isVoiceCalibrationBlocked) {
+        toast("Complete voice calibration before comparing voices.", "warning");
+      }
       return false;
     }
 
@@ -1490,6 +1501,7 @@ function CraftingPage() {
                         : "Paste a tweet idea or link…"
                     }
                     value={draftInputText}
+                    disabled={creating || isVoiceCalibrationBlocked}
                     contentDropActive={isContentDragActive}
                     onContentDragOver={handleContentDragOver}
                     onContentDragLeave={handleContentDragLeave}

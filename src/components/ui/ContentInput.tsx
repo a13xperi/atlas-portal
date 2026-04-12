@@ -7,6 +7,7 @@ import type { RecordingState } from "@/lib/useVoiceRecorder";
 export interface ContentInputProps {
   placeholder?: string;
   value?: string;
+  disabled?: boolean;
   onDrop?: (files: FileList) => void;
   onTextChange?: (text: string) => void;
   onTextSubmit?: (
@@ -30,6 +31,7 @@ export interface ContentInputProps {
 export default function ContentInput({
   placeholder = "Paste a tweet idea or link…",
   value,
+  disabled = false,
   onDrop,
   onTextChange,
   onTextSubmit,
@@ -207,7 +209,8 @@ export default function ContentInput({
               type="button"
               aria-label="Generate draft"
               onClick={handleSubmit}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-atlas-teal/50 bg-atlas-teal/10 p-3 text-atlas-teal transition-colors hover:bg-atlas-teal/20 sm:w-auto sm:self-stretch"
+              disabled={disabled}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-atlas-teal/50 bg-atlas-teal/10 p-3 text-atlas-teal transition-colors hover:bg-atlas-teal/20 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:self-stretch"
             >
               <ArrowUp className="w-4 h-4" aria-hidden="true" />
             </button>
