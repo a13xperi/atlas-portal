@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useCycle } from "framer-motion";
 import {
+  ArrowLeftRight,
   ChevronDown,
   ChevronUp,
   Loader2,
@@ -23,6 +24,7 @@ interface RecipeCardProps {
   fingerprintDescription: string;
   notableDimensions: VoiceDimensionSnapshot[];
   isActive: boolean;
+  onCompareVsMine?: () => void;
   onEdit?: () => void;
   onPreviewSample: () => void;
   onUse: () => void;
@@ -124,6 +126,7 @@ export default function RecipeCard({
   fingerprintDescription,
   notableDimensions,
   isActive,
+  onCompareVsMine,
   onEdit,
   onPreviewSample,
   onUse,
@@ -286,6 +289,16 @@ export default function RecipeCard({
           )}
           {isExpanded ? "Hide fingerprint" : "Show fingerprint"}
         </button>
+        {onCompareVsMine && (
+          <button
+            type="button"
+            onClick={onCompareVsMine}
+            className="inline-flex items-center gap-2 rounded-xl border border-glass-border bg-atlas-surface/50 px-4 py-2 text-sm font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal/40 hover:text-atlas-text"
+          >
+            <ArrowLeftRight className="h-4 w-4" />
+            Compare vs mine
+          </button>
+        )}
         <button
           type="button"
           onClick={onPreviewSample}
