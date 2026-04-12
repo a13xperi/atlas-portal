@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Check, ExternalLink, Loader2, Plus, X } from "lucide-react";
 import GradientButton from "@/components/ui/GradientButton";
 import { api, type ReferenceAccount, type TwitterFollow } from "@/lib/api";
@@ -37,6 +37,7 @@ export default function ReferenceVoiceSelector({
   const [isLoading, setIsLoading] = useState(initial.length === 0);
   const [customHandle, setCustomHandle] = useState("");
   const [customError, setCustomError] = useState("");
+  const customErrorId = useId();
   const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
   const customInputRef = useRef<HTMLInputElement>(null);
 
@@ -142,6 +143,9 @@ export default function ReferenceVoiceSelector({
           <input
             ref={customInputRef}
             type="text"
+            aria-label="X handle"
+            aria-invalid={Boolean(customError)}
+            aria-errormessage={customError ? customErrorId : undefined}
             placeholder="Add any X handle…"
             value={customHandle}
             onChange={(e) => { setCustomHandle(e.target.value); setCustomError(""); }}
@@ -169,7 +173,7 @@ export default function ReferenceVoiceSelector({
         </button>
       </div>
       {customError && (
-        <p className="mb-3 text-xs text-atlas-error">{customError}</p>
+        <p id={customErrorId} role="alert" className="mb-3 text-xs text-atlas-error">{customError}</p>
       )}
 
       {isLoading ? (

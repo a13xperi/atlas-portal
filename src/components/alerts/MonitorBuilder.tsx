@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Pause, Play, Trash2 } from "lucide-react";
 import { AlertSubscription, api } from "@/lib/api";
 
@@ -48,6 +48,7 @@ export default function MonitorBuilder({
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const errorId = useId();
 
   const handleAddKeyword = () => {
     const trimmed = keywordInput.trim();
@@ -174,6 +175,8 @@ export default function MonitorBuilder({
                 <input
                   type="text"
                   aria-label="Keyword"
+                  aria-invalid={Boolean(error)}
+                  aria-errormessage={error ? errorId : undefined}
                   value={keywordInput}
                   onChange={(e) => setKeywordInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -222,6 +225,8 @@ export default function MonitorBuilder({
               <input
                 type="text"
                 aria-label={monitorType === "ACCOUNT" ? "X Handle" : "Topic"}
+                aria-invalid={Boolean(error)}
+                aria-errormessage={error ? errorId : undefined}
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder={
@@ -304,7 +309,7 @@ export default function MonitorBuilder({
           </div>
 
           {error && (
-            <p className="text-xs text-atlas-error">{error}</p>
+            <p id={errorId} role="alert" className="text-xs text-atlas-error">{error}</p>
           )}
 
           {/* Create Button */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import StatusPill from "@/components/ui/StatusPill";
 import { Alert, api, TweetDraft } from "@/lib/api";
 
@@ -28,6 +28,7 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
   const [draft, setDraft] = useState<TweetDraft | null>(null);
   const [draftText, setDraftText] = useState(initialDraftText);
   const [error, setError] = useState<string | null>(null);
+  const errorId = useId();
   const [isSaving, setIsSaving] = useState(false);
   const [savedDraftId, setSavedDraftId] = useState<string | null>(null);
   const [isEnqueued, setIsEnqueued] = useState(false);
@@ -162,6 +163,7 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
 
             {error && (
               <div
+                id={errorId}
                 role="alert"
                 className="mt-4 rounded-xl border border-atlas-error/30 bg-atlas-error/10 px-4 py-3 text-sm text-atlas-error"
               >
@@ -176,6 +178,8 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
             ) : (
               <textarea
                 aria-label="Draft post text"
+                aria-invalid={Boolean(error)}
+                aria-errormessage={error ? errorId : undefined}
                 value={draftText}
                 onChange={(event) => setDraftText(event.target.value)}
                 placeholder="Your generated draft will appear here."
