@@ -54,7 +54,7 @@ export default function OracleChat() {
   const calibratingRef = useRef(false);
   const drainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
-  const [resumeTrackAAfterOAuth, setResumeTrackAAfterOAuth] = useState(false);
+  const [resumeAfterOAuth, setResumeAfterOAuth] = useState(false);
 
   // Pre-fill handle from linked X profile
   useEffect(() => {
@@ -94,7 +94,7 @@ export default function OracleChat() {
         dispatch({ type: "SET_HANDLE", handle: handle.replace(/^@/, "") });
       }
       dispatch({ type: "SET_X_CONNECTED", connected: true });
-      setResumeTrackAAfterOAuth(true);
+      setResumeAfterOAuth(true);
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
@@ -102,7 +102,7 @@ export default function OracleChat() {
   // Resume straight into Track A when returning from X OAuth.
   useEffect(() => {
     if (
-      !resumeTrackAAfterOAuth ||
+      !resumeAfterOAuth ||
       state.currentStep !== "WELCOME" ||
       state.track !== null ||
       !state.xConnected
@@ -110,10 +110,10 @@ export default function OracleChat() {
       return;
     }
 
-    setResumeTrackAAfterOAuth(false);
+    setResumeAfterOAuth(false);
     dispatch({ type: "SET_TRACK", track: "a" });
   }, [
-    resumeTrackAAfterOAuth,
+    resumeAfterOAuth,
     state.currentStep,
     state.track,
     state.xConnected,
