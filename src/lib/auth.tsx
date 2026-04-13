@@ -45,7 +45,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const refreshRes = await api.auth.refresh();
           if (refreshRes.token) {
             setAccessToken(refreshRes.token);
-            document.cookie = "atlas_access_token=1; path=/; max-age=86400; SameSite=Lax; Secure";
           }
           const me = await api.auth.me();
           setUser(me.user);
@@ -79,7 +78,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api.auth.login(email, password);
     if (res.token) {
       setAccessToken(res.token);
-      document.cookie = "atlas_access_token=1; path=/; max-age=86400; SameSite=Lax; Secure";
     }
     const me = await api.auth.me();
     setUser(me.user);
@@ -90,7 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api.auth.register(handle, email, password, onboardingTrack);
     if (res.token) {
       setAccessToken(res.token);
-      document.cookie = "atlas_access_token=1; path=/; max-age=86400; SameSite=Lax; Secure";
       const me = await api.auth.me();
       setUser(me.user);
       setSessionCookie(true);
@@ -104,7 +101,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Best-effort — clear local state regardless
     }
     setAccessToken(null);
-    document.cookie = "atlas_access_token=; path=/; max-age=0";
     setUser(null);
     setSessionCookie(false);
     // Hard redirect — prevents bfcache restoring stale protected pages after logout

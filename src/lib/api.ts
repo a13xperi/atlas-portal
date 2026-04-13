@@ -255,15 +255,15 @@ export function setDemoMode(on: boolean) {
 }
 
 // Token store — fallback when HttpOnly cookies don't reach cross-origin
-// Uses sessionStorage for persistence across client-side navigations
+// Uses localStorage so the token persists across tabs and page refreshes
 const TOKEN_KEY = "atlas_access_token";
-let _accessToken: string | null = typeof window !== "undefined" ? sessionStorage.getItem(TOKEN_KEY) : null;
+let _accessToken: string | null = typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
 
 export function setAccessToken(token: string | null) {
   _accessToken = token;
   if (typeof window !== "undefined") {
-    if (token) sessionStorage.setItem(TOKEN_KEY, token);
-    else sessionStorage.removeItem(TOKEN_KEY);
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
   }
 }
 export function getAccessToken() { return _accessToken; }
