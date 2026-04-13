@@ -71,7 +71,8 @@ function formatRunLabel(run: QaTestRun) {
   const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   const time = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
   const done = Object.values(run.results ?? {}).filter((r) => r.status !== "pending").length;
-  return `${date} ${time} -- ${run.tester_initials} (${done}/${TOTAL_TESTS})`;
+  const sha = run.git_sha ? ` [${run.git_sha.slice(0, 7)}]` : "";
+  return `${date} ${time} -- ${run.tester_initials} (${done}/${TOTAL_TESTS})${sha}`;
 }
 
 // ---------------------------------------------------------------------------
