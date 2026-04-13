@@ -13,7 +13,7 @@ export default function EngagementVelocityChart({
   const chartDescriptionId = useId();
   const chartMax =
     engagementDays.length > 0
-      ? Math.max(...engagementDays.flatMap((day) => [day.predicted, day.actual]), 1)
+      ? Math.max(...engagementDays.flatMap((day) => [day.predicted ?? 0, day.actual ?? 0]), 1)
       : 100;
 
   const accuracyPct =
@@ -21,8 +21,8 @@ export default function EngagementVelocityChart({
       ? Math.round(
           (1 -
             engagementDays.reduce((sum, day) => {
-              const maxVal = Math.max(day.predicted, day.actual, 1);
-              return sum + Math.abs(day.predicted - day.actual) / maxVal;
+              const maxVal = Math.max(day.predicted ?? 0, day.actual ?? 0, 1);
+              return sum + Math.abs((day.predicted ?? 0) - (day.actual ?? 0)) / maxVal;
             }, 0) /
               engagementDays.length) *
             100
@@ -70,18 +70,18 @@ export default function EngagementVelocityChart({
                       <div
                         className="w-3 rounded-t bg-atlas-teal/60"
                         style={{
-                          height: `${(day.predicted / chartMax) * 100}%`,
-                          minHeight: day.predicted > 0 ? "32px" : "0px",
+                          height: `${((day.predicted ?? 0) / chartMax) * 100}%`,
+                          minHeight: (day.predicted ?? 0) > 0 ? "32px" : "0px",
                         }}
-                        title={`Predicted: ${day.predicted}`}
+                        title={`Predicted: ${day.predicted ?? 0}`}
                       />
                       <div
                         className="w-3 rounded-t bg-atlas-success"
                         style={{
-                          height: `${(day.actual / chartMax) * 100}%`,
-                          minHeight: day.actual > 0 ? "32px" : "0px",
+                          height: `${((day.actual ?? 0) / chartMax) * 100}%`,
+                          minHeight: (day.actual ?? 0) > 0 ? "32px" : "0px",
                         }}
-                        title={`Actual: ${day.actual}`}
+                        title={`Actual: ${day.actual ?? 0}`}
                       />
                     </div>
                     <span className="text-[10px] text-atlas-text-muted">{day.dayLabel}</span>

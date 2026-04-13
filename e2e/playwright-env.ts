@@ -29,7 +29,10 @@ export function resolveVercelBypassSecret() {
 export function resolveVercelBypassHeaders() {
   const bypassSecret = resolveVercelBypassSecret();
   return bypassSecret
-    ? { "x-vercel-protection-bypass": bypassSecret }
+    ? {
+        "x-vercel-protection-bypass": bypassSecret,
+        "x-vercel-set-bypass-cookie": "samesitenone",
+      }
     : undefined;
 }
 

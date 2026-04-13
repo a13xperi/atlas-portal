@@ -681,7 +681,7 @@ export default function VoiceProfilesPage() {
         <p className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">Voice Studio</p>
         <h1 className="mt-2 font-heading text-2xl font-bold tracking-tight text-atlas-text">Your Voices</h1>
         <p className="mt-1 text-sm text-atlas-text-secondary">
-          Add inspirations, then blend them into voices you can craft with.
+          Pick writers you admire, then mix their style with yours.
         </p>
 
         {/* Inspirations — seed your voice before seeing blends */}

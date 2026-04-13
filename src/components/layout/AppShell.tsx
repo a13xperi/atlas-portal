@@ -1,15 +1,20 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import NavBar from "@/components/ui/NavBar";
 import { useAuth } from "@/lib/auth";
 import { gradients } from "@/lib/tokens";
 
+// Perf P0: FloatingOracle is a 267-line client component with its own oracle
+// agent + framer-motion deps. It's not above-the-fold, never needs SSR, and
+// pulls a meaningful chunk into the initial app bundle when imported
+// statically. Lazy-loading it via next/dynamic with ssr:false drops it out
+// of the first paint and into a separate chunk fetched after hydration.
 const FloatingOracle = dynamic(
   () => import("@/components/oracle/FloatingOracle"),
-  { ssr: false, loading: () => null },
+  { ssr: false },
 );
 
 export interface AppShellProps {

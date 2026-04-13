@@ -59,7 +59,7 @@ function ManagementPage() {
               Team Management
             </h1>
             <p className="mt-1 text-sm text-atlas-text-secondary">
-              Manage roles, permissions, and team voice settings. {team.length} team member{team.length !== 1 ? "s" : ""}.
+              Your team at a glance. {team.length} member{team.length !== 1 ? "s" : ""} and their voice profiles.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

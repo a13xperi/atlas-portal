@@ -236,8 +236,7 @@ const searchParams = useSearchParams();
         Welcome back, {user?.handle || "Analyst"}
       </h1>
       <p className="mt-2 max-w-2xl text-atlas-text-secondary">
-        Your command center. See what&apos;s queued, track recent activity, and
-        jump to any part of Atlas from here.
+        See what&apos;s queued, track recent activity, and jump to any part of Atlas from here.
       </p>
 
       {showVoiceCalibratedBanner && (
@@ -351,7 +350,7 @@ const searchParams = useSearchParams();
       </ul>
       {showStatsEmptyState && (
         <p className="text-xs text-atlas-text-muted mt-1">
-          Get started by crafting your first draft
+          Drop your first report or hot take to get rolling
         </p>
       )}
 

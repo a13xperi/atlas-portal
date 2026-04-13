@@ -38,7 +38,7 @@ export default function CampaignsPage() {
           </h1>
         </div>
         <p className="mt-2 text-sm text-atlas-text-secondary">
-          Define narratives, group your posts, and manage your posting queue.
+          Group your posts around a narrative and schedule them from one place.
         </p>
 
         <Link href="/queue" className="mt-6 flex items-center justify-between rounded-xl border border-glass-border bg-atlas-surface p-4 transition-colors hover:border-atlas-teal/30">
@@ -209,7 +209,7 @@ function CampaignsTab() {
         <GlassCard className="w-full max-w-2xl mx-auto p-10 text-center">
           <Megaphone className="mx-auto mb-3 h-10 w-10 text-atlas-text-muted" />
           <p className="text-sm text-atlas-text-secondary">
-            No campaigns yet. Create one to define a narrative and group posts around it.
+            No campaigns yet. Create one to build a posting thread around a single narrative.
           </p>
         </GlassCard>
       ) : (
