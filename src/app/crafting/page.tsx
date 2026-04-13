@@ -2399,7 +2399,7 @@ function CraftingPage() {
                       setFeedbackText("");
                       setShowFeedback(false);
                     }}
-                    className="rounded-lg bg-atlas-teal px-3 py-1.5 text-xs font-medium text-white"
+                    className="rounded-lg bg-atlas-teal px-3 py-1.5 text-xs font-medium text-atlas-bg"
                   >
                     Go
                   </button>
