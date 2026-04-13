@@ -16,32 +16,34 @@ import { api } from "@/lib/api";
 // Flag definitions — must match the Super Admin control panel keys exactly
 // ---------------------------------------------------------------------------
 
-type FlagScope = "everyone" | "managers" | "admins";
+export type FlagScope = "everyone" | "managers" | "admins";
 
-interface FlagDef {
+export interface FlagDef {
   key: string;
+  label: string;
+  description: string;
   scope: FlagScope;
   defaultEnabled: boolean;
   /** Route paths gated by this flag — used for nav filtering */
   routes?: string[];
 }
 
-const FLAG_DEFS: FlagDef[] = [
-  { key: "crafting_station", scope: "everyone", defaultEnabled: true, routes: ["/crafting"] },
-  { key: "voice_lab", scope: "everyone", defaultEnabled: true, routes: ["/voice-profiles"] },
-  { key: "arena", scope: "everyone", defaultEnabled: true, routes: ["/arena"] },
-  { key: "campaigns", scope: "everyone", defaultEnabled: true, routes: ["/campaigns"] },
-  { key: "queue", scope: "everyone", defaultEnabled: true, routes: ["/queue"] },
-  { key: "analytics_advanced", scope: "managers", defaultEnabled: true, routes: ["/analytics"] },
-  { key: "signals", scope: "managers", defaultEnabled: true, routes: ["/alerts"] },
-  { key: "telegram_bot", scope: "everyone", defaultEnabled: false, routes: ["/telegram"] },
-  { key: "tweet_tinder", scope: "everyone", defaultEnabled: false },
-  { key: "multi_model", scope: "admins", defaultEnabled: false },
-  { key: "super_admin", scope: "admins", defaultEnabled: true, routes: ["/admin", "/admin/control", "/admin/qa", "/admin/bugs", "/admin/style-tile"] },
-  { key: "management", scope: "admins", defaultEnabled: true, routes: ["/management"] },
-  { key: "feed", scope: "everyone", defaultEnabled: true, routes: ["/feed"] },
-  { key: "briefing", scope: "everyone", defaultEnabled: true, routes: ["/briefing"] },
-  { key: "library", scope: "everyone", defaultEnabled: true, routes: ["/team-library"] },
+export const FLAG_DEFS: FlagDef[] = [
+  { key: "crafting_station", label: "Crafting Station", description: "Tweet crafting workspace with AI-assisted writing", scope: "everyone", defaultEnabled: true, routes: ["/crafting"] },
+  { key: "voice_lab", label: "Voice Lab", description: "Voice profile editing and blend management", scope: "everyone", defaultEnabled: true, routes: ["/voice-profiles"] },
+  { key: "arena", label: "Arena", description: "Competitive leaderboard for content creators", scope: "everyone", defaultEnabled: true, routes: ["/arena"] },
+  { key: "campaigns", label: "Campaigns", description: "Multi-tweet campaign management and scheduling", scope: "everyone", defaultEnabled: true, routes: ["/campaigns"] },
+  { key: "queue", label: "Draft Queue", description: "Tweet scheduling queue with calendar view", scope: "everyone", defaultEnabled: true, routes: ["/queue"] },
+  { key: "analytics_advanced", label: "Advanced Analytics", description: "Detailed engagement metrics and predictions", scope: "managers", defaultEnabled: true, routes: ["/analytics"] },
+  { key: "signals", label: "Signals & Alerts", description: "Market signals and custom alert subscriptions", scope: "managers", defaultEnabled: true, routes: ["/alerts"] },
+  { key: "telegram_bot", label: "Telegram Bot", description: "Telegram integration for mobile notifications", scope: "everyone", defaultEnabled: false, routes: ["/telegram"] },
+  { key: "tweet_tinder", label: "Tweet Tinder", description: "Swipe-to-review interface for draft tweets", scope: "everyone", defaultEnabled: false },
+  { key: "multi_model", label: "Multi-Model", description: "Access to multiple AI models for generation", scope: "admins", defaultEnabled: false },
+  { key: "super_admin", label: "Super Admin", description: "Admin dashboard, QA panel, and control center", scope: "admins", defaultEnabled: true, routes: ["/admin", "/admin/control", "/admin/qa", "/admin/bugs", "/admin/style-tile"] },
+  { key: "management", label: "Management", description: "Team management and role administration", scope: "admins", defaultEnabled: true, routes: ["/management"] },
+  { key: "feed", label: "Feed", description: "Content feed and discovery", scope: "everyone", defaultEnabled: true, routes: ["/feed"] },
+  { key: "briefing", label: "Briefing", description: "Daily market briefing generation", scope: "everyone", defaultEnabled: true, routes: ["/briefing"] },
+  { key: "library", label: "Team Library", description: "Shared voice styles and team resources", scope: "everyone", defaultEnabled: true, routes: ["/team-library"] },
 ];
 
 const STORAGE_KEY = "atlas-feature-flags";
