@@ -44,10 +44,12 @@ import RefinementChips, {
 import {
   api,
   AnalyticsSummary,
+  DraftPerformance,
   SavedBlend,
   TrendingTopic,
   TweetDraft,
 } from "@/lib/api";
+import PerformanceCard from "@/components/analytics/PerformanceCard";
 import { useAuth } from "@/lib/auth";
 import {
   MIN_TWEETS_FOR_VOICE_CALIBRATION,

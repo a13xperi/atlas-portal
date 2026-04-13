@@ -495,6 +495,8 @@ export const api = {
       request<{ draft: TweetDraft }>(`/api/drafts/${id}/engagement`, { method: "POST", body: data }),
     fetchMetrics: (id: string) =>
       request<{ draft: TweetDraft }>(`/api/drafts/${id}/fetch-metrics`, { method: "POST" }),
+    performance: (id: string) =>
+      request<{ performance: DraftPerformance }>(`/api/drafts/${id}/performance`),
     team: (limit = 50) =>
       request<{ drafts: TeamDraft[]; total: number }>(`/api/drafts/team?limit=${limit}`),
     queue: () =>
@@ -1134,6 +1136,20 @@ export interface TeamMember {
   role: string;
   voiceProfile?: VoiceProfile;
   _count: { tweetDrafts: number; sessions: number };
+}
+
+export interface DraftPerformance {
+  predicted: number;
+  actual: number;
+  deltaPct: number;
+  percentile: number;
+  metrics: {
+    impressions: number;
+    likes: number;
+    retweets: number;
+    replies: number;
+    bookmarks: number;
+  };
 }
 
 export interface DailyEngagement {
