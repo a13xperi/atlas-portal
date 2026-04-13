@@ -73,7 +73,6 @@ const TWEET_TEMPLATES = [
 ] as const;
 
 const NEWS_SOURCE_PREFIX = "source:";
-const VOICE_COMPARISON_DELTA = { humor: 20 } as const;
 const MIN_TWEETS_FOR_CRAFTING = MIN_TWEETS_FOR_VOICE_CALIBRATION;
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
@@ -227,20 +226,6 @@ function getWordCount(content: string) {
   return content.split(/\s+/).filter(Boolean).length;
 }
 
-function buildVoiceVariationInstruction(
-  currentHumor: number,
-  variantHumor: number,
-  formality: number,
-  brevity: number,
-  contrarianTone: number
-) {
-  return [
-    "Keep the user's calibrated voice profile intact, but create a subtle A/B variation.",
-    `Increase humor from ${formatVoiceScore(currentHumor)} to ${formatVoiceScore(variantHumor)} while keeping the writing credible for crypto analysis.`,
-    `Hold formality near ${formatVoiceScore(formality)}, brevity near ${formatVoiceScore(brevity)}, and contrarian tone near ${formatVoiceScore(contrarianTone)}.`,
-    "The result should feel slightly more playful and witty without changing the core thesis or facts.",
-  ].join(" ");
-}
 
 function CraftingPage() {
   useTour("crafting");
@@ -307,10 +292,6 @@ function CraftingPage() {
   const handleDraftTextChangeRef = useRef<((text: string) => void) | null>(null);
   const voiceRecorder = useVoiceRecorder(useCallback((text: string) => {
     handleDraftTextChangeRef.current?.(text);
-    // Auto-generate after voice transcription
-    setTimeout(() => {
-      handleCreateDraftRef.current?.(text);
-    }, 50);
   }, []));
   const feedbackRecorder = useVoiceRecorder(useCallback((text: string) => {
     setFeedback((prev) => prev ? `${prev} ${text}` : text);
@@ -355,18 +336,7 @@ function CraftingPage() {
   const currentFormality = clampVoiceValue(user?.voiceProfile?.formality);
   const currentBrevity = clampVoiceValue(user?.voiceProfile?.brevity);
   const currentContrarianTone = clampVoiceValue(user?.voiceProfile?.contrarianTone);
-  const variantHumor = clampVoiceValue(currentHumor + VOICE_COMPARISON_DELTA.humor);
   const currentVoiceSummary = `Humor ${formatVoiceScore(currentHumor)}`;
-  const variantVoiceSummary = `Humor ${formatVoiceScore(
-    variantHumor
-  )} (+${VOICE_COMPARISON_DELTA.humor})`;
-  const voiceVariationInstruction = buildVoiceVariationInstruction(
-    currentHumor,
-    variantHumor,
-    currentFormality,
-    currentBrevity,
-    currentContrarianTone
-  );
   const voiceGate = useVoiceGate();
   const isVoiceCalibrationBlocked = voiceGate.isBlocked;
   const voiceTweetsAnalyzed = voiceGate.tweetsAnalyzed;
@@ -1162,53 +1132,54 @@ function CraftingPage() {
     setVoiceComparison(null);
 
     try {
-      const [currentVoiceResult, variantVoiceResult] = await Promise.all([
+      const replyAngleParam =
+        activeMode === "reply_to_tweet" ? replyAngle || undefined : undefined;
+
+      const [yourVoiceResult, genericResult] = await Promise.all([
         api.drafts.generate({
           sourceContent: trimmedContent,
           sourceType,
           blendId: selectedBlendId || undefined,
-          replyAngle:
-            activeMode === "reply_to_tweet" ? replyAngle || undefined : undefined,
+          replyAngle: replyAngleParam,
         }),
         api.drafts.generate({
           sourceContent: trimmedContent,
           sourceType,
-          blendId: selectedBlendId || undefined,
-          replyAngle:
-            activeMode === "reply_to_tweet" ? replyAngle || undefined : undefined,
-          angleInstruction: voiceVariationInstruction,
+          replyAngle: replyAngleParam,
+          angleInstruction:
+            "Write this as a straightforward, generic tweet. Do not apply any personal voice profile, tone dimensions, or style calibration. Use a neutral, professional crypto-analyst tone.",
         }),
       ]);
 
-      const normalizedCurrentDraft = prependDraftHistory(currentVoiceResult.draft);
-      const normalizedVariantDraft = prependDraftHistory(variantVoiceResult.draft);
+      const normalizedYourDraft = prependDraftHistory(yourVoiceResult.draft);
+      const normalizedGenericDraft = prependDraftHistory(genericResult.draft);
 
       setDrafts((previousDrafts) => [
-        normalizedCurrentDraft,
-        normalizedVariantDraft,
+        normalizedYourDraft,
+        normalizedGenericDraft,
         ...previousDrafts.filter(
           (draft) =>
-            draft.id !== normalizedCurrentDraft.id &&
-            draft.id !== normalizedVariantDraft.id
+            draft.id !== normalizedYourDraft.id &&
+            draft.id !== normalizedGenericDraft.id
         ),
       ]);
-      setDraftVersions([normalizedCurrentDraft]);
-      setActiveDraft(normalizedCurrentDraft);
+      setDraftVersions([normalizedYourDraft]);
+      setActiveDraft(normalizedYourDraft);
       setCompareMode(false);
       setCompareVersion(null);
       setVoiceComparison({
         options: [
           {
-            draft: normalizedCurrentDraft,
-            label: "Current profile",
+            draft: normalizedYourDraft,
+            label: "Your voice",
             summary: currentVoiceSummary,
-            ctaLabel: "Pick current voice",
+            ctaLabel: "Use my voice",
           },
           {
-            draft: normalizedVariantDraft,
-            label: "Variation",
-            summary: variantVoiceSummary,
-            ctaLabel: "Pick funnier variation",
+            draft: normalizedGenericDraft,
+            label: "Generic",
+            summary: "Default AI tone — no personalization",
+            ctaLabel: "Use generic",
           },
         ],
       });
