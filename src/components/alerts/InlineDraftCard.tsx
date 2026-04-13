@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import StatusPill from "@/components/ui/StatusPill";
 import { Alert, api, TweetDraft } from "@/lib/api";
 
@@ -28,6 +28,7 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
   const [draft, setDraft] = useState<TweetDraft | null>(null);
   const [draftText, setDraftText] = useState(initialDraftText);
   const [error, setError] = useState<string | null>(null);
+  const errorId = useId();
   const [isSaving, setIsSaving] = useState(false);
   const [savedDraftId, setSavedDraftId] = useState<string | null>(null);
   const [isEnqueued, setIsEnqueued] = useState(false);
@@ -125,6 +126,7 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
         {!isOpen && (
           <button
             type="button"
+            aria-expanded={false}
             onClick={handleOpen}
             className="rounded-lg border border-atlas-teal/40 bg-atlas-teal/10 px-3 py-2 text-xs font-semibold text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/15"
           >
@@ -153,6 +155,7 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
               </div>
               <button
                 type="button"
+                aria-expanded={true}
                 onClick={() => setIsOpen(false)}
                 className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-text-secondary transition-colors hover:text-atlas-text"
               >
@@ -162,6 +165,7 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
 
             {error && (
               <div
+                id={errorId}
                 role="alert"
                 className="mt-4 rounded-xl border border-atlas-error/30 bg-atlas-error/10 px-4 py-3 text-sm text-atlas-error"
               >
@@ -176,6 +180,8 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
             ) : (
               <textarea
                 aria-label="Draft post text"
+                aria-invalid={Boolean(error)}
+                aria-errormessage={error ? errorId : undefined}
                 value={draftText}
                 onChange={(event) => setDraftText(event.target.value)}
                 placeholder="Your generated draft will appear here."
@@ -184,7 +190,7 @@ export default function InlineDraftCard({ alert }: InlineDraftCardProps) {
             )}
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className={`text-xs font-medium ${characterCountClassName}`}>
+              <p aria-live="polite" className={`text-xs font-medium ${characterCountClassName}`}>
                 {characterCount}/{POST_CHARACTER_LIMIT} characters
               </p>
               <div className="flex flex-wrap items-center justify-end gap-2">

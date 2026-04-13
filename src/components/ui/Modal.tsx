@@ -52,6 +52,7 @@ export default function Modal({
       ref={dialogRef}
       onClick={handleBackdropClick}
       className="fixed inset-0 z-50 m-auto max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-[#0A1225] p-0 shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm open:flex open:flex-col"
+      aria-modal="true"
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
     >
@@ -74,11 +75,12 @@ export default function Modal({
           )}
         </div>
         <button
+          type="button"
           onClick={onClose}
           aria-label="Close modal"
           className="ml-4 flex-shrink-0 rounded-lg p-1.5 text-[#718096] transition-colors hover:bg-white/10 hover:text-white"
         >
-          <X size={18} />
+          <X size={18} aria-hidden="true" />
         </button>
       </div>
 

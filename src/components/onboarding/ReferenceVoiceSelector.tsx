@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Check, ExternalLink, Loader2, Plus, X } from "lucide-react";
 import GradientButton from "@/components/ui/GradientButton";
 import { api, type ReferenceAccount, type TwitterFollow } from "@/lib/api";
@@ -37,6 +37,7 @@ export default function ReferenceVoiceSelector({
   const [isLoading, setIsLoading] = useState(initial.length === 0);
   const [customHandle, setCustomHandle] = useState("");
   const [customError, setCustomError] = useState("");
+  const customErrorId = useId();
   const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
   const customInputRef = useRef<HTMLInputElement>(null);
 
@@ -124,6 +125,7 @@ export default function ReferenceVoiceSelector({
           <button
             key={cat}
             type="button"
+            aria-pressed={activeCategory === cat}
             onClick={() => setActiveCategory(cat as CategoryFilter)}
             className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
               activeCategory === cat
@@ -142,6 +144,9 @@ export default function ReferenceVoiceSelector({
           <input
             ref={customInputRef}
             type="text"
+            aria-label="X handle"
+            aria-invalid={Boolean(customError)}
+            aria-errormessage={customError ? customErrorId : undefined}
             placeholder="Add any X handle…"
             value={customHandle}
             onChange={(e) => { setCustomHandle(e.target.value); setCustomError(""); }}
@@ -151,10 +156,11 @@ export default function ReferenceVoiceSelector({
           {customHandle && (
             <button
               type="button"
+              aria-label="Clear custom handle"
               onClick={() => { setCustomHandle(""); setCustomError(""); }}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-atlas-text-muted hover:text-atlas-text"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           )}
         </div>
@@ -169,7 +175,7 @@ export default function ReferenceVoiceSelector({
         </button>
       </div>
       {customError && (
-        <p className="mb-3 text-xs text-atlas-error">{customError}</p>
+        <p id={customErrorId} role="alert" className="mb-3 text-xs text-atlas-error">{customError}</p>
       )}
 
       {isLoading ? (
@@ -229,7 +235,7 @@ export default function ReferenceVoiceSelector({
                       className="inline-flex items-center gap-0.5 hover:text-atlas-teal hover:underline"
                     >
                       @{account.handle}
-                      <ExternalLink className="h-2.5 w-2.5" />
+                      <ExternalLink className="h-2.5 w-2.5" aria-hidden="true" />
                     </a>
                   ) : "\u00A0"}
                 </p>

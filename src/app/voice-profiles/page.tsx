@@ -631,8 +631,8 @@ export default function VoiceProfilesPage() {
                 Complete your voice setup
               </p>
               <p className="mt-1 text-atlas-text-secondary">
-                Review your voice, add references, and save a blend before you
-                start drafting.
+                Add inspirations, create a blend, and start drafting in your
+                unique voice.
               </p>
             </div>
             <button
@@ -763,8 +763,15 @@ export default function VoiceProfilesPage() {
           {blends.length === 0 && references.length > 0 && (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-glass-border bg-atlas-surface/40 p-5 text-center">
               <Sparkles className="mx-auto h-5 w-5 text-atlas-teal" aria-hidden="true" />
-              <p className="mt-2 text-sm font-semibold text-atlas-text-secondary">No blends yet</p>
-              <p className="mt-1 text-[11px] text-atlas-text-muted">Combine inspirations to create your own style</p>
+              <p className="mt-2 text-sm font-semibold text-atlas-text-secondary">No custom voices yet</p>
+              <p className="mt-1 text-[11px] text-atlas-text-muted">Blend your inspirations into a custom voice for crafting</p>
+            </div>
+          )}
+          {blends.length === 0 && references.length === 0 && (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-glass-border bg-atlas-surface/40 p-5 text-center">
+              <Wand2 className="mx-auto h-5 w-5 text-atlas-text-muted" aria-hidden="true" />
+              <p className="mt-2 text-sm font-semibold text-atlas-text-secondary">Add inspirations first</p>
+              <p className="mt-1 text-[11px] text-atlas-text-muted">Pick voices you admire above, then blend them here</p>
             </div>
           )}
           {references.length > 0 && canManageBlends && (
@@ -776,7 +783,7 @@ export default function VoiceProfilesPage() {
               <Plus className="h-6 w-6" aria-hidden="true" />
               <span className="text-xs font-semibold">New Creator Voice</span>
               {blends.length === 0 && (
-                <span className="text-[10px] text-atlas-text-muted">Start from a single creator you follow</span>
+                <span className="text-[10px] text-atlas-text-muted">Blend your inspirations into a custom voice</span>
               )}
             </button>
           )}
@@ -804,10 +811,12 @@ export default function VoiceProfilesPage() {
             <div className="mt-6 rounded-2xl border border-dashed border-glass-border bg-atlas-surface/40 px-6 py-12 text-center">
               <Sparkles className="mx-auto h-6 w-6 text-atlas-teal" aria-hidden="true" />
               <h3 className="mt-4 font-heading text-xl font-semibold text-atlas-text">
-                No voice recipes yet
+                No saved voices yet
               </h3>
               <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-atlas-text-secondary">
-                Save a creator voice or blend to use it in the Crafting Station.
+                {references.length === 0
+                  ? "Add inspirations above, then create a blend to use in the Crafting Station."
+                  : "Create a blend from your inspirations to use it in the Crafting Station."}
               </p>
             </div>
           ) : (
@@ -890,6 +899,7 @@ export default function VoiceProfilesPage() {
 
           <div className="mt-5 space-y-3">
             <textarea
+              aria-label="Topic for voice comparison"
               value={compareAllTopic}
               onChange={(e) => setCompareAllTopic(e.target.value)}
               placeholder="Type a topic, market take, or paste raw content…"
@@ -1051,7 +1061,7 @@ export default function VoiceProfilesPage() {
                         <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
                       </div>
                     ) : result.error ? (
-                      <p className="mt-3 text-xs text-atlas-error">{result.error}</p>
+                      <p role="alert" className="mt-3 text-xs text-atlas-error">{result.error}</p>
                     ) : (
                       <p className="mt-3 text-sm leading-6 text-atlas-text">
                         {result.text}
@@ -1066,6 +1076,7 @@ export default function VoiceProfilesPage() {
                     {result.text && !isPersonal && (
                       <button
                         type="button"
+                        aria-label={`Use ${result.label} voice`}
                         onClick={() => handleUseVoice(result.id)}
                         className="mt-3 text-xs font-medium text-atlas-teal hover:underline"
                       >
