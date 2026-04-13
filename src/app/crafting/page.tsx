@@ -44,10 +44,12 @@ import RefinementChips, {
 import {
   api,
   AnalyticsSummary,
+  DraftPerformance,
   SavedBlend,
   TrendingTopic,
   TweetDraft,
 } from "@/lib/api";
+import PerformanceCard from "@/components/analytics/PerformanceCard";
 import { useAuth } from "@/lib/auth";
 import {
   MIN_TWEETS_FOR_VOICE_CALIBRATION,
@@ -282,6 +284,8 @@ function CraftingPage() {
   const [compareMode, setCompareMode] = useState(false);
   const [compareVersion, setCompareVersion] = useState<number | null>(null);
   const [comparingVoices, setComparingVoices] = useState(false);
+  const [draftPerformance, setDraftPerformance] = useState<import("@/lib/api").DraftPerformance | null>(null);
+  const [performanceLoading, setPerformanceLoading] = useState(false);
   const [voiceComparison, setVoiceComparison] = useState<{
     options: VoiceComparisonOption[];
   } | null>(null);
@@ -371,6 +375,21 @@ function CraftingPage() {
   const isVoiceCalibrationBlocked = voiceGate.isBlocked;
   const voiceTweetsAnalyzed = voiceGate.tweetsAnalyzed;
   const calibrationTweetsRemaining = voiceGate.tweetsRemaining;
+
+  // Auto-fetch performance data when a POSTED draft becomes active
+  useEffect(() => {
+    if (activeDraft?.status !== "POSTED" || !activeDraft.id) {
+      setDraftPerformance(null);
+      return;
+    }
+    let cancelled = false;
+    api.drafts.performance(activeDraft.id).then((res) => {
+      if (!cancelled) setDraftPerformance(res.performance);
+    }).catch(() => {
+      // Performance endpoint may not be available yet — fail silently
+    });
+    return () => { cancelled = true; };
+  }, [activeDraft?.id, activeDraft?.status]);
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -2169,69 +2188,55 @@ function CraftingPage() {
                 </div>
               ) : null}
 
-              {/* Engagement Metrics — shown for POSTED drafts */}
+              {/* Performance Card — shown for POSTED drafts */}
               {activeDraft.status === "POSTED" ? (
-                <div className="mt-4 rounded-xl border border-glass-border bg-atlas-surface/60 p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-atlas-text-muted">
-                      <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
-                      Engagement
-                    </p>
-                    {activeDraft.actualEngagement ? (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            const result = await api.drafts.fetchMetrics(activeDraft.id);
-                            setActiveDraft(result.draft);
-                            syncDraftReferences(result.draft);
-                          } catch { /* silently fail */ }
-                        }}
-                        className="text-[10px] text-atlas-text-muted hover:text-atlas-teal transition-colors"
-                      >
-                        ↻ Refresh
-                      </button>
-                    ) : null}
-                  </div>
-                  {activeDraft.actualEngagement ? (
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-                      <div>
-                        <span className="text-atlas-text-muted text-xs">Impressions</span>
-                        <p className="font-semibold text-atlas-text">{activeDraft.actualEngagement.toLocaleString()}</p>
-                      </div>
-                      {activeDraft.predictedEngagement ? (
-                        <div className="ml-auto">
-                          <span className="text-atlas-text-muted text-xs">vs Predicted</span>
-                          <p className={`font-semibold text-sm ${
-                            activeDraft.actualEngagement >= activeDraft.predictedEngagement
-                              ? "text-atlas-success" : "text-atlas-warning"
-                          }`}>
-                            {activeDraft.actualEngagement >= activeDraft.predictedEngagement ? "↑" : "↓"}{" "}
-                            {Math.abs(Math.round(((activeDraft.actualEngagement - activeDraft.predictedEngagement) / activeDraft.predictedEngagement) * 100))}%
-                          </p>
-                        </div>
-                      ) : null}
-                    </div>
+                <div className="mt-4">
+                  {draftPerformance ? (
+                    <PerformanceCard
+                      performance={draftPerformance}
+                      onRefresh={async () => {
+                        setPerformanceLoading(true);
+                        try {
+                          const [metricsResult, perfResult] = await Promise.all([
+                            api.drafts.fetchMetrics(activeDraft.id),
+                            api.drafts.performance(activeDraft.id),
+                          ]);
+                          setActiveDraft(metricsResult.draft);
+                          syncDraftReferences(metricsResult.draft);
+                          setDraftPerformance(perfResult.performance);
+                        } catch { /* silently fail */ }
+                        setPerformanceLoading(false);
+                      }}
+                      refreshing={performanceLoading}
+                    />
                   ) : (
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="rounded-xl border border-glass-border bg-atlas-surface/60 p-4">
+                      <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-atlas-text-muted mb-3">
+                        <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
+                        Performance
+                      </p>
                       <button
                         type="button"
                         onClick={async () => {
+                          setPerformanceLoading(true);
                           try {
-                            const result = await api.drafts.fetchMetrics(activeDraft.id);
-                            setActiveDraft(result.draft);
-                            syncDraftReferences(result.draft);
+                            const [metricsResult, perfResult] = await Promise.all([
+                              api.drafts.fetchMetrics(activeDraft.id),
+                              api.drafts.performance(activeDraft.id),
+                            ]);
+                            setActiveDraft(metricsResult.draft);
+                            syncDraftReferences(metricsResult.draft);
+                            setDraftPerformance(perfResult.performance);
                           } catch {
-                            setError("Could not fetch metrics — tweet may not have been posted via Atlas");
+                            setError("Could not fetch performance data");
                           }
+                          setPerformanceLoading(false);
                         }}
-                        className="rounded-lg bg-atlas-teal/20 px-4 py-2 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/30"
+                        disabled={performanceLoading}
+                        className="rounded-lg bg-atlas-teal/20 px-4 py-2 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/30 disabled:opacity-50"
                       >
-                        Fetch from X
+                        {performanceLoading ? "Loading..." : "Load Performance"}
                       </button>
-                      <span className="text-xs text-atlas-text-muted">
-                        Metrics auto-update every few hours for tweets posted via Atlas
-                      </span>
                     </div>
                   )}
                 </div>

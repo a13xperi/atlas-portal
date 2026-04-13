@@ -20,6 +20,7 @@ describe("RefinementChips", () => {
     expect(screen.getByRole("button", { name: "Shorter" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Bolder take" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Simpler" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Thread it" })).toBeInTheDocument();
   });
 
   it("calls onRefine with the matching chip when clicked", () => {
@@ -57,6 +58,7 @@ describe("RefinementChips", () => {
     expect(screen.getByRole("button", { name: "Shorter" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Bolder take" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Simpler" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Thread it" })).toBeDisabled();
   });
 
   it("highlights the active loading chip", () => {
