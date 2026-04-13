@@ -18,6 +18,7 @@ const chips: RefinementChipOption[] = [
   { label: "Shorter", instruction: "Make this tweet shorter and more concise — cut the fat" },
   { label: "Bolder take", instruction: "Make this a bolder, more provocative take — don't hedge" },
   { label: "Simpler", instruction: "Simplify the language — make it accessible to a wider audience" },
+  { label: "Thread it", instruction: "Expand this tweet into a short thread (2-4 tweets) maintaining the core message and voice" },
 ] as const;
 
 function ChipSpinner() {
