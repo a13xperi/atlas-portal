@@ -261,7 +261,7 @@ function ArenaPage() {
     <AppShell>
       <div className="mx-auto max-w-5xl px-4 py-8 space-y-8">
         {/* Header */}
-        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Trophy className="h-6 w-6 text-yellow-400" />
             <h1 className="font-heading font-extrabold tracking-tight text-2xl text-atlas-text">
