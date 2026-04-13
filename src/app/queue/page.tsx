@@ -5,12 +5,14 @@ import Link from "next/link";
 import {
   Clock,
   Calendar,
+  CalendarDays,
   ListOrdered,
   Archive,
   PenTool,
   GripVertical,
   RotateCcw,
   CheckCircle2,
+  ThumbsUp,
   X,
   Send,
 } from "lucide-react";
@@ -34,11 +36,13 @@ import { CSS } from "@dnd-kit/utilities";
 import AppShell from "@/components/layout/AppShell";
 import FeatureGate from "@/components/ui/FeatureGate";
 import QueueTimeline from "@/components/queue/QueueTimeline";
+import QueueCalendar from "@/components/queue/QueueCalendar";
 import OracleInspector from "@/components/oracle/OracleInspector";
 import type { InspectableEntity } from "@/lib/oracle-agent-types";
 import { api, QueuedDraft } from "@/lib/api";
 
 type FilterKey = "all" | "draft" | "scheduled" | "posted" | "archived";
+type ViewMode = "list" | "calendar";
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All" },
@@ -91,48 +95,128 @@ function toLocalDateTimeInput(iso: string): string {
   )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+const PEAK_HOURS = [9, 10, 13, 14, 19, 20]; // ET peak crypto twitter hours
+
+function buildRecommendedSlots(): { label: string; iso: string; hour: number }[] {
+  const slots: { label: string; iso: string; hour: number }[] = [];
+  const now = new Date();
+  const today = new Date();
+  today.setSeconds(0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  for (const hour of PEAK_HOURS) {
+    const todaySlot = new Date(today);
+    todaySlot.setHours(hour, 0, 0, 0);
+    if (todaySlot > now) {
+      const suffix = hour >= 12 ? "pm" : "am";
+      const h = hour > 12 ? hour - 12 : hour;
+      slots.push({
+        label: `Today ${h}${suffix}`,
+        iso: todaySlot.toISOString(),
+        hour,
+      });
+    }
+  }
+  for (const hour of PEAK_HOURS) {
+    const tmrwSlot = new Date(tomorrow);
+    tmrwSlot.setHours(hour, 0, 0, 0);
+    const suffix = hour >= 12 ? "pm" : "am";
+    const h = hour > 12 ? hour - 12 : hour;
+    slots.push({
+      label: `Tmrw ${h}${suffix}`,
+      iso: tmrwSlot.toISOString(),
+      hour,
+    });
+  }
+  return slots;
+}
+
 /* ---- Schedule picker popover ---- */
 function SchedulePopover({
   initialAt,
+  suggestedAt,
   onCancel,
   onConfirm,
   busy,
 }: {
   initialAt: string;
+  suggestedAt?: string;
   onCancel: () => void;
   onConfirm: (iso: string) => void;
   busy?: boolean;
 }) {
   const [value, setValue] = useState(() => toLocalDateTimeInput(initialAt));
+  const recommendedSlots = buildRecommendedSlots();
+
+  // Check if suggestedAt matches a peak hour
+  const suggestedHour = suggestedAt ? new Date(suggestedAt).getHours() : null;
+  const suggestedIsPeak = suggestedHour !== null && PEAK_HOURS.includes(suggestedHour);
 
   return (
-    <div className="absolute right-0 top-full z-30 mt-2 w-64 rounded-xl border border-glass-border bg-atlas-nav p-3 shadow-xl backdrop-blur-xl">
-      <p className="mb-2 text-[11px] font-medium text-atlas-text-secondary">
-        Pick a date and time
-      </p>
-      <input
-        type="datetime-local"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        className="w-full rounded-lg border border-glass-border bg-atlas-surface px-2 py-1.5 text-xs text-atlas-text focus:border-atlas-teal focus:outline-none"
-      />
-      <div className="mt-3 flex items-center justify-end gap-2">
-        <button
-          onClick={onCancel}
-          className="rounded-lg border border-glass-border px-2.5 py-1 text-[11px] text-atlas-text-muted hover:text-atlas-text"
-        >
-          Cancel
-        </button>
-        <button
-          disabled={busy || !value}
-          onClick={() => {
-            const iso = new Date(value).toISOString();
-            onConfirm(iso);
-          }}
-          className="rounded-lg bg-atlas-teal px-2.5 py-1 text-[11px] font-semibold text-atlas-bg transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          {busy ? "Saving..." : "Confirm"}
-        </button>
+    <div className="absolute right-0 top-full z-30 mt-2 w-72 rounded-xl border border-glass-border bg-atlas-nav p-3 shadow-xl backdrop-blur-xl">
+      {/* Recommended time slots */}
+      {recommendedSlots.length > 0 && (
+        <div className="mb-3">
+          <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-atlas-text-muted">
+            Peak hours
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {recommendedSlots.map((slot) => {
+              const matchesSuggested =
+                suggestedIsPeak &&
+                suggestedAt &&
+                new Date(suggestedAt).getHours() === slot.hour &&
+                new Date(suggestedAt).toDateString() ===
+                  new Date(slot.iso).toDateString();
+
+              return (
+                <button
+                  key={slot.iso}
+                  disabled={busy}
+                  onClick={() => onConfirm(slot.iso)}
+                  className={`rounded-lg px-2 py-1 text-[11px] font-medium transition-colors disabled:opacity-50 ${
+                    matchesSuggested
+                      ? "ring-2 ring-atlas-teal bg-atlas-teal/15 text-atlas-teal"
+                      : "border border-glass-border text-atlas-text-secondary hover:border-atlas-teal hover:text-atlas-teal"
+                  }`}
+                >
+                  {slot.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="border-t border-glass-border pt-2">
+        <p className="mb-2 text-[11px] font-medium text-atlas-text-secondary">
+          Or pick manually
+        </p>
+        <input
+          type="datetime-local"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          className="w-full rounded-lg border border-glass-border bg-atlas-surface px-2 py-1.5 text-xs text-atlas-text focus:border-atlas-teal focus:outline-none"
+        />
+        <div className="mt-3 flex items-center justify-end gap-2">
+          <button
+            onClick={onCancel}
+            className="rounded-lg border border-glass-border px-2.5 py-1 text-[11px] text-atlas-text-muted hover:text-atlas-text"
+          >
+            Cancel
+          </button>
+          <button
+            disabled={busy || !value}
+            onClick={() => {
+              const iso = new Date(value).toISOString();
+              onConfirm(iso);
+            }}
+            className="rounded-lg bg-atlas-teal px-2.5 py-1 text-[11px] font-semibold text-atlas-bg transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {busy ? "Saving..." : "Confirm"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -286,6 +370,7 @@ function SortableQueueItem({
               {pickerOpen && (
                 <SchedulePopover
                   initialAt={item.suggestedAt}
+                  suggestedAt={item.suggestedAt}
                   busy={scheduling}
                   onCancel={() => setPickerOpen(false)}
                   onConfirm={async (iso) => {
@@ -321,9 +406,11 @@ function QueuePage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchScheduling, setBatchScheduling] = useState(false);
   const [batchArchiving, setBatchArchiving] = useState(false);
+  const [batchApproving, setBatchApproving] = useState(false);
   const [showTimeline, setShowTimeline] = useState(true);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [isManualOrder, setIsManualOrder] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   // Which row Oracle is currently narrating. Tracks hover + keyboard
   // focus so the Inspector line updates as the user scans the queue.
   const [inspectedId, setInspectedId] = useState<string | null>(null);
@@ -429,6 +516,31 @@ function QueuePage() {
     }
   };
 
+  const handleBatchApprove = async () => {
+    setBatchApproving(true);
+    try {
+      const ids = Array.from(selectedIds);
+      await Promise.all(
+        ids.map((id) => api.drafts.update(id, { status: "APPROVED" }))
+      );
+      setQueue((q) =>
+        q.map((d) =>
+          selectedIds.has(d.id) ? { ...d, status: "APPROVED" as const } : d
+        )
+      );
+      setAllDrafts((q) =>
+        q.map((d) =>
+          selectedIds.has(d.id) ? { ...d, status: "APPROVED" as const } : d
+        )
+      );
+      setSelectedIds(new Set());
+    } catch (err) {
+      console.error("Batch approve failed:", err);
+    } finally {
+      setBatchApproving(false);
+    }
+  };
+
   const handleBatchArchive = async () => {
     setBatchArchiving(true);
     try {
@@ -501,11 +613,13 @@ function QueuePage() {
     return queue;
   }, [filter, queue, allDrafts]);
 
-  const draggable = filter === "all";
+  const draggable = filter === "all" && viewMode === "list";
 
   const activeDragItem = activeDragId
     ? filteredQueue.find((d) => d.id === activeDragId) ?? null
     : null;
+
+  const batchBusy = batchScheduling || batchArchiving || batchApproving;
 
   function formatTime(item: QueuedDraft) {
     const suggestedTime = new Date(item.suggestedAt);
@@ -588,12 +702,41 @@ function QueuePage() {
     <AppShell>
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-heading text-atlas-text">Queue</h1>
-          <p className="mt-1 text-sm text-atlas-text-muted">
-            Your ranked drafts, ready to schedule and post.
-            {draggable ? " Drag to reorder." : ""}
-          </p>
+        <div className="flex items-end gap-3">
+          <div>
+            <h1 className="text-2xl font-heading text-atlas-text">Queue</h1>
+            <p className="mt-1 text-sm text-atlas-text-muted">
+              Your ranked drafts, ready to schedule and post.
+              {draggable ? " Drag to reorder." : ""}
+            </p>
+          </div>
+          {/* View mode toggle */}
+          <div className="flex items-center rounded-lg border border-glass-border">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`flex items-center gap-1 rounded-l-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                viewMode === "list"
+                  ? "bg-atlas-teal/15 text-atlas-teal"
+                  : "text-atlas-text-muted hover:text-atlas-text-secondary"
+              }`}
+              aria-label="List view"
+            >
+              <ListOrdered className="h-3.5 w-3.5" />
+              List
+            </button>
+            <button
+              onClick={() => setViewMode("calendar")}
+              className={`flex items-center gap-1 rounded-r-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                viewMode === "calendar"
+                  ? "bg-atlas-teal/15 text-atlas-teal"
+                  : "text-atlas-text-muted hover:text-atlas-text-secondary"
+              }`}
+              aria-label="Calendar view"
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+              Calendar
+            </button>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {/* Reset to Auto */}
@@ -689,58 +832,67 @@ function QueuePage() {
         );
       })()}
 
-      {/* Drag-sortable queue list */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={filteredQueue.map((d) => d.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="mt-6 space-y-3">
-            {filteredQueue.length === 0 ? (
-              <div className="rounded-xl border border-glass-border bg-atlas-surface p-8 text-center text-sm text-atlas-text-muted">
-                No drafts in this view.
-              </div>
-            ) : (
-              filteredQueue.map((item, index) => (
-                <SortableQueueItem
-                  key={item.id}
-                  item={item}
-                  index={index}
-                  isSelected={selectedIds.has(item.id)}
-                  draggable={draggable}
-                  onToggleSelect={toggleSelect}
-                  onSchedule={handleSchedule}
-                  onPost={handlePost}
-                  onArchive={handleArchive}
-                  onInspect={setInspectedId}
-                  formatTime={formatTime}
-                />
-              ))
-            )}
-          </div>
-        </SortableContext>
+      {/* Calendar view */}
+      {viewMode === "calendar" && (
+        <div className="mt-6">
+          <QueueCalendar queue={queue} onSchedule={handleSchedule} />
+        </div>
+      )}
 
-        {/* Drag overlay for visual feedback */}
-        <DragOverlay>
-          {activeDragItem ? (
-            <div className="rounded-xl border-2 border-atlas-teal/50 bg-atlas-surface p-4 shadow-2xl">
-              <div className="flex items-start gap-3">
-                <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-atlas-teal" />
-                <p className="text-sm leading-relaxed text-atlas-text">
-                  {activeDragItem.content.length > 120
-                    ? `${activeDragItem.content.slice(0, 120)}...`
-                    : activeDragItem.content}
-                </p>
-              </div>
+      {/* Drag-sortable queue list */}
+      {viewMode === "list" && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={filteredQueue.map((d) => d.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="mt-6 space-y-3">
+              {filteredQueue.length === 0 ? (
+                <div className="rounded-xl border border-glass-border bg-atlas-surface p-8 text-center text-sm text-atlas-text-muted">
+                  No drafts in this view.
+                </div>
+              ) : (
+                filteredQueue.map((item, index) => (
+                  <SortableQueueItem
+                    key={item.id}
+                    item={item}
+                    index={index}
+                    isSelected={selectedIds.has(item.id)}
+                    draggable={draggable}
+                    onToggleSelect={toggleSelect}
+                    onSchedule={handleSchedule}
+                    onPost={handlePost}
+                    onArchive={handleArchive}
+                    onInspect={setInspectedId}
+                    formatTime={formatTime}
+                  />
+                ))
+              )}
             </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          </SortableContext>
+
+          {/* Drag overlay for visual feedback */}
+          <DragOverlay>
+            {activeDragItem ? (
+              <div className="rounded-xl border-2 border-atlas-teal/50 bg-atlas-surface p-4 shadow-2xl">
+                <div className="flex items-start gap-3">
+                  <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-atlas-teal" />
+                  <p className="text-sm leading-relaxed text-atlas-text">
+                    {activeDragItem.content.length > 120
+                      ? `${activeDragItem.content.slice(0, 120)}...`
+                      : activeDragItem.content}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
 
       {/* Floating batch action bar */}
       {selectedIds.size > 0 && (
@@ -751,7 +903,7 @@ function QueuePage() {
           </span>
           <button
             onClick={() => void handleBatchSchedule()}
-            disabled={batchScheduling || batchArchiving}
+            disabled={batchBusy}
             className="rounded-lg bg-atlas-teal px-4 py-2 text-sm font-semibold text-atlas-bg transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {batchScheduling
@@ -759,8 +911,22 @@ function QueuePage() {
               : `Schedule ${selectedIds.size}`}
           </button>
           <button
+            onClick={() => void handleBatchApprove()}
+            disabled={batchBusy}
+            className="rounded-lg border border-glass-border px-3 py-2 text-sm text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/10 disabled:opacity-50"
+          >
+            {batchApproving ? (
+              "Approving..."
+            ) : (
+              <>
+                <ThumbsUp className="mr-1 inline h-3.5 w-3.5" />
+                Approve {selectedIds.size}
+              </>
+            )}
+          </button>
+          <button
             onClick={() => void handleBatchArchive()}
-            disabled={batchScheduling || batchArchiving}
+            disabled={batchBusy}
             className="rounded-lg border border-glass-border px-3 py-2 text-sm text-atlas-text-secondary transition-colors hover:border-red-400/40 hover:text-red-400 disabled:opacity-50"
           >
             {batchArchiving ? "Archiving..." : `Archive ${selectedIds.size}`}

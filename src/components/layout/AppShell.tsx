@@ -14,7 +14,7 @@ import { gradients } from "@/lib/tokens";
 // of the first paint and into a separate chunk fetched after hydration.
 const FloatingOracle = dynamic(
   () => import("@/components/oracle/FloatingOracle"),
-  { ssr: false },
+  { ssr: false, loading: () => null },
 );
 
 export interface AppShellProps {
