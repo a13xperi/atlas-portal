@@ -86,11 +86,11 @@ function TeamLibraryPage() {
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="font-heading font-extrabold tracking-tight text-2xl sm:text-4xl text-atlas-text">
+        <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
           Team Style Library
         </h1>
-        <p className="text-atlas-text-secondary mt-2">
-          Curated editorial voices for the next generation of DeFi communication.
+        <p className="text-sm text-atlas-text-secondary mt-2">
+          Browse and remix approved styles from across the team.
         </p>
       </div>
 
@@ -136,7 +136,7 @@ function TeamLibraryPage() {
       )}
       {visibleItems.length === 0 && !loading && (
         <div className="bg-atlas-surface border border-glass-border rounded-2xl p-12 text-center mb-8">
-          <p className="text-atlas-text-secondary">No approved styles yet. Approve drafts in Crafting to build the library.</p>
+          <p className="text-sm text-atlas-text-secondary">No approved styles yet. Approve drafts in the Crafting Station and they will show up here for the team to reference.</p>
         </div>
       )}
       <div className="columns-1 md:columns-2 gap-6 space-y-6">

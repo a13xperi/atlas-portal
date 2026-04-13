@@ -58,7 +58,7 @@ function ManagementPage() {
             <h1 className="font-heading text-2xl font-bold text-atlas-text">
               Team Management
             </h1>
-            <p className="mt-1 text-sm text-atlas-text-secondary">
+            <p className="mt-2 text-sm text-atlas-text-secondary">
               Your team at a glance. {team.length} member{team.length !== 1 ? "s" : ""} and their voice profiles.
             </p>
           </div>

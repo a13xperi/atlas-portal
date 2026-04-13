@@ -96,10 +96,10 @@ function AlertsPage() {
             <p data-tour="signals-feed" className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
               Signals Feed
             </p>
-            <h1 className="mt-3 font-heading font-extrabold tracking-tight text-3xl text-atlas-text sm:text-4xl">
+            <h1 className="mt-2 font-heading font-bold tracking-tight text-2xl text-atlas-text">
               Draft responses without leaving the feed
             </h1>
-            <p className="mt-3 max-w-2xl text-sm text-atlas-text-secondary sm:text-base">
+            <p className="mt-2 max-w-2xl text-sm text-atlas-text-secondary">
               Open any signal, generate a post inline, and tighten the copy before
               you ship it.
             </p>
@@ -238,12 +238,12 @@ function AlertsPage() {
               <p data-tour="signals-feed" className="text-sm font-medium uppercase tracking-[0.2em] text-atlas-teal">
                 Signals
               </p>
-              <h2 className="mt-4 font-heading font-extrabold tracking-tight text-3xl text-atlas-text sm:text-4xl">
+              <h2 className="mt-4 font-heading font-bold tracking-tight text-2xl text-atlas-text">
                 No signals yet
               </h2>
-              <p className="mt-4 text-sm text-atlas-text-secondary sm:text-base">
-                No signals yet &mdash; configure your subscriptions to start receiving
-                signals.
+              <p className="mt-2 text-sm text-atlas-text-secondary">
+                Set up your subscriptions and Atlas will surface signals worth
+                drafting on.
               </p>
               <div className="mt-8 flex justify-center">
                 <GradientButton onClick={() => router.push("/telegram")}>

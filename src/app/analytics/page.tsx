@@ -140,8 +140,8 @@ function AnalyticsPage() {
     return (
       <AppShell>
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Nothing here yet</h2>
-          <p className="mt-2 text-atlas-text-secondary">Craft your first draft and the numbers will start rolling in.</p>
+          <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Your analytics will appear here</h2>
+          <p className="mt-2 text-sm text-atlas-text-secondary">Craft your first draft and the numbers will start rolling in. Every draft, refinement, and piece of feedback lights up a new metric.</p>
         </div>
       </AppShell>
     );
@@ -162,7 +162,7 @@ function AnalyticsPage() {
 
         {/* SECTION 1: Header */}
         <div className="mb-8">
-          <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">
+          <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
             Your Analytics
           </h1>
           <p className="text-atlas-text-secondary mt-2 max-w-2xl text-sm leading-relaxed">
@@ -496,7 +496,7 @@ function AnalyticsPage() {
         {/* SECTION 8: Footer */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 pt-4">
           <span className="text-sm text-atlas-text-secondary">
-            Page 10 of Atlas System
+            Atlas Analytics
           </span>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:gap-4">
             <button

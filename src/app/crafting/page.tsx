@@ -1280,7 +1280,7 @@ function CraftingPage() {
   return (
     <AppShell>
       <div className="mb-6">
-        <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">Crafting Station</h1>
+        <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Crafting Station</h1>
         <p className="mt-2 text-atlas-text-secondary max-w-2xl">Drop in a report, signal, or idea — Atlas drafts it in your voice. Refine it, and the model gets sharper every time.</p>
       </div>
 
