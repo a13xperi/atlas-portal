@@ -71,6 +71,9 @@ export interface QaTestRun {
   results: Record<string, { status: string; note: string; tester: string; timestamp: string }>;
   summary: { pass: number; fail: number; skip: number; total: number };
   status: 'in_progress' | 'completed' | 'abandoned';
+  git_sha?: string | null;
+  pr_number?: number | null;
+  deploy_url?: string | null;
 }
 
 export interface AdminOverview {
@@ -650,7 +653,7 @@ export const api = {
       request<{ runs: QaTestRun[] }>('/api/qa/runs'),
     getRun: (id: string) =>
       request<{ run: QaTestRun }>(`/api/qa/runs/${id}`),
-    createRun: (data: { tester_name: string; tester_initials: string }) =>
+    createRun: (data: { tester_name: string; tester_initials: string; git_sha?: string; pr_number?: number; deploy_url?: string }) =>
       request<{ run: QaTestRun }>('/api/qa/runs', { method: 'POST', body: data }),
     updateRun: (id: string, data: { results?: Record<string, unknown>; summary?: Record<string, unknown>; status?: string }) =>
       request<{ run: QaTestRun }>(`/api/qa/runs/${id}`, { method: 'PATCH', body: data }),
