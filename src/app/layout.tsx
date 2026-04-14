@@ -3,8 +3,13 @@ import { playfairDisplay, inter } from "@/lib/fonts";
 import { colors } from "@/lib/tokens";
 import RouteProgress from "@/components/ui/RouteProgress";
 import Providers from "./providers";
-import OracleWidget from "@/components/ui/OracleWidget";
 import "./globals.css";
+import dynamic from "next/dynamic";
+
+const FloatingOracle = dynamic(
+  () => import("@/components/oracle/FloatingOracle"),
+  { ssr: false },
+);
 
 export const metadata: Metadata = {
   title: {
@@ -59,7 +64,7 @@ export default function RootLayout({
         <RouteProgress />
         <Providers>
           {children}
-          <OracleWidget />
+          <FloatingOracle />
         </Providers>
       </body>
     </html>
