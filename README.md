@@ -11,7 +11,7 @@ Built by [Delphi Digital](https://delphidigital.io).
 - **Auth:** Supabase Auth via `useAuth()` (`src/lib/auth.tsx`)
 - **API:** Typed client at `src/lib/api.ts` → backend at `api-production-9bef.up.railway.app`
 - **Fonts:** Playfair Display (headings), Inter (body)
-- **Monitoring:** Sentry
+- **Monitoring:** Sentry + Vercel OpenTelemetry tracing
 
 ## Routes
 
@@ -46,6 +46,10 @@ npm run test
 |-----|----------|---------|
 | Production | https://delphi-atlas.vercel.app | https://api-production-9bef.up.railway.app |
 | Staging | https://staging-delphi-atlas.vercel.app | https://api-staging-287d.up.railway.app |
+
+Optional tracing override:
+
+- `OTEL_SERVICE_NAME` — overrides the frontend service name reported by `@vercel/otel` (defaults to `atlas-portal-frontend`)
 
 ## Branching
 

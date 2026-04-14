@@ -8,6 +8,7 @@ const withBundleAnalyzer = bundleAnalyzer({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
+    instrumentationHook: true,
     optimizePackageImports: ['framer-motion'],
   },
   async rewrites() {
