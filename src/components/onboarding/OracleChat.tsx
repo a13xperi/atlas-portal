@@ -56,6 +56,9 @@ export default function OracleChat() {
   const drainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [resumeTrackAAfterOAuth, setResumeTrackAAfterOAuth] = useState(false);
+  const [tweetRatings, setTweetRatings] = useState<
+    Record<number, "up" | "down" | null>
+  >({});
   const [blendSaveStatus, setBlendSaveStatus] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
