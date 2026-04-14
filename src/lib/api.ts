@@ -1,6 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
 import { getDemoResponse } from "./demo-data";
-import { getDemoTopTweets, getDemoTopTweetsByHandle } from "./demo-tweets";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -73,9 +72,6 @@ export interface QaTestRun {
   results: Record<string, { status: string; note: string; tester: string; timestamp: string }>;
   summary: { pass: number; fail: number; skip: number; total: number };
   status: 'in_progress' | 'completed' | 'abandoned';
-  git_sha?: string | null;
-  pr_number?: number | null;
-  deploy_url?: string | null;
 }
 
 export interface AdminOverview {
@@ -222,40 +218,6 @@ export class ApiError extends Error {
   constructor(message: string, statusCode: number) {
     super(message);
     this.statusCode = statusCode;
-  }
-}
-
-export async function* readSSEStream(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      const lines = buffer.split("\n\n");
-      buffer = lines.pop() ?? "";
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith("data: ")) continue;
-        const data = trimmed.slice(6);
-        if (data === "[DONE]") return;
-        try {
-          const parsed = JSON.parse(data);
-          if (typeof parsed.delta === "string") {
-            yield parsed.delta;
-          }
-        } catch {
-          // ignore malformed JSON
-        }
-      }
-    }
-  } finally {
-    reader.releaseLock();
   }
 }
 
@@ -450,12 +412,6 @@ export const api = {
       request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/calibrate", {
         method: "POST", body: { handle }, signal: AbortSignal.timeout(45_000),
       }),
-    swipeSignals: (payload: SwipeSignalsPayload) =>
-      request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/swipe-signals", {
-        method: "POST",
-        body: payload,
-        signal: AbortSignal.timeout(45_000),
-      }),
     getGlobalReferenceAccounts: () =>
       request<{ accounts: (ReferenceVoice & { avatarUrl?: string })[] }>("/api/voice/reference-accounts"),
   },
@@ -516,7 +472,6 @@ export const api = {
         status?: string;
         feedback?: string;
         actualEngagement?: number;
-        scheduledAt?: string | null;
       }
     ) =>
       request<{ draft: TweetDraft }>(`/api/drafts/${id}`, { method: "PATCH", body: data }),
@@ -534,8 +489,6 @@ export const api = {
       request<{ draft: TweetDraft }>(`/api/drafts/${id}/engagement`, { method: "POST", body: data }),
     fetchMetrics: (id: string) =>
       request<{ draft: TweetDraft }>(`/api/drafts/${id}/fetch-metrics`, { method: "POST" }),
-    performance: (id: string) =>
-      request<{ performance: DraftPerformance }>(`/api/drafts/${id}/performance`),
     team: (limit = 50) =>
       request<{ drafts: TeamDraft[]; total: number }>(`/api/drafts/team?limit=${limit}`),
     queue: () =>
@@ -584,11 +537,6 @@ export const api = {
     publish: (id: string) =>
       request<{ item: QueueItem } | QueueItem>(`/api/queue/${id}/publish`, {
         method: "POST",
-      }),
-    smartRank: (drafts: TweetDraft[]) =>
-      request<{ drafts: Array<TweetDraft & { optimalTime: string; optimalTimeBadge?: string; topicScore: number; timeScore: number; historyScore: number }> }>("/api/queue/smart-rank", {
-        method: "POST",
-        body: { drafts },
       }),
   },
 
@@ -699,7 +647,7 @@ export const api = {
       request<{ runs: QaTestRun[] }>('/api/qa/runs'),
     getRun: (id: string) =>
       request<{ run: QaTestRun }>(`/api/qa/runs/${id}`),
-    createRun: (data: { tester_name: string; tester_initials: string; git_sha?: string; pr_number?: number; deploy_url?: string }) =>
+    createRun: (data: { tester_name: string; tester_initials: string }) =>
       request<{ run: QaTestRun }>('/api/qa/runs', { method: 'POST', body: data }),
     updateRun: (id: string, data: { results?: Record<string, unknown>; summary?: Record<string, unknown>; status?: string }) =>
       request<{ run: QaTestRun }>(`/api/qa/runs/${id}`, { method: 'PATCH', body: data }),
@@ -733,37 +681,6 @@ export const api = {
       page?: string;
     }) =>
       request<{ text: string }>("/api/oracle/chat", { method: "POST", body }),
-
-    /**
-     * Streaming variant of `chat`. Returns the raw fetch Response body
-     * (a ReadableStream) for SSE consumption. Use with `readSSEStream`.
-     */
-    chatStream: async (body: {
-      messages: Array<{ role: "user" | "oracle"; content: string }>;
-      page?: string;
-    }) => {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        Accept: "text/event-stream",
-      };
-      if (_accessToken) {
-        headers["Authorization"] = `Bearer ${_accessToken}`;
-      }
-      const res = await fetch(`${API_URL}/api/oracle/chat/stream`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: res.statusText }));
-        throw new ApiError(err.error || "Stream request failed", res.status);
-      }
-      if (!res.body) {
-        throw new ApiError("Response body is null", 500);
-      }
-      return res.body;
-    },
 
     /**
      * OpenClaw-routed Oracle chat — returns the raw LLM reply with model
@@ -863,32 +780,6 @@ export const api = {
       };
     },
     likes: () => request<{ likes: TwitterLike[]; cached: boolean }>("/api/twitter/likes"),
-    topTweets: async (limit = 10) => {
-      try {
-        return await request<{ tweets: TwitterLike[]; cached: boolean; fallback?: "demo" }>(
-          `/api/twitter/me/top-tweets?limit=${limit}`
-        );
-      } catch {
-        return {
-          tweets: getDemoTopTweets(limit),
-          cached: false,
-          fallback: "demo" as const,
-        };
-      }
-    },
-    topTweetsByHandle: async (handle: string, limit = 10) => {
-      try {
-        return await request<{ tweets: TwitterLike[]; cached: boolean; fallback?: "demo" }>(
-          `/api/twitter/handle/${encodeURIComponent(handle)}/top-tweets?limit=${limit}`
-        );
-      } catch {
-        return {
-          tweets: getDemoTopTweetsByHandle(handle, limit),
-          cached: false,
-          fallback: "demo" as const,
-        };
-      }
-    },
   },
 
 
@@ -909,78 +800,14 @@ export const api = {
       request<{ campaign: Campaign }>("/api/campaigns", { method: "POST", body: { name, description } }),
     get: (id: string) =>
       request<{ campaign: Campaign }>(`/api/campaigns/${id}`),
-    analytics: (id: string) =>
-      request<CampaignAnalytics>(`/api/campaigns/${id}/analytics`),
     update: (id: string, data: { name?: string; description?: string | null; status?: Campaign["status"] }) =>
       request<{ campaign: Campaign }>(`/api/campaigns/${id}`, { method: "PATCH", body: data }),
     delete: (id: string) =>
       request<{ success: boolean }>(`/api/campaigns/${id}`, { method: "DELETE" }),
-    clone: (id: string) =>
-      request<{ campaign: Campaign }>(`/api/campaigns/${id}/clone`, { method: "POST" }),
     addDraft: (campaignId: string, draftId: string, sortOrder?: number) =>
       request<{ success: boolean }>(`/api/campaigns/${campaignId}/drafts`, { method: "POST", body: { draftId, sortOrder } }),
     removeDraft: (campaignId: string, draftId: string) =>
       request<{ success: boolean }>(`/api/campaigns/${campaignId}/drafts/${draftId}`, { method: "DELETE" }),
-    generateFromPdf: async (
-      file: File,
-      options?: { angles?: number; tone?: string; name?: string; description?: string },
-    ): Promise<{
-      campaignId: string;
-      filename: string;
-      mimeType: string;
-      wordCount: number;
-      truncated: boolean;
-      drafts: Array<{ id: string; content: string; angle: string; score: number }>;
-    }> => {
-      const form = new FormData();
-      form.append("file", file);
-      if (options?.angles) form.append("angles", String(options.angles));
-      if (options?.tone) form.append("tone", options.tone);
-      if (options?.name) form.append("name", options.name);
-      if (options?.description) form.append("description", options.description);
-      const headers: Record<string, string> = {};
-      if (_accessToken) headers["Authorization"] = `Bearer ${_accessToken}`;
-      const res = await fetch(`${API_URL}/api/campaigns/generate-from-pdf`, {
-        method: "POST",
-        headers,
-        body: form,
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: res.statusText }));
-        throw new ApiError(err.error || "Generate-from-PDF failed", res.status);
-      }
-      const json = await res.json();
-      return json && typeof json === "object" && "data" in json ? (json as { data: typeof json }).data as any : json;
-    },
-    postAll: (id: string) =>
-      request<{ posted: number }>(`/api/campaigns/${id}/post-all`, { method: "POST" }),
-  },
-
-  bugs: {
-    list: (status?: string) =>
-      request<{ bugs: BugRecord[] }>(`/api/bugs${status ? `?status=${status}` : ""}`),
-    get: (id: string) =>
-      request<{ bug: BugRecord }>(`/api/bugs/${id}`),
-    create: (data: BugCreateInput) =>
-      request<{ bug: BugRecord }>("/api/bugs", { method: "POST", body: data }),
-    update: (id: string, data: BugUpdateInput) =>
-      request<{ bug: BugRecord }>(`/api/bugs/${id}`, { method: "PATCH", body: data }),
-    delete: (id: string) =>
-      request<{ bug: BugRecord }>(`/api/bugs/${id}`, { method: "DELETE" }),
-  },
-
-  bugs: {
-    list: (status?: string) =>
-      request<{ bugs: BugRecord[] }>(`/api/bugs${status ? `?status=${status}` : ""}`),
-    get: (id: string) =>
-      request<{ bug: BugRecord }>(`/api/bugs/${id}`),
-    create: (data: BugCreateInput) =>
-      request<{ bug: BugRecord }>("/api/bugs", { method: "POST", body: data }),
-    update: (id: string, data: BugUpdateInput) =>
-      request<{ bug: BugRecord }>(`/api/bugs/${id}`, { method: "PATCH", body: data }),
-    delete: (id: string) =>
-      request<{ bug: BugRecord }>(`/api/bugs/${id}`, { method: "DELETE" }),
   },
 };
 
@@ -1024,27 +851,12 @@ export interface CalibrationResult {
   twitterUser: { username: string; name: string };
 }
 
-export interface SwipeSignalRequestItem {
-  tweetId: string;
-  text: string;
-  reasons: string[];
-  handle?: string | null;
-}
-
-export interface SwipeSignalsPayload {
-  ownLikes: SwipeSignalRequestItem[];
-  ownDislikes: SwipeSignalRequestItem[];
-  refLikes: SwipeSignalRequestItem[];
-  refDislikes: SwipeSignalRequestItem[];
-}
-
 export interface ReferenceVoice {
   id: string;
   name: string;
   handle?: string;
   avatarUrl?: string;
   isActive: boolean;
-  voiceProfile?: VoiceProfile;
 }
 
 export interface ReferenceAccount {
@@ -1176,31 +988,6 @@ export interface Campaign {
   draftCount: number;
   drafts?: TweetDraft[];
   createdAt: string;
-}
-
-export interface CampaignTweetAnalytics {
-  draftId: string;
-  content: string;
-  postedAt: string | null;
-  impressions: number;
-  likes: number;
-  retweets: number;
-  replies: number;
-}
-
-export interface CampaignAnalytics {
-  tweets: CampaignTweetAnalytics[];
-  totals: {
-    impressions: number;
-    likes: number;
-    retweets: number;
-    replies: number;
-  };
-  daily: {
-    date: string;
-    dayLabel: string;
-    engagement: number;
-  }[];
 }
 
 export interface QueuedDraft extends TweetDraft {
@@ -1341,20 +1128,6 @@ export interface TeamMember {
   _count: { tweetDrafts: number; sessions: number };
 }
 
-export interface DraftPerformance {
-  predicted: number;
-  actual: number;
-  deltaPct: number;
-  percentile: number;
-  metrics: {
-    impressions: number;
-    likes: number;
-    retweets: number;
-    replies: number;
-    bookmarks: number;
-  };
-}
-
 export interface DailyEngagement {
   date: string;
   dayLabel: string;
@@ -1385,50 +1158,6 @@ export interface LoopIteration {
   score: number;
   branch: string;
   timestamp: string;
-}
-
-export interface BugRecord {
-  id: string;
-  bug_number: number;
-  title: string;
-  description: string;
-  page_route: string | null;
-  page_url: string | null;
-  severity: string;
-  status: string;
-  source: string | null;
-  project: string | null;
-  found_by: string | null;
-  fixed_by: string | null;
-  tags: string[];
-  notes: string | null;
-  fingerprint: string | null;
-  occurrence_count: number;
-  user_agent: string | null;
-  created_at: string;
-  updated_at: string;
-  last_seen_at: string | null;
-  fixed_at: string | null;
-}
-
-export interface BugCreateInput {
-  title: string;
-  description: string;
-  severity?: "critical" | "high" | "medium" | "low" | "cosmetic";
-  page_route?: string | null;
-  page_url?: string | null;
-  source?: "manual" | "console" | "session";
-  tags?: string[];
-}
-
-export interface BugUpdateInput {
-  status?: "open" | "fixed" | "in-progress" | "closed" | "wontfix" | "archived";
-  notes?: string | null;
-  severity?: "critical" | "high" | "medium" | "low" | "cosmetic";
-  title?: string;
-  description?: string;
-  fixed_by?: string | null;
-  tags?: string[];
 }
 
 export interface LoopState {
