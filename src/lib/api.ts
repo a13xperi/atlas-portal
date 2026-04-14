@@ -1,5 +1,52 @@
 import * as Sentry from "@sentry/nextjs";
+import { z, type ZodIssue, type ZodTypeAny } from "zod";
 import { getDemoResponse } from "./demo-data";
+import {
+  activityDailyResponseSchema,
+  analyticsEventsResponseSchema,
+  analyticsSummaryResponseSchema,
+  authLogoutResponseSchema,
+  authMeResponseSchema,
+  authRefreshResponseSchema,
+  authSessionResponseSchema,
+  blendVoiceResponseSchema,
+  blendedVoiceProfileResponseSchema,
+  briefingHistoryResponseSchema,
+  briefingPreferenceResponseSchema,
+  briefingResponseSchema,
+  calibrationResponseSchema,
+  daysToPeakResponseSchema,
+  draftGenerateResponseSchema,
+  draftResponseSchema,
+  draftsResponseSchema,
+  draftScheduleResponseSchema,
+  draftThreadResponseSchema,
+  engagementDailyResponseSchema,
+  learningLogResponseSchema,
+  messageAffectedResponseSchema,
+  queuedDraftsResponseSchema,
+  referenceAccountSelectionResponseSchema,
+  referenceAccountsResponseSchema,
+  referenceVoiceResponseSchema,
+  referenceVoicesResponseSchema,
+  reorderQueueResponseSchema,
+  resetQueueOrderResponseSchema,
+  savedBlendResponseSchema,
+  savedBlendsResponseSchema,
+  teamAnalyticsResponseSchema,
+  teamDraftsResponseSchema,
+  teamEngagementDailyResponseSchema,
+  twitterFollowsResponseSchema,
+  twitterLikesResponseSchema,
+  userRoleResponseSchema,
+  usersProfileResponseSchema,
+  usersTeamResponseSchema,
+  voiceBlendResponseSchema,
+  voiceProfileResponseSchema,
+  xAuthorizeResponseSchema,
+  xCallbackResponseSchema,
+  xStatusResponseSchema,
+} from "./api-schemas";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -10,6 +57,7 @@ const BASE_DELAY_MS = 200;
 interface RequestOptions {
   method?: string;
   body?: unknown;
+  schema?: ZodTypeAny;
 }
 
 interface GenerateDraftInput {
@@ -220,24 +268,110 @@ export class ApiError extends Error {
   }
 }
 
+export class ApiResponseValidationError extends ApiError {
+  issues: ZodIssue[];
+  responsePath: string;
+
+  constructor(path: string, issues: ZodIssue[]) {
+    const firstIssue = issues[0];
+    const issuePath = firstIssue?.path.length ? firstIssue.path.join(".") : "response";
+    super(`Invalid response from ${path}: ${issuePath} ${firstIssue?.message ?? "schema validation failed"}`, 422);
+    this.name = "ApiResponseValidationError";
+    this.issues = issues;
+    this.responsePath = path;
+  }
+}
+
 interface RawTwitterFollow {
   id: string;
   handle?: string | null;
   display_name?: string | null;
+  displayName?: string | null;
   bio?: string | null;
   avatar_url?: string | null;
+  avatarUrl?: string | null;
   follower_count?: number | null;
+  followerCount?: number | null;
 }
 
 function mapTwitterFollow(follow: RawTwitterFollow): TwitterFollow {
   return {
     id: follow.id,
     handle: follow.handle ?? "",
-    displayName: follow.display_name ?? follow.handle ?? "Unknown",
+    displayName: follow.display_name ?? follow.displayName ?? follow.handle ?? "Unknown",
     bio: follow.bio ?? null,
-    avatarUrl: follow.avatar_url ?? null,
-    followerCount: follow.follower_count ?? 0,
+    avatarUrl: follow.avatar_url ?? follow.avatarUrl ?? null,
+    followerCount: follow.follower_count ?? follow.followerCount ?? 0,
   };
+}
+
+const errorPayloadSchema = z
+  .object({
+    error: z.string().optional(),
+    message: z.string().optional(),
+  })
+  .passthrough();
+
+function summarizePayload(payload: unknown) {
+  if (Array.isArray(payload)) {
+    return { kind: "array", length: payload.length };
+  }
+
+  if (payload && typeof payload === "object") {
+    return {
+      kind: "object",
+      keys: Object.keys(payload as Record<string, unknown>).slice(0, 20),
+    };
+  }
+
+  return { kind: typeof payload };
+}
+
+function extractErrorMessage(payload: unknown, fallback: string) {
+  if (typeof payload === "string" && payload.trim()) {
+    return payload;
+  }
+
+  const parsed = errorPayloadSchema.safeParse(payload);
+  if (parsed.success) {
+    return parsed.data.error ?? parsed.data.message ?? fallback;
+  }
+
+  return fallback;
+}
+
+function normalizeResponsePayload(path: string, payload: unknown) {
+  if (payload && typeof payload === "object" && "ok" in payload && "data" in payload) {
+    return (payload as { data: unknown }).data;
+  }
+
+  if (path === "/api/analytics/engagement-daily" && Array.isArray(payload)) {
+    return { days: payload };
+  }
+
+  return payload;
+}
+
+function parseResponseWithSchema<TSchema extends ZodTypeAny>(
+  path: string,
+  payload: unknown,
+  schema: TSchema,
+): z.infer<TSchema> {
+  const parsed = schema.safeParse(payload);
+
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  const error = new ApiResponseValidationError(path, parsed.error.issues);
+  Sentry.captureException(error, {
+    extra: {
+      path,
+      issues: parsed.error.issues,
+      payloadSummary: summarizePayload(payload),
+    },
+  });
+  throw error;
 }
 
 // Demo mode flag — when true, GET requests return mock data
@@ -265,13 +399,23 @@ export function setAccessToken(token: string | null) {
 }
 export function getAccessToken() { return _accessToken; }
 
+async function request<TSchema extends ZodTypeAny>(
+  path: string,
+  opts: RequestOptions & { schema: TSchema },
+): Promise<z.infer<TSchema>>;
+async function request<T>(path: string, opts?: RequestOptions): Promise<T>;
 async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body } = opts;
+  const { method = "GET", body, schema } = opts;
 
   // Demo mode interception — return mock data for GET requests
   if (_demoMode) {
     const demoResponse = getDemoResponse(path, method, body);
-    if (demoResponse !== null) return demoResponse as T;
+    if (demoResponse !== null) {
+      const normalizedDemoResponse = normalizeResponsePayload(path, demoResponse);
+      return schema
+        ? (parseResponseWithSchema(path, normalizedDemoResponse, schema) as T)
+        : (normalizedDemoResponse as T);
+    }
   }
 
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -293,8 +437,8 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
       });
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: res.statusText }));
-        const message = err.error || err.message || "Request failed";
+        const err = await res.json().catch(() => null);
+        const message = extractErrorMessage(err, res.statusText || "Request failed");
         const apiErr = new ApiError(message, res.status);
 
         if (!RETRYABLE_STATUSES.has(res.status) || attempt === MAX_RETRIES - 1) {
@@ -306,15 +450,10 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
         // Fall through to retry
       } else {
         const json = await res.json();
-        // Auto-unwrap response envelope ({ ok, data, timestamp }) if present
-        if (json && typeof json === "object" && "ok" in json && "data" in json) {
-          return json.data as T;
-        }
-        // The analytics backend still returns a raw array for this legacy endpoint.
-        if (path === "/api/analytics/engagement-daily" && Array.isArray(json)) {
-          return { days: json } as T;
-        }
-        return json as T;
+        const normalizedPayload = normalizeResponsePayload(path, json);
+        return schema
+          ? (parseResponseWithSchema(path, normalizedPayload, schema) as T)
+          : (normalizedPayload as T);
       }
     } catch (e) {
       clearTimeout(timeout);
@@ -335,116 +474,166 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
 export const api = {
   auth: {
     register: (handle: string, email: string, password: string, onboardingTrack?: OnboardingTrack) =>
-      request<{ user: User; token: string; refresh_token: string }>("/api/auth/register", {
+      request("/api/auth/register", {
         method: "POST",
         body: { handle, email, password, onboardingTrack },
+        schema: authSessionResponseSchema,
       }),
     login: (email: string, password: string) =>
-      request<{ user: User; token: string; refresh_token: string }>("/api/auth/login", {
+      request("/api/auth/login", {
         method: "POST",
         body: { email, password },
+        schema: authSessionResponseSchema,
       }),
     refresh: () =>
-      request<{ token: string; refresh_token: string }>("/api/auth/refresh", {
+      request("/api/auth/refresh", {
         method: "POST",
+        schema: authRefreshResponseSchema,
       }),
     logout: () =>
-      request<{ success: boolean }>("/api/auth/logout", { method: "POST" }),
+      request("/api/auth/logout", {
+        method: "POST",
+        schema: authLogoutResponseSchema,
+      }),
     me: () =>
-      request<{ user: User & { voiceProfile: VoiceProfile } }>("/api/auth/me"),
+      request("/api/auth/me", {
+        schema: authMeResponseSchema,
+      }),
     x: {
       authorize: () =>
-        request<{ url: string }>("/api/auth/x/authorize", { method: "POST" }),
+        request("/api/auth/x/authorize", {
+          method: "POST",
+          schema: xAuthorizeResponseSchema,
+        }),
       callback: (code: string, state: string) =>
-        request<{ xHandle?: string }>("/api/auth/x/callback", {
+        request("/api/auth/x/callback", {
           method: "POST",
           body: { code, state },
+          schema: xCallbackResponseSchema,
         }),
       status: () =>
-        request<{ linked: boolean; tokenExpired?: boolean; xHandle?: string }>(
-          "/api/auth/x/status"
-        ),
+        request("/api/auth/x/status", {
+          schema: xStatusResponseSchema,
+        }),
     },
   },
 
   voice: {
     getProfile: () =>
-      request<{ profile: VoiceProfile }>("/api/voice/profile"),
+      request("/api/voice/profile", {
+        schema: voiceProfileResponseSchema,
+      }),
     updateProfile: (data: Partial<VoiceProfile>) =>
-      request<{ profile: VoiceProfile }>("/api/voice/profile", { method: "PATCH", body: data }),
+      request("/api/voice/profile", {
+        method: "PATCH",
+        body: data,
+        schema: voiceProfileResponseSchema,
+      }),
     getReferenceAccounts: () =>
-      request<{ accounts: ReferenceAccount[] }>("/api/voice/reference-accounts"),
+      request("/api/voice/reference-accounts", {
+        schema: referenceAccountsResponseSchema,
+      }),
     getReferences: () =>
-      request<{ voices: ReferenceVoice[] }>("/api/voice/references"),
+      request("/api/voice/references", {
+        schema: referenceVoicesResponseSchema,
+      }),
     addReference: (name: string, handle?: string, avatarUrl?: string) =>
-      request<{ voice: ReferenceVoice }>("/api/voice/references", { method: "POST", body: { name, handle, avatarUrl } }),
+      request("/api/voice/references", {
+        method: "POST",
+        body: { name, handle, avatarUrl },
+        schema: referenceVoiceResponseSchema,
+      }),
     getBlends: () =>
-      request<{ blends: SavedBlend[] }>("/api/voice/blends"),
+      request("/api/voice/blends", {
+        schema: savedBlendsResponseSchema,
+      }),
     createBlend: (name: string, voices: BlendVoiceInput[]) =>
-      request<{ blend: SavedBlend }>("/api/voice/blends", { method: "POST", body: { name, voices } }),
+      request("/api/voice/blends", {
+        method: "POST",
+        body: { name, voices },
+        schema: savedBlendResponseSchema,
+      }),
     getBlendedProfile: () =>
-      request<{ profile: BlendedVoiceProfile }>("/api/voice/blended-profile"),
+      request("/api/voice/blended-profile", {
+        schema: blendedVoiceProfileResponseSchema,
+      }),
     blend: (
       primaryId: string,
       additionalIds: string[],
       weights?: Record<string, number>
     ) =>
-      request<VoiceBlendResponse>("/api/voice/blend", {
+      request("/api/voice/blend", {
         method: "POST",
         body: {
           primary_id: primaryId,
           additional_ids: additionalIds,
           ...(weights ? { weights } : {}),
         },
+        schema: voiceBlendResponseSchema,
       }),
     updateBlendVoice: (
       blendId: string,
       voiceId: string,
       data: { label?: string; percentage?: number; referenceVoiceId?: string | null }
     ) =>
-      request<{ voice: BlendVoice }>(
-        `/api/voice/blends/${blendId}/voices/${voiceId}`,
-        { method: "PATCH", body: data }
-      ),
+      request(`/api/voice/blends/${blendId}/voices/${voiceId}`, {
+        method: "PATCH",
+        body: data,
+        schema: blendVoiceResponseSchema,
+      }),
     deleteBlendVoice: (blendId: string, voiceId: string) =>
-      request<{ success: boolean }>(
-        `/api/voice/blends/${blendId}/voices/${voiceId}`,
-        { method: "DELETE" }
-      ),
+      request(`/api/voice/blends/${blendId}/voices/${voiceId}`, {
+        method: "DELETE",
+        schema: authLogoutResponseSchema,
+      }),
     calibrate: (handle: string) =>
-      request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/calibrate", {
-        method: "POST", body: { handle },
+      request("/api/voice/calibrate", {
+        method: "POST",
+        body: { handle },
+        schema: calibrationResponseSchema,
       }),
     getGlobalReferenceAccounts: () =>
-      request<{ accounts: (ReferenceVoice & { avatarUrl?: string })[] }>("/api/voice/reference-accounts"),
+      request("/api/voice/reference-accounts", {
+        schema: referenceAccountsResponseSchema,
+      }),
   },
 
   referenceAccounts: {
     getAll: () =>
-      request<{ accounts: ReferenceAccount[] }>("/api/voice/reference-accounts"),
+      request("/api/voice/reference-accounts", {
+        schema: referenceAccountsResponseSchema,
+      }),
     getReferenceAccounts: () =>
-      request<{ accounts: ReferenceAccount[] }>("/api/voice/reference-accounts"),
+      request("/api/voice/reference-accounts", {
+        schema: referenceAccountsResponseSchema,
+      }),
     saveSelections: (
       userId: string,
       ids: string[],
       weights?: Record<string, number>
     ) =>
-      request<{ success: boolean; ids: string[] }>(
-        `/api/users/${userId}/reference-accounts`,
-        {
-          method: "POST",
-          body: { ids, weights },
-        }
-      ),
+      request(`/api/users/${userId}/reference-accounts`, {
+        method: "POST",
+        body: { ids, weights },
+        schema: referenceAccountSelectionResponseSchema,
+      }),
   },
 
   drafts: {
     list: (status?: string) =>
-      request<{ drafts: TweetDraft[] }>(`/api/drafts${status ? `?status=${status}` : ""}`),
+      request(`/api/drafts${status ? `?status=${status}` : ""}`, {
+        schema: draftsResponseSchema,
+      }),
     get: (id: string) =>
-      request<{ draft: TweetDraft }>(`/api/drafts/${id}`),
+      request(`/api/drafts/${id}`, {
+        schema: draftResponseSchema,
+      }),
     create: (content: string, sourceType?: string, sourceContent?: string) =>
-      request<{ draft: TweetDraft }>("/api/drafts", { method: "POST", body: { content, sourceType, sourceContent } }),
+      request("/api/drafts", {
+        method: "POST",
+        body: { content, sourceType, sourceContent },
+        schema: draftResponseSchema,
+      }),
     generate: (
       sourceContentOrInput: string | GenerateDraftInput,
       sourceType?: string,
@@ -459,14 +648,17 @@ export const api = {
             }
           : sourceContentOrInput;
 
-      return request<{ draft: TweetDraft; blendWarning?: string }>("/api/drafts/generate", {
+      return request("/api/drafts/generate", {
         method: "POST",
         body: payload,
+        schema: draftGenerateResponseSchema,
       });
     },
     regenerate: (draftId: string, feedback?: string) =>
-      request<{ draft: TweetDraft }>(`/api/drafts/${draftId}/regenerate`, {
-        method: "POST", body: { feedback },
+      request(`/api/drafts/${draftId}/regenerate`, {
+        method: "POST",
+        body: { feedback },
+        schema: draftResponseSchema,
       }),
     update: (
       id: string,
@@ -477,33 +669,73 @@ export const api = {
         actualEngagement?: number;
       }
     ) =>
-      request<{ draft: TweetDraft }>(`/api/drafts/${id}`, { method: "PATCH", body: data }),
+      request(`/api/drafts/${id}`, {
+        method: "PATCH",
+        body: data,
+        schema: draftResponseSchema,
+      }),
     delete: (id: string) =>
-      request<{ success: boolean }>(`/api/drafts/${id}`, { method: "DELETE" }),
+      request(`/api/drafts/${id}`, {
+        method: "DELETE",
+        schema: authLogoutResponseSchema,
+      }),
     refine: (draftId: string, instruction: string) =>
-      request<{ draft: TweetDraft }>(`/api/drafts/${draftId}/refine`, { method: "POST", body: { instruction } }),
-    postToX: (draftId: string) =>
-      request<{ draft: TweetDraft }>(`/api/drafts/${draftId}/post`, {
+      request(`/api/drafts/${draftId}/refine`, {
         method: "POST",
+        body: { instruction },
+        schema: draftResponseSchema,
+      }),
+    postToX: (draftId: string) =>
+      request(`/api/drafts/${draftId}/post`, {
+        method: "POST",
+        schema: draftResponseSchema,
       }),
     thread: (draftId: string) =>
-      request<{ thread: string[]; count: number }>(`/api/drafts/${draftId}/thread`, { method: "POST" }),
+      request(`/api/drafts/${draftId}/thread`, {
+        method: "POST",
+        schema: draftThreadResponseSchema,
+      }),
     recordEngagement: (id: string, data: { likes: number; retweets: number; impressions: number }) =>
-      request<{ draft: TweetDraft }>(`/api/drafts/${id}/engagement`, { method: "POST", body: data }),
+      request(`/api/drafts/${id}/engagement`, {
+        method: "POST",
+        body: data,
+        schema: draftResponseSchema,
+      }),
     fetchMetrics: (id: string) =>
-      request<{ draft: TweetDraft }>(`/api/drafts/${id}/fetch-metrics`, { method: "POST" }),
+      request(`/api/drafts/${id}/fetch-metrics`, {
+        method: "POST",
+        schema: draftResponseSchema,
+      }),
     team: (limit = 50) =>
-      request<{ drafts: TeamDraft[]; total: number }>(`/api/drafts/team?limit=${limit}`),
+      request(`/api/drafts/team?limit=${limit}`, {
+        schema: teamDraftsResponseSchema,
+      }),
     queue: () =>
-      request<{ queue: QueuedDraft[]; total: number; nextUp: QueuedDraft | null }>("/api/drafts/queue"),
+      request("/api/drafts/queue", {
+        schema: queuedDraftsResponseSchema,
+      }),
     enqueue: (id: string) =>
-      request<{ draft: TweetDraft }>(`/api/drafts/${id}/enqueue`, { method: "POST" }),
+      request(`/api/drafts/${id}/enqueue`, {
+        method: "POST",
+        schema: draftResponseSchema,
+      }),
     schedule: (id: string, scheduledAt: string) =>
-      request<{ draft: TweetDraft; conflicts?: { id: string; content: string; scheduledAt: string }[] }>(`/api/drafts/${id}/schedule`, { method: "POST", body: { scheduledAt } }),
+      request(`/api/drafts/${id}/schedule`, {
+        method: "POST",
+        body: { scheduledAt },
+        schema: draftScheduleResponseSchema,
+      }),
     reorderQueue: (orderedIds: string[]) =>
-      request<{ reordered: number }>("/api/drafts/queue/reorder", { method: "PATCH", body: { orderedIds } }),
+      request("/api/drafts/queue/reorder", {
+        method: "PATCH",
+        body: { orderedIds },
+        schema: reorderQueueResponseSchema,
+      }),
     resetQueueOrder: () =>
-      request<{ reset: boolean }>("/api/drafts/queue/reset-order", { method: "POST" }),
+      request("/api/drafts/queue/reset-order", {
+        method: "POST",
+        schema: resetQueueOrderResponseSchema,
+      }),
     batchFromContent: (content: string, sourceType: string, options?: { sourceUrl?: string; createCampaign?: boolean; campaignTitle?: string }) =>
       request<{ insights: any[]; drafts: any[]; campaign?: { id: string; title: string } }>("/api/drafts/batch-from-content", {
         method: "POST",
@@ -545,21 +777,37 @@ export const api = {
 
   analytics: {
     summary: () =>
-      request<{ summary: AnalyticsSummary }>("/api/analytics/summary"),
+      request("/api/analytics/summary", {
+        schema: analyticsSummaryResponseSchema,
+      }),
     learningLog: () =>
-      request<{ entries: LearningLogEntry[] }>("/api/analytics/learning-log"),
+      request("/api/analytics/learning-log", {
+        schema: learningLogResponseSchema,
+      }),
     engagement: () =>
-      request<{ events: AnalyticsEvent[] }>("/api/analytics/engagement"),
+      request("/api/analytics/engagement", {
+        schema: analyticsEventsResponseSchema,
+      }),
     engagementDaily: () =>
-      request<{ days: DailyEngagement[] }>("/api/analytics/engagement-daily"),
+      request("/api/analytics/engagement-daily", {
+        schema: engagementDailyResponseSchema,
+      }),
     activityDaily: () =>
-      request<{ days: DailyActivity[] }>("/api/analytics/activity-daily"),
+      request("/api/analytics/activity-daily", {
+        schema: activityDailyResponseSchema,
+      }),
     teamEngagementDaily: () =>
-      request<{ days: DailyTeamEngagement[] }>("/api/analytics/team-engagement-daily"),
+      request("/api/analytics/team-engagement-daily", {
+        schema: teamEngagementDailyResponseSchema,
+      }),
     team: () =>
-      request<{ analysts: TeamAnalyst[] }>("/api/analytics/team"),
+      request("/api/analytics/team", {
+        schema: teamAnalyticsResponseSchema,
+      }),
     daysToPeak: () =>
-      request<{ peaks: AnalystPeak[] }>("/api/analytics/days-to-peak"),
+      request("/api/analytics/days-to-peak", {
+        schema: daysToPeakResponseSchema,
+      }),
   },
 
   alerts: {
@@ -581,16 +829,25 @@ export const api = {
 
   briefing: {
     getPreferences: () =>
-      request<{ preference: BriefingPreference | null }>("/api/briefing/preferences"),
+      request("/api/briefing/preferences", {
+        schema: briefingPreferenceResponseSchema,
+      }),
     updatePreferences: (data: BriefingPreferenceInput) =>
-      request<{ preference: BriefingPreference }>("/api/briefing/preferences", {
+      request("/api/briefing/preferences", {
         method: "PUT",
         body: data,
+        schema: briefingPreferenceResponseSchema,
       }),
     history: () =>
-      request<{ briefings: Briefing[] }>("/api/briefing/history"),
+      request("/api/briefing/history", {
+        schema: briefingHistoryResponseSchema,
+      }),
     generate: (briefType?: string) =>
-      request<{ briefing: Briefing }>("/api/briefing/generate", { method: "POST", body: { briefType } }),
+      request("/api/briefing/generate", {
+        method: "POST",
+        body: { briefType },
+        schema: briefingResponseSchema,
+      }),
   },
 
   images: {
@@ -627,21 +884,40 @@ export const api = {
 
   users: {
     profile: () =>
-      request<{ user: User }>("/api/users/profile"),
+      request("/api/users/profile", {
+        schema: usersProfileResponseSchema,
+      }),
     updateProfile: (data: { displayName?: string; email?: string; bio?: string; avatarUrl?: string; tourCompleted?: boolean; tourStep?: number; onboardingTrack?: OnboardingTrack | null }) =>
-      request<{ user: User }>("/api/users/profile", { method: "PATCH", body: data }),
+      request("/api/users/profile", {
+        method: "PATCH",
+        body: data,
+        schema: usersProfileResponseSchema,
+      }),
     team: () =>
-      request<{ team: TeamMember[] }>("/api/users/team"),
+      request("/api/users/team", {
+        schema: usersTeamResponseSchema,
+      }),
     pushTopProfiles: () =>
-      request<{ message: string; affected: number }>("/api/users/push-top-profiles", { method: "POST" }),
+      request("/api/users/push-top-profiles", {
+        method: "POST",
+        schema: messageAffectedResponseSchema,
+      }),
     sendNudge: () =>
-      request<{ message: string; affected: number }>("/api/users/send-nudge", { method: "POST" }),
+      request("/api/users/send-nudge", {
+        method: "POST",
+        schema: messageAffectedResponseSchema,
+      }),
     pushStyle: (blendId?: string) =>
-      request<{ message: string; affected: number }>("/api/users/push-style", { method: "POST", body: { blendId } }),
+      request("/api/users/push-style", {
+        method: "POST",
+        body: { blendId },
+        schema: messageAffectedResponseSchema,
+      }),
     updateRole: (userId: string, role: string) =>
-      request<{ user: { id: string; role: string } }>(`/api/users/${userId}/role`, {
+      request(`/api/users/${userId}/role`, {
         method: "PATCH",
         body: { role },
+        schema: userRoleResponseSchema,
       }),
   },
 
@@ -772,17 +1048,19 @@ export const api = {
 
   twitter: {
     follows: async () => {
-      const response = await request<{
-        follows: RawTwitterFollow[];
-        cached: boolean;
-      }>("/api/twitter/follows");
+      const response = await request("/api/twitter/follows", {
+        schema: twitterFollowsResponseSchema,
+      });
 
       return {
         cached: response.cached,
         follows: response.follows.map(mapTwitterFollow),
       };
     },
-    likes: () => request<{ likes: TwitterLike[]; cached: boolean }>("/api/twitter/likes"),
+    likes: () =>
+      request("/api/twitter/likes", {
+        schema: twitterLikesResponseSchema,
+      }),
   },
 
 
@@ -820,9 +1098,9 @@ export interface User {
   handle: string;
   role: "ANALYST" | "MANAGER" | "ADMIN";
   onboardingTrack?: OnboardingTrack | null;
-  displayName?: string;
-  email?: string;
-  bio?: string;
+  displayName?: string | null;
+  email?: string | null;
+  bio?: string | null;
   avatarUrl?: string | null;
   telegramChatId?: string | null;
 }
@@ -858,7 +1136,7 @@ export interface ReferenceVoice {
   id: string;
   name: string;
   handle?: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   isActive: boolean;
 }
 
@@ -971,9 +1249,9 @@ export interface TweetDraft {
   content: string;
   version: number;
   status: "DRAFT" | "APPROVED" | "SCHEDULED" | "POSTED" | "ARCHIVED";
-  confidence?: number;
-  predictedEngagement?: number;
-  actualEngagement?: number;
+  confidence?: number | null;
+  predictedEngagement?: number | null;
+  actualEngagement?: number | null;
   sourceType?: string;
   sourceContent?: string;
   blendId?: string;
@@ -1080,7 +1358,7 @@ export interface Briefing {
 export interface TeamAnalyst {
   id: string;
   handle: string;
-  voiceProfile?: VoiceProfile;
+  voiceProfile?: VoiceProfile | null;
   _count: { tweetDrafts: number; analyticsEvents: number; sessions: number };
 }
 
@@ -1125,9 +1403,9 @@ export interface ResearchResultData {
 export interface TeamMember {
   id: string;
   handle: string;
-  displayName?: string;
+  displayName?: string | null;
   role: string;
-  voiceProfile?: VoiceProfile;
+  voiceProfile?: VoiceProfile | null;
   _count: { tweetDrafts: number; sessions: number };
 }
 

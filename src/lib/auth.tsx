@@ -16,7 +16,7 @@ function setSessionCookie(active: boolean) {
 }
 
 interface AuthState {
-  user: (User & { voiceProfile?: VoiceProfile }) | null;
+  user: (User & { voiceProfile?: VoiceProfile | null }) | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (handle: string, email: string, password: string, onboardingTrack?: OnboardingTrack) => Promise<void>;

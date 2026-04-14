@@ -14,8 +14,8 @@ export default function XCallbackPage() {
   const [redirectTarget, setRedirectTarget] = useState<"onboarding" | "crafting" | "voice-lab">("crafting");
   const [connectedIdentity, setConnectedIdentity] = useState<{
     avatarUrl?: string | null;
-    bio?: string;
-    displayName?: string;
+    bio?: string | null;
+    displayName?: string | null;
     handle?: string;
   } | null>(null);
 

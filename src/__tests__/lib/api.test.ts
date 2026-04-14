@@ -1,4 +1,4 @@
-import { api } from "@/lib/api";
+import { ApiResponseValidationError, api } from "@/lib/api";
 
 const API_URL = "http://localhost:3001";
 
@@ -34,6 +34,23 @@ describe("api.auth.login", () => {
       })
     );
     expect(result).toEqual(data);
+  });
+
+  it("accepts wrapped { ok, data } responses before schema validation", async () => {
+    const data = {
+      ok: true,
+      data: {
+        user: { id: "1", handle: "alice", role: "ANALYST" },
+        token: "tok_123",
+        refresh_token: "rt_123",
+      },
+      timestamp: "2026-04-14T10:00:00.000Z",
+    };
+    mockFetch(data);
+
+    const result = await api.auth.login("alice@example.com", "password123");
+
+    expect(result).toEqual(data.data);
   });
 });
 
@@ -121,16 +138,47 @@ describe("error handling", () => {
     const resOk = {
       ok: true,
       status: 200,
-      json: jest.fn().mockResolvedValue({ user: { id: "1" }, token: "tok", refresh_token: "rt" }),
+      json: jest.fn().mockResolvedValue({
+        user: { id: "1", handle: "alice", role: "ANALYST" },
+        token: "tok",
+        refresh_token: "rt",
+      }),
     };
     global.fetch = jest.fn()
       .mockResolvedValueOnce(res500)
       .mockResolvedValueOnce(resOk);
 
     const result = await api.auth.login("test@test.com", "pass");
-    expect(result).toEqual({ user: { id: "1" }, token: "tok", refresh_token: "rt" });
+    expect(result).toEqual({
+      user: { id: "1", handle: "alice", role: "ANALYST" },
+      token: "tok",
+      refresh_token: "rt",
+    });
     expect(fetch).toHaveBeenCalledTimes(2);
   }, 15000);
+
+  it("throws a validation error for malformed success payloads without retrying", async () => {
+    mockFetch({
+      user: { id: "1", handle: "alice", role: "ANALYST" },
+      refresh_token: "rt_123",
+    });
+
+    let error: unknown;
+
+    try {
+      await api.auth.login("alice@example.com", "password123");
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toBeInstanceOf(ApiResponseValidationError);
+    expect(error).toEqual(
+      expect.objectContaining({
+        message: expect.stringContaining("Invalid response from /api/auth/login"),
+      })
+    );
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("api.drafts.list", () => {
@@ -173,11 +221,26 @@ describe("api.analytics.engagementDaily", () => {
     );
     expect(result).toEqual({ days: data });
   });
+
+  it("rejects malformed legacy array items after normalization", async () => {
+    mockFetch([{ date: "2026-04-09", dayLabel: "Wed", predicted: 12 }]);
+
+    await expect(api.analytics.engagementDaily()).rejects.toBeInstanceOf(ApiResponseValidationError);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("api.drafts.generate", () => {
   it("sends the selected reply angle metadata in the request body", async () => {
-    mockFetch({ draft: { id: "draft_1" } });
+    mockFetch({
+      draft: {
+        id: "draft_1",
+        content: "Generated draft content",
+        version: 1,
+        status: "DRAFT",
+        createdAt: "2026-04-14T10:00:00.000Z",
+      },
+    });
 
     await api.drafts.generate({
       sourceContent: "ETH keeps pushing into key resistance.",
@@ -281,6 +344,38 @@ describe("api.twitter.follows", () => {
           bio: "Markets and crypto structure.",
           avatarUrl: "https://example.com/hasu.jpg",
           followerCount: 120000,
+        },
+      ],
+    });
+  });
+
+  it("accepts camelCase follow payloads from demo or newer backends", async () => {
+    mockFetch({
+      follows: [
+        {
+          id: "tw_2",
+          handle: "naval",
+          displayName: "Naval",
+          bio: "Building and investing.",
+          avatarUrl: "https://example.com/naval.jpg",
+          followerCount: 500000,
+        },
+      ],
+      cached: true,
+    });
+
+    const result = await api.twitter.follows();
+
+    expect(result).toEqual({
+      cached: true,
+      follows: [
+        {
+          id: "tw_2",
+          handle: "naval",
+          displayName: "Naval",
+          bio: "Building and investing.",
+          avatarUrl: "https://example.com/naval.jpg",
+          followerCount: 500000,
         },
       ],
     });
