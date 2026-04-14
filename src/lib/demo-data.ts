@@ -18,6 +18,7 @@ import type {
   DailyActivity,
   TeamMember,
 } from "./api";
+import { publicUrls } from "./public-urls";
 
 const now = new Date().toISOString();
 const daysAgo = (n: number) => new Date(Date.now() - n * 86400000).toISOString();
@@ -636,7 +637,7 @@ const alertsFeed: { alerts: Alert[] } = {
       context:
         "Solana hits new ATH. Content opportunity around ecosystem comparison takes.",
       category: "SIGNAL",
-      sourceUrl: "https://example.com/sol-ath",
+      sourceUrl: publicUrls.demoSourceUrl,
       sentiment: "bullish",
       relevance: 0.78,
       createdAt: daysAgo(1),

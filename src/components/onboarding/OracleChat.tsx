@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
+import { publicUrls } from "@/lib/public-urls";
 import {
   canAdvance,
   getContinueLabel,
@@ -563,7 +564,7 @@ export default function OracleChat() {
                 the go.
               </p>
               <a
-                href="https://t.me/AtlasDelphiBot"
+                href={publicUrls.telegramBotUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-atlas-teal text-sm hover:underline"
