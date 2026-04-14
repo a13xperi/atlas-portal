@@ -73,6 +73,7 @@ export default function VoicePreviewModal({
       setPreviewError(null);
       setRegenCount(0);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, voice?.id]);
 
   // Auto-generate on open
@@ -80,6 +81,7 @@ export default function VoicePreviewModal({
     if (isOpen && voice && !previewText && !isGenerating && !previewError) {
       void generatePreview();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, voice?.id, ratio]);
 
   const generatePreview = async () => {

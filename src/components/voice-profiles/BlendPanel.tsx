@@ -144,6 +144,7 @@ export default function BlendPanel({
     if (isTotalValid && weights.length > 0 && !previewText && !isGenerating && !previewError) {
       void generatePreview();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTotalValid, weights.length]);
 
   const handleSave = async () => {
