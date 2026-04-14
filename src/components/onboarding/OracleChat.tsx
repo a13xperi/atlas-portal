@@ -66,6 +66,8 @@ export default function OracleChat() {
   >("idle");
   // Tracks the persisted blend so future PATCH operations can target it.
   const [, setSavedBlendId] = useState<string | null>(null);
+  // Per-sample tweet ratings for the "tweet-ratings" onboarding step.
+  const [tweetRatings, setTweetRatings] = useState<Record<number, 'up' | 'down' | null>>({});
 
   // Pre-fill handle from linked X profile
   useEffect(() => {
