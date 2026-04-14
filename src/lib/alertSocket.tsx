@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "./auth";
+import { publicUrls } from "./public-urls";
 
 interface Alert {
   id: string;
@@ -28,7 +29,7 @@ const AlertSocketContext = createContext<AlertSocketState>({
   onNewAlert: () => () => {},
 });
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API_URL = publicUrls.apiUrl;
 
 export function AlertSocketProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();

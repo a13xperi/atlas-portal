@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import OnboardingShell from "@/components/layout/OnboardingShell";
 import GradientButton from "@/components/ui/GradientButton";
+import { publicUrls } from "@/lib/public-urls";
 import { Check } from "lucide-react";
 
 const feedbackChannels = ["Text", "Voice note", "Loom video"];
@@ -74,7 +75,7 @@ function HandoffContent() {
                 <p className="text-xs text-atlas-text-muted">Scan to connect</p>
               </div>
             </div>
-            <a href="https://t.me/AtlasDelphiBot" target="_blank" rel="noopener noreferrer" className="text-atlas-teal text-sm hover:underline cursor-pointer">
+            <a href={publicUrls.telegramBotUrl} target="_blank" rel="noopener noreferrer" className="text-atlas-teal text-sm hover:underline cursor-pointer">
               or tap this link to connect →
             </a>
           </div>

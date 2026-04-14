@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { playfairDisplay, inter } from "@/lib/fonts";
+import { publicUrls } from "@/lib/public-urls";
 import { colors } from "@/lib/tokens";
 import RouteProgress from "@/components/ui/RouteProgress";
 import Providers from "./providers";
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
   },
   description:
     "Content-to-tweet crafting platform with personalized voice profiles for crypto analysts.",
-  metadataBase: new URL("https://delphi-atlas.vercel.app"),
+  metadataBase: publicUrls.appUrl ? new URL(publicUrls.appUrl) : undefined,
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
     apple: "/apple-touch-icon.png",
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Atlas — Delphi Digital",
     description: "Craft tweets that sound like you. Powered by voice AI.",
-    url: "https://delphi-atlas.vercel.app",
+    url: publicUrls.appUrl || undefined,
     siteName: "Atlas",
     type: "website",
   },

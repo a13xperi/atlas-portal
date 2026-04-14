@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { publicOrigins } from "@/lib/public-urls";
 
 // Public routes that don't require authentication
 const PUBLIC_PATHS = new Set(["/", "/auth/x/callback", "/auth/callback", "/onboarding"]);
@@ -59,9 +60,36 @@ export function middleware(request: NextRequest) {
   // - connect-src: allow self + Railway backend API
   // - font-src: allow self + Google Fonts (Playfair Display, Inter)
   // - frame-ancestors 'none': same as X-Frame-Options DENY but for modern browsers
-  const apiOrigin = process.env.NEXT_PUBLIC_API_URL
-    ? new URL(process.env.NEXT_PUBLIC_API_URL).origin
-    : "";
+  const styleSrc = [
+    "style-src 'self' 'unsafe-inline'",
+    publicOrigins.googleFontsStylesOrigin,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const imgSrc = [
+    "img-src 'self' data: blob:",
+    publicOrigins.xImageCdnOrigin,
+    publicOrigins.unavatarOrigin,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const connectSrc = [
+    "connect-src 'self'",
+    publicOrigins.apiOrigin,
+    publicOrigins.supabaseOrigin,
+    "wss:",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const fontSrc = [
+    "font-src 'self'",
+    publicOrigins.googleFontsAssetsOrigin,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   // TODO(H-2): Migrate script-src off 'unsafe-inline' by adopting per-request
   // nonces for Next.js App Router hydration scripts (see follow-up ticket
@@ -72,10 +100,10 @@ export function middleware(request: NextRequest) {
     [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "img-src 'self' data: blob: https://pbs.twimg.com https://unavatar.io",
-      `connect-src 'self' ${apiOrigin} https://zoirudjyqfqvpxsrxepr.supabase.co wss:`,
-      "font-src 'self' https://fonts.gstatic.com",
+      styleSrc,
+      imgSrc,
+      connectSrc,
+      fontSrc,
       "frame-ancestors 'self'",
       "base-uri 'self'",
       "form-action 'self'",

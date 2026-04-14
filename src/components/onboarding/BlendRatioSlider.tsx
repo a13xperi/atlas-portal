@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import DimensionBar from "@/components/ui/DimensionBar";
+import { getTwitterAvatarUrl } from "@/lib/public-urls";
 import { resolveVoiceAvatar, type MinimalUser } from "@/lib/voice-avatar";
 
 export interface BlendReference {
@@ -228,10 +229,22 @@ function RefAvatar({ handle, name }: { handle?: string; name: string }) {
   }
 
   const cleanHandle = handle.replace(/^@/, "");
+  const avatarUrl = getTwitterAvatarUrl(cleanHandle);
+
+  if (!avatarUrl) {
+    return (
+      <div className="h-8 w-8 shrink-0 rounded-full bg-atlas-surface border border-atlas-text-secondary/20 flex items-center justify-center">
+        <span className="text-[10px] font-semibold text-atlas-text-secondary">
+          {initial}
+        </span>
+      </div>
+    );
+  }
+
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={`https://unavatar.io/twitter/${cleanHandle}`}
+      src={avatarUrl}
       alt={name}
       width={32}
       height={32}

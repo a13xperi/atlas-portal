@@ -1,3 +1,5 @@
+import { appHostDisplay, getAppUrl } from "@/lib/public-urls";
+
 export interface TestCase {
   id: string;
   name: string;
@@ -15,6 +17,9 @@ export interface TestSection {
   tests: TestCase[];
 }
 
+const dashboardUrl = getAppUrl("/dashboard");
+const notFoundUrl = getAppUrl("/nonexistent-page");
+
 export const sections: TestSection[] = [
   {
     id: "auth",
@@ -25,7 +30,7 @@ export const sections: TestSection[] = [
         id: "AUTH-01",
         name: "Register new account",
         steps: [
-          "Go to delphi-atlas.vercel.app",
+          `Go to ${appHostDisplay}`,
           'Click "Sign Up" tab or link',
           "Fill: email qa_manual@test.com, password TestManual123!",
           "Click Submit",
@@ -73,7 +78,7 @@ export const sections: TestSection[] = [
         steps: [
           "Login successfully",
           "Close the browser tab",
-          "Open delphi-atlas.vercel.app in a new tab",
+          `Open ${appHostDisplay} in a new tab`,
         ],
         expected: "Still logged in. Dashboard loads without re-login.",
       },
@@ -90,7 +95,7 @@ export const sections: TestSection[] = [
         id: "AUTH-12",
         name: "Protected route redirect",
         steps: [
-          "After logout, manually type delphi-atlas.vercel.app/dashboard in address bar",
+          `After logout, manually type ${dashboardUrl} in address bar`,
         ],
         expected:
           "Redirected to login page. Should NOT see dashboard content.",
@@ -623,7 +628,7 @@ export const sections: TestSection[] = [
         id: "ERR-03",
         name: "404 page",
         steps: [
-          "Navigate to delphi-atlas.vercel.app/nonexistent-page",
+          `Navigate to ${notFoundUrl}`,
         ],
         expected:
           "Shows 404 page or redirects to dashboard. No white screen.",
