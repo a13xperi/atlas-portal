@@ -13,7 +13,7 @@ import {
   initialOracleState,
   oracleReducer,
 } from "@/lib/oracle";
-import { styleToDimensions } from "@/lib/voice-profile-dimensions";
+import { styleToDimensions, TRACK_A_INITIAL_DIMENSIONS } from "@/lib/voice-profile-dimensions";
 import {
   getReferenceAccountLookup,
   persistReferenceSelections,
@@ -335,9 +335,13 @@ export default function OracleChat() {
     calibratingRef.current = true;
     (async () => {
       try {
-        const { profile, calibration } = await api.voice.calibrate(
-          state.xHandle
-        );
+        const CLIENT_RACE_MS = 50_000;
+        const { profile, calibration } = await Promise.race([
+          api.voice.calibrate(state.xHandle),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("calibration_timeout")), CLIENT_RACE_MS)
+          ),
+        ]);
         dispatch({
           type: "SET_CALIBRATION",
           result: {
@@ -386,6 +390,12 @@ export default function OracleChat() {
         // analysis above is sufficient commentary during onboarding.
       } catch (err) {
         console.error("Calibration failed:", err);
+        // Fallback to Track-A-like dimensions so the user sees non-default
+        // values and the crafting gate becomes passable.
+        dispatch({
+          type: "SET_DIMENSIONS",
+          dimensions: TRACK_A_INITIAL_DIMENSIONS,
+        });
         // Surface a friendly Oracle message, then silently advance so the
         // user isn't stuck and doesn't see a raw error echoed as their reply.
         dispatch({

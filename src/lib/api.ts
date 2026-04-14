@@ -10,6 +10,7 @@ const BASE_DELAY_MS = 200;
 interface RequestOptions {
   method?: string;
   body?: unknown;
+  signal?: AbortSignal;
 }
 
 interface GenerateDraftInput {
@@ -280,15 +281,14 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   }
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10_000);
+    const signal = opts.signal ?? AbortSignal.timeout(45_000);
 
     try {
       const res = await fetch(`${API_URL}${path}`, {
         method,
         headers,
         body: body ? JSON.stringify(body) : undefined,
-        signal: controller.signal,
+        signal,
         credentials: "include",
       });
 
@@ -317,12 +317,9 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
         return json as T;
       }
     } catch (e) {
-      clearTimeout(timeout);
       if (e instanceof ApiError && !RETRYABLE_STATUSES.has(e.statusCode)) throw e;
       if (attempt === MAX_RETRIES - 1) throw e;
       // Network errors and retryable status codes fall through to retry
-    } finally {
-      clearTimeout(timeout);
     }
 
     await new Promise((r) => setTimeout(r, BASE_DELAY_MS * Math.pow(2, attempt)));
@@ -413,7 +410,7 @@ export const api = {
       ),
     calibrate: (handle: string) =>
       request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/calibrate", {
-        method: "POST", body: { handle },
+        method: "POST", body: { handle }, signal: AbortSignal.timeout(45_000),
       }),
     getGlobalReferenceAccounts: () =>
       request<{ accounts: (ReferenceVoice & { avatarUrl?: string })[] }>("/api/voice/reference-accounts"),

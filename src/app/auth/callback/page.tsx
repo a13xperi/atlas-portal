@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
+import { hasCalibratedVoiceDimensions } from "@/lib/voice-profile-dimensions";
 
 /**
  * /auth/callback — handles server-side OAuth redirects.
@@ -50,7 +51,7 @@ export default function AuthCallbackPage() {
       .then((res) => {
         setStatus("success");
         const handle = res.user?.handle;
-        const isNewUser = (res.user?.voiceProfile?.tweetsAnalyzed ?? 0) === 0;
+        const isNewUser = !hasCalibratedVoiceDimensions(res.user?.voiceProfile);
         const destination = isNewUser ? "/onboarding" : "/dashboard";
         setMessage(
           handle

@@ -122,6 +122,19 @@ export function hasAnyVoiceDimension(dimensions: VoiceDimensions) {
   return Object.values(dimensions).some((value) => value > 0);
 }
 
+export function hasCalibratedVoiceDimensions(
+  profile: Partial<VoiceDimensions> & { tweetsAnalyzed?: number; maturity?: string | null } | null | undefined
+): boolean {
+  if (!profile) return false;
+  const anyDimDifferent = VOICE_DIMENSION_FIELDS.some(
+    (field) => (profile[field] ?? 50) !== 50
+  );
+  if (anyDimDifferent) return true;
+  if ((profile.tweetsAnalyzed ?? 0) > 0) return true;
+  if (profile.maturity !== null && profile.maturity !== undefined) return true;
+  return false;
+}
+
 export function formatVoiceDimensionValue(value: number) {
   return `${Math.round(clampVoiceDimension(value) / 10)}/10`;
 }
