@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { api, readSSEStream } from "@/lib/api";
+import { api } from "@/lib/api";
 import { executeAction, summarizeResult } from "@/lib/oracle-action-executor";
 import type {
   AgentChatMessage,
@@ -243,30 +243,82 @@ export function OracleAgentProvider({
           .slice(-20)
           .map((m) => ({ role: m.role, content: m.text }));
 
-        const stream = await api.oracle.chatStream({
+        const res = await api.oracle.agent({
           messages: history,
           page: pathname,
+          sessionId: sessionIdRef.current ?? undefined,
         });
 
-        const oracleMsgId = msgId();
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: oracleMsgId,
-            role: "oracle",
-            text: "",
-            timestamp: Date.now(),
-          },
-        ]);
+        const oracleActions = (res.actions ?? []) as OracleAgentAction[];
 
-        for await (const delta of readSSEStream(stream)) {
-          setMessages((prev) => {
-            const last = prev[prev.length - 1];
-            if (last && last.id === oracleMsgId) {
-              return [...prev.slice(0, -1), { ...last, text: last.text + delta }];
+        if (res.text) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: msgId(),
+              role: "oracle",
+              text: res.text,
+              actions: oracleActions.length > 0 ? oracleActions : undefined,
+              timestamp: Date.now(),
+            },
+          ]);
+        }
+
+        const needsConfirm = oracleActions.filter((a) => a.requiresConfirmation);
+        const autoExec = oracleActions.filter((a) => !a.requiresConfirmation);
+
+        if (needsConfirm.length > 0) {
+          setPendingActions(needsConfirm);
+        }
+
+        if (autoExec.length > 0) {
+          const results = await executeActions(autoExec);
+
+          if (results.some((r) => r.data)) {
+            const continuationHistory = [
+              ...history,
+              { role: "oracle" as const, content: res.text || "" },
+              {
+                role: "user" as const,
+                content: `[Action results: ${results.map((r) => `${r.type}=${r.success ? "ok" : "fail"}`).join(", ")}]`,
+              },
+            ];
+
+            try {
+              const continuation = await api.oracle.agent({
+                messages: continuationHistory,
+                page: pathname,
+                sessionId: sessionIdRef.current ?? undefined,
+                actionResults: results.map((r) => ({
+                  actionId: r.actionId,
+                  type: r.type,
+                  success: r.success,
+                  data: r.data,
+                  error: r.error,
+                })),
+              });
+
+              if (continuation.text) {
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: msgId(),
+                    role: "oracle",
+                    text: continuation.text,
+                    timestamp: Date.now(),
+                  },
+                ]);
+              }
+
+              const followUpActions = (continuation.actions ?? []) as OracleAgentAction[];
+              const followUpConfirm = followUpActions.filter((a) => a.requiresConfirmation);
+              if (followUpConfirm.length > 0) {
+                setPendingActions((prev) => [...prev, ...followUpConfirm]);
+              }
+            } catch {
+              // Continuation failed — non-fatal
             }
-            return prev;
-          });
+          }
         }
       } catch {
         setMessages((prev) => [
@@ -282,7 +334,7 @@ export function OracleAgentProvider({
         setIsThinking(false);
       }
     },
-    [pathname],
+    [pathname, executeActions],
   );
 
   const confirmAction = useCallback(

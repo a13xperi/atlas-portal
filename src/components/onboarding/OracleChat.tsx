@@ -7,7 +7,6 @@ import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import {
   canAdvance,
-  createTextStream,
   getContinueLabel,
   getOnboardingCompletionHref,
   getTrackMeta,
@@ -55,7 +54,6 @@ export default function OracleChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const calibratingRef = useRef(false);
   const drainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const streamCleanupRef = useRef<(() => void) | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [resumeTrackAAfterOAuth, setResumeTrackAAfterOAuth] = useState(false);
   const [blendSaveStatus, setBlendSaveStatus] = useState<
@@ -158,15 +156,20 @@ export default function OracleChat() {
     }
   }, [state.currentStep, state.xConnected, state.xHandle]);
 
-  // ── Streaming animation: drain pending messages via ReadableStream ─
-  // Messages stream in word-by-word using a client-side ReadableStream,
-  // giving the Oracle a natural typing effect instead of appearing all at once.
+  // ── Typing animation: drain pending messages with delay ──────────
+  // NOTE: We deliberately do NOT depend on `state.isTyping` here. Doing so
+  // creates a race where dispatching SET_TYPING(true) inside the effect
+  // triggers a re-run, whose cleanup clears the pending dequeue timer
+  // before it can fire — leaving the chat stuck on the typing indicator
+  // forever (the original "blank /onboarding screen" bug).
   useEffect(() => {
     if (state.pendingMessages.length === 0) {
+      // Nothing to drain — make sure the typing indicator clears.
       if (state.isTyping) dispatch({ type: "SET_TYPING", isTyping: false });
       return;
     }
 
+    // A drain is already scheduled — let it complete.
     if (drainTimerRef.current) return;
 
     if (!state.isTyping) {
@@ -175,56 +178,26 @@ export default function OracleChat() {
 
     const msg = state.pendingMessages[0];
     const wordCount = msg.content.split(/\s+/).length;
-    const initialDelay = Math.min(800, Math.max(200, wordCount * 30));
+    const delay = Math.min(1200, Math.max(300, wordCount * 40));
 
     drainTimerRef.current = setTimeout(() => {
       drainTimerRef.current = null;
-      dispatch({ type: "START_STREAM_MESSAGE" });
-
-      // System messages appear instantly; Oracle messages stream word-by-word.
-      if (msg.role === "system") {
-        dispatch({ type: "APPEND_TO_LAST_MESSAGE", text: msg.content });
-        dispatch({ type: "SET_TYPING", isTyping: false });
-        return;
-      }
-
-      const stream = createTextStream(msg.content, 25);
-      const reader = stream.getReader();
-
-      async function pump() {
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            dispatch({ type: "APPEND_TO_LAST_MESSAGE", text: value });
-          }
-        } catch {
-          // Ignore cancellation errors
-        } finally {
-          reader.releaseLock();
-          dispatch({ type: "SET_TYPING", isTyping: false });
-        }
-      }
-
-      pump();
-      streamCleanupRef.current = () => reader.cancel().catch(() => {});
-    }, initialDelay);
+      dispatch({ type: "DEQUEUE_MESSAGE" });
+    }, delay);
 
     return () => {
       if (drainTimerRef.current) {
         clearTimeout(drainTimerRef.current);
         drainTimerRef.current = null;
       }
-      streamCleanupRef.current?.();
-      streamCleanupRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.pendingMessages]);
 
-  // ── Auto-scroll on new messages or streaming content ─────────────
+  // ── Auto-scroll on new messages ──────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [state.messages.length, state.isTyping, state.messages.at(-1)?.content]);
+  }, [state.messages.length, state.isTyping]);
 
   // ── API persistence side effects ─────────────────────────────────
   const persistAfterStep = useCallback(

@@ -220,40 +220,6 @@ export class ApiError extends Error {
   }
 }
 
-export async function* readSSEStream(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      const lines = buffer.split("\n\n");
-      buffer = lines.pop() ?? "";
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith("data: ")) continue;
-        const data = trimmed.slice(6);
-        if (data === "[DONE]") return;
-        try {
-          const parsed = JSON.parse(data);
-          if (typeof parsed.delta === "string") {
-            yield parsed.delta;
-          }
-        } catch {
-          // ignore malformed JSON
-        }
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
-}
-
 interface RawTwitterFollow {
   id: string;
   handle?: string | null;
@@ -719,37 +685,6 @@ export const api = {
       page?: string;
     }) =>
       request<{ text: string }>("/api/oracle/chat", { method: "POST", body }),
-
-    /**
-     * Streaming variant of `chat`. Returns the raw fetch Response body
-     * (a ReadableStream) for SSE consumption. Use with `readSSEStream`.
-     */
-    chatStream: async (body: {
-      messages: Array<{ role: "user" | "oracle"; content: string }>;
-      page?: string;
-    }) => {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        Accept: "text/event-stream",
-      };
-      if (_accessToken) {
-        headers["Authorization"] = `Bearer ${_accessToken}`;
-      }
-      const res = await fetch(`${API_URL}/api/oracle/chat/stream`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: res.statusText }));
-        throw new ApiError(err.error || "Stream request failed", res.status);
-      }
-      if (!res.body) {
-        throw new ApiError("Response body is null", 500);
-      }
-      return res.body;
-    },
 
     /**
      * OpenClaw-routed Oracle chat — returns the raw LLM reply with model
