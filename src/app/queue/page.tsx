@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Calendar, Clock, ListOrdered } from "lucide-react";
+import { Loader2, Calendar, Clock, ListOrdered, Sparkles } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import FeatureGate from "@/components/ui/FeatureGate";
 import GlassCard from "@/components/ui/GlassCard";
 import GradientButton from "@/components/ui/GradientButton";
 import { api, TweetDraft } from "@/lib/api";
+
+type QueueDraft = TweetDraft & { optimalTime?: string; optimalTimeBadge?: string };
 
 function toLocalDateTimeInput(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -57,9 +59,10 @@ function getStatusBadge(status: TweetDraft["status"]) {
 }
 
 function QueuePage() {
-  const [drafts, setDrafts] = useState<TweetDraft[]>([]);
+  const [drafts, setDrafts] = useState<QueueDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [schedulingAll, setSchedulingAll] = useState(false);
+  const [smartRanking, setSmartRanking] = useState(false);
 
   const loadDrafts = async () => {
     setLoading(true);
@@ -132,6 +135,23 @@ function QueuePage() {
     }
   };
 
+  const handleSmartOrder = async () => {
+    if (approvedDrafts.length === 0) return;
+    setSmartRanking(true);
+    try {
+      const res = await api.queue.smartRank(approvedDrafts);
+      const ranked = res.drafts ?? [];
+      setDrafts((prev) => {
+        const map = new Map(ranked.map((d) => [d.id, d]));
+        return prev.map((d) => map.get(d.id) ?? d);
+      });
+    } catch (e) {
+      console.error("Failed to smart rank", e);
+    } finally {
+      setSmartRanking(false);
+    }
+  };
+
   if (loading) {
     return (
       <AppShell>
@@ -155,14 +175,25 @@ function QueuePage() {
               Review, prioritize, and schedule your approved drafts.
             </p>
           </div>
-          <GradientButton
-            onClick={handleScheduleAll}
-            disabled={schedulingAll || approvedDrafts.length === 0}
-            size="sm"
-          >
-            <Calendar className="mr-1.5 h-4 w-4" />
-            {schedulingAll ? "Scheduling..." : "Schedule All"}
-          </GradientButton>
+          <div className="flex flex-wrap items-center gap-2">
+            <GradientButton
+              onClick={handleSmartOrder}
+              disabled={smartRanking || approvedDrafts.length === 0}
+              size="sm"
+              variant="outline"
+            >
+              <Sparkles className="mr-1.5 h-4 w-4" />
+              {smartRanking ? "Ranking..." : "Smart Order"}
+            </GradientButton>
+            <GradientButton
+              onClick={handleScheduleAll}
+              disabled={schedulingAll || approvedDrafts.length === 0}
+              size="sm"
+            >
+              <Calendar className="mr-1.5 h-4 w-4" />
+              {schedulingAll ? "Scheduling..." : "Schedule All"}
+            </GradientButton>
+          </div>
         </div>
 
         {/* Queue list */}
@@ -198,6 +229,15 @@ function QueuePage() {
                       {getStatusBadge(draft.status)}
                     </div>
                   </div>
+
+                  {/* Optimal time badge */}
+                  {draft.optimalTimeBadge && (
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-atlas-teal/10 px-2 py-0.5 text-[10px] font-medium text-atlas-teal">
+                        Optimal: {draft.optimalTimeBadge}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Engagement bar */}
                   <div className="space-y-1">

@@ -1,12 +1,33 @@
-import { POST } from "@/app/api/queue/smart-rank/route";
+jest.mock("next/server", () => ({
+  NextResponse: {
+    json: (body: unknown, init?: { status?: number }) => {
+      return {
+        json: async () => body,
+        status: init?.status ?? 200,
+      };
+    },
+  },
+}));
+
+const { POST } = require("@/app/api/queue/smart-rank/route");
 
 describe("POST /api/queue/smart-rank", () => {
-  it("returns empty array when no drafts provided", async () => {
-    const req = new Request("http://localhost/api/queue/smart-rank", {
-      method: "POST",
-      body: JSON.stringify({ drafts: [] }),
-    }) as unknown as import("next/server").NextRequest;
+  function makeReq(body: unknown) {
+    return {
+      json: async () => body,
+    } as unknown as import("next/server").NextRequest;
+  }
 
+  function makeBadReq() {
+    return {
+      json: async () => {
+        throw new Error("Invalid JSON");
+      },
+    } as unknown as import("next/server").NextRequest;
+  }
+
+  it("returns empty array when no drafts provided", async () => {
+    const req = makeReq({ drafts: [] });
     const res = await POST(req);
     const json = await res.json();
     expect(json).toEqual({ drafts: [] });
@@ -28,11 +49,7 @@ describe("POST /api/queue/smart-rank", () => {
       },
     ];
 
-    const req = new Request("http://localhost/api/queue/smart-rank", {
-      method: "POST",
-      body: JSON.stringify({ drafts }),
-    }) as unknown as import("next/server").NextRequest;
-
+    const req = makeReq({ drafts });
     const res = await POST(req);
     const json = await res.json();
 
@@ -46,11 +63,7 @@ describe("POST /api/queue/smart-rank", () => {
   });
 
   it("returns 500 on invalid JSON", async () => {
-    const req = new Request("http://localhost/api/queue/smart-rank", {
-      method: "POST",
-      body: "not-json",
-    }) as unknown as import("next/server").NextRequest;
-
+    const req = makeBadReq();
     const res = await POST(req);
     expect(res.status).toBe(500);
   });
