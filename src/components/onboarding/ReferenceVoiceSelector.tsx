@@ -5,6 +5,7 @@ import { Check, ExternalLink, Loader2, Plus, X } from "lucide-react";
 import GradientButton from "@/components/ui/GradientButton";
 import { api, type ReferenceAccount, type TwitterFollow } from "@/lib/api";
 import {
+  normalizeReferenceAccount,
   normalizeReferenceAccounts,
   REFERENCE_ACCOUNT_FALLBACK,
   REFERENCE_ACCOUNT_CATEGORY_ORDER,

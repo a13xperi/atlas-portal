@@ -19,6 +19,9 @@ import {
   CalendarClock,
   Rss,
   ListOrdered,
+  MessageSquare,
+  Shield,
+  Bug,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -150,7 +153,7 @@ export default function NavBar({ variant }: NavBarProps) {
     <nav aria-label="Main navigation" className="fixed top-0 left-0 right-0 z-50 bg-atlas-nav border-b border-glass-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link href="/dashboard" className="flex items-center gap-2">
+          <Link href="/feed" className="flex items-center gap-2">
             <DelphiLogo />
             <span className="text-atlas-text font-semibold text-sm">Atlas</span>
           </Link>
@@ -194,6 +197,22 @@ export default function NavBar({ variant }: NavBarProps) {
           )}
           {variant === "app" && user && (
             <>
+              <Link
+                href="/admin/bugs?action=report"
+                className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-atlas-text-secondary hover:text-atlas-teal hover:bg-atlas-surface transition-colors border border-glass-border"
+              >
+                <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
+                Feedback
+              </Link>
+              {(user.role === "ADMIN" || user.role === "MANAGER") && (
+                <Link
+                  href="/admin/bugs"
+                  className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-atlas-text-secondary hover:text-amber-400 hover:bg-atlas-surface transition-colors border border-glass-border"
+                >
+                  <Shield className="w-3.5 h-3.5" aria-hidden="true" />
+                  Admin
+                </Link>
+              )}
               <TourToggle />
               <DemoModeToggle />
             </>

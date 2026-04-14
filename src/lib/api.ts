@@ -691,6 +691,37 @@ export const api = {
       request<{ text: string }>("/api/oracle/chat", { method: "POST", body }),
 
     /**
+     * Streaming variant of `chat`. Returns the raw fetch Response body
+     * (a ReadableStream) for SSE consumption. Use with `readSSEStream`.
+     */
+    chatStream: async (body: {
+      messages: Array<{ role: "user" | "oracle"; content: string }>;
+      page?: string;
+    }) => {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      };
+      if (_accessToken) {
+        headers["Authorization"] = `Bearer ${_accessToken}`;
+      }
+      const res = await fetch(`${API_URL}/api/oracle/chat`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new ApiError(err.error || "Stream request failed", res.status);
+      }
+      if (!res.body) {
+        throw new ApiError("Response body is null", 500);
+      }
+      return res.body;
+    },
+
+    /**
      * OpenClaw-routed Oracle chat — returns the raw LLM reply with model
      * and token metadata. Profiles (smart/fast) are picked server-side from
      * the optional `phase` hint.
@@ -848,6 +879,19 @@ export const api = {
       const json = await res.json();
       return json && typeof json === "object" && "data" in json ? (json as { data: typeof json }).data as any : json;
     },
+  },
+
+  bugs: {
+    list: (status?: string) =>
+      request<{ bugs: BugRecord[] }>(`/api/bugs${status ? `?status=${status}` : ""}`),
+    get: (id: string) =>
+      request<{ bug: BugRecord }>(`/api/bugs/${id}`),
+    create: (data: BugCreateInput) =>
+      request<{ bug: BugRecord }>("/api/bugs", { method: "POST", body: data }),
+    update: (id: string, data: BugUpdateInput) =>
+      request<{ bug: BugRecord }>(`/api/bugs/${id}`, { method: "PATCH", body: data }),
+    delete: (id: string) =>
+      request<{ bug: BugRecord }>(`/api/bugs/${id}`, { method: "DELETE" }),
   },
 };
 
@@ -1212,6 +1256,50 @@ export interface LoopIteration {
   score: number;
   branch: string;
   timestamp: string;
+}
+
+export interface BugRecord {
+  id: string;
+  bug_number: number;
+  title: string;
+  description: string;
+  page_route: string | null;
+  page_url: string | null;
+  severity: string;
+  status: string;
+  source: string | null;
+  project: string | null;
+  found_by: string | null;
+  fixed_by: string | null;
+  tags: string[];
+  notes: string | null;
+  fingerprint: string | null;
+  occurrence_count: number;
+  user_agent: string | null;
+  created_at: string;
+  updated_at: string;
+  last_seen_at: string | null;
+  fixed_at: string | null;
+}
+
+export interface BugCreateInput {
+  title: string;
+  description: string;
+  severity?: "critical" | "high" | "medium" | "low" | "cosmetic";
+  page_route?: string | null;
+  page_url?: string | null;
+  source?: "manual" | "console" | "session";
+  tags?: string[];
+}
+
+export interface BugUpdateInput {
+  status?: "open" | "fixed" | "in-progress" | "closed" | "wontfix" | "archived";
+  notes?: string | null;
+  severity?: "critical" | "high" | "medium" | "low" | "cosmetic";
+  title?: string;
+  description?: string;
+  fixed_by?: string | null;
+  tags?: string[];
 }
 
 export interface LoopState {

@@ -16,3 +16,13 @@
 - **Recommended merge order:** 244 → 246 → 245 → 243
 - **Capacity:** 88% 7d — switch accounts before next session
 - **Outstanding wire requests:** cc-75573 (arena.ts lock), cc-63895 (crafting/page.tsx lock)
+
+## 2026-04-13T05:06:36Z — #225062: Add Thread it chip to RefinementChips (cc-73386)
+- **Source:** dispatch-next (lane: atlas)
+- **Branch:** feat/thread-it-chip
+- **Account:** B
+- **Points:** 1 | **Attempt:** 1
+- **Status:** Complete
+- **Files:** src/components/ui/RefinementChips.tsx, src/__tests__/components/RefinementChips.test.tsx
+- **Commits:** 0ab5cb9 feat: add Thread it refinement chip (#225062)
+- **Duration:** ~5m
