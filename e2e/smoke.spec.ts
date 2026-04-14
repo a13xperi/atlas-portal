@@ -11,9 +11,9 @@ const API_URL =
   process.env.PLAYWRIGHT_API_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
   "https://api-production-9bef.up.railway.app";
-const TEST_USER_HANDLE = process.env.TEST_USER_HANDLE;
+const TEST_USER_EMAIL = process.env.TEST_USER_EMAIL;
 const TEST_USER_PASSWORD = process.env.TEST_USER_PASSWORD;
-const HAS_AUTH_CREDENTIALS = Boolean(TEST_USER_HANDLE && TEST_USER_PASSWORD);
+const HAS_AUTH_CREDENTIALS = Boolean(TEST_USER_EMAIL && TEST_USER_PASSWORD);
 const HAS_VERCEL_BYPASS = Boolean(resolveVercelBypassHeaders());
 
 test.use({ extraHTTPHeaders: resolveVercelBypassHeaders() });
@@ -26,9 +26,9 @@ async function addVercelBypassCookie(page: Page) {
 }
 
 async function loginAndSeedSession(page: Page) {
-  if (!TEST_USER_HANDLE || !TEST_USER_PASSWORD) {
+  if (!TEST_USER_EMAIL || !TEST_USER_PASSWORD) {
     throw new Error(
-      "Missing TEST_USER_HANDLE or TEST_USER_PASSWORD for authenticated smoke tests.",
+      "Missing TEST_USER_EMAIL or TEST_USER_PASSWORD for authenticated smoke tests.",
     );
   }
 
@@ -36,36 +36,37 @@ async function loginAndSeedSession(page: Page) {
 
   const apiContext = await request.newContext({ baseURL: API_URL });
   try {
-    const loginAttempts = [
-      { email: TEST_USER_HANDLE, password: TEST_USER_PASSWORD },
-      { handle: TEST_USER_HANDLE, password: TEST_USER_PASSWORD },
-      { username: TEST_USER_HANDLE, password: TEST_USER_PASSWORD },
-    ];
-
     let token: string | null = null;
-    let lastError = "Unknown login failure";
 
-    for (const payload of loginAttempts) {
-      const response = await apiContext.post("/api/auth/login", {
-        data: payload,
+    const loginResponse = await apiContext.post("/api/auth/login", {
+      data: { email: TEST_USER_EMAIL, password: TEST_USER_PASSWORD },
+      failOnStatusCode: false,
+    });
+
+    if (loginResponse.ok()) {
+      const body = await loginResponse.json();
+      token = typeof body?.token === "string" ? body.token : null;
+    }
+
+    if (!token && (loginResponse.status() === 404 || loginResponse.status() === 401)) {
+      await apiContext.post("/api/auth/register", {
+        data: { handle: "e2e-smoke-user", email: TEST_USER_EMAIL, password: TEST_USER_PASSWORD },
         failOnStatusCode: false,
       });
 
-      if (response.ok()) {
-        const body = await response.json();
-        token = typeof body?.token === "string" ? body.token : null;
-        if (token) {
-          break;
-        }
-        lastError = "Login succeeded but did not return a token.";
-        continue;
-      }
+      const retryResponse = await apiContext.post("/api/auth/login", {
+        data: { email: TEST_USER_EMAIL, password: TEST_USER_PASSWORD },
+        failOnStatusCode: false,
+      });
 
-      lastError = `Attempt with keys ${Object.keys(payload).join(", ")} failed: ${response.status()} ${response.statusText()}`;
+      if (retryResponse.ok()) {
+        const body = await retryResponse.json();
+        token = typeof body?.token === "string" ? body.token : null;
+      }
     }
 
     if (!token) {
-      throw new Error(lastError);
+      throw new Error("Login failed: unable to obtain token.");
     }
 
     await page.context().addCookies([
@@ -89,7 +90,7 @@ async function loginAndSeedSession(page: Page) {
 function skipIfAuthenticatedSmokeCannotRun() {
   test.skip(
     !HAS_AUTH_CREDENTIALS,
-    "Set TEST_USER_HANDLE and TEST_USER_PASSWORD to run authenticated smoke checks.",
+    "Set TEST_USER_EMAIL and TEST_USER_PASSWORD to run authenticated smoke checks.",
   );
   test.skip(
     BASE_URL === "https://staging-delphi-atlas.vercel.app" && !HAS_VERCEL_BYPASS,
