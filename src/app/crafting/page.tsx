@@ -259,7 +259,8 @@ function CraftingPage() {
   const [draftHistory, setDraftHistory] = useState<DraftHistoryItem[]>([]);
   const [draftVersions, setDraftVersions] = useState<TweetDraft[]>([]);
   const [activeDraft, setActiveDraft] = useState<TweetDraft | null>(null);
-  const [activeMode, setActiveMode] = useState<CraftingMode>("new_post");
+  const activeMode =
+    (searchParams.get("mode") as CraftingMode) || "new_post";
   const [replyAngle, setReplyAngle] = useState<string | null>(null);
   const [voiceMode, setVoiceMode] = useState<"my_voice" | "blended" | "specific">(
     "my_voice"
@@ -526,7 +527,10 @@ function CraftingPage() {
   }, [activeDraft, compareMode, compareVersion, draftVersions]);
 
   const handleModeChange = (mode: CraftingMode) => {
-    setActiveMode(mode);
+    setReplyAngle(null); // prevent stale reply angle leaking into other modes
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("mode", mode);
+    router.replace(`/crafting?${params.toString()}`, { scroll: false });
     setIsContentDragActive(false);
     setError(null);
     setContentError("");
