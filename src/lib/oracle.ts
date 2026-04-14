@@ -327,7 +327,7 @@ export function createTextStream(text: string, wordDelayMs = 30): ReadableStream
 
 /** Parse a server-sent events (SSE) stream into yielded JSON objects. */
 export async function* readSSEStream<T = unknown>(stream: ReadableStream<Uint8Array>): AsyncGenerator<T, void, unknown> {
-  const reader = stream.pipeThrough(new TextDecoderStream()).getReader();
+  const reader = stream.pipeThrough(new TextDecoderStream() as unknown as ReadableWritablePair<string, Uint8Array>).getReader();
   let buffer = "";
   try {
     while (true) {

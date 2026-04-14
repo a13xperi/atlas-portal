@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Download, ExternalLink, PencilLine, Sparkles } from "lucide-react";
 import ReferenceVoiceSelector from "@/components/onboarding/ReferenceVoiceSelector";
 import GradientButton from "@/components/ui/GradientButton";
 import Modal from "@/components/ui/Modal";
 import ImportFromXFollowsModal from "@/components/voice-profiles/ImportFromXFollowsModal";
 import ImportFromXLikesModal from "@/components/voice-profiles/ImportFromXLikesModal";
-import { api, type ReferenceAccount, type ReferenceVoice } from "@/lib/api";
+import ReferenceVoiceCard from "@/components/voice-profiles/ReferenceVoiceCard";
+import BlendPanel from "@/components/voice-profiles/BlendPanel";
+import VoicePreviewModal from "@/components/voice-profiles/VoicePreviewModal";
+import { api, type ReferenceAccount, type ReferenceVoice, type SavedBlend } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { colors } from "@/lib/tokens";
+import type { VoiceDimensions } from "@/lib/voice-profile-dimensions";
 import {
   getEqualReferenceWeights,
   getReferenceAccountLookup,
@@ -24,6 +27,8 @@ import {
 interface ReferenceVoicesSectionProps {
   onReferencesChange: (voices: ReferenceVoice[]) => void;
   references: ReferenceVoice[];
+  personalDimensions: VoiceDimensions;
+  onBlendCreated?: (blend: SavedBlend) => void;
 }
 
 function normalizeTwitterHandle(handle?: string | null) {
@@ -44,6 +49,8 @@ function normalizeTwitterHandle(handle?: string | null) {
 export default function ReferenceVoicesSection({
   onReferencesChange,
   references,
+  personalDimensions,
+  onBlendCreated,
 }: ReferenceVoicesSectionProps) {
   const { user } = useAuth();
   const [catalog, setCatalog] =
@@ -56,6 +63,14 @@ export default function ReferenceVoicesSection({
   const [xLinked, setXLinked] = useState(false);
   const [isImportingFromX, setIsImportingFromX] = useState(false);
   const [isImportingFromLikes, setIsImportingFromLikes] = useState(false);
+
+  // Blend panel state
+  const [blendPanelOpen, setBlendPanelOpen] = useState(false);
+  const [blendInitialVoiceIds, setBlendInitialVoiceIds] = useState<string[]>([]);
+
+  // Preview modal state
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewVoice, setPreviewVoice] = useState<ReferenceVoice | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -152,6 +167,15 @@ export default function ReferenceVoicesSection({
     });
   });
 
+  const selectedReferences = useMemo(() => {
+    return references.filter((ref) => {
+      const normalizedHandle = ref.handle?.replace(/^@/, "").toLowerCase();
+      return selectedIds.some(
+        (id) => id.toLowerCase() === normalizedHandle || id === ref.id
+      );
+    });
+  }, [references, selectedIds]);
+
   const handleSaveSelection = async () => {
     if (isSaving) {
       return;
@@ -206,6 +230,16 @@ export default function ReferenceVoicesSection({
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleOpenBlendPanel = (voiceId?: string) => {
+    setBlendInitialVoiceIds(voiceId ? [voiceId] : []);
+    setBlendPanelOpen(true);
+  };
+
+  const handleOpenPreview = (voice: ReferenceVoice) => {
+    setPreviewVoice(voice);
+    setPreviewModalOpen(true);
   };
 
   return (
@@ -277,62 +311,74 @@ export default function ReferenceVoicesSection({
             </p>
           </div>
         ) : (
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {selectedAccounts.map((account) => {
-              const normalizedHandle = normalizeTwitterHandle(account.handle);
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {selectedReferences.length > 0 ? (
+              selectedReferences.map((voice) => (
+                <ReferenceVoiceCard
+                  key={voice.id}
+                  voice={voice}
+                  onBlend={() => handleOpenBlendPanel(voice.id)}
+                  onPreview={() => handleOpenPreview(voice)}
+                />
+              ))
+            ) : (
+              // Fallback: show selected accounts that haven't been synced to references yet
+              selectedAccounts.map((account) => {
+                const normalizedHandle = normalizeTwitterHandle(account.handle);
 
-              return (
-                <div
-                  key={account.id}
-                  className="flex items-center gap-3 rounded-2xl border border-glass-border bg-atlas-surface/70 p-4"
-                >
-                  {account.profileImageUrl && !avatarErrors[account.id] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      alt={`${account.displayName || account.name || account.handle} avatar`}
-                      className="h-12 w-12 rounded-full border border-glass-border object-cover"
-                      onError={() =>
-                        setAvatarErrors((current) => ({
-                          ...current,
-                          [account.id]: true,
-                        }))
-                      }
-                      src={account.profileImageUrl}
-                    />
-                  ) : (
-                    <div
-                      aria-hidden="true"
-                      className="flex h-12 w-12 items-center justify-center rounded-full border border-atlas-teal/30 text-sm font-semibold uppercase"
-                      style={{
-                        backgroundColor: `${colors.atlasTeal}1A`,
-                        color: colors.atlasTeal,
-                      }}
-                    >
-                      {(normalizedHandle || account.id).charAt(0)}
-                    </div>
-                  )}
-
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-atlas-text">
-                      {account.displayName || account.name || account.handle || account.id}
-                    </p>
-                    {normalizedHandle ? (
-                      <a
-                        href={`https://twitter.com/${normalizedHandle}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-0.5 text-xs text-atlas-text-secondary hover:text-atlas-teal hover:underline"
-                      >
-                        @{normalizedHandle}
-                        <ExternalLink className="h-2.5 w-2.5" />
-                      </a>
+                return (
+                  <div
+                    key={account.id}
+                    className="flex items-center gap-3 rounded-2xl border border-glass-border bg-atlas-surface/70 p-4"
+                  >
+                    {account.profileImageUrl && !avatarErrors[account.id] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        alt={`${account.displayName || account.name || account.handle} avatar`}
+                        className="h-12 w-12 rounded-full border border-glass-border object-cover"
+                        onError={() =>
+                          setAvatarErrors((current) => ({
+                            ...current,
+                            [account.id]: true,
+                          }))
+                        }
+                        src={account.profileImageUrl}
+                      />
                     ) : (
-                      <p className="truncate text-xs text-atlas-text-secondary">@{account.id}</p>
+                      <div
+                        aria-hidden="true"
+                        className="flex h-12 w-12 items-center justify-center rounded-full border border-atlas-teal/30 text-sm font-semibold uppercase"
+                        style={{
+                          backgroundColor: "rgba(78,205,196,0.1)",
+                          color: "#4ecdc4",
+                        }}
+                      >
+                        {(normalizedHandle || account.id).charAt(0)}
+                      </div>
                     )}
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-atlas-text">
+                        {account.displayName || account.name || account.handle || account.id}
+                      </p>
+                      {normalizedHandle ? (
+                        <a
+                          href={`https://twitter.com/${normalizedHandle}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-0.5 text-xs text-atlas-text-secondary hover:text-atlas-teal hover:underline"
+                        >
+                          @{normalizedHandle}
+                          <ExternalLink className="h-2.5 w-2.5" />
+                        </a>
+                      ) : (
+                        <p className="truncate text-xs text-atlas-text-secondary">@{account.id}</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         )}
       </div>
@@ -366,6 +412,32 @@ export default function ReferenceVoicesSection({
         onClose={() => setIsImportingFromLikes(false)}
         references={references}
         onReferenceAdded={handleXReferenceAdded}
+      />
+
+      <BlendPanel
+        isOpen={blendPanelOpen}
+        onClose={() => setBlendPanelOpen(false)}
+        references={references}
+        initialVoiceIds={blendInitialVoiceIds}
+        personalDimensions={personalDimensions}
+        userHandle={user?.handle}
+        onSaveBlend={(blend) => {
+          onBlendCreated?.(blend);
+        }}
+      />
+
+      <VoicePreviewModal
+        isOpen={previewModalOpen}
+        onClose={() => setPreviewModalOpen(false)}
+        voice={previewVoice}
+        personalDimensions={personalDimensions}
+        userHandle={user?.handle}
+        onBlend={() => {
+          setPreviewModalOpen(false);
+          if (previewVoice) {
+            handleOpenBlendPanel(previewVoice.id);
+          }
+        }}
       />
     </>
   );

@@ -48,7 +48,7 @@ type OracleMessage = {
 }
 
 // Export all types for use in other parts of the application
-export {
+export type {
   OracleState,
   OracleAction,
   OracleConfig,
