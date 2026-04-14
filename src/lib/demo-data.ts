@@ -936,6 +936,23 @@ export function getDemoResponse(path: string, method: string = "GET", body?: unk
     };
   }
 
+  // Campaign clone
+  if (method === "POST" && /^\/api\/campaigns\/[^/]+\/clone$/.test(cleanPath)) {
+    const id = cleanPath.split("/")[3] as string;
+    const existing = demoCampaigns.find((c) => c.id === id);
+    return {
+      campaign: {
+        id: `camp-clone-${Date.now()}`,
+        name: `${existing?.name ?? "Campaign"} (Copy)`,
+        description: existing?.description ?? null,
+        status: "DRAFT" as const,
+        draftCount: existing?.draftCount ?? 0,
+        drafts: existing?.drafts ?? [],
+        createdAt: now,
+      },
+    };
+  }
+
   // Campaign update
   if (method === "PATCH" && /^\/api\/campaigns\/[^/]+$/.test(cleanPath)) {
     const id = cleanPath.split("/").pop() as string;

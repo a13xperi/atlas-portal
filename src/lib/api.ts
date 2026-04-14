@@ -807,6 +807,8 @@ export const api = {
       request<{ campaign: Campaign }>(`/api/campaigns/${id}`, { method: "PATCH", body: data }),
     delete: (id: string) =>
       request<{ success: boolean }>(`/api/campaigns/${id}`, { method: "DELETE" }),
+    clone: (id: string) =>
+      request<{ campaign: Campaign }>(`/api/campaigns/${id}/clone`, { method: "POST" }),
     addDraft: (campaignId: string, draftId: string, sortOrder?: number) =>
       request<{ success: boolean }>(`/api/campaigns/${campaignId}/drafts`, { method: "POST", body: { draftId, sortOrder } }),
     removeDraft: (campaignId: string, draftId: string) =>
