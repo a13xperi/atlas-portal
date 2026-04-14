@@ -247,20 +247,9 @@ export default function NavBar({ variant }: NavBarProps) {
                 <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
               </div>
               <Link
-                href="/settings"
-                aria-label="Settings"
-                title="Settings"
-                className={`hidden sm:inline-flex rounded-full border p-2 transition-colors ${
-                  pathname === "/settings"
-                    ? "border-atlas-teal bg-atlas-teal/10 text-atlas-teal"
-                    : "border-glass-border text-atlas-text-secondary hover:border-atlas-teal/40 hover:text-atlas-text"
-                }`}
-              >
-                <Settings className="h-4 w-4" aria-hidden="true" />
-              </Link>
-              <div
+                href="/profile"
                 aria-label={cachedTier ? `${cachedTier.tier.name} (#${cachedTier.rank})` : "Signed in"}
-                className={`w-8 h-8 rounded-full bg-atlas-surface border-2 flex items-center justify-center text-xs font-medium ${
+                className={`w-8 h-8 rounded-full bg-atlas-surface border-2 flex items-center justify-center text-xs font-medium cursor-pointer hover:ring-2 hover:ring-delphi-teal/40 transition-all ${
                   cachedTier
                     ? `${cachedTier.tier.borderColor} ${cachedTier.tier.color}`
                     : "border-glass-border text-atlas-text-secondary"
@@ -279,7 +268,7 @@ export default function NavBar({ variant }: NavBarProps) {
                 ) : (
                   initial
                 )}
-              </div>
+              </Link>
             </>
           )}
           {variant === "app" && user && (
