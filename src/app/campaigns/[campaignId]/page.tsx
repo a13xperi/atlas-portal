@@ -5,10 +5,15 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
+  BarChart3,
   Calendar,
   Check,
+  Eye,
+  Heart,
   Loader2,
   Megaphone,
+  MessageCircle,
+  Repeat2,
   Send,
   X,
 } from "lucide-react";
@@ -16,7 +21,7 @@ import AppShell from "@/components/layout/AppShell";
 import GlassCard from "@/components/ui/GlassCard";
 import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
-import { api, Campaign, TweetDraft } from "@/lib/api";
+import { api, Campaign, CampaignAnalytics, TweetDraft } from "@/lib/api";
 
 type FilterTab = "ALL" | "APPROVED" | "PENDING" | "POSTED";
 
@@ -37,12 +42,20 @@ const DRAFT_STATUS: Record<TweetDraft["status"], { label: string; cls: string }>
 
 const TABS: FilterTab[] = ["ALL", "APPROVED", "PENDING", "POSTED"];
 
+function formatNumber(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
 function CampaignDetailPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
   const router = useRouter();
   const { user } = useAuth();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [analytics, setAnalytics] = useState<CampaignAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<FilterTab>("ALL");
   const [postingAll, setPostingAll] = useState(false);
@@ -61,9 +74,23 @@ function CampaignDetailPage() {
     }
   }, [user, campaignId]);
 
+  const loadAnalytics = useCallback(async () => {
+    if (!user || !campaignId) return;
+    setAnalyticsLoading(true);
+    try {
+      const data = await api.campaigns.analytics(campaignId);
+      setAnalytics(data);
+    } catch {
+      setAnalytics(null);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [user, campaignId]);
+
   useEffect(() => {
     load();
-  }, [load]);
+    loadAnalytics();
+  }, [load, loadAnalytics]);
 
   const filteredDrafts = useMemo(() => {
     if (!campaign?.drafts) return [];
@@ -123,6 +150,12 @@ function CampaignDetailPage() {
     }
   };
 
+  const hasPostedDrafts = (campaign?.drafts?.filter((d) => d.status === "POSTED").length ?? 0) > 0;
+  const chartMax = useMemo(() => {
+    const vals = analytics?.daily.map((d) => d.engagement) ?? [];
+    return vals.length > 0 ? Math.max(...vals, 1) : 1;
+  }, [analytics]);
+
   return (
     <AppShell>
       <div className="mx-auto max-w-4xl px-4 py-8 font-body sm:px-6">
@@ -180,6 +213,109 @@ function CampaignDetailPage() {
                 Post All Approved
               </GradientButton>
             </div>
+
+            {/* Analytics Section */}
+            {hasPostedDrafts && (
+              <div className="mb-6">
+                <div className="mb-3 flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-atlas-teal" />
+                  <h2 className="text-sm font-semibold text-atlas-text">Performance</h2>
+                </div>
+
+                {analyticsLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <Loader2 className="h-5 w-5 animate-spin text-atlas-teal" />
+                  </div>
+                ) : analytics ? (
+                  <div className="space-y-4">
+                    {/* Summary cards */}
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      <GlassCard className="p-4 text-center">
+                        <Eye className="mx-auto mb-1 h-4 w-4 text-atlas-teal" />
+                        <p className="font-heading text-lg font-bold text-atlas-text">{formatNumber(analytics.totals.impressions)}</p>
+                        <p className="text-[10px] uppercase tracking-wide text-atlas-text-muted">Impressions</p>
+                      </GlassCard>
+                      <GlassCard className="p-4 text-center">
+                        <Heart className="mx-auto mb-1 h-4 w-4 text-atlas-success" />
+                        <p className="font-heading text-lg font-bold text-atlas-text">{formatNumber(analytics.totals.likes)}</p>
+                        <p className="text-[10px] uppercase tracking-wide text-atlas-text-muted">Likes</p>
+                      </GlassCard>
+                      <GlassCard className="p-4 text-center">
+                        <Repeat2 className="mx-auto mb-1 h-4 w-4 text-atlas-warning" />
+                        <p className="font-heading text-lg font-bold text-atlas-text">{formatNumber(analytics.totals.retweets)}</p>
+                        <p className="text-[10px] uppercase tracking-wide text-atlas-text-muted">Retweets</p>
+                      </GlassCard>
+                      <GlassCard className="p-4 text-center">
+                        <MessageCircle className="mx-auto mb-1 h-4 w-4 text-atlas-text-secondary" />
+                        <p className="font-heading text-lg font-bold text-atlas-text">{formatNumber(analytics.totals.replies)}</p>
+                        <p className="text-[10px] uppercase tracking-wide text-atlas-text-muted">Replies</p>
+                      </GlassCard>
+                    </div>
+
+                    {/* Mini bar chart */}
+                    {analytics.daily.length > 0 && (
+                      <GlassCard className="p-4">
+                        <p className="mb-3 text-xs font-medium text-atlas-text">Engagement over time</p>
+                        <div className="flex h-28 items-end gap-1">
+                          {analytics.daily.map((day) => (
+                            <div key={day.date} className="flex flex-1 flex-col items-center gap-1">
+                              <div
+                                className="w-full rounded-t bg-atlas-teal/60"
+                                style={{
+                                  height: `${Math.min(100, Math.max(4, (day.engagement / chartMax) * 100))}%`,
+                                }}
+                                title={`${day.dayLabel}: ${day.engagement.toLocaleString()}`}
+                              />
+                              <span className="text-[9px] text-atlas-text-muted">{day.dayLabel}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </GlassCard>
+                    )}
+
+                    {/* Per-tweet engagement */}
+                    {analytics.tweets.length > 0 && (
+                      <GlassCard className="p-4">
+                        <p className="mb-3 text-xs font-medium text-atlas-text">Per-tweet engagement</p>
+                        <div className="space-y-3">
+                          {analytics.tweets.map((t) => (
+                            <div
+                              key={t.draftId}
+                              className="rounded-xl border border-glass-border bg-atlas-surface p-3"
+                            >
+                              <p className="line-clamp-2 text-sm text-atlas-text">{t.content}</p>
+                              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-atlas-text-muted">
+                                <span className="flex items-center gap-1">
+                                  <Eye className="h-3 w-3" />
+                                  {t.impressions.toLocaleString()}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Heart className="h-3 w-3" />
+                                  {t.likes.toLocaleString()}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Repeat2 className="h-3 w-3" />
+                                  {t.retweets.toLocaleString()}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <MessageCircle className="h-3 w-3" />
+                                  {t.replies.toLocaleString()}
+                                </span>
+                                {t.postedAt && (
+                                  <span className="ml-auto text-[10px]">
+                                    {new Date(t.postedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </GlassCard>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            )}
 
             {/* Filter tabs */}
             <div className="mb-6 flex flex-wrap items-center gap-2">

@@ -581,6 +581,11 @@ export const api = {
       request<{ item: QueueItem } | QueueItem>(`/api/queue/${id}/publish`, {
         method: "POST",
       }),
+    smartRank: (drafts: TweetDraft[]) =>
+      request<{ drafts: Array<TweetDraft & { optimalTime: string; optimalTimeBadge?: string; topicScore: number; timeScore: number; historyScore: number }> }>("/api/queue/smart-rank", {
+        method: "POST",
+        body: { drafts },
+      }),
   },
 
   analytics: {
@@ -874,6 +879,8 @@ export const api = {
       request<{ campaign: Campaign }>("/api/campaigns", { method: "POST", body: { name, description } }),
     get: (id: string) =>
       request<{ campaign: Campaign }>(`/api/campaigns/${id}`),
+    analytics: (id: string) =>
+      request<CampaignAnalytics>(`/api/campaigns/${id}/analytics`),
     update: (id: string, data: { name?: string; description?: string | null; status?: Campaign["status"] }) =>
       request<{ campaign: Campaign }>(`/api/campaigns/${id}`, { method: "PATCH", body: data }),
     delete: (id: string) =>
@@ -1110,6 +1117,31 @@ export interface Campaign {
   draftCount: number;
   drafts?: TweetDraft[];
   createdAt: string;
+}
+
+export interface CampaignTweetAnalytics {
+  draftId: string;
+  content: string;
+  postedAt: string | null;
+  impressions: number;
+  likes: number;
+  retweets: number;
+  replies: number;
+}
+
+export interface CampaignAnalytics {
+  tweets: CampaignTweetAnalytics[];
+  totals: {
+    impressions: number;
+    likes: number;
+    retweets: number;
+    replies: number;
+  };
+  daily: {
+    date: string;
+    dayLabel: string;
+    engagement: number;
+  }[];
 }
 
 export interface QueuedDraft extends TweetDraft {
