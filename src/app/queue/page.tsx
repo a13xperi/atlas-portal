@@ -37,6 +37,7 @@ import QueueTimeline from "@/components/queue/QueueTimeline";
 import OracleInspector from "@/components/oracle/OracleInspector";
 import type { InspectableEntity } from "@/lib/oracle-agent-types";
 import { api, QueuedDraft } from "@/lib/api";
+import { SchedulePopover } from "@/components/ui/SchedulePopover";
 
 type FilterKey = "all" | "draft" | "scheduled" | "posted" | "archived";
 
@@ -80,62 +81,6 @@ function statusVariant(status: QueuedDraft["status"]): {
         className: "bg-glass-border/30 text-atlas-text-secondary",
       };
   }
-}
-
-function toLocalDateTimeInput(iso: string): string {
-  const d = new Date(iso);
-  // Format as yyyy-MM-ddTHH:mm in local time for <input type="datetime-local">
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-    d.getDate()
-  )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-/* ---- Schedule picker popover ---- */
-function SchedulePopover({
-  initialAt,
-  onCancel,
-  onConfirm,
-  busy,
-}: {
-  initialAt: string;
-  onCancel: () => void;
-  onConfirm: (iso: string) => void;
-  busy?: boolean;
-}) {
-  const [value, setValue] = useState(() => toLocalDateTimeInput(initialAt));
-
-  return (
-    <div className="absolute right-0 top-full z-30 mt-2 w-64 rounded-xl border border-glass-border bg-atlas-nav p-3 shadow-xl backdrop-blur-xl">
-      <p className="mb-2 text-[11px] font-medium text-atlas-text-secondary">
-        Pick a date and time
-      </p>
-      <input
-        type="datetime-local"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        className="w-full rounded-lg border border-glass-border bg-atlas-surface px-2 py-1.5 text-xs text-atlas-text focus:border-atlas-teal focus:outline-none"
-      />
-      <div className="mt-3 flex items-center justify-end gap-2">
-        <button
-          onClick={onCancel}
-          className="rounded-lg border border-glass-border px-2.5 py-1 text-[11px] text-atlas-text-muted hover:text-atlas-text"
-        >
-          Cancel
-        </button>
-        <button
-          disabled={busy || !value}
-          onClick={() => {
-            const iso = new Date(value).toISOString();
-            onConfirm(iso);
-          }}
-          className="rounded-lg bg-atlas-teal px-2.5 py-1 text-[11px] font-semibold text-atlas-bg transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          {busy ? "Saving..." : "Confirm"}
-        </button>
-      </div>
-    </div>
-  );
 }
 
 /* ---- Sortable queue item ---- */

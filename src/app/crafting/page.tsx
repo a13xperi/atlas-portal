@@ -11,6 +11,7 @@ import {
 import {
   Archive,
   ArrowUp,
+  Calendar,
   Check,
   CheckCircle,
   ChevronRight,
@@ -57,6 +58,8 @@ import OracleWidget from "@/components/oracle/OracleWidget";
 import OracleCraftingHints from "@/components/oracle/OracleCraftingHints";
 import OracleInspector from "@/components/oracle/OracleInspector";
 import type { InspectableEntity } from "@/lib/oracle-agent-types";
+import { useToast } from "@/components/ui/Toast";
+import { SchedulePopover } from "@/components/ui/SchedulePopover";
 
 const CRAFTING_MODES = [
   { id: "new_post", label: "New Post" },
@@ -253,6 +256,7 @@ function CraftingPage() {
   const regenerationGuidanceId = useId();
   const draftFeedbackHintId = useId();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [draftHistory, setDraftHistory] = useState<DraftHistoryItem[]>([]);
   const [draftVersions, setDraftVersions] = useState<TweetDraft[]>([]);
@@ -269,6 +273,8 @@ function CraftingPage() {
   const [feedbackText, setFeedbackText] = useState("");
   const [showFeedback, setShowFeedback] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [schedulePopoverOpen, setSchedulePopoverOpen] = useState(false);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [voiceBanner, setVoiceBanner] = useState<string | null>(null);
   const [blendWarning, setBlendWarning] = useState<string | null>(null);
@@ -963,6 +969,41 @@ function CraftingPage() {
       );
     } finally {
       setStatusUpdating(false);
+    }
+  };
+
+  const handleScheduleDraft = async (scheduledAt: string) => {
+    if (!user || !activeDraft) return;
+
+    setScheduleLoading(true);
+    setError(null);
+
+    try {
+      const sourceUrl = extractSourceUrl(activeDraft);
+      const { draft, conflicts } = await api.drafts.schedule(
+        activeDraft.id,
+        scheduledAt
+      );
+      syncDraftReferences(draft, sourceUrl ?? undefined);
+      setSchedulePopoverOpen(false);
+
+      if (conflicts && conflicts.length > 0) {
+        toast(
+          `Scheduled, but it conflicts with ${conflicts.length} other draft${conflicts.length === 1 ? "" : "s"}.`,
+          "warning"
+        );
+      } else {
+        toast("Draft scheduled successfully.", "success");
+      }
+    } catch (scheduleError: unknown) {
+      console.error("Failed to schedule draft:", scheduleError);
+      setError(
+        scheduleError instanceof Error
+          ? scheduleError.message
+          : "Failed to schedule draft"
+      );
+    } finally {
+      setScheduleLoading(false);
     }
   };
 
@@ -2054,6 +2095,27 @@ function CraftingPage() {
                       </svg>
                       Post to X
                     </button>
+                  ) : null}
+                  {activeDraft.status === "APPROVED" || activeDraft.status === "DRAFT" ? (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setSchedulePopoverOpen(true)}
+                        title="Schedule this draft"
+                        className="flex items-center gap-1.5 rounded-lg border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs font-medium text-atlas-text transition-colors hover:border-atlas-teal/50 hover:text-atlas-teal"
+                      >
+                        <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
+                        Schedule
+                      </button>
+                      {schedulePopoverOpen && (
+                        <SchedulePopover
+                          initialAt={activeDraft.scheduledAt || new Date(Date.now() + 3600000).toISOString()}
+                          onCancel={() => setSchedulePopoverOpen(false)}
+                          onConfirm={(iso) => void handleScheduleDraft(iso)}
+                          busy={scheduleLoading}
+                        />
+                      )}
+                    </div>
                   ) : null}
                   {activeDraft.status === "APPROVED" || activeDraft.status === "DRAFT" ? (
                     <button
