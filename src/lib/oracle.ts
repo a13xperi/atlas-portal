@@ -78,8 +78,8 @@ export function getContinueLabel(
 
 // ── Step transition map ────────────────────────────────────────────
 const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
-  WELCOME: "CONNECT_X",
-  CONNECT_X: "TRACK_A_SCANNING",
+  WELCOME: "TRACK_A_SCANNING",
+  CONNECT_X: "WELCOME",
   TRACK_A_SCANNING: "TRACK_A_RESULT",
   TRACK_A_RESULT: "REFERENCES",
   TRACK_B_STYLE: "TRACK_B_CONTENT",
@@ -124,7 +124,7 @@ export function canAdvance(state: OracleState): boolean {
     case "WELCOME":
       return true;
     case "CONNECT_X":
-      return state.xConnected && state.xHandle.trim().length > 0;
+      return true; // allow skip
     case "TRACK_A_SCANNING":
       return state.calibrationResult !== null;
     case "TRACK_A_RESULT":
@@ -149,10 +149,10 @@ export function canAdvance(state: OracleState): boolean {
 // ── Initial state ──────────────────────────────────────────────────
 export function initialOracleState(): OracleState {
   return {
-    currentStep: "WELCOME",
+    currentStep: "CONNECT_X",
     track: null,
     messages: [],
-    pendingMessages: prepareMessages("WELCOME", null),
+    pendingMessages: prepareMessages("CONNECT_X", null),
     isTyping: false,
     xHandle: "",
     xConnected: false,
@@ -175,11 +175,11 @@ export function oracleReducer(
     case "SET_TRACK": {
       const track = action.track;
       const nextStep: OracleStep =
-        track === "a" ? "CONNECT_X" : "TRACK_B_STYLE";
+        track === "a" ? "TRACK_A_SCANNING" : "TRACK_B_STYLE";
       const userMsg = {
         id: `user-track-${Date.now()}`,
         role: "user" as const,
-        content: track === "a" ? "Connect X" : "Set up manually",
+        content: track === "a" ? "X-Powered" : "Hand-Crafted",
         timestamp: Date.now(),
       };
       return {

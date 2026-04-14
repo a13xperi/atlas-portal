@@ -308,7 +308,7 @@ export default function OracleChat() {
         return;
       }
       if (value === "skip-x") {
-        dispatch({ type: "SET_TRACK", track: "b" });
+        dispatch({ type: "ADVANCE", payload: "Continue without X (limited features)" });
         return;
       }
       if (value === "track-a" || value === "track-b") {
