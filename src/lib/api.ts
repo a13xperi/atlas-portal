@@ -914,6 +914,8 @@ export const api = {
       const json = await res.json();
       return json && typeof json === "object" && "data" in json ? (json as { data: typeof json }).data as any : json;
     },
+    postAll: (id: string) =>
+      request<{ posted: number }>(`/api/campaigns/${id}/post-all`, { method: "POST" }),
   },
 
   bugs: {
