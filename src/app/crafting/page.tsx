@@ -49,10 +49,7 @@ import {
   TweetDraft,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import {
-  MIN_TWEETS_FOR_VOICE_CALIBRATION,
-  useVoiceGate,
-} from "@/lib/useVoiceGate";
+import { hasCalibratedVoiceDimensions } from "@/lib/voice-profile-dimensions";
 import OracleWidget from "@/components/oracle/OracleWidget";
 import OracleCraftingHints from "@/components/oracle/OracleCraftingHints";
 import OracleInspector from "@/components/oracle/OracleInspector";
@@ -74,7 +71,7 @@ const TWEET_TEMPLATES = [
 
 const NEWS_SOURCE_PREFIX = "source:";
 const VOICE_COMPARISON_DELTA = { humor: 20 } as const;
-const MIN_TWEETS_FOR_CRAFTING = MIN_TWEETS_FOR_VOICE_CALIBRATION;
+
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
 type DraftSourceType = "REPORT" | "ARTICLE" | "MANUAL";
@@ -367,10 +364,8 @@ function CraftingPage() {
     currentBrevity,
     currentContrarianTone
   );
-  const voiceGate = useVoiceGate();
-  const isVoiceCalibrationBlocked = voiceGate.isBlocked;
-  const voiceTweetsAnalyzed = voiceGate.tweetsAnalyzed;
-  const calibrationTweetsRemaining = voiceGate.tweetsRemaining;
+  const voiceReady = hasCalibratedVoiceDimensions(user?.voiceProfile);
+  const isVoiceCalibrationBlocked = !voiceReady;
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -1332,26 +1327,19 @@ function CraftingPage() {
         >
           <div>
             <p className="font-semibold text-atlas-text">
-              {voiceGate.reason === "no_profile"
-                ? "Connect X and calibrate your voice to unlock tweet generation."
-                : "Voice calibration is not ready for drafting yet."}
+              Connect X and calibrate your voice to unlock tweet generation.
             </p>
             <p className="mt-1 text-atlas-text-secondary">
-              {voiceGate.reason === "no_profile"
-                ? "Atlas writes in your voice — we need your X handle and a few sample tweets first."
-                : <>
-                    Atlas needs at least {MIN_TWEETS_FOR_CRAFTING} analyzed tweets
-                    before it unlocks generation here. You have {voiceTweetsAnalyzed},
-                    so add {calibrationTweetsRemaining} more.
-                  </>}
+              Atlas writes in your voice — we need your X handle and a few sample tweets first.
+              Need more tweets? The more we analyze, the better your drafts will sound.
             </p>
           </div>
           <Link
-            href={voiceGate.ctaHref}
+            href="/onboarding/track-b"
             data-testid="voice-calibration-cta"
             className="inline-flex shrink-0 items-center justify-center rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-transform hover:scale-[1.02]"
           >
-            {voiceGate.ctaLabel} →
+            Calibrate voice →
           </Link>
         </div>
       ) : null}

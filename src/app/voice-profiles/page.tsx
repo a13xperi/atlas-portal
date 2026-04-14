@@ -22,6 +22,7 @@ import {
 import {
   DEFAULT_VOICE_DIMENSIONS,
   formatVoiceDimensionValue,
+  hasCalibratedVoiceDimensions,
   pickVoiceDimensions,
   type VoiceDimensions,
 } from "@/lib/voice-profile-dimensions";
@@ -192,10 +193,10 @@ export default function VoiceProfilesPage() {
   }, [loadData]);
 
   useEffect(() => {
-    if ((profile?.tweetsAnalyzed ?? 0) === 0) {
+    if (!hasCalibratedVoiceDimensions(profile)) {
       setShowCalibrationInput(true);
     }
-  }, [profile?.tweetsAnalyzed]);
+  }, [profile]);
 
   useEffect(() => {
     if (
