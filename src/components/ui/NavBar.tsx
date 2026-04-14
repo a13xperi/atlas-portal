@@ -54,9 +54,8 @@ export const navLinks = [
 ];
 
 // Core tabs always visible in navigation (DM-322, updated for demo flow).
-// Demo flow: Dashboard → Crafting → Voices → Analytics → Signals → Library → Arena
-// Other tabs (Feed, Briefings, Queue, Campaigns) are hidden from nav but accessible.
-const CORE_NAV_HREFS = new Set(["/dashboard", "/crafting", "/voice-profiles", "/analytics", "/alerts", "/team-library", "/arena"]);
+// Demo flow: Dashboard → Crafting → Voices → Analytics → Signals → Library → Arena → Queue
+const CORE_NAV_HREFS = new Set(["/dashboard", "/crafting", "/voice-profiles", "/analytics", "/alerts", "/team-library", "/arena", "/queue"]);
 const MANAGER_NAV_HREFS = new Set<string>();
 
 export const coreNavLinks = navLinks.filter((link) => CORE_NAV_HREFS.has(link.href));

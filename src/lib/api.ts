@@ -509,6 +509,7 @@ export const api = {
         status?: string;
         feedback?: string;
         actualEngagement?: number;
+        scheduledAt?: string | null;
       }
     ) =>
       request<{ draft: TweetDraft }>(`/api/drafts/${id}`, { method: "PATCH", body: data }),
@@ -938,6 +939,7 @@ export interface ReferenceVoice {
   handle?: string;
   avatarUrl?: string;
   isActive: boolean;
+  voiceProfile?: VoiceProfile;
 }
 
 export interface ReferenceAccount {

@@ -3,6 +3,7 @@ import { playfairDisplay, inter } from "@/lib/fonts";
 import { colors } from "@/lib/tokens";
 import RouteProgress from "@/components/ui/RouteProgress";
 import Providers from "./providers";
+import OracleWidget from "@/components/ui/OracleWidget";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -56,7 +57,10 @@ export default function RootLayout({
       </head>
       <body className="font-body bg-atlas-bg text-atlas-text min-h-screen">
         <RouteProgress />
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <OracleWidget />
+        </Providers>
       </body>
     </html>
   );
