@@ -689,6 +689,15 @@ export default function VoiceProfilesPage() {
           <ReferenceVoicesSection
             references={references}
             onReferencesChange={setReferences}
+            personalDimensions={personalDimensions}
+            onBlendCreated={async () => {
+              try {
+                const response = await api.voice.getBlends();
+                setBlends(response.blends);
+              } catch {
+                // ignore
+              }
+            }}
           />
         </div>
 
