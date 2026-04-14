@@ -458,6 +458,127 @@ describe("buildBlendFingerprint", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Blend normalization
+// ---------------------------------------------------------------------------
+
+describe("blend normalization", () => {
+  it("normalizes blend percentages that sum to >100", () => {
+    const personal: VoiceDimensions = {
+      ...DEFAULT_VOICE_DIMENSIONS,
+      humor: 100,
+      formality: 20,
+    };
+    const refAccount = makeAccount({ id: "ref-1", handle: "researcher", category: "researcher" });
+    const blend = makeBlend([
+      makeBlendVoice({ label: "personal", percentage: 80 }),
+      makeBlendVoice({ label: "researcher", percentage: 80 }),
+    ]);
+
+    const result = buildBlendFingerprint(blend, personal, [refAccount]);
+
+    // totalWeight = 160, each weight = 80/160 = 0.5
+    // personal humor=100, researcher preset humor=50 (default)
+    // personal humor=100, researcher preset humor=50 (default)
+    // Blend = (100*0.5 + 50*0.5) = 75
+    expect(result.humor).toBe(75);
+    // researcher preset formality=76
+    expect(result.formality).toBe(48); // (20*0.5 + 76*0.5) = 48
+  });
+
+  it("normalizes blend percentages that sum to <100", () => {
+    const personal: VoiceDimensions = {
+      ...DEFAULT_VOICE_DIMENSIONS,
+      humor: 100,
+      formality: 20,
+    };
+    const refAccount = makeAccount({ id: "ref-1", handle: "researcher", category: "researcher" });
+    const blend = makeBlend([
+      makeBlendVoice({ label: "personal", percentage: 25 }),
+      makeBlendVoice({ label: "researcher", percentage: 25 }),
+    ]);
+
+    const result = buildBlendFingerprint(blend, personal, [refAccount]);
+
+    // totalWeight = 50, each weight = 25/50 = 0.5
+    // Blend = (100*0.5 + 50*0.5) = 75
+    expect(result.humor).toBe(75);
+    // researcher preset formality=76
+    expect(result.formality).toBe(48); // (20*0.5 + 76*0.5) = 48
+  });
+
+  it("handles empty blend array gracefully", () => {
+    const blend = makeBlend([]);
+
+    const result = buildBlendFingerprint(blend, ALL_NEUTRAL, []);
+
+    VOICE_DIMENSION_FIELDS.forEach((field) => {
+      expect(result[field]).toBe(0);
+    });
+  });
+
+  it("single voice blend stays at 100% regardless of percentage value", () => {
+    const personal: VoiceDimensions = {
+      ...DEFAULT_VOICE_DIMENSIONS,
+      humor: 80,
+      formality: 30,
+    };
+    const blend = makeBlend([
+      makeBlendVoice({ label: "personal", percentage: 42 }),
+    ]);
+
+    const result = buildBlendFingerprint(blend, personal, []);
+
+    // totalWeight = 42, weight = 42/42 = 1
+    expect(result.humor).toBe(80);
+    expect(result.formality).toBe(30);
+  });
+
+  it("three voice blend produces correct proportions", () => {
+    const personal: VoiceDimensions = {
+      ...DEFAULT_VOICE_DIMENSIONS,
+      humor: 90,
+    };
+    const traderAccount = makeAccount({ id: "t1", handle: "trader1", category: "trader" });
+    const contentAccount = makeAccount({ id: "c1", handle: "creator1", category: "content" });
+
+    const blend = makeBlend([
+      makeBlendVoice({ label: "personal", percentage: 100 }),
+      makeBlendVoice({ label: "trader1", percentage: 100 }),
+      makeBlendVoice({ label: "creator1", percentage: 100 }),
+    ]);
+
+    const result = buildBlendFingerprint(blend, personal, [
+      traderAccount,
+      contentAccount,
+    ]);
+
+    // totalWeight = 300, each weight = 100/300 = 1/3
+    // humor: personal=90*1/3 + trader=50*1/3 + content=78*1/3 = 30 + 16.667 + 26 = 72.667 → 73
+    expect(result.humor).toBe(73);
+  });
+
+  it("three voice blend with unequal weights sums correctly", () => {
+    const personal: VoiceDimensions = {
+      ...DEFAULT_VOICE_DIMENSIONS,
+      humor: 100,
+    };
+    const refAccount = makeAccount({ id: "ref-1", handle: "researcher", category: "researcher" });
+
+    const blend = makeBlend([
+      makeBlendVoice({ label: "personal", percentage: 60 }),
+      makeBlendVoice({ label: "researcher", percentage: 30 }),
+      makeBlendVoice({ label: "personal", percentage: 10 }),
+    ]);
+
+    const result = buildBlendFingerprint(blend, personal, [refAccount]);
+
+    // totalWeight = 100
+    // humor: personal=100*0.6 + researcher=50*0.3 + personal=100*0.1 = 60 + 15 + 10 = 85
+    expect(result.humor).toBe(85);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // resolveReferenceAccountForVoice
 // ---------------------------------------------------------------------------
 

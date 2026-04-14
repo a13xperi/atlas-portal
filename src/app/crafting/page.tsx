@@ -1405,15 +1405,15 @@ function CraftingPage() {
             <p className="font-semibold text-atlas-text">
               {voiceGate.reason === "no_profile"
                 ? "Connect your X account to unlock tweet generation."
-                : "Calibrate your voice to start drafting."}
+                : "Analyze at least 20 tweets to unlock drafting."}
             </p>
             <p className="mt-1 text-atlas-text-secondary">
               {voiceGate.reason === "no_profile"
                 ? "Atlas writes in your voice — connect X so we can analyze your writing style."
                 : <>
-                    Go to the Voice Lab, enter your X handle, and Atlas will
-                    analyze your tweets to learn your style. Takes about 30
-                    seconds.
+                    We need more writing samples to learn your style.
+                    Analyze {voiceGate.tweetsRemaining} more tweets in the
+                    Voice Lab to get started.
                   </>}
             </p>
           </div>

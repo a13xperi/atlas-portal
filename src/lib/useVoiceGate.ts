@@ -12,7 +12,7 @@ import { useAuth } from "./auth";
  * future surfaces (Reply mode, News mode, Campaigns) all reference the
  * same number.
  */
-export const MIN_TWEETS_FOR_VOICE_CALIBRATION = 3;
+export const MIN_TWEETS_FOR_VOICE_CALIBRATION = 20;
 
 export type VoiceGateReason = "no_profile" | "insufficient_tweets" | null;
 
