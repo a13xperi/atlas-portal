@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import AnalyticsChartEmptyState from "@/components/analytics/AnalyticsChartEmptyState";
 import { DailyEngagement } from "@/lib/api";
 
 interface EngagementVelocityChartProps {
@@ -11,13 +12,14 @@ export default function EngagementVelocityChart({
   engagementDays,
 }: EngagementVelocityChartProps) {
   const chartDescriptionId = useId();
+  const hasData = engagementDays.length > 0;
   const chartMax =
-    engagementDays.length > 0
+    hasData
       ? Math.max(...engagementDays.flatMap((day) => [day.predicted ?? 0, day.actual ?? 0]), 1)
       : 100;
 
   const accuracyPct =
-    engagementDays.length > 0
+    hasData
       ? Math.round(
           (1 -
             engagementDays.reduce((sum, day) => {
@@ -29,7 +31,7 @@ export default function EngagementVelocityChart({
         )
       : null;
   const chartSummary =
-    engagementDays.length > 0
+    hasData
       ? `Engagement velocity over ${engagementDays.length} days. Highest value shown is ${chartMax}. Prediction accuracy is ${accuracyPct ?? 0} percent.`
       : "No engagement data yet. Create and post drafts to compare predictions with actual engagement.";
 
@@ -49,22 +51,22 @@ export default function EngagementVelocityChart({
         Actual performance against neural prediction models.
       </p>
 
-      <div
-        role="img"
-        aria-label={chartSummary}
-        aria-describedby={chartDescriptionId}
-        className="relative"
-      >
-        <div aria-hidden="true" className="min-w-[20rem]">
-          <div className="relative h-48">
-            <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[10px] text-atlas-text-muted pr-2">
-              <span>High</span>
-              <span>Med</span>
-              <span>Low</span>
-            </div>
-            <div className="ml-10 h-full flex items-end gap-0">
-              {engagementDays.length > 0 ? (
-                engagementDays.map((day) => (
+      {hasData ? (
+        <div
+          role="img"
+          aria-label={chartSummary}
+          aria-describedby={chartDescriptionId}
+          className="relative"
+        >
+          <div aria-hidden="true" className="min-w-[20rem]">
+            <div className="relative h-48">
+              <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[10px] text-atlas-text-muted pr-2">
+                <span>High</span>
+                <span>Med</span>
+                <span>Low</span>
+              </div>
+              <div className="ml-10 h-full flex items-end gap-0">
+                {engagementDays.map((day) => (
                   <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
                     <div className="w-full flex h-40 items-end justify-center gap-1">
                       <div
@@ -86,27 +88,33 @@ export default function EngagementVelocityChart({
                     </div>
                     <span className="text-[10px] text-atlas-text-muted">{day.dayLabel}</span>
                   </div>
-                ))
-              ) : (
-                <p className="ml-2 text-sm italic text-atlas-text-muted">
-                  No engagement data yet. Create and post drafts to see predictions vs actuals.
-                </p>
-              )}
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <AnalyticsChartEmptyState
+          compact
+          variant="engagement"
+          className="min-h-[18rem]"
+          title="No engagement history yet"
+          description="Connect X and import a few report-driven drafts so Atlas can compare predicted reach against real performance."
+        />
+      )}
 
-      <div id={chartDescriptionId} className="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-6">
-        <div className="flex items-center gap-2">
-          <div aria-hidden="true" className="w-3 h-3 rounded-sm bg-atlas-teal/60" />
-          <span className="text-xs text-atlas-text-secondary">Predicted</span>
+      {hasData ? (
+        <div id={chartDescriptionId} className="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-6">
+          <div className="flex items-center gap-2">
+            <div aria-hidden="true" className="w-3 h-3 rounded-sm bg-atlas-teal/60" />
+            <span className="text-xs text-atlas-text-secondary">Predicted</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div aria-hidden="true" className="w-3 h-3 rounded-sm bg-atlas-success" />
+            <span className="text-xs text-atlas-text-secondary">Actual</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div aria-hidden="true" className="w-3 h-3 rounded-sm bg-atlas-success" />
-          <span className="text-xs text-atlas-text-secondary">Actual</span>
-        </div>
-      </div>
+      ) : null}
     </section>
   );
 }

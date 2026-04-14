@@ -63,11 +63,21 @@ describe("AnalyticsPage", () => {
     render(<AnalyticsPage />);
 
     expect(
-      await screen.findByRole("heading", { name: "Nothing here yet" })
+      await screen.findByText("No analytics yet")
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Craft your first draft and the numbers will start rolling in.")
+      screen.getByText(
+        "Connect X and import a report to start building your activity, engagement, and model reliability trends."
+      )
     ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Connect X" })).toHaveAttribute(
+      "href",
+      "/voice-profiles"
+    );
+    expect(screen.getByRole("link", { name: "Import data" })).toHaveAttribute(
+      "href",
+      "/crafting"
+    );
   });
 
   it("renders zero-value analytics data without invalid chart heights", async () => {
@@ -109,6 +119,8 @@ describe("AnalyticsPage", () => {
     expect(screen.getByText("Engagement Velocity")).toBeInTheDocument();
     expect(screen.getByText("Predicted")).toBeInTheDocument();
     expect(screen.getByText("Actual")).toBeInTheDocument();
+    expect(screen.getByText("No confidence trend yet")).toBeInTheDocument();
+    expect(screen.getByText("No growth trend yet")).toBeInTheDocument();
 
     const zeroHeightElements = Array.from(
       container.querySelectorAll<HTMLElement>('[style*="height: 0px"]')

@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import AnalyticsChartEmptyState from "@/components/analytics/AnalyticsChartEmptyState";
 import AppShell from "@/components/layout/AppShell";
+import ModelReliabilitySection from "@/components/analytics/ModelReliabilitySection";
 import FeatureGate from "@/components/ui/FeatureGate";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { api, AnalyticsSummary, LearningLogEntry, TweetDraft, DailyEngagement, DailyActivity } from "@/lib/api";
@@ -129,19 +131,22 @@ function AnalyticsPage() {
     activityDays.length > 0
       ? `Activity over ${activityDays.length} days. Peak day had ${activityMax} actions and the latest day had ${latestActivityCount}.`
       : "No activity data yet. Activity data will appear as you create drafts.";
-  const recentLogEntries = logEntries.slice(-20);
-  const positiveSignalCount = logEntries.filter((entry) => entry.positive).length;
-  const confidenceTrendSummary =
-    recentLogEntries.length > 0
-      ? `Confidence trend across ${recentLogEntries.length} recent learning events. ${positiveSignalCount} positive signals detected so far.`
-      : "No confidence data yet. Confidence data builds as you create and refine drafts.";
+  const totalDrafts = summary?.draftsCreated ?? 0;
+  const totalFeedback = summary?.feedbackGiven ?? 0;
+  const totalRefinements = summary?.refinements ?? 0;
+  const totalActivity = totalDrafts + totalFeedback + totalRefinements;
+  const progressPct = totalActivity > 0 ? Math.min(Math.round((totalActivity / 50) * 100), 100) : 0;
 
   if (hasNoAnalyticsData) {
     return (
       <AppShell>
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Nothing here yet</h2>
-          <p className="mt-2 text-atlas-text-secondary">Craft your first draft and the numbers will start rolling in.</p>
+        <div className="py-16">
+          <AnalyticsChartEmptyState
+            variant="overview"
+            className="mx-auto max-w-3xl min-h-[24rem]"
+            title="No analytics yet"
+            description="Connect X and import a report to start building your activity, engagement, and model reliability trends."
+          />
         </div>
       </AppShell>
     );
@@ -215,9 +220,13 @@ function AnalyticsPage() {
               </div>
             );
           })() : (
-            <div className="mt-6 h-8 flex items-center justify-center">
-              <p className="text-xs text-atlas-text-muted">Your activity chart shows up once you start drafting</p>
-            </div>
+            <AnalyticsChartEmptyState
+              compact
+              variant="sparkline"
+              className="mt-6"
+              title="No activity trend yet"
+              description="Connect X and import a report to start filling your daily drafting and feedback activity curve."
+            />
           )}
           <p className="text-atlas-text-muted text-sm italic mt-3">
             {allZero
@@ -237,50 +246,7 @@ function AnalyticsPage() {
         </div>
 
         {/* SECTION 4: Confidence Trend + Model Reliability */}
-        <div className="grid grid-cols-1 gap-6 mb-6 lg:grid-cols-2">
-          <div className="bg-atlas-surface border border-glass-border rounded-xl p-6">
-            <p className="text-[10px] text-atlas-text-secondary uppercase tracking-wide mb-1">
-              Confidence Trend
-            </p>
-            <h3 className="font-heading font-semibold text-lg text-atlas-text">
-              Model Reliability
-            </h3>
-            <div
-              role="img"
-              aria-label={confidenceTrendSummary}
-              className="mt-4 h-20 flex items-end gap-0.5"
-            >
-              {(logEntries ?? []).length > 0 ? (logEntries ?? []).slice(-20).map(
-                (entry, i) => {
-                  const score = entry.positive ? 70 + (i * 1.5) : 30 + (i * 1.5);
-                  return (
-                    <div
-                      key={i}
-                      aria-hidden="true"
-                      className={`flex-1 rounded-t ${entry.positive ? "bg-atlas-teal" : "bg-atlas-warning"}`}
-                      style={{ height: `${Math.min(score, 100)}%`, minHeight: "32px" }}
-                    />
-                  );
-                }
-              ) : (
-                <div className="flex-1 flex items-center justify-center">
-                  <p className="text-xs text-atlas-text-muted italic">Confidence scores appear after a few rounds of drafting</p>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="bg-atlas-surface border border-glass-border rounded-xl p-6 flex items-center">
-            {(logEntries ?? []).length > 0 ? (
-              <p className="font-heading font-medium text-base text-atlas-text italic leading-relaxed">
-                {(logEntries ?? []).filter((e) => e.positive).length} positive signals detected across your recent activity.
-              </p>
-            ) : (
-              <p className="font-heading font-medium text-base text-atlas-text-muted italic leading-relaxed">
-                Keep drafting — Atlas will surface patterns in your writing here.
-              </p>
-            )}
-          </div>
-        </div>
+        <ModelReliabilitySection logEntries={logEntries} />
 
         <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-4">
           <h3 className="mb-3 text-sm font-medium text-atlas-text">Top Performing Drafts</h3>
@@ -378,48 +344,47 @@ function AnalyticsPage() {
           <h2 className="font-heading font-bold tracking-tight text-xl text-atlas-text mb-6">
             Growth Velocity
           </h2>
-          {(() => {
-            const totalDrafts = summary?.draftsCreated ?? 0;
-            const totalFeedback = summary?.feedbackGiven ?? 0;
-            const totalRefinements = summary?.refinements ?? 0;
-            const totalActivity = totalDrafts + totalFeedback + totalRefinements;
-            const progressPct = totalActivity > 0 ? Math.min(Math.round((totalActivity / 50) * 100), 100) : 0;
-
-            return (
-              <>
-                <div className="flex items-center gap-2">
+          {totalActivity > 0 ? (
+            <>
+              <div className="flex items-center gap-2">
+                <div
+                  className="flex-1 relative h-3 bg-atlas-surface rounded-full overflow-hidden"
+                  role="progressbar"
+                  aria-label="Growth velocity progress"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={progressPct}
+                >
                   <div
-                    className="flex-1 relative h-3 bg-atlas-surface rounded-full overflow-hidden"
-                    role="progressbar"
-                    aria-label="Growth velocity progress"
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={progressPct}
-                  >
-                    <div
-                      aria-hidden="true"
-                      className="h-full bg-atlas-teal rounded-full transition-all duration-500"
-                      style={{ width: `${progressPct}%` }}
-                    />
-                  </div>
+                    aria-hidden="true"
+                    className="h-full bg-atlas-teal rounded-full transition-all duration-500"
+                    style={{ width: `${progressPct}%` }}
+                  />
                 </div>
-                <div className="flex justify-between mt-3">
-                  <div className="text-center">
-                    <p className="text-[10px] text-atlas-text-muted">Drafts</p>
-                    <p className="text-[10px] text-atlas-text font-bold">{totalDrafts}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[10px] text-atlas-text-muted">Refinements</p>
-                    <p className="text-[10px] text-atlas-text font-bold">{totalRefinements}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[10px] text-atlas-text-muted">Total Activity</p>
-                    <p className="text-[10px] text-atlas-text font-bold">{totalActivity}</p>
-                  </div>
+              </div>
+              <div className="flex justify-between mt-3">
+                <div className="text-center">
+                  <p className="text-[10px] text-atlas-text-muted">Drafts</p>
+                  <p className="text-[10px] text-atlas-text font-bold">{totalDrafts}</p>
                 </div>
-              </>
-            );
-          })()}
+                <div className="text-center">
+                  <p className="text-[10px] text-atlas-text-muted">Refinements</p>
+                  <p className="text-[10px] text-atlas-text font-bold">{totalRefinements}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] text-atlas-text-muted">Total Activity</p>
+                  <p className="text-[10px] text-atlas-text font-bold">{totalActivity}</p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <AnalyticsChartEmptyState
+              compact
+              variant="growth"
+              title="No growth trend yet"
+              description="Connect X and import fresh source material so Atlas has enough signal to chart your momentum."
+            />
+          )}
         </div>
 
         {/* SECTION 8: Footer */}
