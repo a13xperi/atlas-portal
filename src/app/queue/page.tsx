@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   X,
   Send,
+  Sparkles,
 } from "lucide-react";
 import {
   DndContext,
@@ -38,6 +39,7 @@ import OracleInspector from "@/components/oracle/OracleInspector";
 import type { InspectableEntity } from "@/lib/oracle-agent-types";
 import { api, QueuedDraft } from "@/lib/api";
 import { SchedulePopover } from "@/components/ui/SchedulePopover";
+import { rankQueue } from "@/lib/queue-rank";
 
 type FilterKey = "all" | "draft" | "scheduled" | "posted" | "archived";
 
@@ -429,6 +431,17 @@ function QueuePage() {
     }
   }, []);
 
+  const handleRank = useCallback(async () => {
+    const ranked = rankQueue(queue);
+    setQueue(ranked);
+    setIsManualOrder(true);
+    try {
+      await api.drafts.reorderQueue(ranked.map((d) => d.id));
+    } catch (err) {
+      console.error("Failed to persist ranked order:", err);
+    }
+  }, [queue]);
+
   // Filter logic — "all" and "scheduled" use the ranked queue, every other
   // status pulls from the full draft list so users can manage the entire pipeline.
   const filteredQueue = useMemo(() => {
@@ -541,6 +554,17 @@ function QueuePage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {/* Smart Rank */}
+          {draggable && (
+            <button
+              onClick={() => void handleRank()}
+              className="flex items-center gap-1 rounded-full border border-glass-border px-3 py-1 text-xs font-medium text-atlas-text-muted transition-colors hover:border-atlas-teal hover:text-atlas-teal"
+              aria-label="Rank queue by predicted engagement"
+            >
+              <Sparkles className="h-3 w-3" />
+              Rank
+            </button>
+          )}
           {/* Reset to Auto */}
           {isManualOrder && draggable && (
             <button
