@@ -2,11 +2,13 @@ import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
-  usePathname: () => "/crafting",
-  useSearchParams: () => new URLSearchParams(),
-}));
+let mockSearchParams = new URLSearchParams();
+const mockSearchParamListeners = new Set<() => void>();
+const mockRouterReplace = jest.fn((href: string) => {
+  const query = href.split("?")[1] ?? "";
+  mockSearchParams = new URLSearchParams(query);
+  mockSearchParamListeners.forEach((listener) => listener());
+});
 
 const mockUseAuth = jest.fn();
 
@@ -26,11 +28,30 @@ jest.mock("next/link", () => ({
   ),
 }));
 
-jest.mock("next/navigation", () => ({
-  useSearchParams: () => new URLSearchParams(),
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
-  usePathname: () => "/crafting",
-}));
+jest.mock("next/navigation", () => {
+  const React = require("react");
+
+  return {
+    useSearchParams: () =>
+      React.useSyncExternalStore(
+        (listener: () => void) => {
+          mockSearchParamListeners.add(listener);
+
+          return () => {
+            mockSearchParamListeners.delete(listener);
+          };
+        },
+        () => mockSearchParams,
+        () => mockSearchParams
+      ),
+    useRouter: () => ({
+      push: jest.fn(),
+      replace: mockRouterReplace,
+      back: jest.fn(),
+    }),
+    usePathname: () => "/crafting",
+  };
+});
 
 jest.mock("@/lib/api", () => ({
   api: {
@@ -108,8 +129,11 @@ function createDraft(overrides: Record<string, unknown> = {}) {
 
 describe("CraftingPage", () => {
   beforeEach(() => {
+    mockSearchParams = new URLSearchParams();
+    mockRouterReplace.mockClear();
+
     mockUseAuth.mockReturnValue({
-      user: { handle: "AtlasAnalyst", onboardingTrack: "TRACK_B", voiceProfile: { tweetsAnalyzed: 12 } },
+      user: { handle: "AtlasAnalyst", onboardingTrack: "TRACK_B", voiceProfile: { tweetsAnalyzed: 20 } },
     });
 
     mockedApi.drafts.list.mockReset();
