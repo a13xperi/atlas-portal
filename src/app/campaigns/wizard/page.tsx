@@ -46,7 +46,7 @@ const ANGLE_COLORS: Record<string, string> = {
   explainer: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://api-production-9bef.up.railway.app";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export default function CampaignWizardPage() {
   const { user } = useAuth();

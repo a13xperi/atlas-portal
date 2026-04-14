@@ -208,6 +208,8 @@ function RefAvatar({ handle, name }: { handle?: string; name: string }) {
     <img
       src={`https://unavatar.io/twitter/${cleanHandle}`}
       alt={name}
+      width={32}
+      height={32}
       onError={() => setErrored(true)}
       className="h-8 w-8 shrink-0 rounded-full object-cover border border-atlas-text-secondary/20 bg-atlas-surface"
     />

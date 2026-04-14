@@ -20,7 +20,7 @@ export default function LoginPage() {
 
   const handleContinueWithX = () => {
     const apiUrl =
-      process.env.NEXT_PUBLIC_API_URL ?? "https://api-production-9bef.up.railway.app";
+      process.env.NEXT_PUBLIC_API_URL ?? "";
     window.location.href = `${apiUrl}/api/auth/x/login`;
   };
 
