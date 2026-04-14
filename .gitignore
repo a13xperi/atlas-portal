@@ -40,3 +40,10 @@ yarn-error.log*
 next-env.d.ts
 .next*
 .claude/worktrees/
+
+# Engine/AI tool artifacts
+.agent_history/
+.grok/
+.minimax/
+.codex/
+kimi_session*
