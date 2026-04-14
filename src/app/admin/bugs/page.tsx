@@ -113,29 +113,65 @@ function relativeTime(iso: string | null) {
   return `${months}mo ago`;
 }
 
-// ---------------------------------------------------------------------------
-// Stat card
-// ---------------------------------------------------------------------------
-
-function StatCard({
-  label,
-  value,
-  icon,
-  color,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-  color: string;
-}) {
+function StatsCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-glass-border bg-glass p-4 backdrop-blur-xl">
-      <div className={`mb-1 flex items-center gap-2 ${color}`}>
-        {icon}
-        <span className="text-2xl font-bold">{value}</span>
+    <div className="rounded-2xl border border-glass-border bg-glass p-4 backdrop-blur-xl">
+      <div className="text-2xl font-semibold text-atlas-text">{value}</div>
+      <div className="mt-1 text-[11px] uppercase tracking-[0.2em] text-atlas-text-muted">{label}</div>
+    </div>
+  );
+}
+
+function BugsTable({ bugs }: { bugs: BugReport[] }) {
+  if (bugs.length === 0) {
+    return (
+      <div className="rounded-2xl border border-glass-border bg-glass px-6 py-10 text-center text-sm text-atlas-text-secondary backdrop-blur-xl">
+        No bug reports yet. Send a `POST` request to `/api/bugs` to create one.
       </div>
-      <div className="text-[11px] font-medium uppercase tracking-wider text-atlas-text-muted">
-        {label}
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-glass-border">
+      <div className="border-b border-glass-border bg-atlas-surface px-5 py-4">
+        <p className="text-sm text-atlas-text-secondary">
+          Reports are served from the internal bug route. New submissions default to `open` if status is omitted.
+        </p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-glass-border bg-atlas-surface text-xs uppercase tracking-wider text-atlas-text-muted">
+              <th className="px-5 py-3">Bug</th>
+              <th className="px-5 py-3">Route</th>
+              <th className="px-5 py-3">Severity</th>
+              <th className="px-5 py-3">Status</th>
+              <th className="px-5 py-3">Reported</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5 bg-glass backdrop-blur-xl">
+            {bugs.map((bug) => (
+              <tr key={bug.id} className="transition-colors hover:bg-white/[0.02]">
+                <td className="px-5 py-4 align-top">
+                  <div className="font-medium text-atlas-text">{bug.title}</div>
+                  <div className="mt-1 max-w-xl text-xs leading-5 text-atlas-text-secondary">{bug.description}</div>
+                </td>
+                <td className="px-5 py-4 align-top text-xs text-atlas-text-secondary">
+                  {bug.route ?? "Unspecified"}
+                </td>
+                <td className="px-5 py-4 align-top">
+                  <StatusBadge value={bug.severity} toneMap={severityTone} />
+                </td>
+                <td className="px-5 py-4 align-top">
+                  <StatusBadge value={bug.status} toneMap={statusTone} />
+                </td>
+                <td className="px-5 py-4 align-top text-xs text-atlas-text-secondary">
+                  {formatReportedAt(bug.createdAt)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
