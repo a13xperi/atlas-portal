@@ -63,10 +63,10 @@ describe("AnalyticsPage", () => {
     render(<AnalyticsPage />);
 
     expect(
-      await screen.findByRole("heading", { name: "No analytics data yet" })
+      await screen.findByRole("heading", { name: "Nothing here yet" })
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Start crafting drafts to see your analytics here.")
+      screen.getByText("Craft your first draft and the numbers will start rolling in.")
     ).toBeInTheDocument();
   });
 
