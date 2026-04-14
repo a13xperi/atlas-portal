@@ -15,7 +15,7 @@ const config: Config = {
     "^@/(.*)$": "<rootDir>/src/$1",
     "^@sentry/nextjs$": "<rootDir>/src/test-support/sentry-nextjs.ts",
   },
-  setupFiles: ["<rootDir>/jest.setup.ts"],
+  setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
 };
 
 export default config;

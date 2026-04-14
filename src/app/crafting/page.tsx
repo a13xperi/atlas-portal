@@ -58,6 +58,7 @@ import {
 import OracleWidget from "@/components/oracle/OracleWidget";
 import OracleCraftingHints from "@/components/oracle/OracleCraftingHints";
 import OracleInspector from "@/components/oracle/OracleInspector";
+import CharacterCounter from "@/components/crafting/CharacterCounter";
 import type { InspectableEntity } from "@/lib/oracle-agent-types";
 
 const CRAFTING_MODES = [
@@ -1773,66 +1774,8 @@ function CraftingPage() {
               />
               {activeDraft.content ? (
                 <>
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="relative h-5 w-5">
-                        <svg
-                          aria-hidden="true"
-                          focusable="false"
-                          className="h-5 w-5 -rotate-90"
-                          viewBox="0 0 20 20"
-                        >
-                          <circle
-                            cx="10"
-                            cy="10"
-                            r="8"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            className="text-atlas-surface"
-                          />
-                          <circle
-                            cx="10"
-                            cy="10"
-                            r="8"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeDasharray={`${Math.min(
-                              (activeDraft.content.length / 280) * 50.3,
-                              50.3
-                            )} 50.3`}
-                            className={
-                              activeDraft.content.length > 280
-                                ? "text-atlas-error"
-                                : activeDraft.content.length > 250
-                                  ? "text-atlas-warning"
-                                  : activeDraft.content.length > 200
-                                    ? "text-yellow-400"
-                                    : "text-atlas-teal"
-                            }
-                          />
-                        </svg>
-                      </div>
-                      <span
-                        className={`text-xs font-mono ${
-                          activeDraft.content.length > 280
-                            ? "text-atlas-error"
-                            : activeDraft.content.length > 250
-                              ? "text-atlas-warning"
-                              : activeDraft.content.length > 200
-                                ? "text-yellow-400"
-                                : "text-atlas-text-secondary"
-                        }`}
-                      >
-                        {activeDraft.content.length}/280
-                      </span>
-                    </div>
-                    {activeDraft.content.length > 280 ? (
-                      <span className="text-xs text-atlas-error">
-                        {activeDraft.content.length - 280} over limit
-                      </span>
-                    ) : null}
+                  <div className="mt-2 flex items-center justify-end">
+                    <CharacterCounter value={activeDraft.content.length} />
                   </div>
                   <div className="mt-1 flex items-center gap-3 text-[10px] text-atlas-text-muted">
                     <span>{activeDraftWordCount} words</span>
