@@ -11,7 +11,7 @@ Built by [Delphi Digital](https://delphidigital.io).
 - **Auth:** Supabase Auth via `useAuth()` (`src/lib/auth.tsx`)
 - **API:** Typed client at `src/lib/api.ts` → backend at `api-production-9bef.up.railway.app`
 - **Fonts:** Playfair Display (headings), Inter (body)
-- **Monitoring:** Sentry
+- **Monitoring:** Sentry + PostHog
 
 ## Routes
 

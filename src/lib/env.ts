@@ -11,6 +11,29 @@ const required = {
   NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
 } as const;
 
+const optional = {
+  NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+  NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+} as const;
+
+const DEFAULT_POSTHOG_HOST = "https://us.i.posthog.com";
+
+function normalizeOptionalValue(value: string | undefined) {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
+function validateUrl(value: string, key: string, expectedFormat: string) {
+  try {
+    new URL(value);
+  } catch {
+    throw new Error(
+      `[Atlas] ${key} is not a valid URL: "${value}"\n` +
+        `Expected format: ${expectedFormat}`
+    );
+  }
+}
+
 function validateEnv() {
   const missing: string[] = [];
 
@@ -28,13 +51,11 @@ function validateEnv() {
   }
 
   const apiUrl = required.NEXT_PUBLIC_API_URL!;
-  try {
-    new URL(apiUrl);
-  } catch {
-    throw new Error(
-      `[Atlas] NEXT_PUBLIC_API_URL is not a valid URL: "${apiUrl}"\n` +
-        `Expected format: https://your-api.up.railway.app`
-    );
+  validateUrl(apiUrl, "NEXT_PUBLIC_API_URL", "https://your-api.up.railway.app");
+
+  const posthogHost = normalizeOptionalValue(optional.NEXT_PUBLIC_POSTHOG_HOST);
+  if (posthogHost) {
+    validateUrl(posthogHost, "NEXT_PUBLIC_POSTHOG_HOST", "https://us.i.posthog.com");
   }
 }
 
@@ -47,4 +68,8 @@ if (typeof window !== "undefined" || process.env.NODE_ENV === "development") {
 
 export const env = {
   apiUrl: required.NEXT_PUBLIC_API_URL!,
+  posthogKey: normalizeOptionalValue(optional.NEXT_PUBLIC_POSTHOG_KEY),
+  posthogHost: normalizeOptionalValue(optional.NEXT_PUBLIC_POSTHOG_KEY)
+    ? normalizeOptionalValue(optional.NEXT_PUBLIC_POSTHOG_HOST) ?? DEFAULT_POSTHOG_HOST
+    : null,
 } as const;

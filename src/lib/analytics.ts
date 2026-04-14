@@ -1,3 +1,7 @@
+"use client";
+
+import { getPostHogClient } from "@/lib/posthog-client";
+
 /**
  * Atlas Analytics — lightweight event tracking + Web Vitals reporting.
  *
@@ -15,27 +19,25 @@ export interface AnalyticsEventPayload {
   metadata?: Record<string, string | number | boolean>;
 }
 
-const ANALYTICS_ENDPOINT = process.env.NEXT_PUBLIC_ANALYTICS_URL;
-
 /**
- * Track a custom event. Logs to console in dev, POSTs to analytics
- * endpoint in production if configured.
+ * Track a custom event. Logs to console in dev and forwards to PostHog
+ * when the browser SDK is configured.
  */
 export function trackEvent(event: AnalyticsEventPayload) {
   if (process.env.NODE_ENV === "development") {
     console.debug("[Atlas Analytics]", event.name, event);
+  }
+
+  const posthog = getPostHogClient();
+  if (!posthog) {
     return;
   }
 
-  if (ANALYTICS_ENDPOINT) {
-    fetch(ANALYTICS_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...event, timestamp: Date.now() }),
-    }).catch(() => {
-      // Silent fail — analytics should never break the app
-    });
-  }
+  posthog.capture(event.name, {
+    category: event.category,
+    ...(event.value !== undefined ? { value: event.value } : {}),
+    ...(event.metadata ?? {}),
+  });
 }
 
 /**
