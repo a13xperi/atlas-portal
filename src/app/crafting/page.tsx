@@ -78,6 +78,7 @@ const TWEET_TEMPLATES = [
 
 const NEWS_SOURCE_PREFIX = "source:";
 const MIN_TWEETS_FOR_CRAFTING = MIN_TWEETS_FOR_VOICE_CALIBRATION;
+const VOICE_COMPARISON_DELTA = { humor: 20 } as const;
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
 type DraftSourceType = "REPORT" | "ARTICLE" | "MANUAL";
@@ -230,6 +231,20 @@ function getWordCount(content: string) {
   return content.split(/\s+/).filter(Boolean).length;
 }
 
+function buildVoiceVariationInstruction(
+  currentHumor: number,
+  variantHumor: number,
+  formality: number,
+  brevity: number,
+  contrarianTone: number
+) {
+  return [
+    "Keep the user's calibrated voice profile intact, but create a subtle A/B variation.",
+    `Increase humor from ${formatVoiceScore(currentHumor)} to ${formatVoiceScore(variantHumor)} while keeping the writing credible for crypto analysis.`,
+    `Hold formality near ${formatVoiceScore(formality)}, brevity near ${formatVoiceScore(brevity)}, and contrarian tone near ${formatVoiceScore(contrarianTone)}.`,
+    "The result should feel slightly more playful and witty without changing the core thesis or facts.",
+  ].join(" ");
+}
 
 function CraftingPage() {
   useTour("crafting");
@@ -344,6 +359,7 @@ function CraftingPage() {
   const currentFormality = clampVoiceValue(user?.voiceProfile?.formality);
   const currentBrevity = clampVoiceValue(user?.voiceProfile?.brevity);
   const currentContrarianTone = clampVoiceValue(user?.voiceProfile?.contrarianTone);
+  const variantHumor = clampVoiceValue(currentHumor + VOICE_COMPARISON_DELTA.humor);
   const currentVoiceSummary = `Humor ${formatVoiceScore(currentHumor)}`;
   const variantVoiceSummary = `Humor ${formatVoiceScore(
     variantHumor
