@@ -57,7 +57,7 @@ export function AlertSocketProvider({ children }: { children: React.ReactNode })
     socket.on("connect", () => setConnected(true));
     socket.on("disconnect", () => setConnected(false));
 
-    socket.on("new-alert", (alert: Alert) => {
+    socket.on("alert:new", (alert: Alert) => {
       setLatestAlert(alert);
       setUnreadNotifications((count) => count + 1);
       listenersRef.current.forEach((cb) => cb(alert));
