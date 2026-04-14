@@ -50,7 +50,7 @@ const styleOptions = [
 
 export default function OracleChat() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [state, dispatch] = useReducer(oracleReducer, null, initialOracleState);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const calibratingRef = useRef(false);
@@ -380,6 +380,7 @@ export default function OracleChat() {
             tweetsAnalyzed: calibration.tweetsAnalyzed,
           },
         });
+        await refreshUser();
         dispatch({
           type: "SET_DIMENSIONS",
           dimensions: {
