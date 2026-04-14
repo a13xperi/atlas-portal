@@ -21,6 +21,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (handle: string, email: string, password: string, onboardingTrack?: OnboardingTrack) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState>({
@@ -29,6 +30,7 @@ const AuthContext = createContext<AuthState>({
   login: async () => {},
   register: async () => {},
   logout: () => {},
+  refreshUser: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -110,8 +112,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.replace("/");
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const me = await api.auth.me();
+    setUser(me.user);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
