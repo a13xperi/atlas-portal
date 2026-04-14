@@ -234,7 +234,7 @@ function BriefingPage() {
               Your Briefings
             </h1>
             <p className="max-w-xl text-sm leading-relaxed text-atlas-text-secondary">
-              Your personalized daily digest. Atlas scans your topics, sources, and the latest market activity to generate a concise briefing you can read in under 2 minutes. Hit Generate Now to create one on demand, or set a delivery time to get them automatically.
+              A quick daily read built from your topics and the latest market moves. Hit Generate Now or schedule them to land automatically.
             </p>
           </div>
           <div className="flex items-center gap-3">
