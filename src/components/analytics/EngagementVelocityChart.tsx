@@ -12,25 +12,25 @@ export default function EngagementVelocityChart({
 }: EngagementVelocityChartProps) {
   const chartDescriptionId = useId();
   const chartMax =
-    engagementDays.length > 0
-      ? Math.max(...engagementDays.flatMap((day) => [day.predicted ?? 0, day.actual ?? 0]), 1)
+    (engagementDays ?? []).length > 0
+      ? Math.max(...(engagementDays ?? []).flatMap((day) => [day.predicted ?? 0, day.actual ?? 0]), 1)
       : 100;
 
   const accuracyPct =
-    engagementDays.length > 0
+    (engagementDays ?? []).length > 0
       ? Math.round(
           (1 -
-            engagementDays.reduce((sum, day) => {
+            (engagementDays ?? []).reduce((sum, day) => {
               const maxVal = Math.max(day.predicted ?? 0, day.actual ?? 0, 1);
               return sum + Math.abs((day.predicted ?? 0) - (day.actual ?? 0)) / maxVal;
             }, 0) /
-              engagementDays.length) *
+              (engagementDays ?? []).length) *
             100
         )
       : null;
   const chartSummary =
-    engagementDays.length > 0
-      ? `Engagement velocity over ${engagementDays.length} days. Highest value shown is ${chartMax}. Prediction accuracy is ${accuracyPct ?? 0} percent.`
+    (engagementDays ?? []).length > 0
+      ? `Engagement velocity over ${(engagementDays ?? []).length} days. Highest value shown is ${chartMax}. Prediction accuracy is ${accuracyPct ?? 0} percent.`
       : "No engagement data yet. Create and post drafts to compare predictions with actual engagement.";
 
   return (
@@ -63,8 +63,8 @@ export default function EngagementVelocityChart({
               <span>Low</span>
             </div>
             <div className="ml-10 h-full flex items-end gap-0">
-              {engagementDays.length > 0 ? (
-                engagementDays.map((day) => (
+              {(engagementDays ?? []).length > 0 ? (
+                (engagementDays ?? []).map((day) => (
                   <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
                     <div className="w-full flex h-40 items-end justify-center gap-1">
                       <div
