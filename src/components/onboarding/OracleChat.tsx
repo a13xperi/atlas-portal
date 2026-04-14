@@ -17,7 +17,6 @@ import { styleToDimensions } from "@/lib/voice-profile-dimensions";
 import {
   getReferenceAccountLookup,
   persistReferenceSelections,
-  buildReferenceBlendVoices,
   REFERENCE_ACCOUNT_FALLBACK,
 } from "@/lib/reference-accounts";
 
@@ -29,7 +28,6 @@ import ActionZone from "./ActionZone";
 import NavBar from "@/components/ui/NavBar";
 
 // Inline components
-import TopicPicker from "./TopicPicker";
 import ReferenceVoiceSelector from "./ReferenceVoiceSelector";
 import ContentSignalsPreview from "./ContentSignalsPreview";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
@@ -56,11 +54,6 @@ export default function OracleChat() {
   const drainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [resumeTrackAAfterOAuth, setResumeTrackAAfterOAuth] = useState(false);
-  const [blendSaveStatus, setBlendSaveStatus] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
-  // Tracks the persisted blend so future PATCH operations can target it.
-  const [, setSavedBlendId] = useState<string | null>(null);
 
   // Pre-fill handle from linked X profile
   useEffect(() => {
@@ -224,35 +217,8 @@ export default function OracleChat() {
             }
           }
         }
-        if (step === "BLEND") {
-          setBlendSaveStatus("saving");
-          try {
-            const result = await api.voice.createBlend(
-              state.track === "a" ? "Onboarding blend" : "My starting blend",
-              buildReferenceBlendVoices(
-                state.selectedRefs,
-                state.selfPercentage,
-                REFERENCE_ACCOUNT_FALLBACK
-              )
-            );
-            setSavedBlendId(result.blend.id);
-            setBlendSaveStatus("saved");
-          } catch (err) {
-            console.error("Blend persist failed:", err);
-            setBlendSaveStatus("error");
-          }
-        }
-        if (step === "TOPICS") {
-          try {
-            await api.briefing.updatePreferences({
-              deliveryTime: "08:00",
-              topics: state.selectedTopics,
-              sources: [],
-              channel: "Portal Only",
-            });
-          } catch {
-            /* optional */
-          }
+        if (step === "HANDOFF") {
+          // Persist onboarding track completion on handoff
           if (state.track === "a" || state.track === "b") {
             try {
               await api.users.updateProfile({
@@ -310,12 +276,8 @@ export default function OracleChat() {
     if (step === "TRACK_B_STYLE") echo = state.selectedStyle || undefined;
     if (step === "REFERENCES")
       echo = `Selected ${state.selectedRefs.length} references`;
-    if (step === "BLEND") echo = `${state.selfPercentage}% my voice`;
-    if (step === "TOPICS") echo = state.selectedTopics.join(", ");
 
-    if (step === "TOPICS") {
-      // Finish the wizard on the final preferences step and land users in the
-      // next surface they should act in, rather than the legacy handoff screen.
+    if (step === "HANDOFF") {
       router.replace(getOnboardingCompletionHref(state.track));
       return;
     }
@@ -492,14 +454,8 @@ export default function OracleChat() {
           return null;
 
         case "topics":
-          return (
-            <TopicPicker
-              selected={state.selectedTopics}
-              onChange={(topics) =>
-                dispatch({ type: "SET_TOPICS", topics })
-              }
-            />
-          );
+          // TOPICS step is skipped in onboarding — topic preferences are managed in Settings.
+          return null;
 
         case "content-signals":
           return (
@@ -536,17 +492,7 @@ export default function OracleChat() {
                 <GradientButton
                   fullWidth
                   onClick={() => {
-                    // Mark onboarding complete so crafting stays gated until HANDOFF.
-                    // Best-effort — navigate regardless of whether the API call succeeds.
-                    if (state.track === "a" || state.track === "b") {
-                      api.users
-                        .updateProfile({
-                          onboardingTrack:
-                            state.track === "a" ? "TRACK_A" : "TRACK_B",
-                        })
-                        .catch(() => {});
-                    }
-                    router.push(getOnboardingCompletionHref(state.track));
+                    handleContinue();
                   }}
                 >
                   Go to Dashboard
@@ -595,7 +541,7 @@ export default function OracleChat() {
           return null;
       }
     },
-    [oauthLoading, router, state, blendSaveStatus]
+    [oauthLoading, state, handleContinue]
   );
 
   // ── Determine ActionZone config per step ─────────────────────────
@@ -607,7 +553,11 @@ export default function OracleChat() {
     if (hasPending) return { disabled: true };
 
     // Terminal step — handoff has its own button inside the component
-    if (step === "HANDOFF") return {};
+    if (step === "HANDOFF") {
+      return {
+        canGoBack: state.stepHistory.length > 0,
+      };
+    }
 
     // Steps that need a Continue button
     const continueSteps = [
@@ -627,10 +577,13 @@ export default function OracleChat() {
           },
         ],
         disabled: !canAdvance(state),
+        canGoBack: state.stepHistory.length > 0,
       };
     }
 
-    return {};
+    return {
+      canGoBack: state.stepHistory.length > 0,
+    };
   };
 
   const actionConfig = getActionZoneConfig();
@@ -679,6 +632,7 @@ export default function OracleChat() {
       <ActionZone
         actions={actionConfig.actions}
         disabled={actionConfig.disabled}
+        canGoBack={actionConfig.canGoBack}
         onAction={(value) => {
           if (value === "continue") {
             handleContinue();
@@ -686,6 +640,7 @@ export default function OracleChat() {
             handleAction(value);
           }
         }}
+        onGoBack={() => dispatch({ type: "GO_BACK" })}
       />
     </div>
   );

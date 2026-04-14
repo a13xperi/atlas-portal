@@ -62,7 +62,7 @@ export default function ActionZone({
             <Send className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
-      ) : actions && actions.length > 0 ? (
+      ) : (
         <div className="flex flex-wrap gap-2 justify-center items-center">
           {canGoBack && (
             <button
@@ -73,7 +73,7 @@ export default function ActionZone({
               ← Back
             </button>
           )}
-          {actions.map((action) => (
+          {actions?.map((action) => (
             <GradientButton
               key={action.value}
               variant={
@@ -87,7 +87,7 @@ export default function ActionZone({
             </GradientButton>
           ))}
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
