@@ -27,6 +27,39 @@ interface BriefingPreferenceInput {
   channel: string;
 }
 
+export type QueuePlatform = "twitter";
+export type QueueStatus = "queued" | "scheduled" | "published" | "failed";
+
+export interface QueueItem {
+  id: string;
+  content: string;
+  platform: QueuePlatform;
+  status: QueueStatus;
+  scheduledAt: string | null;
+  publishedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  failureReason?: string | null;
+}
+
+export interface QueueListResponse {
+  items: QueueItem[];
+  total: number;
+}
+
+export interface QueueCreateInput {
+  content: string;
+  platform?: QueuePlatform;
+  scheduledAt?: string | null;
+}
+
+export interface QueueUpdateInput {
+  content?: string;
+  scheduledAt?: string | null;
+  status?: QueueStatus;
+  failureReason?: string | null;
+}
+
 export interface QaTestRun {
   id: string;
   project: string;
@@ -97,6 +130,76 @@ export interface AdminFeedEvent {
   metadata: Record<string, unknown> | null;
 }
 
+export type PromptCategory = "generation" | "calibration" | "oracle" | "analysis";
+
+export interface PromptVariable {
+  name: string;
+  description: string;
+  example: string;
+}
+
+export interface PromptConfig {
+  id: string;
+  name: string;
+  description: string;
+  systemPrompt: string;
+  userPromptTemplate: string;
+  variables: PromptVariable[];
+  model: string;
+  category: PromptCategory;
+}
+
+export interface PromptTestResult {
+  output: string;
+  tokensUsed: number;
+  latencyMs: number;
+}
+
+export interface AdminLeaderboardEntry {
+  userId: string;
+  handle: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  score: number;
+  breakdown: {
+    output: number;
+    postRate: number;
+    engagementDelta: number;
+    voiceMaturity: number;
+    feedback: number;
+    streak: number;
+  };
+}
+
+export type ArenaPeriod = "last_7_days" | "last_30_days" | "all_time";
+
+export interface ArenaLeaderboardEntry {
+  rank: number;
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  tweetsPublished: number;
+  totalEngagement: number;
+  consistencyStreak: number;
+  badge: string | null;
+}
+
+export interface ArenaLeaderboardData {
+  period: ArenaPeriod;
+  entries: ArenaLeaderboardEntry[];
+}
+
+export interface ArenaMeEntry {
+  rank: number;
+  userId: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  tweetsPublished: number;
+  totalEngagement: number;
+  consistencyStreak: number;
+  badge: string | null;
+}
+
 export interface FeatureFlagRecord {
   key: string;
   name: string;
@@ -106,12 +209,35 @@ export interface FeatureFlagRecord {
   updatedAt: string;
 }
 
-class ApiError extends Error {
+export type OnboardingTrack = "TRACK_A" | "TRACK_B";
+
+
+export class ApiError extends Error {
   statusCode: number;
   constructor(message: string, statusCode: number) {
     super(message);
     this.statusCode = statusCode;
   }
+}
+
+interface RawTwitterFollow {
+  id: string;
+  handle?: string | null;
+  display_name?: string | null;
+  bio?: string | null;
+  avatar_url?: string | null;
+  follower_count?: number | null;
+}
+
+function mapTwitterFollow(follow: RawTwitterFollow): TwitterFollow {
+  return {
+    id: follow.id,
+    handle: follow.handle ?? "",
+    displayName: follow.display_name ?? follow.handle ?? "Unknown",
+    bio: follow.bio ?? null,
+    avatarUrl: follow.avatar_url ?? null,
+    followerCount: follow.follower_count ?? 0,
+  };
 }
 
 // Demo mode flag — when true, GET requests return mock data
@@ -184,6 +310,10 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
         if (json && typeof json === "object" && "ok" in json && "data" in json) {
           return json.data as T;
         }
+        // The analytics backend still returns a raw array for this legacy endpoint.
+        if (path === "/api/analytics/engagement-daily" && Array.isArray(json)) {
+          return { days: json } as T;
+        }
         return json as T;
       }
     } catch (e) {
@@ -204,7 +334,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
 // Auth — all requests use HttpOnly cookies (credentials: 'include')
 export const api = {
   auth: {
-    register: (handle: string, email: string, password: string, onboardingTrack?: string) =>
+    register: (handle: string, email: string, password: string, onboardingTrack?: OnboardingTrack) =>
       request<{ user: User; token: string; refresh_token: string }>("/api/auth/register", {
         method: "POST",
         body: { handle, email, password, onboardingTrack },
@@ -224,7 +354,7 @@ export const api = {
       request<{ user: User & { voiceProfile: VoiceProfile } }>("/api/auth/me"),
     x: {
       authorize: () =>
-        request<{ url: string }>("/api/auth/x/authorize"),
+        request<{ url: string }>("/api/auth/x/authorize", { method: "POST" }),
       callback: (code: string, state: string) =>
         request<{ xHandle?: string }>("/api/auth/x/callback", {
           method: "POST",
@@ -246,12 +376,27 @@ export const api = {
       request<{ accounts: ReferenceAccount[] }>("/api/voice/reference-accounts"),
     getReferences: () =>
       request<{ voices: ReferenceVoice[] }>("/api/voice/references"),
-    addReference: (name: string, handle?: string) =>
-      request<{ voice: ReferenceVoice }>("/api/voice/references", { method: "POST", body: { name, handle } }),
+    addReference: (name: string, handle?: string, avatarUrl?: string) =>
+      request<{ voice: ReferenceVoice }>("/api/voice/references", { method: "POST", body: { name, handle, avatarUrl } }),
     getBlends: () =>
       request<{ blends: SavedBlend[] }>("/api/voice/blends"),
     createBlend: (name: string, voices: BlendVoiceInput[]) =>
       request<{ blend: SavedBlend }>("/api/voice/blends", { method: "POST", body: { name, voices } }),
+    getBlendedProfile: () =>
+      request<{ profile: BlendedVoiceProfile }>("/api/voice/blended-profile"),
+    blend: (
+      primaryId: string,
+      additionalIds: string[],
+      weights?: Record<string, number>
+    ) =>
+      request<VoiceBlendResponse>("/api/voice/blend", {
+        method: "POST",
+        body: {
+          primary_id: primaryId,
+          additional_ids: additionalIds,
+          ...(weights ? { weights } : {}),
+        },
+      }),
     updateBlendVoice: (
       blendId: string,
       voiceId: string,
@@ -314,7 +459,7 @@ export const api = {
             }
           : sourceContentOrInput;
 
-      return request<{ draft: TweetDraft }>("/api/drafts/generate", {
+      return request<{ draft: TweetDraft; blendWarning?: string }>("/api/drafts/generate", {
         method: "POST",
         body: payload,
       });
@@ -366,6 +511,38 @@ export const api = {
       }),
   },
 
+  arena: {
+    leaderboard: (period: ArenaPeriod = "last_30_days") =>
+      request<ArenaLeaderboardData>(`/api/arena/leaderboard?period=${period}`),
+    me: (period: ArenaPeriod = "last_30_days") =>
+      request<ArenaMeEntry>(`/api/arena/me?period=${period}`),
+  },
+
+  queue: {
+    list: (status?: QueueStatus) =>
+      request<QueueListResponse | QueueItem[]>(
+        `/api/queue${status ? `?status=${status}` : ""}`
+      ),
+    create: (data: QueueCreateInput) =>
+      request<{ item: QueueItem } | QueueItem>("/api/queue", {
+        method: "POST",
+        body: data,
+      }),
+    update: (id: string, data: QueueUpdateInput) =>
+      request<{ item: QueueItem } | QueueItem>(`/api/queue/${id}`, {
+        method: "PATCH",
+        body: data,
+      }),
+    remove: (id: string) =>
+      request<{ success: boolean }>(`/api/queue/${id}`, {
+        method: "DELETE",
+      }),
+    publish: (id: string) =>
+      request<{ item: QueueItem } | QueueItem>(`/api/queue/${id}/publish`, {
+        method: "POST",
+      }),
+  },
+
   analytics: {
     summary: () =>
       request<{ summary: AnalyticsSummary }>("/api/analytics/summary"),
@@ -396,6 +573,10 @@ export const api = {
       request<{ subscriptions: AlertSubscription[] }>("/api/alerts/subscriptions"),
     subscribe: (type: string, value: string, delivery?: string[]) =>
       request<{ subscription: AlertSubscription }>("/api/alerts/subscriptions", { method: "POST", body: { type, value, delivery } }),
+    toggleSubscription: (id: string) =>
+      request<{ subscription: AlertSubscription }>(`/api/alerts/subscriptions/${id}`, { method: "PATCH" }),
+    deleteSubscription: (id: string) =>
+      request<{ success: boolean }>(`/api/alerts/subscriptions/${id}`, { method: "DELETE" }),
   },
 
   briefing: {
@@ -447,7 +628,7 @@ export const api = {
   users: {
     profile: () =>
       request<{ user: User }>("/api/users/profile"),
-    updateProfile: (data: { displayName?: string; email?: string; bio?: string; avatarUrl?: string; tourCompleted?: boolean; tourStep?: number }) =>
+    updateProfile: (data: { displayName?: string; email?: string; bio?: string; avatarUrl?: string; tourCompleted?: boolean; tourStep?: number; onboardingTrack?: OnboardingTrack | null }) =>
       request<{ user: User }>("/api/users/profile", { method: "PATCH", body: data }),
     team: () =>
       request<{ team: TeamMember[] }>("/api/users/team"),
@@ -457,6 +638,11 @@ export const api = {
       request<{ message: string; affected: number }>("/api/users/send-nudge", { method: "POST" }),
     pushStyle: (blendId?: string) =>
       request<{ message: string; affected: number }>("/api/users/push-style", { method: "POST", body: { blendId } }),
+    updateRole: (userId: string, role: string) =>
+      request<{ user: { id: string; role: string } }>(`/api/users/${userId}/role`, {
+        method: "PATCH",
+        body: { role },
+      }),
   },
 
   qa: {
@@ -499,9 +685,26 @@ export const api = {
     }) =>
       request<{ text: string }>("/api/oracle/chat", { method: "POST", body }),
 
+    /**
+     * OpenClaw-routed Oracle chat — returns the raw LLM reply with model
+     * and token metadata. Profiles (smart/fast) are picked server-side from
+     * the optional `phase` hint.
+     */
+    chatLLM: (body: {
+      message: string;
+      userId?: string;
+      context?: Record<string, unknown>;
+      phase?: string;
+    }) =>
+      request<{ reply: string; model: string; tokens: number }>(
+        "/api/oracle/chat",
+        { method: "POST", body },
+      ),
+
     agent: (body: {
       messages: Array<{ role: "user" | "oracle"; content: string }>;
       page?: string;
+      sessionId?: string;
       actionResults?: Array<{
         actionId: string;
         type: string;
@@ -521,6 +724,32 @@ export const api = {
         }>;
         serverResults?: Array<{ toolCallId: string; result: unknown }>;
       }>("/api/oracle/agent", { method: "POST", body }),
+
+    /**
+     * Load the authenticated user's persistent Oracle session.
+     * Returns the last DB-persisted session (if any) plus recent messages.
+     * Used by the floating widget to hydrate conversation history on mount.
+     */
+    getSession: () =>
+      request<{
+        sessionId: string;
+        messages: Array<{
+          role: "user" | "assistant";
+          content: string;
+          timestamp: string;
+        }>;
+        context: Record<string, unknown> | null;
+      }>("/api/oracle/session"),
+
+    clearSession: () =>
+      request<{
+        sessionId: string;
+        messages: Array<{
+          role: "user" | "assistant";
+          content: string;
+          timestamp: string;
+        }>;
+      }>("/api/oracle/session", { method: "DELETE" }),
   },
 
   admin: {
@@ -530,7 +759,32 @@ export const api = {
     adoption: () => request<AdminAdoption>("/api/admin/adoption"),
     activityDaily: () => request<{ days: AdminDailyActivity[] }>("/api/admin/activity-daily"),
     feed: () => request<{ events: AdminFeedEvent[] }>("/api/admin/feed"),
+    leaderboard: () =>
+      request<{ entries: AdminLeaderboardEntry[] }>("/api/analytics/leaderboard"),
+    getPrompts: () =>
+      request<{ prompts: PromptConfig[] }>("/api/admin/prompts"),
+    testPrompt: (promptId: string, variables: Record<string, string>) =>
+      request<PromptTestResult>("/api/admin/prompts/test", {
+        method: "POST",
+        body: { promptId, variables },
+      }),
   },
+
+  twitter: {
+    follows: async () => {
+      const response = await request<{
+        follows: RawTwitterFollow[];
+        cached: boolean;
+      }>("/api/twitter/follows");
+
+      return {
+        cached: response.cached,
+        follows: response.follows.map(mapTwitterFollow),
+      };
+    },
+    likes: () => request<{ likes: TwitterLike[]; cached: boolean }>("/api/twitter/likes"),
+  },
+
 
   featureFlags: {
     list: () => request<{ flags: FeatureFlagRecord[] }>("/api/admin/feature-flags"),
@@ -565,6 +819,7 @@ export interface User {
   id: string;
   handle: string;
   role: "ANALYST" | "MANAGER" | "ADMIN";
+  onboardingTrack?: OnboardingTrack | null;
   displayName?: string;
   email?: string;
   bio?: string;
@@ -589,6 +844,7 @@ export interface VoiceProfile {
   selfPromotionalIntensity?: number;
   maturity: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
   tweetsAnalyzed: number;
+  analysis?: string | null;
 }
 
 export interface CalibrationResult {
@@ -616,6 +872,25 @@ export interface ReferenceAccount {
   avatarUrl?: string | null;
 }
 
+export interface TwitterFollow {
+  id: string;
+  handle: string;
+  displayName: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  followerCount: number;
+}
+
+export interface TwitterLike {
+  id: string;
+  text: string;
+  author_handle: string | null;
+  author_avatar: string | null;
+  created_at: string | null;
+  like_count: number;
+  retweet_count: number;
+}
+
 export interface BlendVoice {
   id: string;
   blendId?: string;
@@ -629,6 +904,59 @@ export interface SavedBlend {
   id: string;
   name: string;
   voices: BlendVoice[];
+}
+
+export interface BlendedVoiceDimensions {
+  humor: number;
+  formality: number;
+  brevity: number;
+  contrarianTone: number;
+  directness: number;
+  warmth: number;
+  technicalDepth: number;
+  confidence: number;
+  evidenceOrientation: number;
+  solutionOrientation: number;
+  socialPosture: number;
+  selfPromotionalIntensity: number;
+}
+
+export interface BlendedVoiceProfile {
+  id: string;
+  primaryTwitterId: string;
+  primaryHandle: string | null;
+  additionalTwitterIds: string[];
+  additionalHandles: string[];
+  weights: Record<string, number>;
+  dimensions: BlendedVoiceDimensions;
+  styleSignals?: Record<string, unknown> | null;
+  tweetsAnalyzed: number;
+  blendSummary?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BlendedVoiceInspiration {
+  twitterId: string;
+  handle: string;
+  name: string;
+  tweetCount: number;
+  weight: number;
+}
+
+export interface VoiceBlendResponse {
+  blendedProfile: {
+    id: string;
+    primaryTwitterId: string;
+    additionalTwitterIds: string[];
+    weights: Record<string, number>;
+    tweetsAnalyzed: number;
+    blendSummary?: string | null;
+  };
+  inspirations: BlendedVoiceInspiration[];
+  dimensions: BlendedVoiceDimensions;
+  styleSignals?: Record<string, unknown> | null;
+  summary: string;
 }
 
 export interface BlendVoiceInput {

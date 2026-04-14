@@ -68,7 +68,7 @@ const PAGES: Array<{
 }> = [
   { name: "Dashboard", path: "/dashboard", expectText: /welcome back/i },
   { name: "Crafting", path: "/crafting", expectText: /craft|draft|tweet|write/i },
-  { name: "Voice Profiles", path: "/voice-profiles", expectText: /voice/i },
+  { name: "Voice Lab", path: "/voice-profiles", expectText: /voice/i },
   { name: "Team Library", path: "/team-library", expectText: /team|library/i },
   { name: "Alerts", path: "/alerts", expectText: /alert|signal|momentum/i },
   { name: "Analytics", path: "/analytics", expectText: /analytics|engagement/i },
@@ -77,7 +77,10 @@ const PAGES: Array<{
   { name: "Campaigns", path: "/campaigns", expectText: /campaign/i },
   { name: "Arena", path: "/arena", expectText: /arena|analyst/i },
   { name: "Management", path: "/management", expectText: /management|team/i },
-  { name: "Profile", path: "/profile", expectText: /profile|test/i },
+  // /profile was removed for the Wednesday demo (DM-322) — navigating to
+  // /profile now redirects to /crafting, so we assert the crafting page content
+  // instead of profile content.
+  { name: "Profile", path: "/profile", expectText: /Feed Atlas content/i },
   { name: "Search", path: "/search", expectSelector: "input" },
   { name: "Telegram", path: "/telegram", expectText: /telegram/i },
   { name: "Admin", path: "/admin", expectText: /admin/i },

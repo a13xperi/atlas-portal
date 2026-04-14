@@ -12,11 +12,12 @@ interface RefinementChipsProps {
 }
 
 const chips: RefinementChipOption[] = [
-  { label: "Shorter", instruction: "Make it shorter and more concise" },
-  { label: "Snarkier", instruction: "Make it snarkier and more provocative" },
-  { label: "Opposite stance", instruction: "Take the opposite stance — argue the contrarian position" },
-  { label: "Hook", instruction: "Add a stronger hook at the beginning" },
-  { label: "Thread it", instruction: "Convert this into a thread format" },
+  { label: "Make it funnier", instruction: "Make this tweet funnier and more playful while keeping the core message" },
+  { label: "More serious", instruction: "Make this tweet more serious and authoritative in tone" },
+  { label: "Add evidence", instruction: "Add supporting data, stats, or evidence to strengthen this tweet" },
+  { label: "Shorter", instruction: "Make this tweet shorter and more concise — cut the fat" },
+  { label: "Bolder take", instruction: "Make this a bolder, more provocative take — don't hedge" },
+  { label: "Simpler", instruction: "Simplify the language — make it accessible to a wider audience" },
 ] as const;
 
 function ChipSpinner() {

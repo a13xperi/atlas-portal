@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Search, Settings } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import InlineDraftCard from "@/components/alerts/InlineDraftCard";
 import MonitorBuilder from "@/components/alerts/MonitorBuilder";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -23,7 +24,7 @@ function formatAlertTimestamp(createdAt: string) {
   }).format(new Date(createdAt));
 }
 
-export default function AlertsPage() {
+function AlertsPage() {
   const router = useRouter();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [subscriptions, setSubscriptions] = useState<AlertSubscription[]>([]);
@@ -109,7 +110,7 @@ export default function AlertsPage() {
               onClick={() => setShowSubscriptions(!showSubscriptions)}
               className="flex items-center gap-1.5 rounded-lg border border-glass-border px-3 py-1.5 text-xs font-medium text-atlas-text-secondary transition-colors hover:text-atlas-text"
             >
-              <Settings className="h-3.5 w-3.5" />
+              <Settings className="h-3.5 w-3.5" aria-hidden="true" />
               Monitors ({subscriptions.filter((sub) => sub.isActive).length})
             </button>
             {!loading && alerts.length > 0 && (
@@ -210,9 +211,9 @@ export default function AlertsPage() {
                     className="flex items-center gap-1 text-xs text-atlas-text-secondary transition-colors hover:text-atlas-teal disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {researchingId === alert.id ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
                     ) : (
-                      <Search className="h-3 w-3" />
+                      <Search className="h-3 w-3" aria-hidden="true" />
                     )}
                     Research
                   </button>
@@ -254,5 +255,13 @@ export default function AlertsPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+export default function AlertsPageGated() {
+  return (
+    <FeatureGate flagKey="signals">
+      <AlertsPage />
+    </FeatureGate>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useId } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import { X, Send, Sparkles, Check, XCircle } from "lucide-react";
@@ -43,6 +43,8 @@ export default function FloatingOracle() {
   const [nudge, setNudge] = useState<NudgeMessage | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelTitleId = useId();
 
   // Contextual nudge on page change
   useEffect(() => {
@@ -55,13 +57,39 @@ export default function FloatingOracle() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [agentMessages, pendingActions]);
 
-  // Focus input on open
+  // Focus input on open; return focus to trigger on close
   useEffect(() => {
     if (isOpen) {
       setHasUnread(false);
       setTimeout(() => inputRef.current?.focus(), 100);
+    } else {
+      // Only pull focus back if the trigger button is actually in the DOM
+      // (user may have navigated away). Avoid stealing focus on first mount.
+      if (document.activeElement instanceof HTMLElement && triggerRef.current) {
+        triggerRef.current.focus({ preventScroll: true });
+      }
     }
   }, [isOpen]);
+
+  // Escape closes the panel when open
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isOpen]);
+
+  // Wire Cmd+K "Open Oracle" command palette action
+  useEffect(() => {
+    const handleOracleOpen = () => setIsOpen(true);
+    window.addEventListener("oracle:open", handleOracleOpen);
+    return () => window.removeEventListener("oracle:open", handleOracleOpen);
+  }, []);
 
   const handleSend = useCallback(() => {
     const text = input.trim();
@@ -91,21 +119,25 @@ export default function FloatingOracle() {
       {/* Floating bubble */}
       {!isOpen && (
         <button
+          ref={triggerRef}
           type="button"
           onClick={() => {
             setIsOpen(true);
             try { localStorage.setItem("atlas_discovered_oracle", "1"); } catch {}
           }}
           data-tour="oracle-widget"
+          aria-expanded={false}
+          aria-haspopup="dialog"
+          aria-controls={panelTitleId}
           className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-atlas-nav border-2 border-atlas-teal/40 shadow-lg shadow-atlas-teal/20 transition-transform hover:scale-105 active:scale-95 animate-[subtle-bounce_3s_ease-in-out_infinite_2s]"
-          aria-label="Open Oracle assistant"
+          aria-label={hasUnread ? "Open Oracle assistant (new activity)" : "Open Oracle assistant"}
         >
           {imgError ? (
-            <Sparkles className="h-6 w-6 text-atlas-teal" />
+            <Sparkles className="h-6 w-6 text-atlas-teal" aria-hidden="true" />
           ) : (
             <Image
               src="/images/oracle-avatar.png"
-              alt="The Oracle"
+              alt=""
               width={40}
               height={40}
               className="rounded-full"
@@ -120,28 +152,40 @@ export default function FloatingOracle() {
 
       {/* Chat panel */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 flex w-[360px] max-h-[520px] flex-col rounded-2xl border border-glass-border bg-atlas-nav shadow-2xl shadow-black/40">
+        <div
+          id={panelTitleId}
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby={`${panelTitleId}-heading`}
+          className="fixed bottom-6 right-6 z-50 flex w-[360px] max-h-[520px] flex-col rounded-2xl border border-glass-border bg-atlas-nav shadow-2xl shadow-black/40"
+        >
           {/* Header */}
           <div className="flex items-center gap-3 border-b border-glass-border px-4 py-3">
             <div className="relative h-8 w-8 shrink-0">
               {imgError ? (
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-atlas-surface text-atlas-teal text-sm font-bold">O</div>
               ) : (
-                <Image src="/images/oracle-avatar.png" alt="The Oracle" width={32} height={32} className="rounded-full" onError={() => setImgError(true)} />
+                <Image src="/images/oracle-avatar.png" alt="" width={32} height={32} className="rounded-full" onError={() => setImgError(true)} />
               )}
-              <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-atlas-nav bg-atlas-teal" />
+              <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-atlas-nav bg-atlas-teal" aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-atlas-text">The Oracle</p>
+              <p id={`${panelTitleId}-heading`} className="text-sm font-medium text-atlas-text">The Oracle</p>
               <p className="text-[10px] text-atlas-text-muted">Your Atlas copilot</p>
             </div>
             <button type="button" onClick={() => setIsOpen(false)} className="text-atlas-text-muted hover:text-atlas-text" aria-label="Close Oracle">
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[200px] max-h-[340px]">
+          {/* Messages — aria-live so screen readers announce Oracle replies as they arrive */}
+          <div
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions text"
+            aria-label="Oracle conversation"
+            className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[200px] max-h-[340px]"
+          >
             {/* Contextual nudge (always first) */}
             {nudge && agentMessages.length === 0 && (
               <div className="flex justify-start">
@@ -188,14 +232,14 @@ export default function FloatingOracle() {
                         onClick={() => confirmAction(action.id)}
                         className="flex items-center gap-1 rounded-lg bg-atlas-teal/20 px-3 py-1.5 text-xs font-medium text-atlas-teal hover:bg-atlas-teal/30"
                       >
-                        <Check className="h-3 w-3" /> Yes, do it
+                        <Check className="h-3 w-3" aria-hidden="true" /> Yes, do it
                       </button>
                       <button
                         type="button"
                         onClick={() => rejectAction(action.id)}
                         className="flex items-center gap-1 rounded-lg bg-atlas-surface px-3 py-1.5 text-xs text-atlas-text-muted hover:text-atlas-text"
                       >
-                        <XCircle className="h-3 w-3" /> Cancel
+                        <XCircle className="h-3 w-3" aria-hidden="true" /> Cancel
                       </button>
                     </div>
                   </div>
@@ -219,7 +263,11 @@ export default function FloatingOracle() {
           </div>
 
           {/* Quick actions */}
-          <div className="flex gap-1.5 overflow-x-auto px-4 py-2 border-t border-glass-border/50">
+          <div
+            role="group"
+            aria-label="Oracle quick actions"
+            className="flex gap-1.5 overflow-x-auto px-4 py-2 border-t border-glass-border/50"
+          >
             {QUICK_ACTIONS.map((qa) => (
               <button
                 key={qa.label}
@@ -234,13 +282,18 @@ export default function FloatingOracle() {
 
           {/* Input */}
           <div className="flex items-center gap-2 border-t border-glass-border px-4 py-3">
+            <label htmlFor={`${panelTitleId}-input`} className="sr-only">
+              Ask Oracle anything
+            </label>
             <input
+              id={`${panelTitleId}-input`}
               ref={inputRef}
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
               placeholder="Ask Oracle anything..."
+              aria-label="Ask Oracle anything"
               className="flex-1 bg-transparent text-sm text-atlas-text placeholder:text-atlas-text-muted outline-none"
             />
             <button
@@ -250,7 +303,7 @@ export default function FloatingOracle() {
               className="text-atlas-teal disabled:text-atlas-text-muted disabled:opacity-40"
               aria-label="Send message"
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         </div>

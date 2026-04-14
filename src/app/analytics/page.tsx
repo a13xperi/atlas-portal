@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { api, AnalyticsSummary, LearningLogEntry, TweetDraft, DailyEngagement, DailyActivity } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 const EngagementVelocityChart = dynamic(
   () => import("@/components/analytics/EngagementVelocityChart"),
@@ -17,7 +19,8 @@ const EngagementVelocityChart = dynamic(
   }
 );
 
-export default function AnalyticsPage() {
+function AnalyticsPage() {
+  const { user, loading: authLoading } = useAuth();
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [logEntries, setLogEntries] = useState<LearningLogEntry[]>([]);
   const [topDrafts, setTopDrafts] = useState<TweetDraft[]>([]);
@@ -27,6 +30,7 @@ export default function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading || !user) return;
     setLoading(true);
     setError(null);
     const errors: string[] = [];
@@ -38,9 +42,10 @@ export default function AnalyticsPage() {
     ])
       .then(() => { if (errors.length > 0) setError(errors[0]); })
       .finally(() => setLoading(false));
-  }, []);
+  }, [user, authLoading]);
 
   useEffect(() => {
+    if (authLoading || !user) return;
     api.drafts.list("POSTED")
       .then((res) => {
         const sorted = (res.drafts ?? [])
@@ -50,7 +55,7 @@ export default function AnalyticsPage() {
         setTopDrafts(sorted);
       })
       .catch(() => {});
-  }, []);
+  }, [user, authLoading]);
 
   const handleExportPDF = () => {
     const printContent = document.getElementById("analytics-content");
@@ -92,15 +97,19 @@ export default function AnalyticsPage() {
   const activityCounts = activityDays.map((day) => day.count);
   const activityMax = activityCounts.length > 0 ? Math.max(...activityCounts) : 0;
 
+  // When the analytics API reports zero drafts but we can confirm posted drafts exist from
+  // the drafts endpoint, use the known count as a floor. The analytics_events table can
+  // lag behind the drafts table, causing the summary to show 0 while the detail table has data.
+  const knownPostedCount = topDrafts.length;
   const usageStats = summary
     ? [
-        { label: "Drafts", value: String(summary.draftsCreated), href: "/crafting" },
+        { label: "Drafts", value: String(summary.draftsCreated > 0 ? summary.draftsCreated : knownPostedCount), href: "/crafting" },
         { label: "Feedback", value: String(summary.feedbackGiven), href: "/dashboard" },
         { label: "Refinements", value: String(summary.refinements ?? 0), href: "/voice-profiles" },
         { label: "Ingested", value: String(summary.reportsIngested), href: "/alerts" },
       ]
     : [
-        { label: "Drafts", value: "0", href: "/crafting" },
+        { label: "Drafts", value: String(knownPostedCount), href: "/crafting" },
         { label: "Feedback", value: "0", href: "/dashboard" },
         { label: "Refinements", value: "0", href: "/voice-profiles" },
         { label: "Ingested", value: "0", href: "/alerts" },
@@ -273,12 +282,17 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {topDrafts.length > 0 && (
-          <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-4">
-            <h3 className="mb-3 text-sm font-medium text-atlas-text">Top Performing Drafts</h3>
+        <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-4">
+          <h3 className="mb-3 text-sm font-medium text-atlas-text">Top Performing Drafts</h3>
+          {topDrafts.length > 0 ? (
             <div className="space-y-3">
               {topDrafts.map((draft, i) => (
-                <div key={draft.id} className="flex items-start gap-3">
+                <Link
+                  key={draft.id}
+                  href="/crafting"
+                  aria-label={`Top draft ${i + 1}: open Crafting Station`}
+                  className="flex items-start gap-3 rounded-xl p-2 -m-2 transition-colors hover:bg-white/[0.04] focus:outline-none focus:ring-2 focus:ring-atlas-teal"
+                >
                   <span
                     className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                       i === 0 ? "bg-atlas-teal/20 text-atlas-teal" : "bg-atlas-surface text-atlas-text-muted"
@@ -292,11 +306,23 @@ export default function AnalyticsPage() {
                       {draft.actualEngagement} engagements
                     </p>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="py-6 text-center">
+              <p className="text-sm text-atlas-text-muted">
+                Top drafts will appear here once your posted tweets accumulate engagement.
+              </p>
+              <Link
+                href="/crafting"
+                className="mt-3 inline-block text-xs font-medium text-atlas-teal hover:text-atlas-teal/80 transition-colors"
+              >
+                Head to the Crafting Station →
+              </Link>
+            </div>
+          )}
+        </div>
 
         {/* SECTION 6: Learning Log */}
         <div data-tour="analytics-learning" className="mb-6 rounded-xl border border-glass-border bg-atlas-surface p-6 sm:p-8">
@@ -419,5 +445,13 @@ export default function AnalyticsPage() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function AnalyticsPageGated() {
+  return (
+    <FeatureGate flagKey="analytics_advanced">
+      <AnalyticsPage />
+    </FeatureGate>
   );
 }

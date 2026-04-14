@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page, type Route } from "@playwright/test";
+import { vercelBypassCookies } from "./fixtures";
 
 // Use origin-agnostic glob patterns so stubs work whether the browser hits the
 // cross-origin Railway backend directly OR the Next.js rewrite proxy on localhost.
@@ -7,7 +8,9 @@ const mockUser = {
   id: "smoke-user-1",
   handle: "atlasanalyst",
   email: "atlas@example.com",
-  role: "MANAGER" as const,
+  // ADMIN so FeatureGate-protected routes (campaigns/telegram/management/admin)
+  // that need admin or admins-scope flags render their content in smoke tests.
+  role: "ADMIN" as const,
   displayName: "Atlas Analyst",
   voiceProfile: {
     id: "voice-1",
@@ -19,6 +22,26 @@ const mockUser = {
     maturity: "INTERMEDIATE" as const,
     tweetsAnalyzed: 28,
   },
+};
+
+// All feature flags forced on for smoke runs — mirrors FLAG_DEFS in
+// src/lib/feature-flags.tsx. Seeded into localStorage via addInitScript.
+const ALL_FLAGS_ENABLED: Record<string, boolean> = {
+  crafting_station: true,
+  voice_lab: true,
+  arena: true,
+  campaigns: true,
+  queue: true,
+  analytics_advanced: true,
+  signals: true,
+  telegram_bot: true,
+  tweet_tinder: true,
+  multi_model: true,
+  super_admin: true,
+  management: true,
+  feed: true,
+  briefing: true,
+  library: true,
 };
 
 const mockSummary = {
@@ -248,7 +271,12 @@ const smokeRoutes: SmokeRoute[] = [
   {
     name: "voice profiles",
     path: "/voice-profiles",
-    ready: (page) => page.getByRole("heading", { name: /your voice/i }).first(),
+
+    // Page h1 on voice-profiles is "Your Voices" (updated in Anil feedback pass).
+    ready: (page) =>
+      page.getByRole("heading", { name: /your voices/i }).first(),
+    // API calls + React loading state can take a moment in CI dev-server mode.
+    readyTimeout: 20_000,
   },
   {
     name: "analytics",
@@ -295,9 +323,12 @@ const smokeRoutes: SmokeRoute[] = [
     ready: (page) => page.getByRole("heading", { name: /atlas arena|team management/i }),
   },
   {
+    // /profile was removed for the Wednesday demo (DM-322). Any navigation to
+    // /profile now redirects to /crafting — assert the redirect target renders.
     name: "profile",
     path: "/profile",
-    ready: (page) => page.getByRole("heading", { name: /atlas analyst/i }),
+    finalUrl: /\/crafting$/,
+    ready: (page) => page.getByText(/Feed Atlas content/i),
   },
   // Onboarding now uses the conversational Oracle chat UI at /onboarding
   {
@@ -361,6 +392,8 @@ async function stubApi(page: Page) {
         return json(route, mockVoiceReferences);
       case "/api/voice/blends":
         return json(route, mockBlends);
+      case "/api/voice/reference-accounts":
+        return json(route, { accounts: [] });
       case "/api/trending/topics":
         return json(route, mockTrendingTopics);
       case "/api/loop/state":
@@ -445,12 +478,33 @@ test.describe("Route smoke tests", () => {
     test(`renders ${smokeRoute.name}`, async ({ page, context, baseURL }) => {
       // Set auth cookies so middleware allows access to protected routes
       const url = new URL(baseURL ?? "http://localhost:3000");
-      await context.addCookies([
+      const cookies: Array<{ name: string; value: string; domain: string; path: string }> = [
         { name: "atlas_session", value: "1", domain: url.hostname, path: "/" },
         { name: "atlas_access_token", value: "1", domain: url.hostname, path: "/" },
-      ]);
+        ...vercelBypassCookies(url.hostname),
+      ];
+      await context.addCookies(cookies);
+
+      // Seed feature-flag localStorage BEFORE any page script runs so
+      // FeatureGate-protected routes (campaigns/telegram/management/admin)
+      // render their real content instead of redirecting to /dashboard.
+      await context.addInitScript((flags) => {
+        try {
+          window.localStorage.setItem(
+            "atlas-feature-flags",
+            JSON.stringify(flags),
+          );
+        } catch {
+          // ignore storage failures (private mode, etc.)
+        }
+      }, ALL_FLAGS_ENABLED);
 
       await stubApi(page);
+
+      // Abort external avatar CDN requests so they resolve instantly and don't
+      // block networkidle or inflate test time in CI.
+      await page.route("https://unavatar.io/**", (route) => route.abort());
+      await page.route("https://pbs.twimg.com/**", (route) => route.abort());
 
       const { consoleErrors, pageErrors } = monitorClientErrors(page);
 

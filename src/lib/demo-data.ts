@@ -5,6 +5,7 @@
 
 import type {
   AnalyticsSummary,
+  BlendedVoiceProfile,
   TweetDraft,
   VoiceProfile,
   ReferenceVoice,
@@ -98,6 +99,192 @@ const drafts: { drafts: TweetDraft[] } = {
   ],
 };
 
+// ── Campaigns ────────────────────────────────────────────────────────────────
+
+type DemoCampaign = {
+  id: string;
+  name: string;
+  description: string;
+  status: "DRAFT" | "ACTIVE" | "PAUSED" | "COMPLETED";
+  draftCount: number;
+  createdAt: string;
+  drafts: TweetDraft[];
+};
+
+const demoCampaigns: DemoCampaign[] = [
+  {
+    id: "camp-1",
+    name: "Modular Rollups Report",
+    description:
+      "Report-sourced campaign from Delphi's modular rollups quarterly note — drives the shared sequencer narrative with supporting trending commentary.",
+    status: "ACTIVE",
+    draftCount: 4,
+    createdAt: daysAgo(7),
+    drafts: [
+      {
+        id: "camp-1-draft-1",
+        content:
+          "Blob fees just cratered 40% and CT is calling it bearish. It's the opposite — L2 calldata compression is the modular thesis playing out in real-time. Cheaper infra is the adoption signal nobody's pricing in.",
+        version: 1,
+        status: "POSTED",
+        confidence: 0.91,
+        predictedEngagement: 4200,
+        actualEngagement: 5380,
+        sourceType: "REPORT",
+        createdAt: daysAgo(6),
+      },
+      {
+        id: "camp-1-draft-2",
+        content:
+          "Shared sequencers aren't a scaling upgrade. They're an alignment mechanism. When rollups share ordering, they stop competing for MEV and start compounding liquidity. That's the real unlock.",
+        version: 2,
+        status: "APPROVED",
+        confidence: 0.87,
+        predictedEngagement: 3600,
+        sourceType: "REPORT",
+        createdAt: daysAgo(5),
+      },
+      {
+        id: "camp-1-draft-3",
+        content:
+          "Hot take: EigenDA + Celestia + Avail aren't competing for the same market. They're each optimizing for a different failure mode. The winning rollup stack will run all three in parallel.",
+        version: 1,
+        status: "APPROVED",
+        confidence: 0.82,
+        predictedEngagement: 2900,
+        sourceType: "REPORT",
+        createdAt: daysAgo(4),
+      },
+      {
+        id: "camp-1-draft-4",
+        content:
+          "Three metrics that actually matter for modular L2s: blob fee efficiency, sequencer uptime, and cross-rollup message latency. Everyone's watching TPS. The data is in the footnotes.",
+        version: 1,
+        status: "DRAFT",
+        confidence: 0.78,
+        predictedEngagement: 2400,
+        sourceType: "REPORT",
+        createdAt: daysAgo(2),
+      },
+    ],
+  },
+  {
+    id: "camp-2",
+    name: "DeFi Market Update",
+    description:
+      "Working campaign for the upcoming DeFi update — stablecoin payments angle plus the restaking thread idea, both still in DRAFT status.",
+    status: "DRAFT",
+    draftCount: 3,
+    createdAt: daysAgo(3),
+    drafts: [
+      {
+        id: "camp-2-draft-1",
+        content:
+          "The carry trade is back — and this time it's denominated in stablecoins. $180B in circulating USDC/USDT is quietly earning 5%+ on T-bills. Banks aren't ready for what happens when that yield flows on-chain.",
+        version: 1,
+        status: "DRAFT",
+        confidence: 0.84,
+        predictedEngagement: 3100,
+        sourceType: "MANUAL",
+        createdAt: daysAgo(3),
+      },
+      {
+        id: "camp-2-draft-2",
+        content:
+          "Restaking is overleveraged. When the same ETH secures 15 AVSs, you're not distributing risk — you're concentrating it with extra steps. The first correlated slashing event will reprice the entire sector.",
+        version: 2,
+        status: "DRAFT",
+        confidence: 0.79,
+        predictedEngagement: 3800,
+        sourceType: "MANUAL",
+        createdAt: daysAgo(2),
+      },
+      {
+        id: "camp-2-draft-3",
+        content:
+          "Intent-based DEXs just crossed $12B in monthly volume. Solvers are competing on price and latency instead of bribes. This is how DeFi finally eats the OTC desks — quietly, then all at once.",
+        version: 1,
+        status: "APPROVED",
+        confidence: 0.88,
+        predictedEngagement: 2700,
+        sourceType: "MANUAL",
+        createdAt: daysAgo(1),
+      },
+    ],
+  },
+  {
+    id: "camp-3",
+    name: "L2 Fee Wars — March Recap",
+    description:
+      "Weekly recap thread on L2 fee compression. Blob fees, calldata optimization, and rollup economics.",
+    status: "COMPLETED",
+    draftCount: 5,
+    createdAt: daysAgo(10),
+    drafts: [
+      {
+        id: "camp-3-draft-1",
+        content:
+          "March L2 recap 🧵\n\nBlob fees: -42%\nAvg tx cost: -61%\nDaily active addresses: +28%\n\nThe fee wars are doing exactly what competition is supposed to do. Users win, rollups learn.",
+        version: 1,
+        status: "POSTED",
+        confidence: 0.93,
+        predictedEngagement: 4100,
+        actualEngagement: 4820,
+        sourceType: "REPORT",
+        createdAt: daysAgo(9),
+      },
+      {
+        id: "camp-3-draft-2",
+        content:
+          "Base shipped calldata compression and cut costs in half overnight. Arbitrum followed within 48 hours. Optimism is next. This isn't a race to zero — it's a race to the bottom of the cost curve where only infra matters.",
+        version: 1,
+        status: "POSTED",
+        confidence: 0.89,
+        predictedEngagement: 3400,
+        actualEngagement: 3920,
+        sourceType: "REPORT",
+        createdAt: daysAgo(8),
+      },
+      {
+        id: "camp-3-draft-3",
+        content:
+          "SOL reclaimed the 200d MA and nobody's talking about it. Last three times this happened: +34%, +51%, +72% over the following 90 days. The setup rhymes — just with quieter attention.",
+        version: 2,
+        status: "POSTED",
+        confidence: 0.86,
+        predictedEngagement: 3900,
+        actualEngagement: 4450,
+        sourceType: "MANUAL",
+        createdAt: daysAgo(7),
+      },
+      {
+        id: "camp-3-draft-4",
+        content:
+          "The most underrated L2 metric right now is sequencer uptime. Everyone's optimizing for fees but the real differentiator over the next cycle will be reliability. Downtime is the new rug.",
+        version: 1,
+        status: "POSTED",
+        confidence: 0.81,
+        predictedEngagement: 2500,
+        actualEngagement: 2980,
+        sourceType: "REPORT",
+        createdAt: daysAgo(6),
+      },
+      {
+        id: "camp-3-draft-5",
+        content:
+          "Closing thought: the modular vs monolithic debate is over. The market already voted — with fee dollars. Look at where the activity went in Q1, not where the arguments did.",
+        version: 1,
+        status: "POSTED",
+        confidence: 0.9,
+        predictedEngagement: 3200,
+        actualEngagement: 3610,
+        sourceType: "REPORT",
+        createdAt: daysAgo(5),
+      },
+    ],
+  },
+];
+
 // ── Voice Profile ────────────────────────────────────────────────────────────
 
 const voiceProfile: { profile: VoiceProfile } = {
@@ -152,23 +339,105 @@ const voiceBlends: { blends: SavedBlend[] } = {
   blends: [
     {
       id: "demo-blend-1",
-      name: "CT Shitposter",
+      name: "Delphi Voice",
       voices: [
-        { id: "demo-blend-1-v1", blendId: "demo-blend-1", label: "Personal", percentage: 60 },
-        { id: "demo-blend-1-v2", blendId: "demo-blend-1", label: "Cobie", percentage: 25 },
-        { id: "demo-blend-1-v3", blendId: "demo-blend-1", label: "GCR", percentage: 15 },
+        { id: "demo-blend-1-v1", blendId: "demo-blend-1", label: "Personal", percentage: 70 },
+        { id: "demo-blend-1-v2", blendId: "demo-blend-1", label: "Delphi Digital", percentage: 20 },
+        { id: "demo-blend-1-v3", blendId: "demo-blend-1", label: "Messari", percentage: 10 },
       ],
     },
     {
       id: "demo-blend-2",
-      name: "Research Thread",
+      name: "Founder Voice",
       voices: [
-        { id: "demo-blend-2-v1", blendId: "demo-blend-2", label: "Personal", percentage: 40 },
-        { id: "demo-blend-2-v2", blendId: "demo-blend-2", label: "Hasu", percentage: 40 },
-        { id: "demo-blend-2-v3", blendId: "demo-blend-2", label: "Cobie", percentage: 20 },
+        { id: "demo-blend-2-v1", blendId: "demo-blend-2", label: "Personal", percentage: 55 },
+        { id: "demo-blend-2-v2", blendId: "demo-blend-2", label: "Naval", percentage: 25 },
+        { id: "demo-blend-2-v3", blendId: "demo-blend-2", label: "Paul Graham", percentage: 20 },
+      ],
+    },
+    {
+      id: "demo-blend-3",
+      name: "Market Commentary",
+      voices: [
+        { id: "demo-blend-3-v1", blendId: "demo-blend-3", label: "Personal", percentage: 60 },
+        { id: "demo-blend-3-v2", blendId: "demo-blend-3", label: "Messari", percentage: 25 },
+        { id: "demo-blend-3-v3", blendId: "demo-blend-3", label: "Marc Andreessen", percentage: 15 },
       ],
     },
   ],
+};
+
+const twitterFollows = {
+  follows: [
+    {
+      id: "demo-follow-1",
+      handle: "hasufl",
+      displayName: "Hasu",
+      bio: "Writing about markets, crypto structure, and the second-order effects most people miss.",
+      avatarUrl: null,
+      followerCount: 182400,
+    },
+    {
+      id: "demo-follow-2",
+      handle: "DefiIgnas",
+      displayName: "Ignas",
+      bio: "DeFi researcher breaking down product design, token mechanics, and the incentive layer.",
+      avatarUrl: null,
+      followerCount: 95600,
+    },
+    {
+      id: "demo-follow-3",
+      handle: "goodalexander",
+      displayName: "Alex Good",
+      bio: "Macro, liquidity, and the market structure beneath the headline noise.",
+      avatarUrl: null,
+      followerCount: 74200,
+    },
+    {
+      id: "demo-follow-4",
+      handle: "punk6529",
+      displayName: "punk6529",
+      bio: "Long-form thinking on the internet, culture, and the future of digital ownership.",
+      avatarUrl: null,
+      followerCount: 521000,
+    },
+  ],
+  cached: false,
+};
+
+const blendedVoiceProfile: { profile: BlendedVoiceProfile } = {
+  profile: {
+    id: "demo-blended-profile-1",
+    primaryTwitterId: "demo-follow-1",
+    primaryHandle: "hasufl",
+    additionalTwitterIds: ["demo-follow-2", "demo-follow-3"],
+    additionalHandles: ["DefiIgnas", "goodalexander"],
+    weights: {
+      "demo-follow-1": 0.7,
+      "demo-follow-2": 0.15,
+      "demo-follow-3": 0.15,
+    },
+    dimensions: {
+      humor: 48,
+      formality: 74,
+      brevity: 61,
+      contrarianTone: 67,
+      directness: 69,
+      warmth: 42,
+      technicalDepth: 79,
+      confidence: 71,
+      evidenceOrientation: 83,
+      solutionOrientation: 56,
+      socialPosture: 38,
+      selfPromotionalIntensity: 22,
+    },
+    styleSignals: null,
+    tweetsAnalyzed: 146,
+    blendSummary:
+      "Voice blend anchored on @hasufl with supporting influence from @DefiIgnas and @goodalexander.",
+    createdAt: now,
+    updatedAt: now,
+  },
 };
 
 // ── Team Analysts ────────────────────────────────────────────────────────────
@@ -489,7 +758,9 @@ const demoData: Record<string, unknown> = {
   "/api/voice/profile": voiceProfile,
   "/api/voice/references": voiceReferences,
   "/api/voice/blends": voiceBlends,
+  "/api/voice/blended-profile": blendedVoiceProfile,
   "/api/voice/reference-accounts": referenceAccounts,
+  "/api/twitter/follows": twitterFollows,
   "/api/analytics/team": teamAnalysts,
   "/api/analytics/engagement-daily": engagementDaily,
   "/api/analytics/activity-daily": activityDaily,
@@ -536,32 +807,10 @@ const demoData: Record<string, unknown> = {
 
   "/api/users/team": teamMembers,
   "/api/campaigns": {
-    campaigns: [
-      {
-        id: "camp-1",
-        name: "Pair Trading in Crypto",
-        description: "Promote the new Delphi Digital research report on pair trading strategies. Generate tweets covering statistical arbitrage, funding rate arb, and cross-exchange spreads.",
-        status: "ACTIVE" as const,
-        draftCount: 4,
-        createdAt: daysAgo(2),
-      },
-      {
-        id: "camp-2",
-        name: "ETH Staking Thesis",
-        description: "Build narrative around institutional ETH staking yields compressing — what it means for the network and why it's actually bullish.",
-        status: "DRAFT" as const,
-        draftCount: 2,
-        createdAt: daysAgo(5),
-      },
-      {
-        id: "camp-3",
-        name: "L2 Fee Wars — March Recap",
-        description: "Weekly recap thread on L2 fee compression. Blob fees, calldata optimization, and rollup economics.",
-        status: "COMPLETED" as const,
-        draftCount: 6,
-        createdAt: daysAgo(10),
-      },
-    ],
+    campaigns: demoCampaigns.map(({ drafts: campaignDrafts, ...rest }) => ({
+      ...rest,
+      draftCount: campaignDrafts.length,
+    })),
   },
 
   "/api/briefing/history": {
@@ -581,6 +830,39 @@ const demoData: Record<string, unknown> = {
       },
     ],
   },
+  "/api/arena/leaderboard": {
+    period: "weekly" as const,
+    entries: [
+      { rank: 1, userId: "u3", displayName: "inversebrah", avatarUrl: null, tweetsPublished: 31, totalEngagement: 142000, consistencyStreak: 14, badge: "Alpha" },
+      { rank: 2, userId: "u1", displayName: "DegenSpartan", avatarUrl: null, tweetsPublished: 23, totalEngagement: 118000, consistencyStreak: 10, badge: null },
+      { rank: 3, userId: "u2", displayName: "CryptoHayes", avatarUrl: null, tweetsPublished: 18, totalEngagement: 97000, consistencyStreak: 7, badge: null },
+      { rank: 4, userId: "u4", displayName: "punk6529", avatarUrl: null, tweetsPublished: 15, totalEngagement: 74000, consistencyStreak: 5, badge: null },
+      { rank: 5, userId: "u5", displayName: "Pentosh1", avatarUrl: null, tweetsPublished: 8, totalEngagement: 41000, consistencyStreak: 3, badge: null },
+      { rank: 6, userId: "u6", displayName: "Alex Peri", avatarUrl: null, tweetsPublished: 47, totalEngagement: 210000, consistencyStreak: 21, badge: null },
+    ],
+  },
+  "/api/arena/me": {
+    rank: 6,
+    userId: "u6",
+    displayName: "Alex Peri",
+    avatarUrl: null,
+    tweetsPublished: 47,
+    totalEngagement: 210000,
+    consistencyStreak: 21,
+    badge: null,
+  },
+
+  "/api/drafts/queue": {
+    queue: [
+      { id: "demo-q-1", content: "ETH staking yields are compressing but that's actually bullish. It means the network is maturing and validators are playing a longer game. The yield farmers leave, the believers stay.", version: 1, status: "APPROVED", confidence: 0.87, predictedEngagement: 8.4, actualEngagement: null, sourceType: "MANUAL" as const, createdAt: daysAgo(1), _score: 0.92, suggestedAt: new Date(Date.now() + 1 * 3600000).toISOString() },
+      { id: "demo-q-2", content: "The carry trade is back — and this time it's denominated in stablecoins. Banks aren't ready for a world where yield on-chain is 2x what they offer off-chain.", version: 1, status: "DRAFT", confidence: 0.76, predictedEngagement: 7.1, actualEngagement: null, sourceType: "REPORT" as const, createdAt: daysAgo(2), _score: 0.84, suggestedAt: new Date(Date.now() + 5 * 3600000).toISOString() },
+      { id: "demo-q-3", content: "L2 fees just hit an all-time low. The rollup wars are doing exactly what competition is supposed to do — drive costs down while throughput goes up. Users win.", version: 2, status: "APPROVED", confidence: 0.81, predictedEngagement: 9.3, actualEngagement: null, sourceType: "MANUAL" as const, createdAt: daysAgo(1), _score: 0.79, suggestedAt: new Date(Date.now() + 24 * 3600000).toISOString() },
+      { id: "demo-q-4", content: "Everyone wants to be a contrarian until the contrarian trade actually works. Then they call it obvious. The blob fee thesis has been in our research for 6 months.", version: 1, status: "DRAFT", confidence: 0.69, predictedEngagement: 5.8, actualEngagement: null, sourceType: "MANUAL" as const, createdAt: daysAgo(3), _score: 0.71, suggestedAt: new Date(Date.now() + 48 * 3600000).toISOString() },
+    ],
+    total: 4,
+    nextUp: { id: "demo-q-1", content: "ETH staking yields are compressing but that's actually bullish. It means the network is maturing and validators are playing a longer game. The yield farmers leave, the believers stay.", version: 1, status: "APPROVED", confidence: 0.87, predictedEngagement: 8.4, actualEngagement: null, sourceType: "MANUAL" as const, createdAt: daysAgo(1), _score: 0.92, suggestedAt: new Date(Date.now() + 1 * 3600000).toISOString() },
+  },
+
   "/api/briefing/latest": {
     id: "b1",
     date: "2026-04-04",
@@ -614,6 +896,74 @@ export function getDemoResponse(path: string, method: string = "GET", body?: unk
     if (cleanPath !== "/api/drafts/team") {
       return { draft: drafts.drafts[0] };
     }
+  }
+
+  // Campaign detail — return full campaign with drafts populated
+  if (method === "GET" && /^\/api\/campaigns\/[^/]+$/.test(cleanPath)) {
+    const id = cleanPath.split("/").pop() as string;
+    const match = demoCampaigns.find((c) => c.id === id);
+    if (match) {
+      return { campaign: match };
+    }
+    // Unknown id (e.g. freshly created in-session) — return a minimal shell
+    // with the first demo draft so the page renders something useful.
+    return {
+      campaign: {
+        id,
+        name: "New Campaign",
+        description: "Campaign created in demo mode.",
+        status: "DRAFT" as const,
+        draftCount: 1,
+        drafts: [drafts.drafts[0]],
+        createdAt: now,
+      },
+    };
+  }
+
+  // Campaign create — return a synthetic campaign the UI can route to
+  if (method === "POST" && cleanPath === "/api/campaigns") {
+    const payload = (body ?? {}) as { name?: string; description?: string };
+    return {
+      campaign: {
+        id: `camp-demo-${Date.now()}`,
+        name: payload.name || "New Campaign",
+        description: payload.description ?? null,
+        status: "DRAFT" as const,
+        draftCount: 0,
+        drafts: [],
+        createdAt: now,
+      },
+    };
+  }
+
+  // Campaign update
+  if (method === "PATCH" && /^\/api\/campaigns\/[^/]+$/.test(cleanPath)) {
+    const id = cleanPath.split("/").pop() as string;
+    const existing = demoCampaigns.find((c) => c.id === id);
+    const payload = (body ?? {}) as Partial<{
+      name: string;
+      description: string | null;
+      status: DemoCampaign["status"];
+    }>;
+    return {
+      campaign: {
+        id,
+        name: payload.name ?? existing?.name ?? "Campaign",
+        description: payload.description ?? existing?.description ?? null,
+        status: payload.status ?? existing?.status ?? ("DRAFT" as const),
+        draftCount: existing?.draftCount ?? 0,
+        drafts: existing?.drafts ?? [],
+        createdAt: existing?.createdAt ?? now,
+      },
+    };
+  }
+
+  // Campaign add/remove draft
+  if (method === "POST" && /^\/api\/campaigns\/[^/]+\/drafts$/.test(cleanPath)) {
+    return { success: true };
+  }
+  if (method === "DELETE" && /^\/api\/campaigns\/[^/]+\/drafts\/[^/]+$/.test(cleanPath)) {
+    return { success: true };
   }
 
   if (method === "POST" && cleanPath === "/api/drafts/generate") {
@@ -719,10 +1069,25 @@ export function getDemoResponse(path: string, method: string = "GET", body?: unk
 
   // Oracle agent — used by FloatingOracle agent mode
   if (method === "POST" && cleanPath === "/api/oracle/agent") {
-    return {
-      text: "I can help you draft tweets, check analytics, browse signals, tune your voice, or generate briefings. Just tell me what you need — or tap a quick action below.",
-      actions: [],
-    };
+    const agentMsgs = typeof body === "object" && body !== null && "messages" in body ? (body as Record<string, unknown>).messages : [];
+    const lastUser = Array.isArray(agentMsgs)
+      ? [...agentMsgs].reverse().find((m) => typeof m === "object" && m !== null && (m as Record<string, unknown>).role === "user")
+      : null;
+    const lastText = lastUser && typeof lastUser === "object" ? String((lastUser as Record<string, unknown>).content ?? "").toLowerCase() : "";
+
+    if (/\b(draft|tweet|write|post)\b/.test(lastText)) {
+      return { text: "On it — spinning up a draft based on your voice profile.", actions: [{ id: `act-${Date.now()}`, type: "generate_draft", input: { prompt: lastText }, requiresConfirmation: false, label: "Generate draft" }] };
+    }
+    if (/\b(analytics|stats|performance|metrics)\b/.test(lastText)) {
+      return { text: "Pulling your latest analytics summary now.", actions: [{ id: `act-${Date.now()}`, type: "get_analytics_summary", input: {}, requiresConfirmation: false, label: "Get analytics summary" }] };
+    }
+    if (/\b(trending|signals|hot|momentum)\b/.test(lastText)) {
+      return { text: "Checking the signal feed — here\'s what\'s moving right now.", actions: [{ id: `act-${Date.now()}`, type: "get_trending", input: {}, requiresConfirmation: false, label: "Get trending signals" }] };
+    }
+    if (/\b(voice|tone|style|profile)\b/.test(lastText)) {
+      return { text: "Grabbing your current voice profile so we can tune it together.", actions: [{ id: `act-${Date.now()}`, type: "get_voice_profile", input: {}, requiresConfirmation: false, label: "Get voice profile" }] };
+    }
+    return { text: "I can help you draft tweets, check analytics, browse signals, tune your voice, or generate briefings. Just tell me what you need — or tap a quick action below.", actions: [] };
   }
 
   // Briefing generate

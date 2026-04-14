@@ -1,5 +1,5 @@
 # Atlas — Anil Onboarding Package
-_Last updated: 2026-04-08_
+_Last updated: 2026-04-10_
 
 ## What It Is
 Atlas is a content-to-tweet platform for Delphi Digital analysts. You feed it research (paste text, drop a URL, or record audio) and it generates tweet drafts in your voice.
@@ -28,12 +28,15 @@ Atlas is a content-to-tweet platform for Delphi Digital analysts. You feed it re
 
 **Alerts** (`/alerts`) — Subscribe to on-chain or market alerts, get notified via Telegram.
 
+**Admin Dashboard** (`/admin/dashboard`) — God-mode command center (ADMIN users only):
+- **Team Access tab**: Feature matrix showing which roles (Owner/Admin/Analyst) can see each feature. Toggle switches persist to DB. Team roster grouped by role with inline role promotion.
+- **Intelligence tab**: Platform Pulse KPIs, Atlas Score leaderboard, Top Content this week, Engagement Accuracy chart, adoption metrics, activity feed.
+
 ---
 
 ## Known Limitations
 
 - `/analytics` can crash on empty data — don't worry about it yet
-- Alert feed is being patched (currently shows all users' alerts, not just yours) — don't rely on it for sensitive content
 - Onboarding tour is live but some targets are still wiring up — click through it, then explore manually
 - No custom domain yet (delphi-atlas.vercel.app is the real URL)
 
@@ -42,7 +45,7 @@ Atlas is a content-to-tweet platform for Delphi Digital analysts. You feed it re
 ## First Steps
 
 1. Go to https://delphi-atlas.vercel.app
-2. Log in with X (Twitter)
+2. Log in with X (Twitter) — connect X first, before anything else
 3. Complete the onboarding flow — it sets up your voice profile
 4. Go to `/briefing` to see today's brief, click "Craft from this" to test the core flow
 5. Go to `/crafting` and paste any Delphi research article to generate a tweet

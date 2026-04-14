@@ -80,9 +80,67 @@ describe("NavBar", () => {
       "aria-current",
       "page"
     );
-    expect(screen.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute(
+    // Core 7 tabs visible to all roles (DM-322): Dashboard, Crafting, Voices, Analytics, Signals, Library, Arena
+    expect(screen.getByRole("link", { name: "Voices" })).not.toHaveAttribute(
       "aria-current"
     );
+    expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Analytics" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Signals" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Library" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Arena" })).toBeInTheDocument();
+    // Non-core tabs should not appear in nav
+    expect(screen.queryByRole("link", { name: "Feed" })).not.toBeInTheDocument();
+  });
+
+  it("shows Analytics and Signals for all roles including ANALYST (DM-322)", () => {
+    render(<NavBar variant="app" />);
+
+    // DM-322: Analytics and Signals are now core tabs visible to all roles
+    expect(screen.getByRole("link", { name: "Analytics" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Signals" })).toBeInTheDocument();
+    // Other core tabs visible
+    expect(screen.getByRole("link", { name: "Crafting" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Voices" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Library" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Arena" })).toBeInTheDocument();
+  });
+
+  it("shows Analytics and Signals tabs for MANAGER role", () => {
+    mockUseAuth.mockReturnValue({
+      user: {
+        id: "user-1",
+        handle: "atlas",
+        role: "MANAGER",
+      },
+      loading: false,
+      login: jest.fn(),
+      register: jest.fn(),
+      logout: jest.fn(),
+    });
+
+    render(<NavBar variant="app" />);
+
+    expect(screen.getByRole("link", { name: "Analytics" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Signals" })).toBeInTheDocument();
+  });
+
+  it("shows Analytics and Signals tabs for ADMIN role", () => {
+    mockUseAuth.mockReturnValue({
+      user: {
+        id: "user-1",
+        handle: "atlas",
+        role: "ADMIN",
+      },
+      loading: false,
+      login: jest.fn(),
+      register: jest.fn(),
+      logout: jest.fn(),
+    });
+
+    render(<NavBar variant="app" />);
+
+    expect(screen.getByRole("link", { name: "Analytics" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Signals" })).toBeInTheDocument();
   });
 

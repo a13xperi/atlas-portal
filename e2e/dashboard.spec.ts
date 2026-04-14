@@ -3,8 +3,8 @@ import { test, expect } from "./fixtures";
 test.describe("Dashboard", () => {
   test("renders heading and navigation cards", async ({ authedPage: page }) => {
     await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
-    await expect(page.getByText("Crafting Station")).toBeVisible();
-    await expect(page.getByText("Voice Profiles")).toBeVisible();
+    await expect(page.getByTestId("nav-card-crafting-station")).toBeVisible();
+    await expect(page.locator("#main-content").getByText("Voice Lab")).toBeVisible();
   });
 
   test("renders stat cards", async ({ authedPage: page }) => {
@@ -23,8 +23,8 @@ test.describe("Dashboard", () => {
   });
 
   test("navigation to crafting works", async ({ authedPage: page }) => {
-    await page.getByText("Crafting Station").click();
-    await page.waitForURL("**/crafting");
+    await page.getByTestId("nav-card-crafting-station").click();
+    await page.waitForURL("**/crafting", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(/\/crafting/);
   });
 });

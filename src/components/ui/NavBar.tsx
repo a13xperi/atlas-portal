@@ -28,24 +28,43 @@ import { useAuth } from "@/lib/auth";
 import { useAlertSocket } from "@/lib/alertSocket";
 import { useCommandPalette } from "@/components/ui/CommandPalette";
 import { getCachedTier } from "@/lib/arena-tier-cache";
+import { useNavDiscovery } from "@/lib/discovery";
+import NavDiscoveryDot from "@/components/tour/NavDiscoveryDot";
+import { useRouteEnabled } from "@/lib/feature-flags";
 
 export interface NavBarProps {
   variant: "app" | "onboarding";
 }
 
-const navLinks = [
-  { label: "Feed", href: "/feed", icon: Rss },
+export const navLinks = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Crafting", href: "/crafting", icon: PenTool },
   { label: "Voices", href: "/voice-profiles", icon: Mic2 },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
-  { label: "Briefing", href: "/briefing", icon: Newspaper },
   { label: "Signals", href: "/alerts", icon: Zap },
   { label: "Library", href: "/team-library", icon: BookOpen },
   { label: "Arena", href: "/arena", icon: Trophy },
+  { label: "Feed", href: "/feed", icon: Rss },
+  { label: "Briefing", href: "/briefing", icon: Newspaper },
   { label: "Campaigns", href: "/campaigns", icon: CalendarClock },
   { label: "Queue", href: "/queue", icon: ListOrdered },
 ];
+
+// Core tabs always visible in navigation (DM-322, updated for demo flow).
+// Demo flow: Dashboard → Crafting → Voices → Analytics → Signals → Library → Arena
+// Other tabs (Feed, Briefings, Queue, Campaigns) are hidden from nav but accessible.
+const CORE_NAV_HREFS = new Set(["/dashboard", "/crafting", "/voice-profiles", "/analytics", "/alerts", "/team-library", "/arena"]);
+const MANAGER_NAV_HREFS = new Set<string>();
+
+export const coreNavLinks = navLinks.filter((link) => CORE_NAV_HREFS.has(link.href));
+
+/** Returns the visible nav links for a given user role. Managers/admins see Analytics + Signals in addition to core tabs. */
+export function getVisibleNavLinks(role?: string): typeof navLinks {
+  const isManager = role === "MANAGER" || role === "ADMIN";
+  return navLinks.filter(
+    (link) => CORE_NAV_HREFS.has(link.href) || (isManager && MANAGER_NAV_HREFS.has(link.href))
+  );
+}
 
 function DelphiLogo() {
   return (
@@ -93,10 +112,13 @@ export default function NavBar({ variant }: NavBarProps) {
   const { unreadNotifications } = useAlertSocket();
   const { open: openPalette } = useCommandPalette();
   const hasUser = Boolean(user);
-  const initial = user?.handle?.[0]?.toUpperCase() || user?.displayName?.[0]?.toUpperCase() || "A";
+  const initial = user?.displayName?.[0]?.toUpperCase() || user?.handle?.[0]?.toUpperCase() || "A";
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const isRouteEnabled = useRouteEnabled();
   const cachedTier = typeof window !== "undefined" ? getCachedTier() : null;
+  const { shouldShowDot } = useNavDiscovery();
+  const visibleLinks = getVisibleNavLinks(user?.role).filter((link) => isRouteEnabled(link.href));
 
   useEffect(() => {
     setMobileOpen(false);
@@ -133,7 +155,7 @@ export default function NavBar({ variant }: NavBarProps) {
           </Link>
           {variant === "app" && (
             <div className="hidden md:flex items-center gap-6">
-              {navLinks.map((link) => (
+              {visibleLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -145,8 +167,8 @@ export default function NavBar({ variant }: NavBarProps) {
                   }`}
                 >
                   {link.label}
-                  {link.label === "Briefing" && (
-                    <span className="ml-1 rounded-full bg-atlas-teal/15 px-1.5 py-0.5 text-[9px] font-bold text-atlas-teal">NEW</span>
+                  {shouldShowDot(link.href) && (
+                    <NavDiscoveryDot className="ml-1" />
                   )}
                 </Link>
               ))}
@@ -205,20 +227,26 @@ export default function NavBar({ variant }: NavBarProps) {
                 </button>
                 <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
               </div>
-              <Link
-                href="/profile"
-                aria-label={cachedTier ? `Open profile — ${cachedTier.tier.name} (#${cachedTier.rank})` : "Open profile"}
-                className={`w-8 h-8 rounded-full bg-atlas-surface border-2 flex items-center justify-center text-xs font-medium transition-colors ${
+              <div
+                aria-label={cachedTier ? `${cachedTier.tier.name} (#${cachedTier.rank})` : "Signed in"}
+                className={`w-8 h-8 rounded-full bg-atlas-surface border-2 flex items-center justify-center text-xs font-medium ${
                   cachedTier
                     ? `${cachedTier.tier.borderColor} ${cachedTier.tier.color}`
-                    : pathname === "/profile"
-                      ? "border-atlas-teal text-atlas-teal"
-                      : "border-glass-border text-atlas-text-secondary hover:border-atlas-text-secondary"
+                    : "border-glass-border text-atlas-text-secondary"
                 }`}
                 title={cachedTier ? `${cachedTier.tier.name} · #${cachedTier.rank} · ${cachedTier.score} pts` : undefined}
               >
-                {initial}
-              </Link>
+                {user.avatarUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={user.avatarUrl}
+                    alt={`${user.displayName || user.handle} avatar`}
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                ) : (
+                  initial
+                )}
+              </div>
             </>
           )}
           {variant === "app" && user && (
@@ -260,7 +288,7 @@ export default function NavBar({ variant }: NavBarProps) {
           >
             <nav aria-label="Mobile navigation">
               <div className="flex flex-col gap-1">
-                {navLinks.map((link) => {
+                {visibleLinks.map((link) => {
                   const Icon = link.icon;
 
                   return (
@@ -277,8 +305,8 @@ export default function NavBar({ variant }: NavBarProps) {
                     >
                       <Icon className="h-4 w-4" aria-hidden="true" />
                       {link.label}
-                      {link.label === "Briefing" && (
-                        <span className="ml-auto rounded-full bg-atlas-teal/15 px-1.5 py-0.5 text-[9px] font-bold text-atlas-teal">NEW</span>
+                      {shouldShowDot(link.href) && (
+                        <NavDiscoveryDot className="ml-auto" />
                       )}
                     </Link>
                   );

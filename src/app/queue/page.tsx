@@ -32,7 +32,10 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import QueueTimeline from "@/components/queue/QueueTimeline";
+import OracleInspector from "@/components/oracle/OracleInspector";
+import type { InspectableEntity } from "@/lib/oracle-agent-types";
 import { api, QueuedDraft } from "@/lib/api";
 
 type FilterKey = "all" | "draft" | "scheduled" | "posted" | "archived";
@@ -145,6 +148,7 @@ function SortableQueueItem({
   onSchedule,
   onPost,
   onArchive,
+  onInspect,
   formatTime,
 }: {
   item: QueuedDraft;
@@ -155,6 +159,7 @@ function SortableQueueItem({
   onSchedule: (id: string, at: string) => Promise<void> | void;
   onPost: (id: string) => void;
   onArchive: (id: string) => void;
+  onInspect: (id: string) => void;
   formatTime: (d: QueuedDraft) => string;
 }) {
   const {
@@ -186,7 +191,10 @@ function SortableQueueItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative rounded-xl border bg-atlas-surface p-4 transition-colors hover:border-atlas-teal/30 ${
+      onMouseEnter={() => onInspect(item.id)}
+      onFocus={() => onInspect(item.id)}
+      tabIndex={0}
+      className={`relative rounded-xl border bg-atlas-surface p-4 transition-colors hover:border-atlas-teal/30 focus:border-atlas-teal/50 focus:outline-none ${
         isFirst
           ? "border-2 border-atlas-teal/30 rounded-2xl p-6"
           : "border-glass-border"
@@ -304,7 +312,7 @@ function SortableQueueItem({
   );
 }
 
-export default function QueuePage() {
+function QueuePage() {
   const [queue, setQueue] = useState<QueuedDraft[]>([]);
   const [allDrafts, setAllDrafts] = useState<QueuedDraft[]>([]);
   const [loading, setLoading] = useState(true);
@@ -316,6 +324,9 @@ export default function QueuePage() {
   const [showTimeline, setShowTimeline] = useState(true);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [isManualOrder, setIsManualOrder] = useState(false);
+  // Which row Oracle is currently narrating. Tracks hover + keyboard
+  // focus so the Inspector line updates as the user scans the queue.
+  const [inspectedId, setInspectedId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -651,6 +662,33 @@ export default function QueuePage() {
       </button>
       {showTimeline && <QueueTimeline queue={queue} />}
 
+      {/* Oracle ambient narration — follows hover/focus across the queue
+          list and renders a single line about the currently-inspected
+          draft. The row's own focus ring doubles as the visual anchor. */}
+      {(() => {
+        const inspected = filteredQueue.find((d) => d.id === inspectedId)
+          ?? filteredQueue[0];
+        if (!inspected) return null;
+        const inspectorEntity: InspectableEntity = {
+          type: "draft",
+          id: inspected.id,
+          name: inspected.status === "SCHEDULED" ? "scheduled draft" : "draft",
+          meta: {
+            status: inspected.status,
+            charCount: inspected.content?.length ?? 0,
+            score:
+              typeof inspected._score === "number"
+                ? Math.min(1, Math.max(0, inspected._score))
+                : undefined,
+          },
+        };
+        return (
+          <div className="mt-4">
+            <OracleInspector entity={inspectorEntity} />
+          </div>
+        );
+      })()}
+
       {/* Drag-sortable queue list */}
       <DndContext
         sensors={sensors}
@@ -679,6 +717,7 @@ export default function QueuePage() {
                   onSchedule={handleSchedule}
                   onPost={handlePost}
                   onArchive={handleArchive}
+                  onInspect={setInspectedId}
                   formatTime={formatTime}
                 />
               ))
@@ -736,5 +775,13 @@ export default function QueuePage() {
         </div>
       )}
     </AppShell>
+  );
+}
+
+export default function QueuePageGated() {
+  return (
+    <FeatureGate flagKey="queue">
+      <QueuePage />
+    </FeatureGate>
   );
 }

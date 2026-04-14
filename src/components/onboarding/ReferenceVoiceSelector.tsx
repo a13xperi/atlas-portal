@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Loader2, Plus, X } from "lucide-react";
+import { Check, ExternalLink, Loader2, Plus, X } from "lucide-react";
 import GradientButton from "@/components/ui/GradientButton";
-import { api, type ReferenceAccount } from "@/lib/api";
+import { api, type ReferenceAccount, type TwitterFollow } from "@/lib/api";
 import {
   normalizeReferenceAccounts,
   REFERENCE_ACCOUNT_FALLBACK,
   REFERENCE_ACCOUNT_CATEGORY_ORDER,
   type ReferenceAccountCategory,
 } from "@/lib/reference-accounts";
+
+type SourceTab = "curated" | "follows";
 
 interface Props {
   accounts?: ReferenceAccount[];
@@ -23,7 +25,7 @@ type CategoryFilter = "All" | ReferenceAccountCategory;
 
 export default function ReferenceVoiceSelector({
   accounts,
-  minRequired = 2,
+  minRequired = 1,
   onContinue,
   onSelectionChange,
   selected,
@@ -35,6 +37,7 @@ export default function ReferenceVoiceSelector({
   const [isLoading, setIsLoading] = useState(initial.length === 0);
   const [customHandle, setCustomHandle] = useState("");
   const [customError, setCustomError] = useState("");
+  const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
   const customInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -112,7 +115,7 @@ export default function ReferenceVoiceSelector({
           Pick your reference voices
         </h2>
         <p className="mt-2 text-sm leading-6 text-atlas-text-secondary">
-          Choose at least {minRequired} accounts Atlas should learn from.
+          Choose at least {minRequired} account to get started. You can add more later.
         </p>
       </div>
 
@@ -124,7 +127,7 @@ export default function ReferenceVoiceSelector({
             onClick={() => setActiveCategory(cat as CategoryFilter)}
             className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
               activeCategory === cat
-                ? "bg-atlas-teal text-white"
+                ? "bg-atlas-teal text-atlas-bg"
                 : "bg-atlas-surface text-atlas-text-secondary"
             }`}
           >
@@ -198,16 +201,16 @@ export default function ReferenceVoiceSelector({
               >
                 {isSelected && (
                   <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-atlas-teal">
-                    <Check className="h-3.5 w-3.5 text-white" />
+                    <Check className="h-3.5 w-3.5 text-atlas-bg" />
                   </span>
                 )}
-                {avatarUrl ? (
+                {avatarUrl && !imgErrors.has(account.id) ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={avatarUrl}
                     alt={`${label} avatar`}
                     className="mx-auto h-16 w-16 rounded-full object-cover"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    onError={() => setImgErrors((prev) => new Set(prev).add(account.id))}
                   />
                 ) : (
                   <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-atlas-teal/20 text-xl font-semibold uppercase text-atlas-teal">
@@ -215,7 +218,18 @@ export default function ReferenceVoiceSelector({
                   </div>
                 )}
                 <p className="mt-3 text-xs text-atlas-text-muted">
-                  {account.handle ? `@${account.handle}` : "\u00A0"}
+                  {account.handle ? (
+                    <a
+                      href={`https://twitter.com/${account.handle}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-0.5 hover:text-atlas-teal hover:underline"
+                    >
+                      @{account.handle}
+                      <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  ) : "\u00A0"}
                 </p>
                 <p className="mt-1 text-sm font-medium text-atlas-text">{label}</p>
               </button>

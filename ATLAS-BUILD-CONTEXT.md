@@ -69,5 +69,19 @@ CTAs: bg-gradient-to-r from-delphi-teal to-delphi-teal/60
 Headings: font-heading (Playfair Display), Body: font-body (Inter)
 API client: src/lib/api.ts (typed — use it, don't create new fetch calls)
 
+## DESIGN PHILOSOPHY — HUMAN FIRST (core directive, Apr 2026)
+Atlas must feel human and accessible, not technical and abstract.
+User feedback (Anil): "too technical", "too abstract", "hard to wrap your head around".
+
+Frontend implications:
+- Personify everything: voices get real faces (Twitter avatars), not just handles or labels
+- Concrete over abstract: "70% Naval" with Naval's actual face beats "70% reference_voice_3"
+- Show before describe: render a face, a bar, a familiar metaphor — always before a label
+- Accessible to analysts, not engineers: no jargon without context, no numbers without meaning
+- Voice dimensions → frame as personality traits with anchors, not 0-100 sliders
+- Blends → stack the faces of who you're mixing with, not just percentages
+- Scores → plain language alongside the number
+- Every new UI feature must pass: "does this require thought to interpret?" If yes, make it more human first.
+
 ## AI ROUTING
 OpenAI gpt-4o → tweets, Anthropic → research, Gemini → images, Grok → trending

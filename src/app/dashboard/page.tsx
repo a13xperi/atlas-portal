@@ -1,25 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import StatusPill from "@/components/ui/StatusPill";
 import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
 import { api, TweetDraft, QueuedDraft, TrendingTopic } from "@/lib/api";
-import { PenTool, Bell, BarChart3, Mic2, BookOpen, Send, Users, TrendingUp, X, Clock, Zap, Calendar, Sparkles, ArrowRight } from "lucide-react";
+import { PenTool, Bell, BarChart3, Mic2, BookOpen, Users, TrendingUp, X, Clock, Zap, Calendar, Sparkles, ArrowRight, Trophy, Megaphone } from "lucide-react";
 import DashboardSkeleton from "@/components/skeletons/DashboardSkeleton";
 import OracleWidget from "@/components/oracle/OracleWidget";
+import { useRouteEnabled, useFeatureFlags } from "@/lib/feature-flags";
 
 const navCards = [
   { label: "Crafting Station", href: "/crafting", icon: PenTool },
-  { label: "Alerts + Momentum", href: "/alerts", icon: Bell },
-  { label: "Analytics + Predictions", href: "/analytics", icon: BarChart3 },
-  { label: "Voice Profiles", href: "/voice-profiles", icon: Mic2 },
-  { label: "Team Style Library", href: "/team-library", icon: BookOpen },
-  { label: "Telegram Guide", href: "/telegram", icon: Send },
-  { label: "Team Management", href: "/management", icon: Users },
+  { label: "Voice Lab", href: "/voice-profiles", icon: Mic2 },
+  { label: "Voice Library", href: "/team-library", icon: BookOpen },
+  { label: "Campaigns", href: "/campaigns", icon: Megaphone },
+  { label: "Arena", href: "/arena", icon: Trophy },
+  { label: "Signals", href: "/alerts", icon: Bell },
+  { label: "Analytics", href: "/analytics", icon: BarChart3 },
+  { label: "Management", href: "/management", icon: Users },
 ];
 
 const defaultStats = {
@@ -31,7 +33,11 @@ const defaultStats = {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user } = useAuth();
+const searchParams = useSearchParams();
+  const { user, loading: authLoading } = useAuth();
+  const isRouteEnabled = useRouteEnabled();
+  const { isEnabled } = useFeatureFlags();
+  const visibleNavCards = navCards.filter(card => isRouteEnabled(card.href));
   const [stats, setStats] = useState(defaultStats);
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [quickDraft, setQuickDraft] = useState("");
@@ -44,8 +50,22 @@ export default function DashboardPage() {
   const [trending, setTrending] = useState<TrendingTopic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dismissedCompletionBanner, setDismissedCompletionBanner] =
+    useState(false);
+  const [briefingText, setBriefingText] = useState<string | null>(null);
+  const [briefingLoading, setBriefingLoading] = useState(false);
+  const briefingFiredRef = useRef(false);
+  const completionBanner = searchParams.get("banner");
+  const showVoiceCalibratedBanner =
+    completionBanner === "voice-calibrated" && !dismissedCompletionBanner;
 
   useEffect(() => {
+    setDismissedCompletionBanner(false);
+  }, [completionBanner]);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+
     let cancelled = false;
 
     const loadDashboard = async () => {
@@ -61,12 +81,41 @@ export default function DashboardPage() {
             return;
           }
 
-          setStats({
+          const nextStats = {
             drafts: response.summary?.draftsCreated ?? 0,
             posts: response.summary?.draftsPosted ?? 0,
             feedback: response.summary?.feedbackGiven ?? 0,
             reports: response.summary?.reportsIngested ?? 0,
-          });
+          };
+          setStats(nextStats);
+
+          if (!briefingFiredRef.current) {
+            briefingFiredRef.current = true;
+            setBriefingLoading(true);
+            const nudge =
+              nextStats.drafts > 0 && nextStats.posts === 0
+                ? "Nudge them to ship one."
+                : nextStats.posts > 0
+                  ? "Acknowledge momentum and suggest next action."
+                  : "Encourage them to drop their first report.";
+            api.oracle
+              .chat({
+                page: "dashboard",
+                messages: [
+                  {
+                    role: "user",
+                    content: `Generate a concise daily briefing (2-3 sentences) for ${user.displayName || user.handle || "an analyst"}. They have created ${nextStats.drafts} drafts this period, posted ${nextStats.posts} to X. ${nudge} Keep it direct, confident, and specific. No fluff.`,
+                  },
+                ],
+              })
+              .then((r) => {
+                if (!cancelled) setBriefingText(r.text);
+              })
+              .catch(() => null)
+              .finally(() => {
+                if (!cancelled) setBriefingLoading(false);
+              });
+          }
         } catch {
           if (cancelled) {
             return;
@@ -127,10 +176,11 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user, authLoading]);
 
+  // Use actual loaded drafts count as a floor when analytics summary lags behind the drafts table
   const statCards = [
-    { label: "Drafts this week", value: String(stats.drafts), href: "/crafting" },
+    { label: "Drafts this week", value: String(stats.drafts > 0 ? stats.drafts : drafts.length), href: "/crafting" },
     { label: "Posts", value: String(stats.posts), href: "/campaigns?tab=posted" },
     { label: "Feedback given", value: String(stats.feedback), href: "/analytics" },
     { label: "Reports ingested", value: String(stats.reports), href: "/crafting" },
@@ -185,18 +235,47 @@ export default function DashboardPage() {
       <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
         Welcome back, {user?.handle || "Analyst"}
       </h1>
-          <p className="mt-2 text-atlas-text-secondary max-w-2xl">Your command center. See what&apos;s queued, track recent activity, and jump to any part of Atlas from here.</p>
+      <p className="mt-2 max-w-2xl text-atlas-text-secondary">
+        Your command center. See what&apos;s queued, track recent activity, and
+        jump to any part of Atlas from here.
+      </p>
+
+      {showVoiceCalibratedBanner && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="mt-4 flex items-start justify-between rounded-lg border border-atlas-teal/20 bg-atlas-teal/10 px-4 py-3 text-sm"
+        >
+          <div>
+            <p className="font-semibold text-atlas-teal">Voice calibrated!</p>
+            <p className="mt-1 text-atlas-text-secondary">
+              Atlas is ready to draft in your baseline voice.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDismissedCompletionBanner(true)}
+            aria-label="Dismiss onboarding success banner"
+            className="ml-3 text-atlas-text-secondary hover:text-atlas-text"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className="mt-4" data-tour="oracle-banner">
         <OracleWidget
           message={
-            stats.drafts > 0
-              ? `You've crafted ${stats.drafts} draft${stats.drafts === 1 ? "" : "s"} this month — ${stats.posts > 0 ? `${stats.posts} made it to X. Your voice is sharpening.` : "time to post one and see how it lands."}`
-              : "Your voice profile is set up. Head to the Crafting Station and turn some alpha into a tweet."
+            briefingLoading
+              ? "Generating your briefing…"
+              : briefingText ??
+                (stats.drafts > 0
+                  ? `You've crafted ${stats.drafts} draft${stats.drafts === 1 ? "" : "s"} this month.`
+                  : "Your voice profile is set up. Head to the Crafting Station.")
           }
           context="dashboard"
-          actionLabel={stats.drafts > 0 && stats.posts === 0 ? "Pick one to ship" : "Draft your first post"}
-          onAction={() => router.push("/crafting")}
+          actionLabel="Tell me more"
+          onAction={() => window.dispatchEvent(new Event("oracle:open"))}
         />
       </div>
 
@@ -258,6 +337,7 @@ export default function DashboardPage() {
             <Link
               href={stat.href}
               className="bg-atlas-surface border border-glass-border rounded-2xl p-6 card-interactive group block"
+              aria-label={`${stat.label}: ${stat.value}`}
             >
               <span className="text-atlas-text-secondary text-sm group-hover:text-atlas-teal transition-colors">
                 {stat.label}
@@ -280,7 +360,9 @@ export default function DashboardPage() {
           <div className="rounded-2xl border border-glass-border bg-atlas-surface p-5">
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-teal">Trending Now</p>
-              <Link href="/alerts" className="text-xs text-atlas-text-muted hover:text-atlas-teal transition-colors">View all signals &rarr;</Link>
+              {isEnabled("signals") && (
+                <Link href="/alerts" className="text-xs text-atlas-text-muted hover:text-atlas-teal transition-colors">View all signals &rarr;</Link>
+              )}
             </div>
             <div className="mt-3 space-y-2">
               {trending.map((topic) => (
@@ -299,6 +381,7 @@ export default function DashboardPage() {
         ) : null}
       </div>
 
+      {isEnabled("briefing") && (
       <Link
         href="/briefing"
         className="mt-8 flex items-center justify-between rounded-2xl border border-atlas-teal/20 bg-gradient-to-r from-atlas-teal/5 to-transparent p-5 ring-1 ring-atlas-teal/10 transition-all hover:ring-atlas-teal/30 hover:shadow-lg hover:shadow-atlas-teal/5"
@@ -316,12 +399,14 @@ export default function DashboardPage() {
           Try Brief <ArrowRight className="h-3.5 w-3.5" />
         </div>
       </Link>
+      )}
 
-      <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {navCards.map((card) => (
+      <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {visibleNavCards.map((card) => (
           <Link
             key={card.label}
             href={card.href}
+            data-testid={`nav-card-${card.label.toLowerCase().replace(/\s+/g, "-")}`}
             className="card-interactive flex flex-col items-center gap-3 rounded-2xl border border-glass-border bg-atlas-surface p-6 text-center text-atlas-text"
           >
             <card.icon className="w-5 h-5 text-atlas-teal" aria-hidden="true" />
@@ -330,7 +415,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {queue.length > 0 && (
+      {isEnabled("queue") && queue.length > 0 && (
         <div className="mt-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -445,21 +530,21 @@ export default function DashboardPage() {
                   <div className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-glass-border bg-atlas-bg p-3">
                     <div>
                       <label className="mb-1 block text-[10px] uppercase tracking-wider text-atlas-text-muted">Likes</label>
-                      <input type="number" min="0" value={engagementForm.likes} onChange={(e) => setEngagementForm((f) => ({ ...f, likes: e.target.value }))} className="w-20 rounded border border-glass-border bg-atlas-surface px-2 py-1 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none" />
+                      <input type="number" min="0" aria-label="Likes" value={engagementForm.likes} onChange={(e) => setEngagementForm((f) => ({ ...f, likes: e.target.value }))} className="w-20 rounded border border-glass-border bg-atlas-surface px-2 py-1 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none" />
                     </div>
                     <div>
                       <label className="mb-1 block text-[10px] uppercase tracking-wider text-atlas-text-muted">Retweets</label>
-                      <input type="number" min="0" value={engagementForm.retweets} onChange={(e) => setEngagementForm((f) => ({ ...f, retweets: e.target.value }))} className="w-20 rounded border border-glass-border bg-atlas-surface px-2 py-1 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none" />
+                      <input type="number" min="0" aria-label="Retweets" value={engagementForm.retweets} onChange={(e) => setEngagementForm((f) => ({ ...f, retweets: e.target.value }))} className="w-20 rounded border border-glass-border bg-atlas-surface px-2 py-1 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none" />
                     </div>
                     <div>
                       <label className="mb-1 block text-[10px] uppercase tracking-wider text-atlas-text-muted">Impressions</label>
-                      <input type="number" min="0" value={engagementForm.impressions} onChange={(e) => setEngagementForm((f) => ({ ...f, impressions: e.target.value }))} className="w-24 rounded border border-glass-border bg-atlas-surface px-2 py-1 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none" />
+                      <input type="number" min="0" aria-label="Impressions" value={engagementForm.impressions} onChange={(e) => setEngagementForm((f) => ({ ...f, impressions: e.target.value }))} className="w-24 rounded border border-glass-border bg-atlas-surface px-2 py-1 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none" />
                     </div>
                     <button onClick={() => handleEngagementSubmit(draft.id)} disabled={engagementSaving} className="rounded-lg bg-atlas-teal px-3 py-1 text-xs font-medium text-atlas-bg transition-colors hover:bg-atlas-teal/80 disabled:opacity-50">
                       {engagementSaving ? "Saving..." : "Save"}
                     </button>
-                    <button onClick={() => setEngagementDraftId(null)} className="rounded-lg px-2 py-1 text-xs text-atlas-text-muted hover:text-atlas-text">
-                      <X className="h-3 w-3" />
+                    <button onClick={() => setEngagementDraftId(null)} aria-label="Cancel engagement entry" className="rounded-lg px-2 py-1 text-xs text-atlas-text-muted hover:text-atlas-text">
+                      <X className="h-3 w-3" aria-hidden="true" />
                     </button>
                   </div>
                 )}

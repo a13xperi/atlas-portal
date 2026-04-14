@@ -38,7 +38,7 @@ export default function GlobalError({
           <button
             type="button"
             onClick={reset}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-delphi-teal to-delphi-teal/60 text-white text-sm font-medium rounded-lg hover:scale-105 transition-transform"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-delphi-teal to-delphi-teal/60 text-atlas-bg text-sm font-medium rounded-lg hover:scale-105 transition-transform"
           >
             <RotateCcw className="w-4 h-4" />
             Try again

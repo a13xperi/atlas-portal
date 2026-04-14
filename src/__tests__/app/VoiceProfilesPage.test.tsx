@@ -1,15 +1,6 @@
 import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { DEFAULT_VOICE_DIMENSIONS } from "@/lib/voice-profile-dimensions";
-
-const ctDegenPreset = {
-  ...DEFAULT_VOICE_DIMENSIONS,
-  humor: 80,
-  formality: 20,
-  brevity: 90,
-  contrarianTone: 70,
-};
+import { render, screen, waitFor } from "@testing-library/react";
 
 const mockProfile = {
   id: "vp1",
@@ -67,15 +58,22 @@ const mockApi = {
   },
 };
 
+let mockSearchParams = new URLSearchParams();
+
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
   usePathname: () => "/voice-profiles",
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => mockSearchParams,
 }));
 
 jest.mock("@/components/layout/AppShell", () => ({
   __esModule: true,
   default: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+}));
+
+jest.mock("@/app/voice-profiles/tweet-tinder-section", () => ({
+  __esModule: true,
+  default: () => <div>Tweet Tinder Section</div>,
 }));
 
 jest.mock("@/components/voice-profiles/ReferenceVoicesSection", () => ({
@@ -95,23 +93,13 @@ jest.mock("@/components/voice-profiles/ReferenceVoicesSection", () => ({
 
 jest.mock("@/components/voice-profiles/VoiceCard", () => ({
   __esModule: true,
-  default: ({ name, isActive, onSelect, onUse }: { name: string; isActive: boolean; isSelected: boolean; isPersonal: boolean; onSelect: () => void; onUse: () => void; dimensions?: Record<string, number> }) => (
+  default: ({ name, isActive, onSelect, onUse }: { name: string; isActive: boolean; isSelected: boolean; isPersonal: boolean; onSelect: () => void; onUse: () => void }) => (
     <div>
       <span>{name}</span>
       <button onClick={onSelect}>{name}</button>
       <button onClick={onUse}>{isActive ? "Active" : "Use This Voice"}</button>
     </div>
   ),
-}));
-
-jest.mock("@/components/voice-profiles/VoiceEditorModal", () => ({
-  __esModule: true,
-  default: ({ isOpen }: { isOpen: boolean }) => isOpen ? <div>Editor Modal</div> : null,
-}));
-
-jest.mock("@/components/voice-profiles/VoiceDimensionSections", () => ({
-  __esModule: true,
-  default: () => <div>Dimension Sliders</div>,
 }));
 
 jest.mock("@/lib/api", () => ({
@@ -123,6 +111,7 @@ const VoiceProfilesPage = require("@/app/voice-profiles/page").default;
 describe("VoiceProfilesPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSearchParams = new URLSearchParams();
     localStorage.clear();
     mockApi.voice.getProfile.mockResolvedValue({ profile: mockProfile });
     mockApi.referenceAccounts.getAll.mockResolvedValue({
@@ -151,13 +140,27 @@ describe("VoiceProfilesPage", () => {
     });
   });
 
-  it("renders voice dimensions", async () => {
+  it("renders the page heading", async () => {
     render(<VoiceProfilesPage />);
 
     await waitFor(() => {
-      // VoiceDimensionSections is mocked — check the mock renders
-      expect(screen.getByText("Dimension Sliders")).toBeInTheDocument();
+      expect(screen.getByText("Your Voices")).toBeInTheDocument();
     });
+  });
+
+  it("shows the Track B completion prompt when redirected into voice lab", async () => {
+    mockSearchParams = new URLSearchParams("prompt=complete-voice-setup");
+
+    render(<VoiceProfilesPage />);
+
+    expect(
+      await screen.findByText("Complete your voice setup")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Review your voice, add references, and save a blend before you start drafting."
+      )
+    ).toBeInTheDocument();
   });
 
   it("shows reference voices", async () => {
@@ -166,24 +169,11 @@ describe("VoiceProfilesPage", () => {
     expect((await screen.findAllByText("Hasu")).length).toBeGreaterThan(0);
   });
 
-  it("toggles a saved blend as active and persists it", async () => {
-    mockApi.voice.getBlends.mockResolvedValue({
-      blends: [
-        {
-          id: "blend-1",
-          name: "Research-heavy",
-          voices: [
-            { label: "Personal", percentage: 60 },
-            { label: "Hasu", percentage: 40 },
-          ],
-        },
-      ],
-    });
-
+  it("shows the redesign placeholder", async () => {
     render(<VoiceProfilesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("Dimension Sliders")).toBeInTheDocument();
+      expect(screen.getByText("Your Voices")).toBeInTheDocument();
     });
   });
 
@@ -195,23 +185,15 @@ describe("VoiceProfilesPage", () => {
     render(<VoiceProfilesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("Dimension Sliders")).toBeInTheDocument();
+      expect(screen.getByText("Your Voices")).toBeInTheDocument();
     });
   });
 
-  it("shows voice breakdown section", async () => {
+  it("shows voice detail section", async () => {
     render(<VoiceProfilesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/your voice/i)).toBeInTheDocument();
-    });
-  });
-
-  it("renders dimension sliders section", async () => {
-    render(<VoiceProfilesPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Dimension Sliders")).toBeInTheDocument();
+      expect(screen.getByText("Your Voices")).toBeInTheDocument();
     });
   });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Pause, Play, Trash2 } from "lucide-react";
 import { AlertSubscription, api } from "@/lib/api";
 
 const MONITOR_TYPES = [
@@ -44,6 +45,8 @@ export default function MonitorBuilder({
   const [sentiment, setSentiment] = useState<string>("any");
   const [delivery, setDelivery] = useState<string[]>(["in_app"]);
   const [creating, setCreating] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleAddKeyword = () => {
@@ -56,6 +59,30 @@ export default function MonitorBuilder({
 
   const handleRemoveKeyword = (kw: string) => {
     setKeywords(keywords.filter((k) => k !== kw));
+  };
+
+  const handleToggle = async (id: string) => {
+    setTogglingId(id);
+    try {
+      await api.alerts.toggleSubscription(id);
+      onSubscriptionChange();
+    } catch {
+      // non-fatal
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await api.alerts.deleteSubscription(id);
+      onSubscriptionChange();
+    } catch {
+      // non-fatal
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const handleCreate = async () => {
@@ -146,6 +173,7 @@ export default function MonitorBuilder({
               <div className="mt-2 flex gap-2">
                 <input
                   type="text"
+                  aria-label="Keyword"
                   value={keywordInput}
                   onChange={(e) => setKeywordInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -176,6 +204,7 @@ export default function MonitorBuilder({
                       <button
                         type="button"
                         onClick={() => handleRemoveKeyword(kw)}
+                        aria-label={`Remove keyword ${kw}`}
                         className="ml-0.5 text-atlas-teal/60 hover:text-atlas-teal"
                       >
                         &times;
@@ -192,6 +221,7 @@ export default function MonitorBuilder({
               </p>
               <input
                 type="text"
+                aria-label={monitorType === "ACCOUNT" ? "X Handle" : "Topic"}
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder={
@@ -282,7 +312,7 @@ export default function MonitorBuilder({
             type="button"
             onClick={() => void handleCreate()}
             disabled={creating}
-            className="w-full rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-lg bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-4 py-3 text-sm font-semibold text-atlas-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {creating ? "Creating..." : "Create Monitor"}
           </button>
@@ -312,15 +342,39 @@ export default function MonitorBuilder({
                   </p>
                 )}
               </div>
-              <span
-                className={`shrink-0 ml-3 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
-                  sub.isActive
-                    ? "bg-atlas-teal/10 text-atlas-teal"
-                    : "bg-glass text-atlas-text-muted"
-                }`}
-              >
-                {sub.isActive ? "Active" : "Paused"}
-              </span>
+              <div className="flex items-center gap-2 ml-3">
+                <span
+                  className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
+                    sub.isActive
+                      ? "bg-atlas-teal/10 text-atlas-teal"
+                      : "bg-glass text-atlas-text-muted"
+                  }`}
+                >
+                  {sub.isActive ? "Active" : "Paused"}
+                </span>
+                <button
+                  type="button"
+                  aria-label={sub.isActive ? "Pause monitor" : "Resume monitor"}
+                  onClick={() => void handleToggle(sub.id)}
+                  disabled={togglingId === sub.id}
+                  className="rounded-lg border border-glass-border p-1.5 text-atlas-text-secondary transition-colors hover:border-atlas-teal/50 hover:text-atlas-teal disabled:opacity-50"
+                >
+                  {sub.isActive ? (
+                    <Pause className="h-3 w-3" aria-hidden="true" />
+                  ) : (
+                    <Play className="h-3 w-3" aria-hidden="true" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  aria-label="Delete monitor"
+                  onClick={() => void handleDelete(sub.id)}
+                  disabled={deletingId === sub.id}
+                  className="rounded-lg border border-glass-border p-1.5 text-atlas-text-secondary transition-colors hover:border-atlas-error/50 hover:text-atlas-error disabled:opacity-50"
+                >
+                  <Trash2 className="h-3 w-3" aria-hidden="true" />
+                </button>
+              </div>
             </div>
           ))}
         </div>

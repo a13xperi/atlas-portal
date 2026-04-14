@@ -1,13 +1,21 @@
 import type { VoiceDimensions } from "./voice-profile-dimensions";
 
+// ── Content signals (Track B) ──────────────────────────────────────
+export type ContentSignalSource = "article" | "report" | "tweet" | "link";
+
+export interface ContentSignal {
+  source: ContentSignalSource;
+  title?: string;
+  url?: string;
+  addedLabel?: string;
+}
+
 // ── Steps ──────────────────────────────────────────────────────────
 export type OracleStep =
   | "WELCOME"
   | "CONNECT_X"
-  | "TRACK_A_HANDLE"
   | "TRACK_A_SCANNING"
   | "TRACK_A_RESULT"
-  | "TRACK_A_RATE"
   | "TRACK_B_STYLE"
   | "TRACK_B_CONTENT"
   | "TRACK_B_DIMENSIONS"
@@ -18,11 +26,9 @@ export type OracleStep =
 
 // ── Inline component types ─────────────────────────────────────────
 export type InlineComponentType =
-  | "handle-input"
   | "x-oauth"
   | "scan-progress"
   | "dimensions"
-  | "tweet-ratings"
   | "style-picker"
   | "references"
   | "blend"
@@ -35,6 +41,8 @@ export interface ChatMessage {
   id: string;
   role: "oracle" | "user" | "system";
   content: string;
+  // Optional tag for special rendering paths (e.g. Track B content signals).
+  type?: "content_signal";
   component?: {
     type: InlineComponentType;
     props?: Record<string, unknown>;
@@ -44,6 +52,11 @@ export interface ChatMessage {
     value: string;
     variant: "primary" | "secondary" | "ghost";
   }>;
+  // Arbitrary structured attachments rendered below the message bubble.
+  metadata?: {
+    contentSignal?: ContentSignal;
+    [key: string]: unknown;
+  };
   timestamp: number;
 }
 
@@ -60,7 +73,6 @@ export interface OracleState {
   xConnected: boolean;
   calibrationResult: { analysis: string; tweetsAnalyzed: number } | null;
   dimensions: VoiceDimensions;
-  displayName: string;
   selectedStyle: string | null;
   selectedRefs: string[];
   selfPercentage: number;
@@ -78,7 +90,6 @@ export type OracleAction =
   | { type: "SET_X_CONNECTED"; connected: boolean }
   | { type: "SET_CALIBRATION"; result: OracleState["calibrationResult"] }
   | { type: "SET_DIMENSIONS"; dimensions: VoiceDimensions }
-  | { type: "SET_DISPLAY_NAME"; name: string }
   | { type: "SET_STYLE"; style: string }
   | { type: "SET_REFS"; ids: string[] }
   | { type: "SET_BLEND"; percentage: number }

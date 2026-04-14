@@ -10,22 +10,25 @@ import {
 } from "react";
 import {
   Archive,
+  ArrowUp,
   Check,
   CheckCircle,
   ChevronRight,
   Clipboard,
   Link2,
   Loader2,
+  Megaphone,
   Mic,
   RefreshCw,
   Sparkles,
   TrendingUp,
   X,
 } from "lucide-react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
+import { useTour } from "@/components/tour/TourProvider";
+import FeatureGate from "@/components/ui/FeatureGate";
 import DraftHistorySidebar, {
   DraftHistoryItem,
 } from "@/components/crafting/DraftHistorySidebar";
@@ -41,12 +44,19 @@ import RefinementChips, {
 import {
   api,
   AnalyticsSummary,
-  GeneratedImage,
   SavedBlend,
   TrendingTopic,
   TweetDraft,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import {
+  MIN_TWEETS_FOR_VOICE_CALIBRATION,
+  useVoiceGate,
+} from "@/lib/useVoiceGate";
+import OracleWidget from "@/components/oracle/OracleWidget";
+import OracleCraftingHints from "@/components/oracle/OracleCraftingHints";
+import OracleInspector from "@/components/oracle/OracleInspector";
+import type { InspectableEntity } from "@/lib/oracle-agent-types";
 
 const CRAFTING_MODES = [
   { id: "new_post", label: "New Post" },
@@ -64,6 +74,7 @@ const TWEET_TEMPLATES = [
 
 const NEWS_SOURCE_PREFIX = "source:";
 const VOICE_COMPARISON_DELTA = { humor: 20 } as const;
+const MIN_TWEETS_FOR_CRAFTING = MIN_TWEETS_FOR_VOICE_CALIBRATION;
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
 type DraftSourceType = "REPORT" | "ARTICLE" | "MANUAL";
@@ -103,16 +114,6 @@ const DRAFT_WORKFLOW_STEPS: { status: TweetDraft["status"]; label: string }[] = 
   { status: "APPROVED", label: "Approved" },
   { status: "POSTED", label: "Posted" },
 ];
-
-const VisualConceptSection = dynamic(
-  () => import("@/components/crafting/VisualConceptSection"),
-  {
-    loading: () => (
-      <div className="mt-4 h-64 rounded-2xl bg-atlas-surface animate-pulse" />
-    ),
-    ssr: false,
-  }
-);
 
 function appendSourceUrl(content: string, sourceUrl?: string) {
   const trimmedContent = content.trimEnd();
@@ -241,7 +242,10 @@ function buildVoiceVariationInstruction(
   ].join(" ");
 }
 
-export default function CraftingPage() {
+function CraftingPage() {
+  useTour("crafting");
+
+  const router = useRouter();
   const searchParams = useSearchParams();
   const voiceModeLabelId = useId();
   const savedBlendLabelId = useId();
@@ -267,10 +271,9 @@ export default function CraftingPage() {
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [creating, setCreating] = useState(false);
   const [voiceBanner, setVoiceBanner] = useState<string | null>(null);
+  const [blendWarning, setBlendWarning] = useState<string | null>(null);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
-  const [visualConcept, setVisualConcept] = useState<GeneratedImage | null>(null);
-  const [generatingImage, setGeneratingImage] = useState(false);
   const [refiningChip, setRefiningChip] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [contentError, setContentError] = useState("");
@@ -282,6 +285,10 @@ export default function CraftingPage() {
   const [voiceComparison, setVoiceComparison] = useState<{
     options: VoiceComparisonOption[];
   } | null>(null);
+  const [compareBlendId, setCompareBlendId] = useState<string | null>(null);
+  const [compareBlendDraft, setCompareBlendDraft] = useState<string | null>(null);
+  const [compareBlendName, setCompareBlendName] = useState<string | null>(null);
+  const [compareBlendLoading, setCompareBlendLoading] = useState(false);
   const [draftInputText, setDraftInputText] = useState(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -297,8 +304,16 @@ export default function CraftingPage() {
   } | null>(null);
   const activeDraftInitialized = useRef(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
+  const handleDraftTextChangeRef = useRef<((text: string) => void) | null>(null);
   const voiceRecorder = useVoiceRecorder(useCallback((text: string) => {
-    handleDraftTextChange(text);
+    handleDraftTextChangeRef.current?.(text);
+    // Auto-generate after voice transcription
+    setTimeout(() => {
+      handleCreateDraftRef.current?.(text);
+    }, 50);
+  }, []));
+  const feedbackRecorder = useVoiceRecorder(useCallback((text: string) => {
+    setFeedback((prev) => prev ? `${prev} ${text}` : text);
   }, []));
   const draftInputValueRef = useRef("");
   const handleCreateDraftRef = useRef<
@@ -312,6 +327,30 @@ export default function CraftingPage() {
     1,
     Math.ceil(activeDraftWordCount / 200)
   );
+  // Entity descriptor for OracleInspector — Oracle narrates whatever is
+  // in the draft card, including real status + size so the line reflects
+  // what the user is actually looking at.
+  const inspectorEntity: InspectableEntity | null = activeDraft
+    ? {
+        type: "draft",
+        id: activeDraft.id,
+        name: `v${activeDraft.version} draft`,
+        meta: {
+          status: activeDraft.status,
+          wordCount: activeDraftWordCount,
+          charCount: activeDraft.content?.length ?? 0,
+          confidence:
+            typeof activeDraft.predictedEngagement === "number" &&
+            typeof activeDraft.actualEngagement === "number" &&
+            activeDraft.predictedEngagement > 0
+              ? Math.min(
+                  1,
+                  activeDraft.actualEngagement / activeDraft.predictedEngagement,
+                )
+              : undefined,
+        },
+      }
+    : null;
   const currentHumor = clampVoiceValue(user?.voiceProfile?.humor);
   const currentFormality = clampVoiceValue(user?.voiceProfile?.formality);
   const currentBrevity = clampVoiceValue(user?.voiceProfile?.brevity);
@@ -328,6 +367,10 @@ export default function CraftingPage() {
     currentBrevity,
     currentContrarianTone
   );
+  const voiceGate = useVoiceGate();
+  const isVoiceCalibrationBlocked = voiceGate.isBlocked;
+  const voiceTweetsAnalyzed = voiceGate.tweetsAnalyzed;
+  const calibrationTweetsRemaining = voiceGate.tweetsRemaining;
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -381,7 +424,7 @@ export default function CraftingPage() {
   const loadTrending = useCallback(async () => {
     try {
       const { topics } = await api.trending.topics();
-      setTrendingTopics(topics);
+      setTrendingTopics(topics ?? []);
     } catch {
       // Trending is optional — do not block the page.
     }
@@ -533,7 +576,6 @@ export default function CraftingPage() {
     );
 
     setActiveDraft(draft);
-    setVisualConcept(null);
     setVoiceComparison(null);
 
     if (!draftInVersionHistory) {
@@ -585,7 +627,6 @@ export default function CraftingPage() {
       setCompareVersion(null);
     }
     setActiveDraft(normalizedDraft);
-    setVisualConcept(null);
     activeDraftInitialized.current = true;
   }, [prependDraftHistory]);
 
@@ -628,6 +669,7 @@ export default function CraftingPage() {
       setSourceError("");
     }
   }, [contentError, sourceError]);
+  handleDraftTextChangeRef.current = handleDraftTextChange;
 
   const createDraftFromSource = useCallback(async (
     content: string,
@@ -635,24 +677,27 @@ export default function CraftingPage() {
     hasSource: boolean,
     angle?: string | null
   ) => {
-    if (!user) return false;
+    if (!user || isVoiceCalibrationBlocked) return false;
 
     setError(null);
     const { isValid, trimmedContent } = validateDraftSubmission(content, hasSource);
     if (!isValid) return false;
 
     setCreating(true);
+    setBlendWarning(null);
     try {
-      const { draft } = await api.drafts.generate({
+      const { draft, blendWarning: warn } = await api.drafts.generate({
         sourceContent: trimmedContent,
         sourceType,
         blendId: selectedBlendId || undefined,
         replyAngle: angle || undefined,
       });
+      if (warn === "blend_not_found") {
+        setBlendWarning("Your selected blend couldn't be found — this draft used your base voice instead.");
+      }
       setVoiceComparison(null);
       setCompareMode(false);
       setCompareVersion(null);
-      setVisualConcept(null);
       commitDraft(draft);
       return true;
     } catch (createDraftError: unknown) {
@@ -666,7 +711,61 @@ export default function CraftingPage() {
     } finally {
       setCreating(false);
     }
-  }, [commitDraft, selectedBlendId, user, validateDraftSubmission]);
+  }, [
+    commitDraft,
+    isVoiceCalibrationBlocked,
+    selectedBlendId,
+    user,
+    validateDraftSubmission,
+  ]);
+
+  const handleCompareInAnotherVoice = useCallback(async () => {
+    if (!activeDraft || !compareBlendId) return;
+    if (isVoiceCalibrationBlocked) return;
+
+    const targetBlend = blends.find((blend) => blend.id === compareBlendId);
+    if (!targetBlend) return;
+
+    const sourceContent = activeDraft.sourceContent?.trim();
+    if (!sourceContent) {
+      setError("Can't regenerate — this draft is missing its original source content.");
+      return;
+    }
+
+    setCompareBlendLoading(true);
+    setError(null);
+    try {
+      const { draft: alternativeDraft } = await api.drafts.generate({
+        sourceContent,
+        sourceType: activeDraft.sourceType || "MANUAL",
+        blendId: compareBlendId,
+      });
+      setCompareBlendDraft(alternativeDraft.content);
+      setCompareBlendName(targetBlend.name);
+    } catch (compareError: unknown) {
+      console.error("Failed to generate comparison draft:", compareError);
+      setError(
+        compareError instanceof Error
+          ? compareError.message
+          : "Failed to generate comparison draft"
+      );
+    } finally {
+      setCompareBlendLoading(false);
+    }
+  }, [activeDraft, blends, compareBlendId, isVoiceCalibrationBlocked]);
+
+  const handleUseComparisonDraft = useCallback(() => {
+    if (!activeDraft || !compareBlendDraft) return;
+    setActiveDraft({ ...activeDraft, content: compareBlendDraft });
+    setCompareBlendDraft(null);
+    setCompareBlendName(null);
+  }, [activeDraft, compareBlendDraft]);
+
+  useEffect(() => {
+    setCompareBlendDraft(null);
+    setCompareBlendName(null);
+    setCompareBlendId(null);
+  }, [activeDraft?.id]);
 
   const handleTextFileInput = useCallback(async (file: File) => {
     if (!isTextFile(file)) {
@@ -789,7 +888,7 @@ export default function CraftingPage() {
   }, []);
 
   const handleGenerateNews = async (articleUrl: string, fallbackText = "") => {
-    if (!user) {
+    if (!user || isVoiceCalibrationBlocked) {
       return {};
     }
 
@@ -808,7 +907,6 @@ export default function CraftingPage() {
       setVoiceComparison(null);
       setCompareMode(false);
       setCompareVersion(null);
-      setVisualConcept(null);
       commitDraft(draft, trimmedArticleUrl);
       return { showFallback: Boolean(trimmedFallbackText) };
     } catch (generateNewsError: unknown) {
@@ -942,27 +1040,6 @@ export default function CraftingPage() {
     }
   };
 
-  const handleGenerateVisual = async (style = "quote_card") => {
-    if (!user || !activeDraft) return;
-
-    setGeneratingImage(true);
-    setError(null);
-
-    try {
-      const { image } = await api.images.generateForDraft(activeDraft.id, style);
-      setVisualConcept(image);
-    } catch (generateVisualError: unknown) {
-      console.error("Image generation failed:", generateVisualError);
-      setError(
-        generateVisualError instanceof Error
-          ? generateVisualError.message
-          : "Image generation failed"
-      );
-    } finally {
-      setGeneratingImage(false);
-    }
-  };
-
   const handleCopyDraft = async () => {
     if (!activeDraft || !navigator.clipboard) return;
 
@@ -1013,7 +1090,6 @@ export default function CraftingPage() {
         setActiveDraft(null);
         setCompareMode(false);
         setCompareVersion(null);
-        setVisualConcept(null);
         setFeedback("");
       }
     } catch (deleteDraftError: unknown) {
@@ -1064,7 +1140,7 @@ export default function CraftingPage() {
   const activeTabPanelId = `${activeMode}-panel`;
 
   const handleCompareVoices = async (text = draftInputValueRef.current) => {
-    if (!user) {
+    if (!user || isVoiceCalibrationBlocked) {
       return false;
     }
 
@@ -1120,7 +1196,6 @@ export default function CraftingPage() {
       setActiveDraft(normalizedCurrentDraft);
       setCompareMode(false);
       setCompareVersion(null);
-      setVisualConcept(null);
       setVoiceComparison({
         options: [
           {
@@ -1164,7 +1239,6 @@ export default function CraftingPage() {
     setCompareMode(false);
     setCompareVersion(null);
     setVoiceComparison(null);
-    setVisualConcept(null);
     activeDraftInitialized.current = true;
   };
 
@@ -1190,6 +1264,21 @@ export default function CraftingPage() {
         <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">Crafting Station</h1>
         <p className="mt-2 text-atlas-text-secondary max-w-2xl">Turn signals, reports, and ideas into polished tweets in your voice. Atlas generates drafts, you refine them, and the model learns what works.</p>
       </div>
+
+      <div className="mb-6" data-tour="oracle-banner">
+        <OracleWidget
+          message={
+            activeDraft
+              ? "Draft in progress — refine it, rate it, or ship it. Every piece of feedback sharpens your model."
+              : "Drop a report, article, or idea below. I'll help you craft it into a tweet that sounds like you."
+          }
+          context="crafting"
+        />
+        {activeDraft && (
+          <OracleCraftingHints draftContent={activeDraft.content} />
+        )}
+      </div>
+
       <div className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:gap-0 sm:rounded-3xl sm:px-6">
         <div className="flex items-center gap-4 sm:gap-6">
           <svg
@@ -1235,6 +1324,38 @@ export default function CraftingPage() {
         </Link>
       </div>
 
+      {isVoiceCalibrationBlocked ? (
+        <div
+          role="alert"
+          data-testid="voice-calibration-gate"
+          className="mt-6 flex flex-col gap-4 rounded-2xl border border-atlas-warning/30 bg-atlas-warning/10 px-4 py-4 text-sm text-atlas-warning sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div>
+            <p className="font-semibold text-atlas-text">
+              {voiceGate.reason === "no_profile"
+                ? "Connect X and calibrate your voice to unlock tweet generation."
+                : "Voice calibration is not ready for drafting yet."}
+            </p>
+            <p className="mt-1 text-atlas-text-secondary">
+              {voiceGate.reason === "no_profile"
+                ? "Atlas writes in your voice — we need your X handle and a few sample tweets first."
+                : <>
+                    Atlas needs at least {MIN_TWEETS_FOR_CRAFTING} analyzed tweets
+                    before it unlocks generation here. You have {voiceTweetsAnalyzed},
+                    so add {calibrationTweetsRemaining} more.
+                  </>}
+            </p>
+          </div>
+          <Link
+            href={voiceGate.ctaHref}
+            data-testid="voice-calibration-cta"
+            className="inline-flex shrink-0 items-center justify-center rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-transform hover:scale-[1.02]"
+          >
+            {voiceGate.ctaLabel} →
+          </Link>
+        </div>
+      ) : null}
+
       <div className="mt-6 flex flex-col gap-6 lg:flex-row">
         <DraftHistorySidebar
           drafts={draftHistoryItems}
@@ -1253,6 +1374,7 @@ export default function CraftingPage() {
                   <button
                     key={topic.id}
                     type="button"
+                    disabled={creating || isVoiceCalibrationBlocked}
                     onClick={() =>
                       void createDraftFromSource(
                         `${topic.headline}. ${topic.context || ""}`,
@@ -1260,7 +1382,7 @@ export default function CraftingPage() {
                         true
                       )
                     }
-                    className="rounded-full border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs text-atlas-text transition-colors hover:border-atlas-teal hover:text-atlas-teal"
+                    className="rounded-full border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs text-atlas-text transition-colors hover:border-atlas-teal hover:text-atlas-teal disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {topic.headline.length > 50
                       ? `${topic.headline.slice(0, 50)}…`
@@ -1311,6 +1433,7 @@ export default function CraftingPage() {
               >
                 <NewsMode
                   creating={creating}
+                  disabled={isVoiceCalibrationBlocked}
                   error={error}
                   onDismissError={() => setError(null)}
                   onGenerateNews={handleGenerateNews}
@@ -1428,6 +1551,7 @@ export default function CraftingPage() {
                         sourceContent={draftInputText}
                         sourceType={getDraftGenerationInput(draftInputText).sourceType}
                         blendId={selectedBlendId || undefined}
+                        isCalibrationBlocked={isVoiceCalibrationBlocked}
                         onDraftsGenerated={(drafts) => {
                           drafts.forEach(draft => commitDraft(draft));
                           setShowAdvisor(false);
@@ -1439,7 +1563,7 @@ export default function CraftingPage() {
                   <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]" data-tour="generate-button">
                     <GradientButton
                       fullWidth
-                      disabled={creating}
+                      disabled={creating || isVoiceCalibrationBlocked}
                       onClick={() => void handleCreateDraft()}
                     >
                       {creating && !comparingVoices ? (
@@ -1456,7 +1580,7 @@ export default function CraftingPage() {
                     <button
                       type="button"
                       onClick={() => void handleCompareVoices()}
-                      disabled={creating}
+                      disabled={creating || isVoiceCalibrationBlocked}
                       className="inline-flex items-center justify-center gap-2 rounded-2xl border border-glass-border bg-glass px-4 py-3 text-sm font-medium text-atlas-text transition-colors hover:border-atlas-teal/50 hover:text-atlas-teal disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {comparingVoices ? (
@@ -1476,7 +1600,7 @@ export default function CraftingPage() {
                     <button
                       type="button"
                       onClick={() => setShowAdvisor(true)}
-                      disabled={creating}
+                      disabled={creating || isVoiceCalibrationBlocked}
                       className="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-delphi-teal/20 bg-delphi-teal/5 px-4 py-2.5 text-sm font-medium text-delphi-teal transition-colors hover:bg-delphi-teal/10 hover:border-delphi-teal/40 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <Sparkles className="h-4 w-4" />
@@ -1499,12 +1623,21 @@ export default function CraftingPage() {
                       </button>
                     </div>
                   ) : null}
+                  {blendWarning && (
+                    <div className="mt-2 rounded-lg border border-atlas-teal/20 bg-atlas-teal/5 px-3 py-2 text-xs text-atlas-text-secondary flex items-center justify-between">
+                      <span>{blendWarning}</span>
+                      <button type="button" onClick={() => setBlendWarning(null)} aria-label="Dismiss" className="ml-2 hover:text-atlas-text"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
           </div>
 
-          <div className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6">
+          <div
+            className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6"
+            data-tour="voice-selector"
+          >
             <label
               id={voiceModeLabelId}
               htmlFor="voice-mode"
@@ -1892,13 +2025,13 @@ export default function CraftingPage() {
                           setError(null);
                           // Check if X account is linked
                           const xStatus = await api.auth.x.status();
-                          if (!xStatus.linked || xStatus.tokenExpired) {
-                            // Start OAuth flow
+                          if (!xStatus.linked) {
+                            // X not linked — start OAuth link flow
                             const { url } = await api.auth.x.authorize();
                             window.location.href = url;
                             return;
                           }
-                          // Post to X via backend
+                          // Backend auto-refreshes expired tokens — just try to post
                           const result = await api.drafts.postToX(activeDraft.id);
                           setActiveDraft(result.draft);
                           syncDraftReferences(result.draft);
@@ -1920,6 +2053,19 @@ export default function CraftingPage() {
                         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                       </svg>
                       Post to X
+                    </button>
+                  ) : null}
+                  {activeDraft.status === "APPROVED" || activeDraft.status === "DRAFT" ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        router.push(`/campaigns?newCampaign=true&draftId=${activeDraft.id}`)
+                      }
+                      title="Add this draft to a new campaign"
+                      className="flex items-center gap-1.5 rounded-lg border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs font-medium text-atlas-text transition-colors hover:border-atlas-teal/50 hover:text-atlas-teal"
+                    >
+                      <Megaphone className="h-3.5 w-3.5" aria-hidden="true" />
+                      Add to Campaign
                     </button>
                   ) : null}
                   <button
@@ -1959,6 +2105,69 @@ export default function CraftingPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Try in another voice — quick side-by-side comparison */}
+              {blends.length > 0 && activeDraft.sourceContent ? (
+                <div className="mt-4 rounded-xl border border-glass-border bg-atlas-surface/40 p-4">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-atlas-text-muted">
+                    Try in another voice
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label htmlFor="compare-blend-select" className="sr-only">
+                      Choose a blend to compare
+                    </label>
+                    <select
+                      id="compare-blend-select"
+                      value={compareBlendId || ""}
+                      onChange={(event) =>
+                        setCompareBlendId(event.target.value || null)
+                      }
+                      className="flex-1 min-w-[180px] rounded-lg border border-glass-border bg-atlas-surface px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none"
+                    >
+                      <option value="">Select a blend...</option>
+                      {blends
+                        .filter((blend) => blend.id !== selectedBlendId)
+                        .map((blend) => (
+                          <option key={blend.id} value={blend.id}>
+                            {blend.name}
+                          </option>
+                        ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => void handleCompareInAnotherVoice()}
+                      disabled={
+                        !compareBlendId ||
+                        compareBlendId === selectedBlendId ||
+                        compareBlendLoading
+                      }
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-atlas-teal/30 px-3 py-2 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {compareBlendLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                      ) : null}
+                      Compare
+                    </button>
+                  </div>
+                  {compareBlendDraft && compareBlendName ? (
+                    <div className="mt-3 rounded-lg border border-atlas-teal/20 bg-atlas-bg/60 p-3">
+                      <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-atlas-teal">
+                        {compareBlendName}
+                      </p>
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-atlas-text">
+                        {compareBlendDraft}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleUseComparisonDraft}
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-atlas-teal/30 px-3 py-1.5 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/10"
+                      >
+                        Use this instead
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
 
               {/* Engagement Metrics — shown for POSTED drafts */}
               {activeDraft.status === "POSTED" ? (
@@ -2034,6 +2243,15 @@ export default function CraftingPage() {
             </div>
           )}
 
+          {/* Oracle inline narration — "demo money shot" (v2 Step 8).
+              Oracle whispers what it sees the moment the user lands on a
+              draft: real size + status + confidence → concrete nudge. */}
+          {inspectorEntity && !voiceComparison ? (
+            <div className="mt-3">
+              <OracleInspector entity={inspectorEntity} />
+            </div>
+          ) : null}
+
           {!voiceComparison && canReviseActiveDraft ? (
             <div className="mt-4">
               <RefinementChips
@@ -2042,14 +2260,6 @@ export default function CraftingPage() {
                 loading={refiningChip}
               />
             </div>
-          ) : null}
-
-          {!voiceComparison && activeDraft ? (
-            <VisualConceptSection
-              generatingImage={generatingImage}
-              onGenerateVisual={handleGenerateVisual}
-              visualConcept={visualConcept}
-            />
           ) : null}
 
           {!voiceComparison && versionDrafts.length > 0 ? (
@@ -2076,7 +2286,7 @@ export default function CraftingPage() {
                     onClick={handleToggleCompareMode}
                     className={`rounded px-2 py-1 text-xs ${
                       compareMode
-                        ? "bg-atlas-teal text-white"
+                        ? "bg-atlas-teal text-atlas-bg"
                         : "text-atlas-text-secondary hover:text-atlas-text"
                     }`}
                   >
@@ -2215,10 +2425,36 @@ export default function CraftingPage() {
                 />
                 <button
                   type="button"
-                  aria-label="Record voice feedback"
-                  className="flex items-center justify-center rounded-lg border border-glass-border bg-atlas-surface p-3 text-atlas-text-secondary transition-colors hover:text-atlas-teal"
+                  aria-label={feedbackRecorder.state === "recording" ? "Stop recording" : "Record voice feedback"}
+                  onClick={() => {
+                    if (feedbackRecorder.state === "recording") {
+                      feedbackRecorder.stopRecording();
+                    } else if (feedbackRecorder.state === "idle") {
+                      feedbackRecorder.startRecording();
+                    }
+                  }}
+                  className={`flex items-center justify-center rounded-lg border p-3 text-sm transition-colors ${
+                    feedbackRecorder.state === "recording"
+                      ? "border-red-500 bg-red-500/10 text-red-400"
+                      : feedbackRecorder.state === "transcribing"
+                      ? "border-atlas-teal/50 bg-atlas-teal/10 text-atlas-teal animate-pulse"
+                      : "border-glass-border bg-atlas-surface text-atlas-text-secondary hover:text-atlas-teal"
+                  }`}
                 >
-                  <Mic className="h-4 w-4" aria-hidden="true" />
+                  {feedbackRecorder.state === "recording" ? (
+                    <span className="text-xs font-mono">{feedbackRecorder.duration}s</span>
+                  ) : (
+                    <Mic className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  aria-label="Submit feedback"
+                  onClick={() => { if (feedback.trim()) void handleFeedback(); }}
+                  disabled={!feedback.trim()}
+                  className="flex items-center justify-center rounded-lg border border-atlas-teal/50 bg-atlas-teal/10 p-3 text-atlas-teal transition-colors hover:bg-atlas-teal/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ArrowUp className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
               <p id={draftFeedbackHintId} className="mt-2 text-sm italic text-atlas-text-muted">
@@ -2227,7 +2463,25 @@ export default function CraftingPage() {
             </div>
           ) : null}
         </div>
+
+        {/* Mobile draft history — desktop sidebar above is hidden below lg */}
+        <div className="lg:hidden">
+          <DraftHistorySidebar
+            drafts={draftHistoryItems}
+            activeDraftId={activeDraft?.id ?? null}
+            onSelectDraft={handleSelectDraft}
+            mobile
+          />
+        </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function CraftingPageGated() {
+  return (
+    <FeatureGate flagKey="crafting_station">
+      <CraftingPage />
+    </FeatureGate>
   );
 }

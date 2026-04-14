@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import GlassCard from "@/components/ui/GlassCard";
 import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
@@ -32,7 +33,7 @@ const DRAFT_STATUS: Record<TweetDraft["status"], { label: string; cls: string }>
   ARCHIVED: { label: "Archived", cls: "bg-atlas-text-muted/20 text-atlas-text-muted" },
 };
 
-export default function CampaignDetailPage() {
+function CampaignDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
@@ -340,5 +341,13 @@ export default function CampaignDetailPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+export default function CampaignDetailPageGated() {
+  return (
+    <FeatureGate flagKey="campaigns">
+      <CampaignDetailPage />
+    </FeatureGate>
   );
 }

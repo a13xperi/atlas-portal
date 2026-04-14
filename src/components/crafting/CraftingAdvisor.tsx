@@ -12,6 +12,7 @@ interface CraftingAdvisorProps {
   sourceType: string;
   blendId?: string;
   pageCount?: number;
+  isCalibrationBlocked?: boolean;
   onDraftsGenerated: (drafts: TweetDraft[]) => void;
   onClose: () => void;
 }
@@ -21,6 +22,7 @@ export function CraftingAdvisor({
   sourceType,
   blendId,
   pageCount,
+  isCalibrationBlocked = false,
   onDraftsGenerated,
   onClose,
 }: CraftingAdvisorProps) {
@@ -29,7 +31,8 @@ export function CraftingAdvisor({
   const [showCustomInput, setShowCustomInput] = useState(false);
 
   const selectedCount = advisor.selectedAngleIds.size;
-  const canGenerate = selectedCount > 0 && advisor.phase === 'presenting';
+  const canGenerate =
+    selectedCount > 0 && advisor.phase === 'presenting' && !isCalibrationBlocked;
 
   // Auto-start analysis on mount
   useEffect(() => {
@@ -40,6 +43,7 @@ export function CraftingAdvisor({
   }, []);
 
   const handleGenerate = async () => {
+    if (isCalibrationBlocked) return;
     await advisor.generateSelected(sourceContent, sourceType, blendId);
     // drafts are passed up via the complete-state useEffect below
   };
@@ -79,9 +83,10 @@ export function CraftingAdvisor({
             </button>
             <button
               onClick={onClose}
+              aria-label="Close advisor"
               className="text-xs text-white/50 hover:text-white/80 transition-colors"
             >
-              <X size={16} />
+              <X size={16} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -94,11 +99,11 @@ export function CraftingAdvisor({
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-glass-border">
         <div className="flex items-center gap-2">
-          <Sparkles size={16} className="text-delphi-teal" />
+          <Sparkles size={16} className="text-delphi-teal" aria-hidden="true" />
           <span className="text-sm font-semibold text-white">Craft with Atlas</span>
         </div>
-        <button onClick={onClose} className="text-white/40 hover:text-white/70 transition-colors">
-          <X size={16} />
+        <button onClick={onClose} aria-label="Close advisor" className="text-white/40 hover:text-white/70 transition-colors">
+          <X size={16} aria-hidden="true" />
         </button>
       </div>
 
@@ -153,6 +158,7 @@ export function CraftingAdvisor({
                   <input
                     autoFocus
                     type="text"
+                    aria-label="Custom angle description"
                     value={customInput}
                     onChange={e => setCustomInput(e.target.value)}
                     onKeyDown={e => {
@@ -175,7 +181,7 @@ export function CraftingAdvisor({
                   onClick={() => setShowCustomInput(true)}
                   className="w-full flex items-center gap-2 text-xs text-white/40 hover:text-white/60 transition-colors py-1"
                 >
-                  <Plus size={13} />
+                  <Plus size={13} aria-hidden="true" />
                   Add your own angle
                 </button>
               )}
@@ -187,6 +193,12 @@ export function CraftingAdvisor({
               </p>
             )}
 
+            {isCalibrationBlocked && (
+              <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                Calibrate your voice first in Voice Studio before generating drafts.
+              </p>
+            )}
+
             {/* Generate button */}
             <button
               onClick={handleGenerate}
@@ -194,12 +206,14 @@ export function CraftingAdvisor({
               className={`
                 w-full py-3 rounded-xl text-sm font-semibold transition-all duration-200
                 ${canGenerate
-                  ? 'bg-gradient-to-r from-delphi-teal to-delphi-teal/60 text-white hover:opacity-90 active:scale-[0.99]'
+                  ? 'bg-gradient-to-r from-delphi-teal to-delphi-teal/60 text-atlas-bg hover:opacity-90 active:scale-[0.99]'
                   : 'bg-atlas-surface/50 text-white/30 cursor-not-allowed border border-glass-border'
                 }
               `}
             >
-              {selectedCount === 0
+              {isCalibrationBlocked
+                ? 'Calibrate voice to generate'
+                : selectedCount === 0
                 ? 'Select at least one angle'
                 : `Generate ${selectedCount} draft${selectedCount !== 1 ? 's' : ''}`}
             </button>

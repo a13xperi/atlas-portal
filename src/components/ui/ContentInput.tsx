@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type DragEventHandler } from "react";
-import { Mic, MicOff, Loader2, FileText, MessageSquare, TrendingUp } from "lucide-react";
+import { Mic, MicOff, Loader2, FileText, MessageSquare, TrendingUp, ArrowUp } from "lucide-react";
 import type { RecordingState } from "@/lib/useVoiceRecorder";
 
 export interface ContentInputProps {
@@ -196,6 +196,16 @@ export default function ContentInput({
             }}
             className="w-full flex-1 rounded-lg border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
           />
+          {text.trim() ? (
+            <button
+              type="button"
+              aria-label="Generate draft"
+              onClick={handleSubmit}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-atlas-teal/50 bg-atlas-teal/10 p-3 text-atlas-teal transition-colors hover:bg-atlas-teal/20 sm:w-auto sm:self-stretch"
+            >
+              <ArrowUp className="w-4 h-4" aria-hidden="true" />
+            </button>
+          ) : null}
           {showMic ? (
             <button
               type="button"

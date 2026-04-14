@@ -1,46 +1,51 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { api, TeamMember, TeamAnalyst } from "@/lib/api";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
+import { useActionFeedback } from "@/hooks/useActionFeedback";
 
-export default function ManagementPage() {
+function ManagementPage() {
   const { user } = useAuth();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [analysts, setAnalysts] = useState<TeamAnalyst[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionBanner, setActionBanner] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { isLoading, runAction } = useActionFeedback();
+
+  const showBanner = useCallback((message: string, type: "success" | "error") => {
+    if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
+    setActionBanner({ message, type });
+    bannerTimerRef.current = setTimeout(() => setActionBanner(null), 5000);
+  }, []);
+
+  const managementActionLoading =
+    isLoading("push-top-profiles") ||
+    isLoading("send-nudge") ||
+    isLoading("push-style");
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || (user.role !== "MANAGER" && user.role !== "ADMIN")) return;
 
+    setLoadError(null);
     Promise.all([api.users.team(), api.analytics.team()])
       .then(([teamRes, analyticsRes]) => {
         setTeam(teamRes.team);
         setAnalysts(analyticsRes.analysts);
       })
-      .catch(() => {})
+      .catch((err: Error) => {
+        setLoadError(err.message || 'Failed to load team data. Please refresh.');
+      })
       .finally(() => setLoading(false));
   }, [user]);
 
-  const runAction = async (
-    action: () => Promise<{ message: string; affected: number }>,
-    label: string
-  ) => {
-    if (actionLoading) return;
-    setActionLoading(true);
-    setActionMessage(null);
-    try {
-      const res = await action();
-      setActionMessage(`${label}: ${res.message} (${res.affected} affected)`);
-    } catch {
-      setActionMessage(`${label} failed. Try again.`);
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  if (user && user.role !== "MANAGER" && user.role !== "ADMIN") {
+    return null;
+  }
 
   const getAnalystStats = (memberId: string) =>
     analysts.find((a) => a.id === memberId);
@@ -60,41 +65,98 @@ export default function ManagementPage() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              disabled={actionLoading}
+              aria-busy={isLoading("push-top-profiles")}
+              disabled={managementActionLoading}
               onClick={() =>
-                void runAction(api.users.pushTopProfiles, "Push top profiles")
+                void runAction("push-top-profiles", api.users.pushTopProfiles, {
+                  successMessage: "Top profiles pushed to team",
+                  errorMessage: "Failed to push top profiles",
+                  onResult: showBanner,
+                })
               }
               className="flex items-center gap-1.5 rounded-lg border border-atlas-teal/40 bg-atlas-teal/10 px-4 py-2 text-xs font-semibold text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/15 disabled:opacity-50"
             >
-              {actionLoading && <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />}
-              Push Top Profiles
+              {isLoading("push-top-profiles") ? (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+                  />
+                  Processing...
+                </>
+              ) : (
+                "Push Top Profiles"
+              )}
             </button>
             <button
               type="button"
-              disabled={actionLoading}
-              onClick={() => void runAction(api.users.sendNudge, "Send nudge")}
+              aria-busy={isLoading("send-nudge")}
+              disabled={managementActionLoading}
+              onClick={() => void runAction("send-nudge", api.users.sendNudge, {
+                successMessage: "Nudge sent to all analysts",
+                errorMessage: "Failed to send nudge",
+                onResult: showBanner,
+              })}
               className="flex items-center gap-1.5 rounded-lg border border-glass-border px-4 py-2 text-xs font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal disabled:opacity-50"
             >
-              {actionLoading && <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />}
-              Send Nudge
+              {isLoading("send-nudge") ? (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+                  />
+                  Processing...
+                </>
+              ) : (
+                "Send Nudge"
+              )}
             </button>
             <button
               type="button"
-              disabled={actionLoading}
+              aria-busy={isLoading("push-style")}
+              disabled={managementActionLoading}
               onClick={() =>
-                void runAction(() => api.users.pushStyle(), "Push style")
+                void runAction("push-style", () => api.users.pushStyle(), {
+                  successMessage: "Team style settings pushed",
+                  errorMessage: "Failed to push style settings",
+                  onResult: showBanner,
+                })
               }
               className="flex items-center gap-1.5 rounded-lg border border-glass-border px-4 py-2 text-xs font-semibold text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal disabled:opacity-50"
             >
-              {actionLoading && <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />}
-              Push Style
+              {isLoading("push-style") ? (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+                  />
+                  Processing...
+                </>
+              ) : (
+                "Push Style"
+              )}
             </button>
           </div>
         </div>
 
-        {actionMessage && (
-          <div className="mt-4 rounded-xl border border-glass-border bg-glass/50 px-4 py-3 text-sm text-atlas-text-secondary">
-            {actionMessage}
+        {loadError && (
+          <div role="alert" className="mt-4 rounded-xl border border-atlas-error/30 bg-atlas-error/10 px-4 py-3 text-sm text-atlas-error">
+            {loadError}
+          </div>
+        )}
+
+        {actionBanner && (
+          <div
+            role="status"
+            aria-live="polite"
+            className={`mt-4 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+              actionBanner.type === "success"
+                ? "border-atlas-teal/30 bg-atlas-teal/10 text-atlas-teal"
+                : "border-atlas-error/30 bg-atlas-error/10 text-atlas-error"
+            }`}
+          >
+            <span aria-hidden="true">{actionBanner.type === "success" ? "✓" : "✕"}</span>
+            {actionBanner.message}
           </div>
         )}
 
@@ -126,7 +188,7 @@ export default function ManagementPage() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-delphi-teal to-delphi-blue-500 text-sm font-bold text-white">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-delphi-teal to-delphi-blue-500 text-sm font-bold text-atlas-bg">
                         {(member.displayName || member.handle)[0]?.toUpperCase()}
                       </div>
                       <div className="min-w-0">
@@ -206,5 +268,13 @@ export default function ManagementPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+export default function ManagementPageGated() {
+  return (
+    <FeatureGate flagKey="management">
+      <ManagementPage />
+    </FeatureGate>
   );
 }

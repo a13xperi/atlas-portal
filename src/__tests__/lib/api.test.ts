@@ -59,12 +59,12 @@ describe("api.auth.register", () => {
     const data = { user: { id: "2", handle: "bob", role: "ANALYST" }, token: "tok_456", refresh_token: "rt_456" };
     mockFetch(data);
 
-    await api.auth.register("bob", "bob@example.com", "pass123", "crypto");
+    await api.auth.register("bob", "bob@example.com", "pass123", "TRACK_A");
 
     expect(fetch).toHaveBeenCalledWith(
       `${API_URL}/api/auth/register`,
       expect.objectContaining({
-        body: JSON.stringify({ handle: "bob", email: "bob@example.com", password: "pass123", onboardingTrack: "crypto" }),
+        body: JSON.stringify({ handle: "bob", email: "bob@example.com", password: "pass123", onboardingTrack: "TRACK_A" }),
         credentials: "include",
       })
     );
@@ -157,6 +157,24 @@ describe("api.drafts.list", () => {
   });
 });
 
+describe("api.analytics.engagementDaily", () => {
+  it("wraps legacy array responses in a days object", async () => {
+    const data = [{ date: "2026-04-09", dayLabel: "Wed", predicted: 12, actual: 9 }];
+    mockFetch(data);
+
+    const result = await api.analytics.engagementDaily();
+
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/api/analytics/engagement-daily`,
+      expect.objectContaining({
+        method: "GET",
+        credentials: "include",
+      })
+    );
+    expect(result).toEqual({ days: data });
+  });
+});
+
 describe("api.drafts.generate", () => {
   it("sends the selected reply angle metadata in the request body", async () => {
     mockFetch({ draft: { id: "draft_1" } });
@@ -221,6 +239,91 @@ describe("api.referenceAccounts", () => {
             hosseeb: 0.5,
             naval: 0.5,
           },
+        }),
+        credentials: "include",
+      })
+    );
+  });
+});
+
+describe("api.twitter.follows", () => {
+  it("maps follow payloads from the Twitter follows endpoint", async () => {
+    mockFetch({
+      follows: [
+        {
+          id: "tw_1",
+          handle: "hasufl",
+          display_name: "Hasu",
+          bio: "Markets and crypto structure.",
+          avatar_url: "https://example.com/hasu.jpg",
+          follower_count: 120000,
+        },
+      ],
+      cached: false,
+    });
+
+    const result = await api.twitter.follows();
+
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/api/twitter/follows`,
+      expect.objectContaining({
+        method: "GET",
+        credentials: "include",
+      })
+    );
+    expect(result).toEqual({
+      cached: false,
+      follows: [
+        {
+          id: "tw_1",
+          handle: "hasufl",
+          displayName: "Hasu",
+          bio: "Markets and crypto structure.",
+          avatarUrl: "https://example.com/hasu.jpg",
+          followerCount: 120000,
+        },
+      ],
+    });
+  });
+});
+
+describe("api.voice.blend", () => {
+  it("sends the primary and additional inspiration ids to the blend endpoint", async () => {
+    mockFetch({
+      blendedProfile: {
+        id: "blend_1",
+        primaryTwitterId: "tw_1",
+        additionalTwitterIds: ["tw_2"],
+        weights: { tw_1: 0.7, tw_2: 0.3 },
+        tweetsAnalyzed: 100,
+      },
+      inspirations: [],
+      dimensions: {
+        humor: 50,
+        formality: 50,
+        brevity: 50,
+        contrarianTone: 50,
+        directness: 50,
+        warmth: 50,
+        technicalDepth: 50,
+        confidence: 50,
+        evidenceOrientation: 50,
+        solutionOrientation: 50,
+        socialPosture: 50,
+        selfPromotionalIntensity: 50,
+      },
+      summary: "ok",
+    });
+
+    await api.voice.blend("tw_1", ["tw_2"]);
+
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/api/voice/blend`,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          primary_id: "tw_1",
+          additional_ids: ["tw_2"],
         }),
         credentials: "include",
       })

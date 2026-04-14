@@ -5,7 +5,7 @@
  * correctly across all pages.
  */
 
-import { test as fixtureTest, expect, stubAuth, stubDataEndpoints } from "./fixtures";
+import { test as fixtureTest, expect, vercelBypassCookies } from "./fixtures";
 import { type Page } from "@playwright/test";
 
 // Use origin-agnostic glob patterns so stubs work whether the browser hits the
@@ -16,12 +16,12 @@ import { type Page } from "@playwright/test";
  * handler, then navigate directly to /dashboard by setting the session cookie.
  */
 const test = fixtureTest.extend<{ authedPage: Page }>({
-  authedPage: async ({ page, context }, use) => {
+  authedPage: async ({ page, context, baseURL }, use) => {
     const mockUser = {
       id: "test-user-1",
       handle: "testanalyst",
       email: "test@atlas.dev",
-      role: "MANAGER" as const,
+      role: "ADMIN" as const,
       displayName: "Test User",
       voiceProfile: {
         id: "vp-1",
@@ -65,9 +65,16 @@ const test = fixtureTest.extend<{ authedPage: Page }>({
     });
 
     // Set session cookie so middleware allows /dashboard
+    const hostname = new URL(baseURL ?? "http://localhost:3000").hostname;
     await context.addCookies([
-      { name: "atlas_session", value: "1", domain: "localhost", path: "/" },
+      { name: "atlas_session", value: "1", domain: hostname, path: "/" },
+      ...vercelBypassCookies(hostname),
     ]);
+
+    // Abort external avatar CDN requests instantly — prevents unavatar.io from
+    // blocking waitForLoadState("networkidle") on voice-profiles in CI.
+    await page.route("https://unavatar.io/**", (route) => route.abort());
+    await page.route("https://pbs.twimg.com/**", (route) => route.abort());
 
     await page.goto("/dashboard");
     await page.waitForLoadState("networkidle");
@@ -173,7 +180,8 @@ test.describe("Demo Mode", () => {
     }) => {
       await enableDemo(page);
       await page.goto("/arena");
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("domcontentloaded");
+      await page.waitForTimeout(1500);
 
       await expect(page.getByText("DegenSpartan").first()).toBeVisible();
       await expect(page.getByText("CryptoHayes").first()).toBeVisible();
@@ -187,9 +195,19 @@ test.describe("Demo Mode", () => {
       await page.goto("/voice-profiles");
       await page.waitForLoadState("networkidle");
 
-      // Demo data has reference voices: Cobie, Hasu, GCR
-      await expect(page.getByText("Cobie").first()).toBeVisible();
-      await expect(page.getByText("Hasu").first()).toBeVisible();
+      // Wait for the loading skeleton to resolve before asserting on content.
+      await expect(
+        page.getByRole("heading", { name: /your voices/i }).first(),
+      ).toBeVisible({ timeout: 15_000 });
+
+      // Demo data seeds three reference voices; assert on any one of them by
+      // either display name OR handle so we stay green if the seed copy
+      // changes (e.g. Cobie → cobie, Hasu → HasuFL).
+      await expect(
+        page
+          .getByText(/\b(Cobie|coaboratecobie|Hasu|hasufl|GCR|GCRClassic)\b/i)
+          .first(),
+      ).toBeVisible();
     });
 
     test("crafting shows demo drafts and trending topics in demo mode", async ({

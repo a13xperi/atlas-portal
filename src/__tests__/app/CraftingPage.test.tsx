@@ -109,7 +109,7 @@ function createDraft(overrides: Record<string, unknown> = {}) {
 describe("CraftingPage", () => {
   beforeEach(() => {
     mockUseAuth.mockReturnValue({
-      user: { handle: "AtlasAnalyst" },
+      user: { handle: "AtlasAnalyst", onboardingTrack: "TRACK_B", voiceProfile: { tweetsAnalyzed: 12 } },
     });
 
     mockedApi.drafts.list.mockReset();
@@ -271,11 +271,10 @@ describe("CraftingPage", () => {
       screen.queryByText("No drafts yet. Generate your first tweet above.")
     ).not.toBeInTheDocument();
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: /Second draft copy frames ETH strength as the cleaner momentum trade/i,
-      })
-    );
+    const draftButtons = await screen.findAllByRole("button", {
+      name: /Second draft copy frames ETH strength as the cleaner momentum trade/i,
+    });
+    fireEvent.click(draftButtons[0]);
 
     await waitFor(() => expect(generatedDraft).toHaveValue(secondDraft.content));
   });
@@ -352,7 +351,7 @@ describe("CraftingPage", () => {
     await waitFor(() =>
       expect(mockedApi.drafts.refine).toHaveBeenCalledWith(
         "draft-1",
-        "Make it shorter and more concise"
+        "Make this tweet shorter and more concise — cut the fat"
       )
     );
 

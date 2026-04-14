@@ -5,10 +5,16 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
-import { oracleReducer, initialOracleState, canAdvance } from "@/lib/oracle";
+import {
+  canAdvance,
+  getContinueLabel,
+  getOnboardingCompletionHref,
+  getTrackMeta,
+  initialOracleState,
+  oracleReducer,
+} from "@/lib/oracle";
 import { styleToDimensions } from "@/lib/voice-profile-dimensions";
 import {
-  buildReferenceBlendVoices,
   getReferenceAccountLookup,
   persistReferenceSelections,
   REFERENCE_ACCOUNT_FALLBACK,
@@ -16,18 +22,19 @@ import {
 
 import OracleAvatar from "./OracleAvatar";
 import OracleMessage from "./OracleMessage";
+import TrackBadge from "./TrackBadge";
 import TypingIndicator from "./TypingIndicator";
 import ActionZone from "./ActionZone";
 import NavBar from "@/components/ui/NavBar";
 
 // Inline components
-import BlendRatioSlider from "./BlendRatioSlider";
 import TopicPicker from "./TopicPicker";
 import ReferenceVoiceSelector from "./ReferenceVoiceSelector";
+import ContentSignalsPreview from "./ContentSignalsPreview";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import GradientButton from "@/components/ui/GradientButton";
 import ContentInput from "@/components/ui/ContentInput";
-import { AtSign, Loader2 } from "lucide-react";
+import { CheckCircle, Loader2 } from "lucide-react";
 
 const referenceAccountLookup = getReferenceAccountLookup(
   REFERENCE_ACCOUNT_FALLBACK
@@ -47,45 +54,94 @@ export default function OracleChat() {
   const calibratingRef = useRef(false);
   const drainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
-  const [blendSaveStatus, setBlendSaveStatus] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
-  // Tracks the persisted blend so future PATCH operations can target it.
-  const [, setSavedBlendId] = useState<string | null>(null);
+  const [resumeTrackAAfterOAuth, setResumeTrackAAfterOAuth] = useState(false);
 
-  // Pre-fill display name from user
+  // Pre-fill handle from linked X profile
   useEffect(() => {
-    const name = user?.displayName || user?.handle;
-    if (name && !state.displayName) {
-      dispatch({ type: "SET_DISPLAY_NAME", name });
-    }
     if (user?.handle && !state.xHandle) {
       dispatch({ type: "SET_HANDLE", handle: user.handle.replace(/^@/, "") });
     }
-  }, [user?.displayName, user?.handle, state.displayName, state.xHandle]);
+  }, [user?.handle, state.xHandle]);
+
+  // Deep-link pre-select: /onboarding/track-a|track-b stores the chosen
+  // track in sessionStorage before redirecting here. Pick it up on mount
+  // so the chat skips the welcome prompt and enters the right path.
+  useEffect(() => {
+    if (state.track !== null || state.currentStep !== "WELCOME") return;
+    let preselected: string | null = null;
+    try {
+      preselected = sessionStorage.getItem("atlas_preselected_track");
+    } catch {
+      preselected = null;
+    }
+    if (preselected === "a" || preselected === "b") {
+      try {
+        sessionStorage.removeItem("atlas_preselected_track");
+      } catch {
+        /* ignore */
+      }
+      dispatch({ type: "SET_TRACK", track: preselected });
+    }
+  }, [state.track, state.currentStep]);
 
   // Detect OAuth callback return from X
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const xConnected = params.get("x_connected");
     const handle = params.get("handle");
-    if (xConnected === "true" && handle) {
-      dispatch({ type: "SET_HANDLE", handle: handle.replace(/^@/, "") });
+    if (xConnected === "true") {
+      if (handle) {
+        dispatch({ type: "SET_HANDLE", handle: handle.replace(/^@/, "") });
+      }
       dispatch({ type: "SET_X_CONNECTED", connected: true });
+      setResumeTrackAAfterOAuth(true);
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
 
+  // Resume straight into Track A when returning from X OAuth.
+  useEffect(() => {
+    if (
+      !resumeTrackAAfterOAuth ||
+      state.currentStep !== "WELCOME" ||
+      state.track !== null ||
+      !state.xConnected
+    ) {
+      return;
+    }
+
+    setResumeTrackAAfterOAuth(false);
+    dispatch({ type: "SET_TRACK", track: "a" });
+  }, [
+    resumeTrackAAfterOAuth,
+    state.currentStep,
+    state.track,
+    state.xConnected,
+  ]);
+
   // Auto-advance if already connected to X
   useEffect(() => {
-    if (state.currentStep !== "CONNECT_X" || state.xConnected) return;
-    api.auth.x.status().then((res) => {
-      if (res.linked && res.xHandle) {
-        dispatch({ type: "SET_HANDLE", handle: res.xHandle.replace(/^@/, "") });
+    if (
+      state.currentStep !== "CONNECT_X" ||
+      (state.xConnected && state.xHandle)
+    ) {
+      return;
+    }
+
+    api.auth.x
+      .status()
+      .then((res) => {
+        if (!res.linked) {
+          return;
+        }
+
+        if (res.xHandle) {
+          dispatch({ type: "SET_HANDLE", handle: res.xHandle.replace(/^@/, "") });
+        }
         dispatch({ type: "SET_X_CONNECTED", connected: true });
-      }
-    }).catch(() => {});
-  }, [state.currentStep, state.xConnected]);
+      })
+      .catch(() => {});
+  }, [state.currentStep, state.xConnected, state.xHandle]);
 
   // Auto-advance from CONNECT_X when connected
   useEffect(() => {
@@ -142,9 +198,6 @@ export default function OracleChat() {
     async (step: string) => {
       try {
         if (step === "TRACK_A_RESULT" || step === "TRACK_B_DIMENSIONS") {
-          await api.users.updateProfile({
-            displayName: state.displayName.trim(),
-          });
           await api.voice.updateProfile(state.dimensions);
         }
         if (step === "REFERENCES") {
@@ -165,24 +218,6 @@ export default function OracleChat() {
             }
           }
         }
-        if (step === "BLEND") {
-          setBlendSaveStatus("saving");
-          try {
-            const result = await api.voice.createBlend(
-              state.track === "a" ? "Onboarding blend" : "My starting blend",
-              buildReferenceBlendVoices(
-                state.selectedRefs,
-                state.selfPercentage,
-                REFERENCE_ACCOUNT_FALLBACK
-              )
-            );
-            setSavedBlendId(result.blend.id);
-            setBlendSaveStatus("saved");
-          } catch (err) {
-            console.error("Blend persist failed:", err);
-            setBlendSaveStatus("error");
-          }
-        }
         if (step === "TOPICS") {
           try {
             await api.briefing.updatePreferences({
@@ -193,6 +228,15 @@ export default function OracleChat() {
             });
           } catch {
             /* optional */
+          }
+          if (state.track === "a" || state.track === "b") {
+            try {
+              await api.users.updateProfile({
+                onboardingTrack: state.track === "a" ? "TRACK_A" : "TRACK_B",
+              });
+            } catch {
+              /* optional — non-fatal */
+            }
           }
         }
       } catch (e) {
@@ -205,6 +249,14 @@ export default function OracleChat() {
   // ── Handle action from Oracle message buttons ────────────────────
   const handleAction = useCallback(
     (value: string) => {
+      if (value === "start-onboarding") {
+        dispatch({ type: "ADVANCE", payload: "Let\'s go" });
+        return;
+      }
+      if (value === "skip-x") {
+        dispatch({ type: "SET_TRACK", track: "b" });
+        return;
+      }
       if (value === "track-a" || value === "track-b") {
         dispatch({
           type: "SET_TRACK",
@@ -231,15 +283,21 @@ export default function OracleChat() {
 
     // Build user echo message
     let echo: string | undefined;
-    if (step === "TRACK_A_HANDLE") echo = `Scan @${state.xHandle}`;
     if (step === "TRACK_B_STYLE") echo = state.selectedStyle || undefined;
     if (step === "REFERENCES")
       echo = `Selected ${state.selectedRefs.length} references`;
     if (step === "BLEND") echo = `${state.selfPercentage}% my voice`;
     if (step === "TOPICS") echo = state.selectedTopics.join(", ");
 
+    if (step === "TOPICS") {
+      // Finish the wizard on the final preferences step and land users in the
+      // next surface they should act in, rather than the legacy handoff screen.
+      router.replace(getOnboardingCompletionHref(state.track));
+      return;
+    }
+
     dispatch({ type: "ADVANCE", payload: echo });
-  }, [state, persistAfterStep]);
+  }, [state, persistAfterStep, router]);
 
   // ── Auto-trigger calibration for Track A scanning step ───────────
   useEffect(() => {
@@ -298,42 +356,27 @@ export default function OracleChat() {
             ],
           });
         }
-        // Fetch personalized LLM commentary (supplementary)
-        api.oracle.message({
-          track: "a",
-          step: "TRACK_A_SCANNING",
-          action: "scan-complete",
-          context: {
-            dimensions: {
-              humor: profile.humor ?? 50, formality: profile.formality ?? 50,
-              brevity: profile.brevity ?? 50, contrarianTone: profile.contrarianTone ?? 50,
-              directness: profile.directness ?? 50, warmth: profile.warmth ?? 50,
-              technicalDepth: profile.technicalDepth ?? 50, confidence: profile.confidence ?? 50,
-              evidenceOrientation: profile.evidenceOrientation ?? 50,
-              solutionOrientation: profile.solutionOrientation ?? 50,
-              socialPosture: profile.socialPosture ?? 50,
-              selfPromotionalIntensity: profile.selfPromotionalIntensity ?? 50,
-            },
-            calibrationResult: { analysis: calibration.analysis, tweetsAnalyzed: calibration.tweetsAnalyzed },
-            handle: state.xHandle,
-          },
-        }).then((r) => {
-          if (r.llmGenerated && r.messages.length > 0) {
-            dispatch({
-              type: "ENQUEUE_MESSAGES",
-              messages: r.messages.map((m, i) => ({
-                id: `llm-${Date.now()}-${i}`,
-                role: "oracle" as const,
-                content: m.content,
-                timestamp: Date.now(),
-              })),
-            });
-          }
-        }).catch(() => { /* LLM is optional */ });
+        // NOTE: Supplementary LLM oracle.message() call intentionally removed.
+        // Anil feedback (Apr 10): don't generate tweet content until after
+        // HANDOFF is complete and a voice blend is configured. The calibration
+        // analysis above is sufficient commentary during onboarding.
       } catch (err) {
         console.error("Calibration failed:", err);
-        // Still advance so user isn't stuck
-        dispatch({ type: "ADVANCE", payload: "Calibration unavailable" });
+        // Surface a friendly Oracle message, then silently advance so the
+        // user isn't stuck and doesn't see a raw error echoed as their reply.
+        dispatch({
+          type: "ENQUEUE_MESSAGES",
+          messages: [
+            {
+              id: `calibration-skip-${Date.now()}`,
+              role: "oracle" as const,
+              content:
+                "I couldn't scan your tweets right now — no worries, we can calibrate later. Let's keep going.",
+              timestamp: Date.now(),
+            },
+          ],
+        });
+        dispatch({ type: "ADVANCE", payload: undefined });
       } finally {
         calibratingRef.current = false;
       }
@@ -344,36 +387,15 @@ export default function OracleChat() {
   const renderComponent = useCallback(
     (type: string): ReactNode => {
       switch (type) {
-        case "handle-input":
-          return (
-            <div className="bg-atlas-surface rounded-2xl p-4 space-y-3">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-atlas-text-secondary">
-                    <AtSign className="h-4 w-4" />
-                  </span>
-                  <input
-                    type="text"
-                    value={state.xHandle}
-                    onChange={(e) =>
-                      dispatch({
-                        type: "SET_HANDLE",
-                        handle: e.target.value.replace(/^@/, ""),
-                      })
-                    }
-                    placeholder="yourhandle"
-                    className="w-full rounded-lg border border-glass-border bg-atlas-bg px-4 py-2.5 pl-9 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-          );
-
         case "scan-progress":
           return (
             <div className="bg-atlas-surface rounded-2xl p-4 space-y-2">
               <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
+                {state.calibrationResult ? (
+                  <CheckCircle className="h-4 w-4 text-atlas-teal" />
+                ) : (
+                  <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
+                )}
                 <span className="text-sm text-atlas-text-secondary">
                   {state.calibrationResult
                     ? `Calibrated from ${state.calibrationResult.tweetsAnalyzed} tweets`
@@ -396,65 +418,9 @@ export default function OracleChat() {
                   })
                 }
               />
-              {(state.currentStep === "TRACK_A_RESULT" ||
-                state.currentStep === "TRACK_B_DIMENSIONS") && (
-                <div className="mt-4">
-                  <label className="text-xs text-atlas-text-secondary uppercase tracking-wide">
-                    Display name
-                  </label>
-                  <input
-                    type="text"
-                    value={state.displayName}
-                    onChange={(e) =>
-                      dispatch({
-                        type: "SET_DISPLAY_NAME",
-                        name: e.target.value,
-                      })
-                    }
-                    placeholder="Your display name"
-                    className="mt-1 w-full rounded-lg border border-glass-border bg-atlas-bg px-4 py-2.5 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
-                  />
-                </div>
-              )}
             </div>
           );
 
-        case "tweet-ratings": {
-          const sampleTweets = [
-            "ETH staking yields are compressing fast. The easy alpha is gone — now it's about execution risk and DVT adoption.",
-            "Everyone's talking about L2 fees but nobody's asking why L1 gas is still this high during a bear market.",
-            "Hot take: most DeFi governance is theater. Token holders vote, whales decide.",
-            "The merge was 18 months ago and we're still arguing about MEV. Builders are the new miners.",
-          ];
-          return (
-            <div className="space-y-3">
-              {sampleTweets.map((tweet, i) => (
-                <div
-                  key={i}
-                  className="flex items-start justify-between gap-4 rounded-2xl bg-atlas-surface p-4"
-                >
-                  <p className="flex-1 text-sm text-atlas-text">{tweet}</p>
-                  <div className="flex shrink-0 gap-2">
-                    <button
-                      type="button"
-                      className="text-atlas-text-secondary hover:text-atlas-teal transition-colors"
-                      title="More like me"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z" /></svg>
-                    </button>
-                    <button
-                      type="button"
-                      className="text-atlas-text-secondary hover:text-atlas-error transition-colors"
-                      title="Less like me"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z" /></svg>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          );
-        }
 
         case "style-picker":
           return (
@@ -493,67 +459,13 @@ export default function OracleChat() {
               onSelectionChange={(ids) =>
                 dispatch({ type: "SET_REFS", ids })
               }
-              onContinue={() => {}} // Continue handled by ActionZone
+              onContinue={handleContinue} // Continue handled by ActionZone
             />
           );
 
-        case "blend": {
-          const refNames = state.selectedRefs.map((id) => {
-            const acct = referenceAccountLookup.get(id);
-            return acct?.displayName || acct?.name || id;
-          });
-          return (
-            <div className="space-y-4">
-              <BlendRatioSlider
-                selfPercentage={state.selfPercentage}
-                onChange={(p) => dispatch({ type: "SET_BLEND", percentage: p })}
-                referenceNames={refNames}
-              />
-              <p className="text-center text-xs text-atlas-text-muted">
-                {blendSaveStatus === "saving" && "Saving blend…"}
-                {blendSaveStatus === "saved" &&
-                  "Blend saved. Adjustments persist on continue."}
-                {blendSaveStatus === "error" &&
-                  "Couldn't save blend — we'll retry on continue."}
-                {blendSaveStatus === "idle" &&
-                  "We'll save this blend when you continue."}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  const blendVoices = [
-                    { label: "My voice", percentage: state.selfPercentage },
-                    ...refNames.map((n) => ({
-                      label: n,
-                      percentage: Math.round((100 - state.selfPercentage) / refNames.length),
-                    })),
-                  ];
-                  api.oracle.message({
-                    track: state.track!,
-                    step: state.currentStep,
-                    action: "blend-preview",
-                    context: { dimensions: state.dimensions, blendVoices },
-                  }).then((r) => {
-                    if (r.llmGenerated && r.messages.length > 0) {
-                      dispatch({
-                        type: "ENQUEUE_MESSAGES",
-                        messages: r.messages.map((m, i) => ({
-                          id: `blend-preview-${Date.now()}-${i}`,
-                          role: "oracle" as const,
-                          content: `Here's what a tweet might sound like in this blend:\n\n\"${m.content}\"`,
-                          timestamp: Date.now(),
-                        })),
-                      });
-                    }
-                  }).catch(() => {});
-                }}
-                className="w-full rounded-lg border border-atlas-teal/30 bg-atlas-teal/10 px-4 py-2.5 text-sm font-medium text-atlas-teal transition-colors hover:border-atlas-teal hover:bg-atlas-teal/15"
-              >
-                Preview a tweet in this voice
-              </button>
-            </div>
-          );
-        }
+        case "blend":
+          // BLEND step is skipped in onboarding — advanced blending lives in Voice Labs.
+          return null;
 
         case "topics":
           return (
@@ -574,6 +486,7 @@ export default function OracleChat() {
                 onTextChange={() => {}}
                 onTextSubmit={() => true}
               />
+              <ContentSignalsPreview />
               <p className="text-xs text-atlas-text-muted">
                 You can also send these via Telegram later.
               </p>
@@ -598,7 +511,19 @@ export default function OracleChat() {
               <div className="pt-2">
                 <GradientButton
                   fullWidth
-                  onClick={() => router.push("/dashboard")}
+                  onClick={() => {
+                    // Mark onboarding complete so crafting stays gated until HANDOFF.
+                    // Best-effort — navigate regardless of whether the API call succeeds.
+                    if (state.track === "a" || state.track === "b") {
+                      api.users
+                        .updateProfile({
+                          onboardingTrack:
+                            state.track === "a" ? "TRACK_A" : "TRACK_B",
+                        })
+                        .catch(() => {});
+                    }
+                    router.push(getOnboardingCompletionHref(state.track));
+                  }}
                 >
                   Go to Dashboard
                 </GradientButton>
@@ -607,6 +532,9 @@ export default function OracleChat() {
           );
 
         case "x-oauth":
+          // Once we've moved past CONNECT_X, hide this widget from message history.
+          // The button must disappear after skip-x so tests and the UX are consistent.
+          if (state.currentStep !== "CONNECT_X") return null;
           return (
             <div className="bg-atlas-surface rounded-2xl p-6 space-y-4">
               <button
@@ -643,7 +571,7 @@ export default function OracleChat() {
           return null;
       }
     },
-    [state, router, oauthLoading, blendSaveStatus]
+    [oauthLoading, router, state]
   );
 
   // ── Determine ActionZone config per step ─────────────────────────
@@ -659,21 +587,17 @@ export default function OracleChat() {
 
     // Steps that need a Continue button
     const continueSteps = [
-      "TRACK_A_HANDLE",
       "TRACK_A_RESULT",
-      "TRACK_A_RATE",
       "TRACK_B_STYLE",
       "TRACK_B_DIMENSIONS",
       "REFERENCES",
-      "BLEND",
-      "TOPICS",
     ];
 
     if (continueSteps.includes(step)) {
       return {
         actions: [
           {
-            label: "Continue",
+            label: getContinueLabel(step, state.track),
             value: "continue",
             variant: "primary" as const,
           },
@@ -686,24 +610,32 @@ export default function OracleChat() {
   };
 
   const actionConfig = getActionZoneConfig();
+  const trackMeta = getTrackMeta(state.track);
 
   return (
-    <div className="flex h-screen flex-col bg-gradient-to-b from-atlas-bg via-atlas-nav to-atlas-bg">
+    <div className="flex h-screen flex-col bg-gradient-to-b from-atlas-bg via-atlas-nav to-atlas-bg pt-14">
       <NavBar variant="onboarding" />
 
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-glass-border bg-atlas-nav/50 backdrop-blur-xl">
+      <div className="flex items-center gap-3 px-4 sm:px-6 py-3 border-b border-glass-border bg-atlas-nav/50 backdrop-blur-xl">
         <OracleAvatar size="md" />
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="font-heading font-bold text-sm text-atlas-text">
             The Oracle
           </h1>
           <p className="text-xs text-atlas-teal">DELPHI OS</p>
         </div>
+        <TrackBadge meta={trackMeta} />
       </div>
 
-      {/* Message list */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+      {/* Message list — aria-live so screen readers announce Oracle replies as they arrive */}
+      <div
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions text"
+        aria-label="Oracle conversation"
+        className="flex-1 overflow-y-auto px-4 sm:px-6 pt-6 pb-8 space-y-4"
+      >
         {state.messages.map((msg, i) => (
           <OracleMessage
             key={msg.id}

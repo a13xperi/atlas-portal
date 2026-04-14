@@ -46,60 +46,70 @@ export const REFERENCE_ACCOUNT_FALLBACK: ReferenceAccount[] = [
     handle: "hosseeb",
     displayName: "Haseeb Qureshi",
     category: "Crypto/VC",
+    profileImageUrl: "https://unavatar.io/twitter/hosseeb",
   },
   {
     id: "DefiIgnas",
     handle: "DefiIgnas",
     displayName: "Ignas",
     category: "DeFi",
+    profileImageUrl: "https://unavatar.io/twitter/DefiIgnas",
   },
   {
     id: "goodalexander",
     handle: "goodalexander",
     displayName: "Alex Good",
     category: "Macro",
+    profileImageUrl: "https://unavatar.io/twitter/goodalexander",
   },
   {
     id: "thedankoe",
     handle: "thedankoe",
     displayName: "Dan Koe",
     category: "Content",
+    profileImageUrl: "https://unavatar.io/twitter/thedankoe",
   },
   {
     id: "thiccyth0t",
     handle: "thiccyth0t",
     displayName: "thiccyth0t",
     category: "Culture",
+    profileImageUrl: "https://unavatar.io/twitter/thiccyth0t",
   },
   {
     id: "ThinkingUSD",
     handle: "ThinkingUSD",
     displayName: "ThinkingUSD",
     category: "Macro",
+    profileImageUrl: "https://unavatar.io/twitter/ThinkingUSD",
   },
   {
     id: "JasonYanowitz",
     handle: "JasonYanowitz",
     displayName: "Jason Yanowitz",
     category: "Crypto/VC",
+    profileImageUrl: "https://unavatar.io/twitter/JasonYanowitz",
   },
   {
     id: "balaboris",
     handle: "balaboris",
     displayName: "Balaji",
     category: "Tech",
+    profileImageUrl: "https://unavatar.io/twitter/balaboris",
   },
   {
     id: "naval",
     handle: "naval",
     displayName: "Naval",
     category: "Philosophy",
+    profileImageUrl: "https://unavatar.io/twitter/naval",
   },
   {
     id: "elonmusk",
     handle: "elonmusk",
     displayName: "Elon Musk",
     category: "Culture",
+    profileImageUrl: "https://unavatar.io/twitter/elonmusk",
   },
 ];
 
@@ -149,7 +159,10 @@ export function normalizeReferenceAccount(
     account.id ||
     "Unknown";
   const resolvedId = handle || account.id || displayName;
-  const profileImageUrl = account.profileImageUrl ?? account.avatarUrl ?? null;
+  const profileImageUrl =
+    account.profileImageUrl ??
+    account.avatarUrl ??
+    (handle ? `https://unavatar.io/twitter/${handle}` : null);
 
   return {
     id: resolvedId,

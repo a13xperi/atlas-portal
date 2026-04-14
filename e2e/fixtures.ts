@@ -1,4 +1,5 @@
-import { test as base, Page, Route } from "@playwright/test";
+import { test as base, BrowserContext, Page, Route } from "@playwright/test";
+import { resolveVercelBypassCookies } from "./playwright-env";
 
 // Use origin-agnostic glob patterns so stubs work whether the browser hits the
 // cross-origin Railway backend directly OR the Next.js rewrite proxy on localhost.
@@ -7,7 +8,9 @@ const mockUser = {
   id: "test-user-1",
   handle: "testanalyst",
   email: "test@atlas.dev",
-  role: "MANAGER" as const,
+  // ADMIN so FeatureGate-protected routes (campaigns/telegram/management/admin/*)
+  // that require admin or admins-scope flags render their content in tests.
+  role: "ADMIN" as const,
   displayName: "Test User",
   voiceProfile: {
     id: "vp-1",
@@ -19,6 +22,27 @@ const mockUser = {
     maturity: "INTERMEDIATE" as const,
     tweetsAnalyzed: 12,
   },
+};
+
+// All feature flags forced on for e2e runs so gated routes render.
+// Mirrors FLAG_DEFS in src/lib/feature-flags.tsx — add new keys here when the
+// source list grows. Seeded via addInitScript before any page script runs.
+const ALL_FLAGS_ENABLED: Record<string, boolean> = {
+  crafting_station: true,
+  voice_lab: true,
+  arena: true,
+  campaigns: true,
+  queue: true,
+  analytics_advanced: true,
+  signals: true,
+  telegram_bot: true,
+  tweet_tinder: true,
+  multi_model: true,
+  super_admin: true,
+  management: true,
+  feed: true,
+  briefing: true,
+  library: true,
 };
 
 const mockSummary = {
@@ -90,17 +114,107 @@ const mockLearningLog = {
 
 const mockTeam = {
   team: [
-    { id: "u1", handle: "alice", displayName: "Alice", role: "ANALYST", voiceProfile: { maturity: "ADVANCED" }, _count: { tweetDrafts: 15, sessions: 8 } },
-    { id: "u2", handle: "bob", displayName: "Bob", role: "ANALYST", voiceProfile: { maturity: "BEGINNER" }, _count: { tweetDrafts: 3, sessions: 1 } },
-    { id: "test-user-1", handle: "testanalyst", displayName: "Test User", role: "MANAGER", voiceProfile: { maturity: "INTERMEDIATE" }, _count: { tweetDrafts: 8, sessions: 5 } },
+    {
+      id: "u1",
+      handle: "alice",
+      displayName: "Alice",
+      role: "ANALYST",
+      voiceProfile: {
+        id: "vp-u1",
+        userId: "u1",
+        humor: 65,
+        formality: 55,
+        brevity: 70,
+        contrarianTone: 45,
+        maturity: "ADVANCED" as const,
+        tweetsAnalyzed: 48,
+      },
+      _count: { tweetDrafts: 15, sessions: 8 },
+    },
+    {
+      id: "u2",
+      handle: "bob",
+      displayName: "Bob",
+      role: "ANALYST",
+      voiceProfile: {
+        id: "vp-u2",
+        userId: "u2",
+        humor: 35,
+        formality: 75,
+        brevity: 40,
+        contrarianTone: 20,
+        maturity: "BEGINNER" as const,
+        tweetsAnalyzed: 6,
+      },
+      _count: { tweetDrafts: 3, sessions: 1 },
+    },
+    {
+      id: "test-user-1",
+      handle: "testanalyst",
+      displayName: "Test User",
+      role: "ADMIN",
+      voiceProfile: {
+        id: "vp-1",
+        userId: "test-user-1",
+        humor: 50,
+        formality: 60,
+        brevity: 40,
+        contrarianTone: 30,
+        maturity: "INTERMEDIATE" as const,
+        tweetsAnalyzed: 12,
+      },
+      _count: { tweetDrafts: 8, sessions: 5 },
+    },
   ],
 };
 
 const mockTeamAnalytics = {
   analysts: [
-    { id: "u1", handle: "alice", _count: { tweetDrafts: 15, analyticsEvents: 40, sessions: 8 } },
-    { id: "u2", handle: "bob", _count: { tweetDrafts: 3, analyticsEvents: 5, sessions: 1 } },
-    { id: "test-user-1", handle: "testanalyst", _count: { tweetDrafts: 8, analyticsEvents: 20, sessions: 5 } },
+    {
+      id: "u1",
+      handle: "alice",
+      voiceProfile: {
+        id: "vp-u1",
+        userId: "u1",
+        humor: 65,
+        formality: 55,
+        brevity: 70,
+        contrarianTone: 45,
+        maturity: "ADVANCED" as const,
+        tweetsAnalyzed: 48,
+      },
+      _count: { tweetDrafts: 15, analyticsEvents: 40, sessions: 8 },
+    },
+    {
+      id: "u2",
+      handle: "bob",
+      voiceProfile: {
+        id: "vp-u2",
+        userId: "u2",
+        humor: 35,
+        formality: 75,
+        brevity: 40,
+        contrarianTone: 20,
+        maturity: "BEGINNER" as const,
+        tweetsAnalyzed: 6,
+      },
+      _count: { tweetDrafts: 3, analyticsEvents: 5, sessions: 1 },
+    },
+    {
+      id: "test-user-1",
+      handle: "testanalyst",
+      voiceProfile: {
+        id: "vp-1",
+        userId: "test-user-1",
+        humor: 50,
+        formality: 60,
+        brevity: 40,
+        contrarianTone: 30,
+        maturity: "INTERMEDIATE" as const,
+        tweetsAnalyzed: 12,
+      },
+      _count: { tweetDrafts: 8, analyticsEvents: 20, sessions: 5 },
+    },
   ],
 };
 
@@ -108,6 +222,17 @@ const mockBlends = { blends: [] };
 const mockVoiceProfile = { profile: mockUser.voiceProfile };
 const mockAlerts = { alerts: [] };
 const mockSubscriptions = { subscriptions: [] };
+
+const mockArenaLeaderboard = {
+  entries: [
+    { rank: 1, userId: "test-user-1", displayName: "Test User", avatarUrl: null, tweetsPublished: 12, totalEngagement: 4800, consistencyStreak: 9, badge: "Top Analyst" },
+    { rank: 2, userId: "u1", displayName: "Alice", avatarUrl: null, tweetsPublished: 10, totalEngagement: 3900, consistencyStreak: 8, badge: null },
+  ],
+  period: "last_30_days",
+  updatedAt: new Date().toISOString(),
+};
+
+type RouteTarget = Page | BrowserContext;
 
 function json(route: Route, body: unknown) {
   return route.fulfill({
@@ -118,8 +243,8 @@ function json(route: Route, body: unknown) {
 }
 
 /** Stub all auth endpoints so the app thinks we're logged in. */
-async function stubAuth(page: Page) {
-  await page.route("**/api/auth/**", (route) => {
+async function stubAuth(target: RouteTarget) {
+  await target.route("**/api/auth/**", (route) => {
     const url = new URL(route.request().url());
     switch (url.pathname) {
       case "/api/auth/me":
@@ -130,6 +255,10 @@ async function stubAuth(page: Page) {
         return json(route, { token: "fake-jwt", refresh_token: "fake-refresh" });
       case "/api/auth/logout":
         return json(route, { success: true });
+      case "/api/auth/x/status":
+        return json(route, { linked: false, tokenExpired: false });
+      case "/api/auth/x/authorize":
+        return json(route, { url: "https://twitter.com/i/oauth2/authorize" });
       default:
         return json(route, {});
     }
@@ -137,8 +266,8 @@ async function stubAuth(page: Page) {
 }
 
 /** Stub common data endpoints with realistic responses. */
-async function stubDataEndpoints(page: Page) {
-  await page.route("**/api/**", (route) => {
+async function stubDataEndpoints(target: RouteTarget) {
+  await target.route("**/api/**", (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname;
 
@@ -150,14 +279,14 @@ async function stubDataEndpoints(page: Page) {
         return json(route, mockSummary);
       case "/api/drafts":
         if (route.request().method() === "GET") return json(route, mockDrafts);
-        return route.continue();
+        return route.fallback();
       case "/api/analytics/engagement-daily":
         return json(route, mockEngagementDaily);
       case "/api/analytics/activity-daily":
         return json(route, mockActivityDaily);
       case "/api/analytics/learning-log":
         if (route.request().method() === "GET") return json(route, mockLearningLog);
-        return route.continue();
+        return route.fallback();
       case "/api/users/team":
         return json(route, mockTeam);
       case "/api/analytics/team":
@@ -170,7 +299,18 @@ async function stubDataEndpoints(page: Page) {
         return json(route, mockBlends);
       case "/api/voice/profile":
         if (route.request().method() === "GET") return json(route, mockVoiceProfile);
-        return route.continue();
+        return route.fallback();
+      case "/api/briefing/preferences":
+        return json(route, {
+          preferences: {
+            deliveryTime: "08:00",
+            topics: [],
+            sources: [],
+            channel: "EMAIL",
+          },
+        });
+      case "/api/briefing/history":
+        return json(route, { briefings: [] });
       case "/api/alerts/feed":
         return json(route, mockAlerts);
       case "/api/alerts/subscriptions":
@@ -187,12 +327,23 @@ async function stubDataEndpoints(page: Page) {
         return json(route, { accounts: [] });
       case "/api/campaigns":
         return json(route, { campaigns: [] });
+      case "/api/arena/leaderboard":
+        return json(route, mockArenaLeaderboard);
+      case "/api/arena/me":
+        return json(route, mockArenaLeaderboard.entries[0] ?? null);
       default:
         // Catch-all for any remaining API calls (including briefing, etc.)
         if (route.request().method() === "GET") return json(route, {});
-        return route.continue();
+        return route.fallback();
     }
   });
+}
+
+/** Return the Vercel deployment-protection bypass cookie if the env var is set. */
+export function vercelBypassCookies(
+  domain: string,
+): Array<{ name: string; value: string; domain: string; path: string }> {
+  return resolveVercelBypassCookies(domain);
 }
 
 /** Extended test fixture that provides an authenticated page. */
@@ -200,19 +351,39 @@ export const test = base.extend<{ authedPage: Page }>({
   authedPage: async ({ page, context, baseURL }, use) => {
     // Set auth cookie so middleware and client auth both see an active session
     const url = new URL(baseURL ?? "http://localhost:3000");
-    await context.addCookies([
+    const cookies: Array<{ name: string; value: string; domain: string; path: string }> = [
       { name: "atlas_access_token", value: "1", domain: url.hostname, path: "/" },
       { name: "atlas_session", value: "1", domain: url.hostname, path: "/" },
-    ]);
+      ...vercelBypassCookies(url.hostname),
+    ];
+    await context.addCookies(cookies);
 
-    await stubAuth(page);
-    await stubDataEndpoints(page);
+    // Seed feature flags BEFORE any page script runs so FeatureGate-protected
+    // routes (telegram, campaigns, management, etc.) render their content
+    // instead of redirecting to /dashboard.
+    await context.addInitScript((flags) => {
+      try {
+        window.localStorage.setItem("atlas-feature-flags", JSON.stringify(flags));
+      } catch {
+        // ignore storage failures (private mode, etc.)
+      }
+    }, ALL_FLAGS_ENABLED);
+
+    await stubAuth(context);
+    await stubDataEndpoints(context);
+
+    // Abort external avatar requests so they resolve instantly (404 → initials fallback).
+    // Without this, waitForLoadState("networkidle") hangs waiting for unavatar.io
+    // in CI environments where the connection is slow or external images take too long.
+    await page.route("https://unavatar.io/**", (route) => route.abort());
+    await page.route("https://pbs.twimg.com/**", (route) => route.abort());
 
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.waitForURL("**/dashboard");
+
     await use(page);
   },
 });
 
-export { stubAuth, stubDataEndpoints, mockUser, mockSummary, mockDrafts, mockEngagementDaily, mockActivityDaily, mockLearningLog };
+export { stubAuth, stubDataEndpoints, vercelBypassCookies, mockUser, mockSummary, mockDrafts, mockEngagementDaily, mockActivityDaily, mockLearningLog };
 export { expect } from "@playwright/test";

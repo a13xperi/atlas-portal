@@ -37,7 +37,7 @@ export default function ActionZone({
 
   return (
     <div
-      className={`bg-atlas-nav/95 backdrop-blur-xl border-t border-glass-border px-4 py-3 ${
+      className={`bg-atlas-nav/95 backdrop-blur-xl border-t border-glass-border px-4 sm:px-6 py-3 ${
         disabled ? "opacity-50 pointer-events-none" : ""
       }`}
     >
@@ -49,15 +49,17 @@ export default function ActionZone({
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
             placeholder={textInputPlaceholder}
+            aria-label={textInputPlaceholder}
             className="flex-1 rounded-lg border border-glass-border bg-atlas-surface px-4 py-2.5 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
           />
           <button
             type="button"
             onClick={handleSubmit}
             disabled={!text.trim()}
+            aria-label="Send message"
             className="rounded-lg bg-atlas-teal px-3 py-2.5 text-white transition-colors hover:bg-atlas-teal/80 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       ) : actions && actions.length > 0 ? (

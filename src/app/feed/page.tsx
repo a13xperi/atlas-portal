@@ -7,6 +7,7 @@ import {
   ArrowRight, Clock, Send, Sparkles,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
+import FeatureGate from "@/components/ui/FeatureGate";
 import GlassCard from "@/components/ui/GlassCard";
 import GradientButton from "@/components/ui/GradientButton";
 import { useAuth } from "@/lib/auth";
@@ -23,7 +24,7 @@ function timeAgo(date: Date): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export default function FeedPage() {
+function FeedPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -103,7 +104,7 @@ export default function FeedPage() {
             <button
               type="button"
               onClick={() => router.push("/crafting")}
-              className="shrink-0 rounded-lg bg-atlas-teal px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-atlas-teal/80"
+              className="shrink-0 rounded-lg bg-atlas-teal px-4 py-2 text-sm font-semibold text-atlas-bg transition-all hover:bg-atlas-teal/80"
             >
               Post your first draft
             </button>
@@ -333,4 +334,12 @@ function getGreeting(): string {
   if (h < 12) return "morning";
   if (h < 17) return "afternoon";
   return "evening";
+}
+
+export default function FeedPageGated() {
+  return (
+    <FeatureGate flagKey="feed">
+      <FeedPage />
+    </FeatureGate>
+  );
 }

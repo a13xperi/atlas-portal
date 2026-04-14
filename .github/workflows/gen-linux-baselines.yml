@@ -1,0 +1,87 @@
+name: Gen Linux Visual Baselines
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Base URL to run visual tests against"
+        required: false
+        default: "https://staging-delphi-atlas.vercel.app"
+      commit_message:
+        description: "Commit message for baseline update"
+        required: false
+        default: "chore(visual): update Linux visual regression baselines"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  gen-baselines:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: staging
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Generate Linux visual + responsive baselines
+        # continue-on-error so baseline PNGs are committed even if a non-snapshot
+        # functional test fails (e.g. nav hamburger assertion on a live deployment).
+        continue-on-error: true
+        run: |
+          npx playwright test \
+            --config=playwright-e2e.config.ts \
+            --project=visual \
+            --project=responsive \
+            --update-snapshots
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ inputs.base_url }}
+          VERCEL_PROTECTION_BYPASS: ${{ secrets.VERCEL_PROTECTION_BYPASS }}
+          CI: "true"
+
+      - name: Show generated snapshots
+        run: |
+          echo "=== Snapshot files changed ==="
+          git diff --name-only || true
+          git status --short
+
+      - name: Commit and push to feature branch
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add e2e/visual/visual-regression.spec.ts-snapshots/
+          git add e2e/responsive/responsive.spec.ts-snapshots/
+          if git diff --staged --quiet; then
+            echo "No snapshot changes to commit."
+            echo "branch=" >> $GITHUB_OUTPUT
+          else
+            BRANCH="chore/linux-visual-baselines-$(date +%Y%m%d-%H%M)"
+            git checkout -b "$BRANCH"
+            git commit -m "${{ inputs.commit_message }}"
+            git push origin "$BRANCH"
+            echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+            echo "Linux baselines committed to branch: $BRANCH"
+          fi
+
+      - name: Create PR to staging
+        if: steps.commit.outputs.branch != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --title "chore(visual): Linux visual regression baselines" \
+            --body "Auto-generated Linux visual regression baselines from staging deployment." \
+            --base staging \
+            --head "${{ steps.commit.outputs.branch }}"

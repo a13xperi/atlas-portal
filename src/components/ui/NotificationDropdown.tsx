@@ -17,6 +17,7 @@ export default function NotificationDropdown({
   const [notifications, setNotifications] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const { clearUnread } = useAlertSocket();
 
   useEffect(() => {
@@ -39,6 +40,10 @@ export default function NotificationDropdown({
       return;
     }
 
+    // Remember the element that had focus before the dropdown opened so we
+    // can return focus to it on close (keeps keyboard users anchored).
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         onClose();
@@ -57,6 +62,13 @@ export default function NotificationDropdown({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
+
+      // Return focus to whoever opened us. `preventScroll` avoids jank when
+      // the trigger is below the fold (e.g. in a mobile drawer).
+      const prev = previouslyFocusedRef.current;
+      if (prev && typeof prev.focus === "function") {
+        prev.focus({ preventScroll: true });
+      }
     };
   }, [isOpen, onClose]);
 
@@ -86,7 +98,6 @@ export default function NotificationDropdown({
       ref={dropdownRef}
       id="notification-dropdown"
       role="dialog"
-      aria-modal="false"
       aria-labelledby="notification-dropdown-title"
       className="absolute right-0 top-full z-50 mt-2 max-h-96 w-80 overflow-y-auto rounded-2xl border border-glass-border bg-atlas-nav backdrop-blur-xl shadow-lg"
     >

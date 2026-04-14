@@ -2,50 +2,128 @@ import type { OracleAction, OracleState, OracleStep } from "./oracle-types";
 import { DEFAULT_VOICE_DIMENSIONS } from "./voice-profile-dimensions";
 import { prepareMessages } from "./oracle-messages";
 
+// ── Track metadata — human-first, visible to users ───────────────
+export interface TrackMeta {
+  id: "a" | "b";
+  /** Backend Prisma enum value this UI track maps to. */
+  backendEnum: "TRACK_A" | "TRACK_B";
+  /** Short badge label shown in the onboarding header. */
+  label: string;
+  /** One-sentence "what this track does" tagline — used as badge title. */
+  tagline: string;
+  /** Icon key — TrackBadge picks a lucide icon from this. */
+  iconKey: "sparkles" | "brush";
+  /** Tailwind utility applied to the badge border + text. */
+  accent: string;
+}
+
+/**
+ * Track metadata keyed by local frontend state.track value.
+ *
+ * Frontend "a" = X-first path (Connect X → scan tweets → refine).
+ * Frontend "b" = Manual path (pick a style → dial in from scratch).
+ *
+ * User-facing labels are functional ("X-Powered", "Hand-Crafted"),
+ * not letter-coded, so the copy reads naturally regardless of how the
+ * local state ids map to backend enum values.
+ */
+export const TRACK_META: Record<"a" | "b", TrackMeta> = {
+  a: {
+    id: "a",
+    backendEnum: "TRACK_B",
+    label: "X-Powered",
+    tagline: "I scan your tweets to learn your voice, then you refine.",
+    iconKey: "sparkles",
+    accent: "border-atlas-teal text-atlas-teal",
+  },
+  b: {
+    id: "b",
+    backendEnum: "TRACK_A",
+    label: "Hand-Crafted",
+    tagline: "Pick a starter style and we dial it in together from scratch.",
+    iconKey: "brush",
+    accent: "border-delphi-teal text-delphi-teal",
+  },
+};
+
+export function getTrackMeta(track: OracleState["track"]): TrackMeta | null {
+  if (!track) return null;
+  return TRACK_META[track];
+}
+
+/**
+ * Track-aware continue CTA label for each step. Human-first verbs tell
+ * the user exactly what clicking the button will do next — "Continue" is
+ * the silent fallback.
+ */
+export function getContinueLabel(
+  step: OracleStep,
+  track: OracleState["track"],
+): string {
+  switch (step) {
+    case "TRACK_A_RESULT":
+      return "Looks right — continue";
+    case "TRACK_B_STYLE":
+      return "Use this as my starting point";
+    case "TRACK_B_DIMENSIONS":
+      return "Lock in these dimensions";
+    case "REFERENCES":
+      return track === "a"
+        ? "These are my people"
+        : "These voices feel right";
+    default:
+      return "Continue";
+  }
+}
+
 // ── Step transition map ────────────────────────────────────────────
 const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
-  WELCOME: null, // determined by track selection
+  WELCOME: "CONNECT_X",
   CONNECT_X: "TRACK_A_SCANNING",
-  TRACK_A_HANDLE: "TRACK_A_SCANNING",
   TRACK_A_SCANNING: "TRACK_A_RESULT",
-  TRACK_A_RESULT: "TRACK_A_RATE",
-  TRACK_A_RATE: "REFERENCES",
+  TRACK_A_RESULT: "REFERENCES",
   TRACK_B_STYLE: "TRACK_B_CONTENT",
   TRACK_B_CONTENT: "TRACK_B_DIMENSIONS",
   TRACK_B_DIMENSIONS: "REFERENCES",
-  REFERENCES: "BLEND",
-  BLEND: "TOPICS",
-  TOPICS: "HANDOFF",
+  REFERENCES: "HANDOFF",
+  BLEND: "HANDOFF",
+  TOPICS: "HANDOFF", // legacy fallback, step skipped in flow
   HANDOFF: null, // terminal
 };
+
+export function getOnboardingCompletionHref(
+  track: OracleState["track"]
+): string {
+  if (track === "b") {
+    return "/voice-lab?prompt=complete-voice-setup";
+  }
+
+  return "/dashboard?banner=voice-calibrated";
+}
 
 // ── Can-advance predicates ─────────────────────────────────────────
 export function canAdvance(state: OracleState): boolean {
   switch (state.currentStep) {
     case "WELCOME":
-      return state.track !== null;
+      return true;
     case "CONNECT_X":
       return state.xConnected && state.xHandle.trim().length > 0;
-    case "TRACK_A_HANDLE":
-      return state.xHandle.trim().length > 0;
     case "TRACK_A_SCANNING":
       return state.calibrationResult !== null;
     case "TRACK_A_RESULT":
-      return state.displayName.trim().length >= 2;
-    case "TRACK_A_RATE":
       return true;
     case "TRACK_B_STYLE":
       return state.selectedStyle !== null;
     case "TRACK_B_CONTENT":
       return true; // content signals are optional
     case "TRACK_B_DIMENSIONS":
-      return state.displayName.trim().length >= 2;
+      return true;
     case "REFERENCES":
-      return state.selectedRefs.length >= 2;
+      return state.selectedRefs.length >= 1;
     case "BLEND":
       return true;
     case "TOPICS":
-      return state.selectedTopics.length >= 1;
+      return true; // step skipped in flow, kept for type exhaustiveness
     case "HANDOFF":
       return false; // terminal
   }
@@ -57,13 +135,12 @@ export function initialOracleState(): OracleState {
     currentStep: "WELCOME",
     track: null,
     messages: [],
-    pendingMessages: prepareMessages("WELCOME"),
+    pendingMessages: prepareMessages("WELCOME", null),
     isTyping: false,
     xHandle: "",
     xConnected: false,
     calibrationResult: null,
     dimensions: DEFAULT_VOICE_DIMENSIONS,
-    displayName: "",
     selectedStyle: null,
     selectedRefs: [],
     selfPercentage: 50,
@@ -93,7 +170,7 @@ export function oracleReducer(
         track,
         currentStep: nextStep,
         messages: [...state.messages, userMsg],
-        pendingMessages: prepareMessages(nextStep),
+        pendingMessages: prepareMessages(nextStep, track),
         selfPercentage: track === "a" ? 50 : 30,
       };
     }
@@ -119,7 +196,7 @@ export function oracleReducer(
         messages: userMsg
           ? [...state.messages, userMsg]
           : state.messages,
-        pendingMessages: prepareMessages(next),
+        pendingMessages: prepareMessages(next, state.track),
         stepHistory: newHistory,
       };
     }
@@ -149,9 +226,6 @@ export function oracleReducer(
 
     case "SET_DIMENSIONS":
       return { ...state, dimensions: action.dimensions };
-
-    case "SET_DISPLAY_NAME":
-      return { ...state, displayName: action.name };
 
     case "SET_STYLE":
       return { ...state, selectedStyle: action.style };

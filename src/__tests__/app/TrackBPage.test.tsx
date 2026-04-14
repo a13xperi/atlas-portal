@@ -1,23 +1,23 @@
 import "@testing-library/jest-dom";
+import { render } from "@testing-library/react";
+import React from "react";
 
-const mockRedirect = jest.fn();
+const mockReplace = jest.fn();
 
 jest.mock("next/navigation", () => ({
-  redirect: (...args: unknown[]) => {
-    mockRedirect(...args);
-    throw new Error("NEXT_REDIRECT");
-  },
+  useRouter: () => ({ replace: mockReplace }),
+  redirect: jest.fn(),
 }));
 
-const TrackBPage = require("@/app/onboarding/track-b/page").default;
+const TrackBStarter = require("@/app/onboarding/track-b/page").default;
 
 describe("TrackBRedirect", () => {
   beforeEach(() => {
-    mockRedirect.mockClear();
+    mockReplace.mockClear();
   });
 
-  it("redirects to /onboarding", () => {
-    expect(() => TrackBPage()).toThrow("NEXT_REDIRECT");
-    expect(mockRedirect).toHaveBeenCalledWith("/onboarding");
+  it("renders without crashing and calls router.replace on mount", () => {
+    render(React.createElement(TrackBStarter));
+    expect(mockReplace).toHaveBeenCalledWith("/onboarding");
   });
 });
