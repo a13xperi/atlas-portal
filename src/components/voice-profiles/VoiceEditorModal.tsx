@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Check, Loader2, Search } from "lucide-react";
 import Modal from "@/components/ui/Modal";
+import BlendPreviewPanel from "@/components/voice-profiles/BlendPreviewPanel";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import { api, type TwitterFollow } from "@/lib/api";
 import {
@@ -10,6 +11,7 @@ import {
   VoiceDimensionField,
   VoiceDimensions,
 } from "@/lib/voice-profile-dimensions";
+import type { BlendPreviewRequest } from "@/types/voice-profile-preview";
 
 const VOICE_PRESETS: Array<{ label: string; values: VoiceDimensions }> = [
   {
@@ -34,6 +36,10 @@ interface VoiceEditorModalProps {
   mode: EditorMode;
   initialName?: string;
   initialDimensions?: VoiceDimensions;
+  previewContext?: {
+    blendVoices?: BlendPreviewRequest["blend"]["voices"];
+    personalHandle?: string | null;
+  };
   saveDisabled?: boolean;
   saveNotice?: string;
   onSave: (name: string, dimensions: VoiceDimensions, selectedFollow: TwitterFollow | null) => Promise<void>;
@@ -57,6 +63,7 @@ export default function VoiceEditorModal({
   mode,
   initialName = "",
   initialDimensions,
+  previewContext,
   saveDisabled = false,
   saveNotice,
   onSave,
@@ -175,6 +182,33 @@ export default function VoiceEditorModal({
       : "Configure your voice dimensions";
 
   const showPickStep = mode === "create" && step === "pick";
+  const previewBlend = useMemo<BlendPreviewRequest["blend"] | null>(() => {
+    if (showPickStep) return null;
+
+    const personalHandle =
+      previewContext?.personalHandle?.replace(/^@/, "") || "myvoice";
+
+    if (mode === "create") {
+      if (!selectedFollow?.handle) return null;
+      return {
+        voices: [
+          { handle: personalHandle, percentage: 50 },
+          { handle: selectedFollow.handle, percentage: 50 },
+        ],
+        dimensions,
+      };
+    }
+
+    if (mode === "edit-personal") {
+      return {
+        voices: [{ handle: personalHandle, percentage: 100 }],
+        dimensions,
+      };
+    }
+
+    if (!previewContext?.blendVoices?.length) return null;
+    return { voices: previewContext.blendVoices, dimensions };
+  }, [dimensions, mode, previewContext, selectedFollow, showPickStep]);
 
   return (
     <Modal
@@ -359,6 +393,8 @@ export default function VoiceEditorModal({
             interactive
             onChange={handleDimensionChange}
           />
+
+          {previewBlend && <BlendPreviewPanel blend={previewBlend} />}
 
           {saveNotice && (
             <p className="rounded-2xl border border-glass-border/70 bg-atlas-surface/50 px-4 py-3 text-sm text-atlas-text-secondary">

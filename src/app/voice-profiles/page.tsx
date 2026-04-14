@@ -268,6 +268,18 @@ export default function VoiceProfilesPage() {
     () => getActiveRecipeLabel(activeVoiceId, blends),
     [activeVoiceId, blends]
   );
+  const editorPreviewContext = useMemo(
+    () => ({
+      personalHandle: user?.handle ?? null,
+      blendVoices: selectedBlendForEditor?.blend.voices.map((voice) => ({
+        handle:
+          voice.referenceVoice?.handle ??
+          (voice.referenceVoiceId ? voice.label : user?.handle ?? voice.label),
+        percentage: voice.percentage,
+      })),
+    }),
+    [selectedBlendForEditor, user?.handle]
+  );
 
   const handlePreviewBlend = useCallback(
     async (blend: SavedBlend, dimensions: VoiceDimensions) => {
@@ -1099,6 +1111,7 @@ export default function VoiceProfilesPage() {
               ? personalDimensions
               : selectedBlendForEditor?.dimensions ?? DEFAULT_VOICE_DIMENSIONS
           }
+          previewContext={editorPreviewContext}
           saveDisabled={editorMode === "edit-blend"}
           saveNotice={
             editorMode === "edit-blend"
