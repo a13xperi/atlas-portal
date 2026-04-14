@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { GitMerge, Loader2, Sparkles } from "lucide-react";
+import VoicePreviewPlayer from "./VoicePreviewPlayer";
 import { api } from "@/lib/api";
 import {
   getNotableVoiceDimensions,
@@ -258,9 +259,14 @@ export default function VoiceCard({
         )}
 
         {previewText && !previewError && (
-          <p className="mt-2 rounded-lg border border-glass-border bg-atlas-bg/40 px-2 py-1.5 text-[11px] italic text-atlas-text-secondary">
-            {previewText}
-          </p>
+          <div className="mt-2 rounded-lg border border-glass-border bg-atlas-bg/40 px-2 py-1.5">
+            <p className="text-[11px] italic text-atlas-text-secondary">
+              {previewText}
+            </p>
+            <div className="mt-2">
+              <VoicePreviewPlayer text={previewText} />
+            </div>
+          </div>
         )}
       </div>
 

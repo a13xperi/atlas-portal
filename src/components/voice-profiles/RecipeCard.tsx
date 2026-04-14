@@ -10,6 +10,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import DimensionBar from "@/components/ui/DimensionBar";
+import VoicePreviewPlayer from "./VoicePreviewPlayer";
 import type { BlendVoice, SavedBlend } from "@/lib/api";
 import type { VoiceDimensionSnapshot } from "@/lib/voice-recipes";
 import {
@@ -349,9 +350,14 @@ export default function RecipeCard({
 
       {previewText || previewError ? (
         <div className="mt-4 rounded-2xl border border-glass-border bg-atlas-surface/40 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-text-muted">
-            Sample tweet
-          </p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-text-muted">
+              Sample tweet
+            </p>
+            {previewText && !previewError && (
+              <VoicePreviewPlayer text={previewText} />
+            )}
+          </div>
           {previewError ? (
             <p role="alert" className="mt-2 text-sm text-atlas-error">
               {previewError}
