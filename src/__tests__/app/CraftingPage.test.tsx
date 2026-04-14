@@ -49,6 +49,7 @@ jest.mock("@/lib/api", () => ({
       refine: jest.fn(),
       schedule: jest.fn(),
       postToX: jest.fn(),
+      enqueue: jest.fn(),
     },
     analytics: {
       summary: jest.fn(),
@@ -84,6 +85,7 @@ const mockedApi = api as unknown as {
     refine: jest.Mock;
     schedule: jest.Mock;
     postToX: jest.Mock;
+    enqueue: jest.Mock;
   };
   analytics: {
     summary: jest.Mock;
@@ -124,6 +126,7 @@ describe("CraftingPage", () => {
     mockedApi.drafts.refine.mockReset();
     mockedApi.drafts.schedule.mockReset();
     mockedApi.drafts.postToX.mockReset();
+    mockedApi.drafts.enqueue.mockReset();
     mockedApi.auth.x.status.mockReset();
     mockedApi.auth.x.authorize.mockReset();
     mockedApi.analytics.summary.mockReset();
@@ -509,5 +512,69 @@ describe("CraftingPage", () => {
     await screen.findByRole("textbox", { name: "Generated draft" });
 
     expect(screen.queryByRole("button", { name: "Schedule" })).not.toBeInTheDocument();
+  });
+
+  it("shows multi-angle button after pasting substantial text and opens panel on click", async () => {
+    render(<CraftingPage />);
+
+    fireEvent.change(screen.getByPlaceholderText("Paste a tweet idea or link…"), {
+      target: { value: "a".repeat(600) },
+    });
+
+    const multiAngleButton = await screen.findByRole("button", {
+      name: "Generate Multi-Angle Tweets",
+    });
+    expect(multiAngleButton).toBeInTheDocument();
+
+    mockedApi.drafts.generate.mockResolvedValue({ draft: createDraft() });
+
+    fireEvent.click(multiAngleButton);
+
+    await waitFor(() =>
+      expect(screen.getByText("Multi-Angle Tweets")).toBeInTheDocument()
+    );
+  });
+
+  it("batch approves multi-angle drafts and refreshes the sidebar", async () => {
+    render(<CraftingPage />);
+
+    fireEvent.change(screen.getByPlaceholderText("Paste a tweet idea or link…"), {
+      target: { value: "a".repeat(600) },
+    });
+
+    const multiAngleButton = await screen.findByRole("button", {
+      name: "Generate Multi-Angle Tweets",
+    });
+
+    mockedApi.drafts.generate.mockResolvedValue({
+      draft: createDraft({ id: "draft-angle-1", content: "Angle draft content" }),
+    });
+    mockedApi.drafts.update.mockResolvedValue({
+      draft: createDraft({ id: "draft-angle-1", status: "APPROVED" }),
+    });
+    mockedApi.drafts.enqueue.mockResolvedValue({
+      draft: createDraft({ id: "draft-angle-1", status: "APPROVED" }),
+    });
+
+    fireEvent.click(multiAngleButton);
+
+    await waitFor(() =>
+      expect(screen.getAllByText("Angle draft content").length).toBeGreaterThan(0)
+    );
+
+    const batchApproveButton = screen.getByRole("button", {
+      name: "Approve 5 to Queue",
+    });
+    fireEvent.click(batchApproveButton);
+
+    await waitFor(() =>
+      expect(mockedApi.drafts.update).toHaveBeenCalledWith(
+        "draft-angle-1",
+        expect.objectContaining({ status: "APPROVED" })
+      )
+    );
+    await waitFor(() =>
+      expect(mockedApi.drafts.enqueue).toHaveBeenCalledWith("draft-angle-1")
+    );
   });
 });
