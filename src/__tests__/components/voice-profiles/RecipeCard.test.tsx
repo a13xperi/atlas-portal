@@ -11,28 +11,34 @@ import type { VoiceDimensionSnapshot } from "@/lib/voice-recipes";
 // framer-motion: replace animated wrappers with plain DOM elements
 jest.mock("framer-motion", () => {
   const React = require("react");
-  return {
-    AnimatePresence: ({ children }: { children: React.ReactNode }) => (
-      <>{children}</>
+  const AnimatePresence = ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  );
+  AnimatePresence.displayName = "AnimatePresence";
+
+  const MotionDiv = React.forwardRef(
+    (
+      {
+        children,
+        initial: _initial,
+        animate: _animate,
+        exit: _exit,
+        transition: _transition,
+        ...rest
+      }: Record<string, unknown> & { children?: React.ReactNode },
+      ref: React.Ref<HTMLDivElement>,
+    ) => (
+      <div ref={ref} {...rest}>
+        {children}
+      </div>
     ),
+  );
+  MotionDiv.displayName = "MotionDiv";
+
+  return {
+    AnimatePresence,
     motion: {
-      div: React.forwardRef(
-        (
-          {
-            children,
-            initial: _initial,
-            animate: _animate,
-            exit: _exit,
-            transition: _transition,
-            ...rest
-          }: Record<string, unknown> & { children?: React.ReactNode },
-          ref: React.Ref<HTMLDivElement>,
-        ) => (
-          <div ref={ref} {...rest}>
-            {children}
-          </div>
-        ),
-      ),
+      div: MotionDiv,
     },
     useCycle: <T,>(...items: T[]) => {
       let index = 0;
