@@ -136,6 +136,10 @@ export default function RecipeCard({
   userHandle,
 }: RecipeCardProps) {
   const [isExpanded, toggleExpanded] = useCycle(false, true);
+  const voices = blend.voices;
+  const total = voices.reduce((sum, voice) => sum + (voice.percentage ?? 0), 0) || 1;
+  const getDisplayPercentage = (voice: BlendVoice) =>
+    Math.round(((voice.percentage ?? 0) / total) * 100);
 
   return (
     <article
@@ -190,7 +194,7 @@ export default function RecipeCard({
             Blend
           </p>
           <p className="mt-1 text-lg font-semibold text-atlas-text">
-            {blend.voices.reduce((sum, voice) => sum + voice.percentage, 0)}%
+            100%
           </p>
         </div>
       </div>
@@ -201,29 +205,29 @@ export default function RecipeCard({
             Composition
           </p>
           <p className="text-xs text-atlas-text-secondary">
-            {blend.voices.map((voice) => `${voice.percentage}% ${voice.label}`).join(" + ")}
+            {voices.map((voice) => `${getDisplayPercentage(voice)}% ${voice.label}`).join(" + ")}
           </p>
         </div>
         <div className="mt-3 overflow-hidden rounded-full border border-glass-border bg-atlas-bg/70">
           <div className="flex h-4">
-            {blend.voices.map((voice, index) => (
+            {voices.map((voice, index) => (
               <div
                 key={`${blend.id}-${voice.label}`}
                 aria-hidden="true"
                 className={SEGMENT_STYLES[index % SEGMENT_STYLES.length].bar}
-                style={{ width: `${voice.percentage}%` }}
+                style={{ width: `${getDisplayPercentage(voice)}%` }}
               />
             ))}
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
-          {blend.voices.map((voice, index) => (
+          {voices.map((voice, index) => (
             <span
               key={`${blend.id}-${voice.label}-pill`}
               className={`inline-flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-3 text-xs font-medium ${SEGMENT_STYLES[index % SEGMENT_STYLES.length].pill}`}
             >
               <VoiceAvatar voice={voice} userHandle={userHandle} size={20} />
-              {voice.percentage}% {voice.label}
+              {getDisplayPercentage(voice)}% {voice.label}
             </span>
           ))}
         </div>
