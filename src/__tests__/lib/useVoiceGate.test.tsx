@@ -113,6 +113,51 @@ describe("useVoiceGate", () => {
     expect(result.current.tweetsRemaining).toBe(0);
   });
 
+  it("bypasses insufficient_tweets gate when existingDraftCount > 0", async () => {
+    mockMe.mockResolvedValue({
+      user: {
+        id: "1",
+        handle: "alice",
+        role: "ANALYST",
+        voiceProfile: {
+          id: "vp-1",
+          userId: "1",
+          humor: 50,
+          formality: 50,
+          brevity: 50,
+          contrarianTone: 50,
+          maturity: "BEGINNER",
+          tweetsAnalyzed: 0,
+        },
+      },
+    });
+
+    const { result } = renderHook(
+      () => useVoiceGate({ existingDraftCount: 5 }),
+      { wrapper }
+    );
+
+    await waitFor(() => expect(result.current.tweetsAnalyzed).toBe(0));
+    // Should NOT be blocked because the user has existing drafts
+    expect(result.current.isBlocked).toBe(false);
+    expect(result.current.reason).toBeNull();
+  });
+
+  it("does NOT bypass no_profile gate even when existingDraftCount > 0", async () => {
+    mockMe.mockResolvedValue({
+      user: { id: "1", handle: "alice", role: "ANALYST", voiceProfile: null },
+    });
+
+    const { result } = renderHook(
+      () => useVoiceGate({ existingDraftCount: 5 }),
+      { wrapper }
+    );
+
+    await waitFor(() => expect(result.current.isBlocked).toBe(true));
+    // no_profile is never bypassed — the user genuinely has no voice data
+    expect(result.current.reason).toBe("no_profile");
+  });
+
   it("starts blocked while auth is still loading (no user yet)", () => {
     // Auth.me() never resolves — simulates the brief mount window before
     // session restore completes. The gate should fail closed: blocked.
