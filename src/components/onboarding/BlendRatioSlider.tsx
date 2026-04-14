@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import DimensionBar from "@/components/ui/DimensionBar";
+import { resolveVoiceAvatar, type MinimalUser } from "@/lib/voice-avatar";
 
 export interface BlendReference {
   name: string;
@@ -24,6 +25,7 @@ export interface BlendRatioSliderProps {
    * Weights are normalized so they sum to 100 (share of the reference portion).
    */
   onReferenceWeightsChange?: (weights: number[]) => void;
+  user?: MinimalUser | null;
 }
 
 export default function BlendRatioSlider({
@@ -32,6 +34,7 @@ export default function BlendRatioSlider({
   references,
   referenceNames,
   onReferenceWeightsChange,
+  user,
 }: BlendRatioSliderProps) {
   const refs: BlendReference[] =
     references && references.length > 0
@@ -112,11 +115,7 @@ export default function BlendRatioSlider({
 
           {/* My voice row */}
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 shrink-0 rounded-full bg-atlas-teal/20 border border-atlas-teal/40 flex items-center justify-center">
-              <span className="text-[10px] font-semibold text-atlas-teal">
-                ME
-              </span>
-            </div>
+            <SelfAvatar user={user} />
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between text-sm mb-1">
                 <span className="text-atlas-text truncate">My voice</span>
@@ -185,6 +184,32 @@ export default function BlendRatioSlider({
         </div>
       )}
     </div>
+  );
+}
+
+function SelfAvatar({ user }: { user?: MinimalUser | null }) {
+  const [errored, setErrored] = useState(false);
+  const url = resolveVoiceAvatar({ label: "My voice" }, user);
+  const initial = (user?.displayName || user?.handle || "ME").trim().charAt(0).toUpperCase();
+
+  if (!url || errored) {
+    return (
+      <div className="h-8 w-8 shrink-0 rounded-full bg-atlas-teal/20 border border-atlas-teal/40 flex items-center justify-center">
+        <span className="text-[10px] font-semibold text-atlas-teal">
+          {initial}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt="My voice"
+      onError={() => setErrored(true)}
+      className="h-8 w-8 shrink-0 rounded-full object-cover border border-atlas-teal/40 bg-atlas-surface"
+    />
   );
 }
 

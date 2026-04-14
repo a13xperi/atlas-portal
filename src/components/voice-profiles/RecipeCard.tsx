@@ -17,6 +17,7 @@ import {
   type VoiceDimensions,
   VOICE_DIMENSION_SECTIONS,
 } from "@/lib/voice-profile-dimensions";
+import { resolveVoiceAvatar, voiceInitials, type MinimalUser } from "@/lib/voice-avatar";
 
 interface RecipeCardProps {
   blend: SavedBlend;
@@ -31,32 +32,22 @@ interface RecipeCardProps {
   previewError?: string | null;
   previewLoading?: boolean;
   previewText?: string;
-  userHandle?: string;
-}
-
-function getVoiceAvatarUrl(voice: BlendVoice, userHandle?: string): string {
-  if (voice.referenceVoice?.avatarUrl) return voice.referenceVoice.avatarUrl;
-  if (voice.referenceVoice?.handle) {
-    return `https://unavatar.io/twitter/${voice.referenceVoice.handle.replace("@", "")}`;
-  }
-  // User's own voice (no referenceVoice attached)
-  if (userHandle) return `https://unavatar.io/twitter/${userHandle.replace("@", "")}`;
-  return "";
+  user?: MinimalUser | null;
 }
 
 function VoiceAvatar({
   voice,
-  userHandle,
+  user,
   size = 24,
   className = "",
 }: {
   voice: BlendVoice;
-  userHandle?: string;
+  user?: MinimalUser | null;
   size?: number;
   className?: string;
 }) {
-  const url = getVoiceAvatarUrl(voice, userHandle);
-  const initials = voice.label.charAt(0).toUpperCase();
+  const url = resolveVoiceAvatar(voice, user);
+  const initials = voiceInitials(voice, user);
 
   if (!url) {
     return (
@@ -133,7 +124,7 @@ export default function RecipeCard({
   previewError,
   previewLoading = false,
   previewText,
-  userHandle,
+  user,
 }: RecipeCardProps) {
   const [isExpanded, toggleExpanded] = useCycle(false, true);
   const totalWeight = blend.voices.reduce((sum, voice) => sum + voice.percentage, 0) || 1;
@@ -167,7 +158,7 @@ export default function RecipeCard({
                 <VoiceAvatar
                   key={`${blend.id}-${voice.id ?? voice.label}-cluster`}
                   voice={voice}
-                  userHandle={userHandle}
+                  user={user}
                   size={28}
                   className={`border-2 border-atlas-bg ring-0 ${
                     reverseIndex === blend.voices.length - 1 ? "" : "-ml-2"
@@ -223,7 +214,7 @@ export default function RecipeCard({
               key={`${blend.id}-${voice.label}-pill`}
               className={`inline-flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-3 text-xs font-medium ${SEGMENT_STYLES[index % SEGMENT_STYLES.length].pill}`}
             >
-              <VoiceAvatar voice={voice} userHandle={userHandle} size={20} />
+              <VoiceAvatar voice={voice} user={user} size={20} />
               {Math.round((voice.percentage / totalWeight) * 100)}% {voice.label}
             </span>
           ))}
