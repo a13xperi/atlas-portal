@@ -69,6 +69,18 @@ export default function OracleChat() {
     }
   }, [user?.handle, state.xHandle]);
 
+  // Default blend name when entering the name step
+  useEffect(() => {
+    if (state.currentStep === "NAME_VOICE" && !state.blendName) {
+      const defaultName = `My voice - ${new Date().toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })}`;
+      dispatch({ type: "SET_BLEND_NAME", name: defaultName });
+    }
+  }, [state.currentStep, state.blendName]);
+
   // Deep-link pre-select: /onboarding/track-a|track-b stores the chosen
   // track in sessionStorage before redirecting here. Pick it up on mount
   // so the chat skips the welcome prompt and enters the right path.
@@ -224,11 +236,11 @@ export default function OracleChat() {
             }
           }
         }
-        if (step === "BLEND") {
+        if (step === "NAME_VOICE") {
           setBlendSaveStatus("saving");
           try {
             const result = await api.voice.createBlend(
-              state.track === "a" ? "Onboarding blend" : "My starting blend",
+              state.blendName.trim() || "My voice",
               buildReferenceBlendVoices(
                 state.selectedRefs,
                 state.selfPercentage,
@@ -311,6 +323,7 @@ export default function OracleChat() {
     if (step === "REFERENCES")
       echo = `Selected ${state.selectedRefs.length} references`;
     if (step === "BLEND") echo = `${state.selfPercentage}% my voice`;
+    if (step === "NAME_VOICE") echo = state.blendName;
     if (step === "TOPICS") echo = state.selectedTopics.join(", ");
 
     if (step === "TOPICS") {
@@ -491,6 +504,21 @@ export default function OracleChat() {
           // BLEND step is skipped in onboarding — advanced blending lives in Voice Labs.
           return null;
 
+        case "voice-name-input":
+          return (
+            <div className="bg-atlas-surface rounded-2xl p-4">
+              <input
+                type="text"
+                value={state.blendName}
+                onChange={(e) =>
+                  dispatch({ type: "SET_BLEND_NAME", name: e.target.value })
+                }
+                placeholder="Name your voice"
+                className="w-full rounded-xl bg-atlas-bg border border-glass-border px-4 py-3 text-sm text-atlas-text placeholder:text-atlas-text-muted focus:outline-none focus:border-atlas-teal"
+              />
+            </div>
+          );
+
         case "topics":
           return (
             <TopicPicker
@@ -615,6 +643,7 @@ export default function OracleChat() {
       "TRACK_B_STYLE",
       "TRACK_B_DIMENSIONS",
       "REFERENCES",
+      "NAME_VOICE",
     ];
 
     if (continueSteps.includes(step)) {

@@ -85,8 +85,9 @@ const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
   TRACK_B_STYLE: "TRACK_B_CONTENT",
   TRACK_B_CONTENT: "TRACK_B_DIMENSIONS",
   TRACK_B_DIMENSIONS: "REFERENCES",
-  REFERENCES: "HANDOFF",
+  REFERENCES: "NAME_VOICE",
   BLEND: "HANDOFF",
+  NAME_VOICE: "HANDOFF",
   TOPICS: "HANDOFF", // legacy fallback, step skipped in flow
   HANDOFF: null, // terminal
 };
@@ -122,6 +123,8 @@ export function canAdvance(state: OracleState): boolean {
       return state.selectedRefs.length >= 1;
     case "BLEND":
       return true;
+    case "NAME_VOICE":
+      return state.blendName.trim().length > 0;
     case "TOPICS":
       return true; // step skipped in flow, kept for type exhaustiveness
     case "HANDOFF":
@@ -145,6 +148,7 @@ export function initialOracleState(): OracleState {
     selectedRefs: [],
     selfPercentage: 50,
     selectedTopics: [],
+    blendName: "",
     stepHistory: [],
   };
 }
@@ -238,6 +242,9 @@ export function oracleReducer(
 
     case "SET_TOPICS":
       return { ...state, selectedTopics: action.topics };
+
+    case "SET_BLEND_NAME":
+      return { ...state, blendName: action.name };
 
     case "ENQUEUE_MESSAGES":
       return {

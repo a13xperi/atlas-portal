@@ -122,6 +122,16 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
     ),
   ],
 
+  NAME_VOICE: [
+    msg(
+      "oracle",
+      "What should we call this voice? You can rename it anytime.",
+      {
+        component: { type: "voice-name-input" },
+      }
+    ),
+  ],
+
   TOPICS: [
     msg(
       "oracle",
