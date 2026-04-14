@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom";
 import { renderHook, act, waitFor } from "@testing-library/react";
+import { setTag, setUser } from "@sentry/nextjs";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { ReactNode } from "react";
@@ -55,6 +56,12 @@ describe("useAuth restores session", () => {
 
     expect(mockMe).toHaveBeenCalled();
     expect(result.current.user).toEqual(mockUser);
+    expect(setUser).toHaveBeenCalledWith({
+      id: "1",
+      username: "alice",
+      email: undefined,
+    });
+    expect(setTag).toHaveBeenCalledWith("user_role", "analyst");
   });
 
   it("tries refresh when initial me fails, then retries me", async () => {
@@ -120,5 +127,7 @@ describe("logout", () => {
     });
 
     await waitFor(() => expect(result.current.user).toBeNull());
+    expect(setUser).toHaveBeenLastCalledWith(null);
+    expect(setTag).toHaveBeenLastCalledWith("onboarding_track", "none");
   });
 });

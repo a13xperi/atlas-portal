@@ -1,5 +1,6 @@
 import React from "react";
 import "@testing-library/jest-dom";
+import { captureException } from "@sentry/nextjs";
 import { render, screen } from "@testing-library/react";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
@@ -30,6 +31,14 @@ describe("ErrorBoundary", () => {
 
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    expect(captureException).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        extra: expect.objectContaining({
+          componentStack: expect.any(String),
+        }),
+      }),
+    );
 
     consoleErrorSpy.mockRestore();
   });

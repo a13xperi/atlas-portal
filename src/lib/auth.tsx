@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { api, OnboardingTrack, User, VoiceProfile, setAccessToken } from "./api";
+import { syncSentryUser } from "./sentry";
 
 // Session flag cookie — tells the middleware the user has logged in.
 // The real auth token is cross-origin (HttpOnly on the backend domain),
@@ -38,7 +39,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Check session on mount via cookie (HttpOnly — no localStorage needed)
   useEffect(() => {
     api.auth.me()
-      .then((res) => { setUser(res.user); setSessionCookie(true); })
+      .then((res) => {
+        setUser(res.user);
+        syncSentryUser(res.user);
+        setSessionCookie(true);
+      })
       .catch(async () => {
         // Token may be expired — try refresh
         try {
@@ -48,12 +53,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           const me = await api.auth.me();
           setUser(me.user);
+          syncSentryUser(me.user);
           setSessionCookie(true);
           return;
         } catch {
           // Refresh also failed — not authenticated
         }
         setUser(null);
+        syncSentryUser(null);
         setSessionCookie(false);
       })
       .finally(() => setLoading(false));
@@ -67,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const hasSession = document.cookie.split(";").some((c) => c.trim().startsWith("atlas_session=1"));
       if (!hasSession) {
         setUser(null);
+        syncSentryUser(null);
         setAccessToken(null);
       }
     };
@@ -81,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const me = await api.auth.me();
     setUser(me.user);
+    syncSentryUser(me.user);
     setSessionCookie(true);
   }, []);
 
@@ -90,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(res.token);
       const me = await api.auth.me();
       setUser(me.user);
+      syncSentryUser(me.user);
       setSessionCookie(true);
     }
   }, []);
@@ -102,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setAccessToken(null);
     setUser(null);
+    syncSentryUser(null);
     setSessionCookie(false);
     // Hard redirect — prevents bfcache restoring stale protected pages after logout
     window.location.replace("/");

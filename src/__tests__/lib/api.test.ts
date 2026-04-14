@@ -1,3 +1,4 @@
+import { captureException } from "@sentry/nextjs";
 import { api } from "@/lib/api";
 
 const API_URL = "http://localhost:3001";
@@ -130,6 +131,27 @@ describe("error handling", () => {
     const result = await api.auth.login("test@test.com", "pass");
     expect(result).toEqual({ user: { id: "1" }, token: "tok", refresh_token: "rt" });
     expect(fetch).toHaveBeenCalledTimes(2);
+  }, 15000);
+
+  it("captures final network failures in Sentry after exhausting retries", async () => {
+    global.fetch = jest.fn().mockRejectedValue(new Error("Network offline"));
+
+    await expect(api.auth.login("test@test.com", "pass")).rejects.toThrow("Network offline");
+
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(captureException).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        tags: expect.objectContaining({
+          surface: "api-client",
+        }),
+        extra: expect.objectContaining({
+          method: "POST",
+          path: "/api/auth/login",
+          maxRetries: 3,
+        }),
+      }),
+    );
   }, 15000);
 });
 

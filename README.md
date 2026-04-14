@@ -47,6 +47,12 @@ npm run test
 | Production | https://delphi-atlas.vercel.app | https://api-production-9bef.up.railway.app |
 | Staging | https://staging-delphi-atlas.vercel.app | https://api-staging-287d.up.railway.app |
 
+## Sentry
+
+- Client, server, and edge runtimes are instrumented through the root Sentry config files.
+- Set `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, and `SENTRY_AUTH_TOKEN` in Vercel to enable event delivery and source-map uploads.
+- Optional public sample-rate overrides are documented in `.env.example`.
+
 ## Branching
 
 - `main` → Production (protected, PR + CI required)

@@ -319,7 +319,23 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     } catch (e) {
       clearTimeout(timeout);
       if (e instanceof ApiError && !RETRYABLE_STATUSES.has(e.statusCode)) throw e;
-      if (attempt === MAX_RETRIES - 1) throw e;
+      if (attempt === MAX_RETRIES - 1) {
+        if (!(e instanceof ApiError)) {
+          Sentry.captureException(e, {
+            tags: {
+              surface: "api-client",
+            },
+            extra: {
+              apiUrl: API_URL,
+              attempt: attempt + 1,
+              maxRetries: MAX_RETRIES,
+              method,
+              path,
+            },
+          });
+        }
+        throw e;
+      }
       // Network errors and retryable status codes fall through to retry
     } finally {
       clearTimeout(timeout);
