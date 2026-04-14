@@ -79,8 +79,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (res.token) {
       setAccessToken(res.token);
     }
+    // Optimistic: set user immediately from login response so role-gated
+    // UI (admin dashboard, etc.) renders correctly before /me resolves
+    if (res.user) setUser(res.user as any);
     const me = await api.auth.me();
-    setUser(me.user);
+    setUser(me.user); // authoritative — includes voiceProfile
     setSessionCookie(true);
   }, []);
 
