@@ -69,6 +69,7 @@ export default function OracleChat() {
   const [blendSaveStatus, setBlendSaveStatus] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
+  const [scanError, setScanError] = useState<string | null>(null);
   // Tracks the persisted blend so future PATCH operations can target it.
   const [, setSavedBlendId] = useState<string | null>(null);
 
@@ -415,6 +416,7 @@ export default function OracleChat() {
       return;
 
     calibratingRef.current = true;
+    setScanError(null);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30_000);
 
@@ -424,6 +426,7 @@ export default function OracleChat() {
           signal: controller.signal,
         });
         clearTimeout(timeoutId);
+        setScanError(null);
 
         dispatch({
           type: "SET_CALIBRATION",
@@ -490,6 +493,8 @@ export default function OracleChat() {
           dimensions: TRACK_A_INITIAL_DIMENSIONS,
         });
         const reason = err instanceof Error ? err.message : "something went wrong";
+        setScanError(reason);
+        dispatch({ type: "ADVANCE", payload: undefined });
         dispatch({
           type: "ENQUEUE_MESSAGES",
           messages: [
@@ -501,7 +506,6 @@ export default function OracleChat() {
             },
           ],
         });
-        dispatch({ type: "ADVANCE", payload: undefined });
       } finally {
         calibratingRef.current = false;
       }
@@ -521,16 +525,28 @@ export default function OracleChat() {
           return (
             <div className="bg-atlas-surface rounded-2xl p-4 space-y-2">
               <div className="flex items-center gap-2">
-                {state.calibrationResult ? (
-                  <CheckCircle className="h-4 w-4 text-atlas-teal" />
+                {scanError ? (
+                  <>
+                    <span className="text-red-400" aria-hidden="true">⚠</span>
+                    <span className="text-sm text-red-400">
+                      {scanError}
+                    </span>
+                  </>
+                ) : state.calibrationResult ? (
+                  <>
+                    <CheckCircle className="h-4 w-4 text-atlas-teal" />
+                    <span className="text-sm text-atlas-text-secondary">
+                      {`Calibrated from ${state.calibrationResult.tweetsAnalyzed} tweets`}
+                    </span>
+                  </>
                 ) : (
-                  <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
+                    <span className="text-sm text-atlas-text-secondary">
+                      {`Scanning @${state.xHandle}...`}
+                    </span>
+                  </>
                 )}
-                <span className="text-sm text-atlas-text-secondary">
-                  {state.calibrationResult
-                    ? `Calibrated from ${state.calibrationResult.tweetsAnalyzed} tweets`
-                    : `Scanning @${state.xHandle}...`}
-                </span>
               </div>
             </div>
           );
@@ -765,7 +781,7 @@ export default function OracleChat() {
           return null;
       }
     },
-    [oauthLoading, router, state, blendSaveStatus]
+    [oauthLoading, router, state, blendSaveStatus, scanError]
   );
 
   // ── Determine ActionZone config per step ─────────────────────────
