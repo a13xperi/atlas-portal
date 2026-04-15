@@ -105,6 +105,7 @@ export default function OracleChat() {
   const [blendSaveStatus, setBlendSaveStatus] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
+  const [scanError, setScanError] = useState<string | null>(null);
   // Tracks the persisted blend so future PATCH operations can target it.
   const [, setSavedBlendId] = useState<string | null>(null);
 
@@ -585,7 +586,7 @@ export default function OracleChat() {
 
   // ── Render inline components ─────────────────────────────────────
   const renderComponent = useCallback(
-    (type: string): ReactNode => {
+    (type: string, props?: Record<string, unknown>): ReactNode => {
       switch (type) {
         case "scan-progress":
           return (
@@ -663,7 +664,7 @@ export default function OracleChat() {
                 </p>
               )}
               <VoiceDimensionSections
-                values={state.dimensions}
+                values={dimensionValues}
                 interactive
                 onChange={(field, value) =>
                   dispatch({
@@ -674,6 +675,7 @@ export default function OracleChat() {
               />
             </div>
           );
+        }
 
         case "tweet-ratings": {
           const sampleTweets = [
@@ -889,7 +891,7 @@ export default function OracleChat() {
           return null;
       }
     },
-    [oauthLoading, router, state, blendSaveStatus]
+    [oauthLoading, router, state, blendSaveStatus, scanError]
   );
 
   // ── Determine ActionZone config per step ─────────────────────────

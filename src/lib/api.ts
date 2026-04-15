@@ -1038,6 +1038,7 @@ export interface CalibrationResult {
   tweetsAnalyzed: number;
   source?: { mode: string; pool: number; topN: number; recentN: number };
   twitterUser: { username: string; name: string };
+  dimensions?: VoiceDimensions;
 }
 
 export interface SwipeSignalRequestItem {
