@@ -828,7 +828,7 @@ export default function VoiceProfilesPage() {
                   })()}
                   notableDimensions={notableDimensions}
                   isActive={activeVoiceId === blend.id}
-                  userHandle={user?.handle}
+                  user={user}
                   onCompareVsMine={() =>
                     void handleCompareVsMine(blend.id)
                   }
