@@ -21,6 +21,7 @@ import {
   buildReferenceBlendVoices,
   REFERENCE_ACCOUNT_FALLBACK,
 } from "@/lib/reference-accounts";
+import { generateVoiceProfileName } from "@/lib/voice-naming";
 
 import OracleAvatar from "./OracleAvatar";
 import OracleMessage from "./OracleMessage";
@@ -259,13 +260,32 @@ export default function OracleChat() {
         if (step === "BLEND") {
           setBlendSaveStatus("saving");
           try {
+            const blendVoices = buildReferenceBlendVoices(
+              state.selectedRefs,
+              state.selfPercentage,
+              REFERENCE_ACCOUNT_FALLBACK
+            );
+            const blendName = generateVoiceProfileName(state.dimensions, [
+              {
+                isPersonal: true,
+                label: "My voice",
+                percentage: state.selfPercentage,
+              },
+              ...state.selectedRefs.map((refId, index) => {
+                const account = referenceAccountLookup.get(refId);
+                const blendVoice = blendVoices[index + 1];
+
+                return {
+                  category: account?.category,
+                  handle: account?.handle ?? blendVoice?.label ?? refId,
+                  label: blendVoice?.label ?? account?.displayName ?? refId,
+                  percentage: blendVoice?.percentage ?? 0,
+                };
+              }),
+            ]);
             const result = await api.voice.createBlend(
-              state.track === "a" ? "Onboarding blend" : "My starting blend",
-              buildReferenceBlendVoices(
-                state.selectedRefs,
-                state.selfPercentage,
-                REFERENCE_ACCOUNT_FALLBACK
-              )
+              blendName,
+              blendVoices
             );
             setSavedBlendId(result.blend.id);
             setBlendSaveStatus("saved");

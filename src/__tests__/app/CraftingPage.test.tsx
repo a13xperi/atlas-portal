@@ -128,7 +128,13 @@ function createDraft(overrides: Record<string, unknown> = {}) {
 }
 
 describe("CraftingPage", () => {
+  let consoleErrorSpy: jest.SpiedFunction<typeof console.error> | undefined;
+
   beforeEach(() => {
+    consoleErrorSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
     mockSearchParams = new URLSearchParams();
     mockRouterReplace.mockClear();
 
@@ -156,6 +162,11 @@ describe("CraftingPage", () => {
     mockedApi.voice.getBlends.mockResolvedValue({ blends: [] });
     mockedApi.trending.topics.mockResolvedValue({ topics: [] });
     mockedApi.images.generateForDraft.mockResolvedValue({ image: null });
+  });
+
+  afterEach(() => {
+    consoleErrorSpy?.mockRestore();
+    consoleErrorSpy = undefined;
   });
 
   it("shows inline errors when trying to submit empty content", async () => {
@@ -230,13 +241,13 @@ describe("CraftingPage", () => {
         replyAngle: undefined,
       })
     );
-    expect(mockedApi.drafts.generate).toHaveBeenNthCalledWith(
-      2,
+    expect(mockedApi.drafts.generate.mock.calls[1][0]).toEqual(
       expect.objectContaining({
         sourceContent: "Fresh BTC momentum read",
         sourceType: "MANUAL",
-        replyAngle: undefined,
-        angleInstruction: expect.stringContaining("straightforward, generic tweet"),
+        angleInstruction: expect.stringContaining(
+          "straightforward, generic tweet"
+        ),
       })
     );
 

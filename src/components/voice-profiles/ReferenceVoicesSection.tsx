@@ -24,6 +24,7 @@ import {
 interface ReferenceVoicesSectionProps {
   onReferencesChange: (voices: ReferenceVoice[]) => void;
   references: ReferenceVoice[];
+  onBlendCreated?: () => void | Promise<void>;
 }
 
 function normalizeTwitterHandle(handle?: string | null) {
