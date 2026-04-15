@@ -31,6 +31,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import { useTour } from "@/components/tour/TourProvider";
 import FeatureGate from "@/components/ui/FeatureGate";
+import ShadowGate from "@/components/ui/ShadowGate";
 import DraftHistorySidebar, {
   DraftHistoryItem,
 } from "@/components/crafting/DraftHistorySidebar";
@@ -1886,11 +1887,12 @@ function CraftingPage() {
             )}
           </div>
 
-          <div
-            className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6"
-            data-tour="voice-selector"
-          >
-            <div className="flex flex-wrap gap-2 py-2">
+          <ShadowGate sectionKey="crafting-selector">
+            <div
+              className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6"
+              data-tour="voice-selector"
+            >
+              <div className="flex flex-wrap gap-2 py-2">
               <button
                 type="button"
                 onClick={() => setSelectedBlendId(null)}
@@ -2009,9 +2011,10 @@ function CraftingPage() {
                   );
                 })()}
               </div>
-              <span className="w-10 text-right text-sm text-atlas-text">{blendValue}%</span>
+                <span className="w-10 text-right text-sm text-atlas-text">{blendValue}%</span>
+              </div>
             </div>
-          </div>
+          </ShadowGate>
 
           {voiceComparison ? (
             <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6">

@@ -3,6 +3,7 @@ import { playfairDisplay, inter } from "@/lib/fonts";
 import { publicUrls } from "@/lib/public-urls";
 import { colors } from "@/lib/tokens";
 import RouteProgress from "@/components/ui/RouteProgress";
+import ShadowToggleBar from "@/components/ui/ShadowToggleBar";
 import Providers from "./providers";
 import "./globals.css";
 import dynamic from "next/dynamic";
@@ -66,6 +67,7 @@ export default function RootLayout({
         <Providers>
           {children}
           <FloatingOracle />
+          <ShadowToggleBar />
         </Providers>
       </body>
     </html>

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import FeatureGate from "@/components/ui/FeatureGate";
+import ShadowGate from "@/components/ui/ShadowGate";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
 import { api, TeamMember } from "@/lib/api";
@@ -57,6 +58,7 @@ function TeamLibraryPage() {
 
   return (
     <AppShell>
+      <ShadowGate sectionKey="voice-library-v2">
       {error && (
         <div
           role="alert"
@@ -148,6 +150,7 @@ function TeamLibraryPage() {
           })}
         </div>
       )}
+      </ShadowGate>
     </AppShell>
   );
 }

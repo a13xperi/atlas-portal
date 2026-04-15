@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Check, Loader2, Plus, Sparkles, Wand2, X } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import TweetTinderSection from "./tweet-tinder-section";
+import ShadowGate from "@/components/ui/ShadowGate";
 import ReferenceVoicesSection from "@/components/voice-profiles/ReferenceVoicesSection";
 import RecipeCard from "@/components/voice-profiles/RecipeCard";
 import VoiceCard from "@/components/voice-profiles/VoiceCard";
@@ -1180,9 +1181,11 @@ export default function VoiceProfilesPage() {
         />
 
         {/* Tweet Tinder — voice calibration via liked tweets */}
-        <div className="mt-8 scroll-mt-20">
-          <TweetTinderSection />
-        </div>
+        <ShadowGate sectionKey="voice-tinder">
+          <div className="mt-8 scroll-mt-20">
+            <TweetTinderSection />
+          </div>
+        </ShadowGate>
       </div>
     </AppShell>
   );
