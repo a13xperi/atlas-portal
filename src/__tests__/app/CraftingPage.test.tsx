@@ -47,6 +47,8 @@ jest.mock("@/lib/api", () => ({
       regenerate: jest.fn(),
       delete: jest.fn(),
       refine: jest.fn(),
+      schedule: jest.fn(),
+      postToX: jest.fn(),
     },
     analytics: {
       summary: jest.fn(),
@@ -80,6 +82,8 @@ const mockedApi = api as unknown as {
     regenerate: jest.Mock;
     delete: jest.Mock;
     refine: jest.Mock;
+    schedule: jest.Mock;
+    postToX: jest.Mock;
   };
   analytics: {
     summary: jest.Mock;
@@ -118,6 +122,8 @@ describe("CraftingPage", () => {
     mockedApi.drafts.regenerate.mockReset();
     mockedApi.drafts.delete.mockReset();
     mockedApi.drafts.refine.mockReset();
+    mockedApi.drafts.schedule.mockReset();
+    mockedApi.drafts.postToX.mockReset();
     mockedApi.auth.x.status.mockReset();
     mockedApi.auth.x.authorize.mockReset();
     mockedApi.analytics.summary.mockReset();
@@ -452,5 +458,56 @@ describe("CraftingPage", () => {
     expect(
       screen.queryByRole("button", { name: "Post to X" })
     ).not.toBeInTheDocument();
+  });
+
+  it("shows the Schedule button for draft and approved statuses", async () => {
+    mockedApi.drafts.list.mockResolvedValue({
+      drafts: [createDraft({ status: "DRAFT" })],
+    });
+
+    render(<CraftingPage />);
+
+    await screen.findByRole("textbox", { name: "Generated draft" });
+
+    expect(screen.getByRole("button", { name: "Schedule" })).toBeInTheDocument();
+  });
+
+  it("opens the schedule popover and schedules the draft", async () => {
+    const draft = createDraft({ status: "APPROVED" });
+    const scheduledDraft = createDraft({ status: "SCHEDULED", scheduledAt: "2026-04-15T12:00:00.000Z" });
+
+    mockedApi.drafts.list.mockResolvedValue({ drafts: [draft] });
+    mockedApi.drafts.schedule.mockResolvedValue({ draft: scheduledDraft });
+
+    render(<CraftingPage />);
+
+    await screen.findByRole("textbox", { name: "Generated draft" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Schedule" }));
+
+    const dateInput = await screen.findByLabelText("Schedule date and time");
+    expect(dateInput).toBeInTheDocument();
+
+    fireEvent.change(dateInput, { target: { value: "2026-04-15T12:00" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() =>
+      expect(mockedApi.drafts.schedule).toHaveBeenCalledWith(
+        "draft-1",
+        expect.stringMatching(/^2026-04-15T\d{2}:00:00\.000Z$/)
+      )
+    );
+  });
+
+  it("does not show the Schedule button for archived drafts", async () => {
+    mockedApi.drafts.list.mockResolvedValue({
+      drafts: [createDraft({ status: "ARCHIVED" })],
+    });
+
+    render(<CraftingPage />);
+
+    await screen.findByRole("textbox", { name: "Generated draft" });
+
+    expect(screen.queryByRole("button", { name: "Schedule" })).not.toBeInTheDocument();
   });
 });
