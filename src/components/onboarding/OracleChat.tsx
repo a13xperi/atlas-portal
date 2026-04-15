@@ -422,7 +422,6 @@ export default function OracleChat() {
 
     (async () => {
       try {
-        console.log("[OracleChat] calibrate dispatch xHandle:", state.xHandle);
         const { profile, calibration } = await api.voice.calibrate(state.xHandle, {
           signal: controller.signal,
         });
