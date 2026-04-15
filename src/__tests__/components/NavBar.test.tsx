@@ -54,7 +54,7 @@ describe("NavBar", () => {
       refresh: jest.fn(),
       back: jest.fn(),
       prefetch: jest.fn(),
-    } as ReturnType<typeof useRouter>);
+    } as unknown as ReturnType<typeof useRouter>);
     mockUseAuth.mockReturnValue({
       user: {
         id: "user-1",
