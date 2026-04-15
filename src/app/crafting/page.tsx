@@ -62,6 +62,11 @@ import { MultiAnglePanel } from "@/components/crafting/MultiAnglePanel";
 import CharacterCounter from "@/components/crafting/CharacterCounter";
 import type { InspectableEntity } from "@/lib/oracle-agent-types";
 import { useToast } from "@/components/ui/Toast";
+import {
+  useVoiceGate,
+  MIN_TWEETS_FOR_VOICE_CALIBRATION,
+} from "@/lib/useVoiceGate";
+import { MultiAnglePanel } from "@/components/crafting/MultiAnglePanel";
 import { SchedulePopover } from "@/components/ui/SchedulePopover";
 
 const CRAFTING_MODES = [
@@ -79,6 +84,7 @@ const TWEET_TEMPLATES = [
 ] as const;
 
 const NEWS_SOURCE_PREFIX = "source:";
+const MIN_TWEETS_FOR_CRAFTING = MIN_TWEETS_FOR_VOICE_CALIBRATION;
 const VOICE_COMPARISON_DELTA = { humor: 20 } as const;
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
@@ -259,7 +265,6 @@ function CraftingPage() {
   const regenerationGuidanceId = useId();
   const draftFeedbackHintId = useId();
   const { user } = useAuth();
-  const { toast } = useToast();
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [draftHistory, setDraftHistory] = useState<DraftHistoryItem[]>([]);
   const [draftVersions, setDraftVersions] = useState<TweetDraft[]>([]);
@@ -1402,12 +1407,35 @@ function CraftingPage() {
 
   return (
     <AppShell>
-      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-start sm:gap-6">
-        <div className="min-w-0 flex-1">
-          <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Crafting Station</h1>
-          <p className="mt-2 text-atlas-text-secondary max-w-2xl">Drop in a report, signal, or idea — Atlas drafts it in your voice. Refine it, and the model gets sharper every time.</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-3 sm:items-start">
+      <div className="mb-6">
+        <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Crafting Station</h1>
+        <p className="mt-2 text-atlas-text-secondary max-w-2xl">Drop in a report, signal, or idea — Atlas drafts it in your voice. Refine it, and the model gets sharper every time.</p>
+      </div>
+
+      <div className="mb-6" data-tour="oracle-banner">
+        <OracleWidget
+          message={
+            activeDraft
+              ? "Draft in progress — refine it, rate it, or ship it. Every piece of feedback sharpens your model."
+              : "Drop a report, article, or idea below. I'll help you craft it into a tweet that sounds like you."
+          }
+          context="crafting"
+        />
+        {activeDraft && (
+          <OracleCraftingHints
+            draftContent={activeDraft.content}
+            onApplyHint={(hint) => {
+              setFeedback(hint);
+              setTimeout(() => {
+                document.getElementById("feedback-input")?.focus();
+              }, 100);
+            }}
+          />
+        )}
+      </div>
+
+      <div className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:gap-0 sm:rounded-3xl sm:px-6">
+        <div className="flex items-center gap-4 sm:gap-6">
           <svg
             aria-hidden="true"
             focusable="false"

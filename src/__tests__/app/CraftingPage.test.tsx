@@ -507,7 +507,7 @@ describe("CraftingPage", () => {
       drafts: [createDraft({ status: "DRAFT" })],
     });
 
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     await screen.findByRole("textbox", { name: "Generated draft" });
 
@@ -521,7 +521,7 @@ describe("CraftingPage", () => {
     mockedApi.drafts.list.mockResolvedValue({ drafts: [draft] });
     mockedApi.drafts.schedule.mockResolvedValue({ draft: scheduledDraft });
 
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     await screen.findByRole("textbox", { name: "Generated draft" });
 
@@ -546,7 +546,7 @@ describe("CraftingPage", () => {
       drafts: [createDraft({ status: "ARCHIVED" })],
     });
 
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     await screen.findByRole("textbox", { name: "Generated draft" });
 
@@ -554,7 +554,7 @@ describe("CraftingPage", () => {
   });
 
   it("shows multi-angle button after pasting substantial text and opens panel on click", async () => {
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     fireEvent.change(screen.getByPlaceholderText("Paste a tweet idea or link…"), {
       target: { value: "a".repeat(600) },
@@ -575,7 +575,7 @@ describe("CraftingPage", () => {
   });
 
   it("batch approves multi-angle drafts and refreshes the sidebar", async () => {
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     fireEvent.change(screen.getByPlaceholderText("Paste a tweet idea or link…"), {
       target: { value: "a".repeat(600) },

@@ -15,23 +15,23 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const HOURS = Array.from({ length: 8 }, (_, i) => `${i * 3}-${i * 3 + 2}h`);
 
 function CampaignAnalyticsPage() {
-  const { id } = useParams<{ id: string }>();
+  const { campaignId } = useParams<{ campaignId: string }>();
   const { user } = useAuth();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!user || !id) return;
+    if (!user || !campaignId) return;
     try {
-      const { campaign: data } = await api.campaigns.get(id);
+      const { campaign: data } = await api.campaigns.get(campaignId);
       setCampaign(data);
     } catch {
       setError("Campaign not found");
     } finally {
       setLoading(false);
     }
-  }, [user, id]);
+  }, [user, campaignId]);
 
   useEffect(() => {
     load();
@@ -94,7 +94,7 @@ function CampaignAnalyticsPage() {
     <AppShell>
       <div className="mx-auto max-w-5xl px-4 py-8 font-body sm:px-6">
         <Link
-          href={`/campaigns/${id}`}
+          href={`/campaigns/${campaignId}`}
           className="mb-6 inline-flex items-center gap-1 text-sm text-atlas-text-muted transition-colors hover:text-atlas-teal"
         >
           <ArrowLeft className="h-4 w-4" />
