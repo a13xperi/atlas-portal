@@ -52,7 +52,7 @@ test.describe("Investor Walkthrough", () => {
 
     // ── Step 7: Briefing ───────────────────────────────────────────────
     await visitRoute(page, "/briefing");
-    expect((await page.locator("body").textContent())?.length ?? 0).toBeGreaterThan(50);
+    await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 10_000 });
 
     // ── Step 8: Admin ──────────────────────────────────────────────────
     await visitRoute(page, "/admin");
