@@ -3,6 +3,16 @@ import type { ReactNode } from "react";
 import { render, screen } from "@testing-library/react";
 import AdminPage from "@/app/admin/page";
 
+jest.mock("@/components/layout/AppShell", () => ({
+  __esModule: true,
+  default: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+}));
+
+jest.mock("@/components/ui/FeatureGate", () => ({
+  __esModule: true,
+  default: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
+
 jest.mock("next/link", () => ({
   __esModule: true,
   default: ({ children, href }: { children: ReactNode; href: string }) => (
@@ -32,5 +42,11 @@ describe("AdminPage", () => {
     ).toBeInTheDocument();
     const roadmapLinks = screen.getAllByRole("link").filter((el) => el.getAttribute("href") === "/admin/roadmap");
     expect(roadmapLinks.length).toBeGreaterThan(0);
+  });
+
+  it("shows the reset me button for admins", () => {
+    render(<AdminPage />);
+
+    expect(screen.getByRole("button", { name: "Reset Me" })).toBeInTheDocument();
   });
 });
