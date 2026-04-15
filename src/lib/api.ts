@@ -863,6 +863,14 @@ export const api = {
       };
     },
     likes: () => request<{ likes: TwitterLike[]; cached: boolean }>("/api/twitter/likes"),
+    topTweets: (limit = 10) =>
+      request<{ tweets: TwitterLike[]; cached: boolean; fallback?: "demo" }>(
+        `/api/twitter/me/top-tweets?limit=${limit}`
+      ),
+    topTweetsByHandle: (handle: string, limit = 10) =>
+      request<{ tweets: TwitterLike[]; cached: boolean; fallback?: "demo" }>(
+        `/api/twitter/handle/${encodeURIComponent(handle)}/top-tweets?limit=${limit}`
+      ),
   },
 
   voiceTinder: {
