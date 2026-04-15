@@ -106,6 +106,7 @@ export default function OracleChat() {
     "idle" | "saving" | "saved" | "error"
   >("idle");
   const [scanError, setScanError] = useState<string | null>(null);
+  const [scanLoading, setScanLoading] = useState(false);
   // Tracks the persisted blend so future PATCH operations can target it.
   const [, setSavedBlendId] = useState<string | null>(null);
 
@@ -891,7 +892,7 @@ export default function OracleChat() {
           return null;
       }
     },
-    [oauthLoading, router, state, blendSaveStatus, scanError]
+    [oauthLoading, router, state, blendSaveStatus, scanError, scanLoading]
   );
 
   // ── Determine ActionZone config per step ─────────────────────────
