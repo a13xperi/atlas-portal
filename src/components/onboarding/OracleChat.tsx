@@ -361,9 +361,13 @@ export default function OracleChat() {
           tweetsAnalyzed: calibration.tweetsAnalyzed,
         },
       });
+      const calibratedDimensions = pickVoiceDimensions(profile);
+      // Guard against degenerate all-zero AI output (renders as 0/10 on every slider).
+      // Falls back to sensible defaults so the user sees a usable starting point.
+      const isAllZero = Object.values(calibratedDimensions).every((v) => v <= 4);
       dispatch({
         type: "SET_DIMENSIONS",
-        dimensions: pickVoiceDimensions(profile),
+        dimensions: isAllZero ? TRACK_A_INITIAL_DIMENSIONS : calibratedDimensions,
       });
     },
     []
