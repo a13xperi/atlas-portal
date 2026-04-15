@@ -62,8 +62,7 @@ describe("VoicePreviewPlayer", () => {
   });
 
   it("shows a disabled-looking state when speech synthesis is not supported", () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).speechSynthesis = undefined;
+    (window as any).speechSynthesis = undefined; // eslint-disable-line
     render(<VoicePreviewPlayer text="Hello world" />);
     expect(screen.getByText("Listen")).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
@@ -101,8 +100,7 @@ describe("VoicePreviewPlayer", () => {
   });
 
   it("resumes playback when clicked while paused", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window.speechSynthesis as any).paused = true;
+    (window.speechSynthesis as any).paused = true; // eslint-disable-line
 
     render(<VoicePreviewPlayer text="Hello world" />);
     fireEvent.click(screen.getByRole("button", { name: /play preview/i }));
