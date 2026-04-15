@@ -56,7 +56,7 @@ export function middleware(request: NextRequest) {
   // - default-src 'self': only allow same-origin resources by default
   // - script-src: allow self + Next.js inline scripts (unsafe-inline needed for App Router hydration)
   // - style-src: allow self + inline styles (Tailwind inlines critical CSS)
-  // - img-src: allow self + data URIs (for base64 images)
+  // - img-src: allow self + data URIs + Twitter avatar CDNs (pbs.twimg.com, unavatar.io) — BUG-39
   // - connect-src: allow self + Railway backend API
   // - font-src: allow self + Google Fonts (Playfair Display, Inter)
   // - frame-ancestors 'none': same as X-Frame-Options DENY but for modern browsers
