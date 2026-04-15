@@ -187,6 +187,12 @@ function CampaignDetailPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Link
+                      href={`/campaigns/${campaign.id}/analytics`}
+                      className="rounded-lg border border-glass-border px-3 py-1.5 text-xs text-atlas-text-muted transition-colors hover:text-atlas-teal"
+                    >
+                      Analytics
+                    </Link>
                     <button
                       onClick={() => setEditing(true)}
                       className="rounded-lg border border-glass-border px-3 py-1.5 text-xs text-atlas-text-muted transition-colors hover:text-atlas-text"
