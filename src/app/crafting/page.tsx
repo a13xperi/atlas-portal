@@ -55,6 +55,7 @@ import { hasCalibratedVoiceDimensions } from "@/lib/voice-profile-dimensions";
 import OracleWidget from "@/components/oracle/OracleWidget";
 import OracleCraftingHints from "@/components/oracle/OracleCraftingHints";
 import OracleInspector from "@/components/oracle/OracleInspector";
+import { MultiAnglePanel } from "@/components/crafting/MultiAnglePanel";
 import type { InspectableEntity } from "@/lib/oracle-agent-types";
 import { useToast } from "@/components/ui/Toast";
 import { SchedulePopover } from "@/components/ui/SchedulePopover";
@@ -305,6 +306,11 @@ function CraftingPage() {
   const [urlPreview, setUrlPreview] = useState<{
     title?: string;
     url: string;
+  } | null>(null);
+  const [showMultiAngle, setShowMultiAngle] = useState(false);
+  const [multiAngleSource, setMultiAngleSource] = useState<{
+    content: string;
+    sourceType: DraftSourceType;
   } | null>(null);
   const activeDraftInitialized = useRef(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
@@ -670,7 +676,13 @@ function CraftingPage() {
     if (sourceError && trimmedText) {
       setSourceError("");
     }
-  }, [contentError, sourceError]);
+
+    if (activeMode === "new_post" && trimmedText.length > 500) {
+      setMultiAngleSource({ content: text, sourceType: "MANUAL" });
+    } else if (activeMode === "new_post" && !trimmedText) {
+      setMultiAngleSource(null);
+    }
+  }, [activeMode, contentError, sourceError]);
   handleDraftTextChangeRef.current = handleDraftTextChange;
 
   const createDraftFromSource = useCallback(async (
@@ -796,6 +808,14 @@ function CraftingPage() {
 
       setError(null);
       handleDraftTextChange(text);
+      // Auto-trigger multi-angle for PDFs; for other files only if substantial text
+      const isPdf = file.type === "application/pdf" || file.name.endsWith(".pdf");
+      if (isPdf && activeMode === "new_post") {
+        setMultiAngleSource({ content: text, sourceType: "REPORT" });
+        setShowMultiAngle(true);
+      } else if (text.length > 500 && activeMode === "new_post") {
+        setMultiAngleSource({ content: text, sourceType: "MANUAL" });
+      }
     } catch (fileDropError: unknown) {
       console.error("Failed to process file:", fileDropError);
       setError(
@@ -804,7 +824,7 @@ function CraftingPage() {
           : "Failed to process file. Try pasting the content instead."
       );
     }
-  }, [handleDraftTextChange]);
+  }, [handleDraftTextChange, activeMode]);
 
   const handleFileDrop = useCallback(async (files: FileList) => {
     if (files.length === 0) {
@@ -1637,6 +1657,17 @@ function CraftingPage() {
                       Craft with Atlas
                     </button>
                   )}
+                  {activeMode === "new_post" && multiAngleSource && !showMultiAngle && (
+                    <button
+                      type="button"
+                      onClick={() => setShowMultiAngle(true)}
+                      disabled={creating || isVoiceCalibrationBlocked}
+                      className="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-atlas-teal/20 bg-atlas-teal/5 px-4 py-2.5 text-sm font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/10 hover:border-atlas-teal/40 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Generate Multi-Angle Tweets
+                    </button>
+                  )}
                   {error ? (
                     <div
                       role="alert"
@@ -1658,6 +1689,22 @@ function CraftingPage() {
                       <span>{blendWarning}</span>
                       <button type="button" onClick={() => setBlendWarning(null)} aria-label="Dismiss" className="ml-2 hover:text-atlas-text"><X className="h-3.5 w-3.5" aria-hidden="true" /></button>
                     </div>
+                  )}
+                  {showMultiAngle && multiAngleSource && (
+                    <MultiAnglePanel
+                      sourceContent={multiAngleSource.content}
+                      sourceType={multiAngleSource.sourceType}
+                      blendId={selectedBlendId}
+                      disabled={creating || isVoiceCalibrationBlocked}
+                      onDraftsCreated={() => {
+                        void loadDrafts();
+                      }}
+                      onError={(message) => setError(message)}
+                      onClose={() => {
+                        setShowMultiAngle(false);
+                        setMultiAngleSource(null);
+                      }}
+                    />
                   )}
                 </div>
               </div>
