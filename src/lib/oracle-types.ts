@@ -73,7 +73,7 @@ export interface OracleState {
   // Accumulated onboarding data
   xHandle: string;
   xConnected: boolean;
-  calibrationResult: { analysis: string; tweetsAnalyzed: number } | null;
+  calibrationResult: { analysis: string; tweetsAnalyzed: number; dimensions?: VoiceDimensions } | null;
   dimensions: VoiceDimensions;
   selectedStyle: string | null;
   selectedRefs: string[];
