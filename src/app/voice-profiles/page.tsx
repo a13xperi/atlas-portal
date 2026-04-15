@@ -815,6 +815,8 @@ export default function VoiceProfilesPage() {
               isSelected={selectedVoiceId === blend.id}
               notableDimensions={notableDimensions}
               userHandle={user?.handle}
+              voices={blend.voices}
+              user={user}
               onSelect={() => setSelectedVoiceId(blend.id)}
               onUse={() => handleUseVoice(blend.id)}
               onBlend={
