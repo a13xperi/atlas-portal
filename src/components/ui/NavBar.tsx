@@ -18,10 +18,13 @@ import {
   CalendarClock,
   Rss,
   ListOrdered,
+  User,
+  LogOut,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import NotificationDropdown from "@/components/ui/NotificationDropdown";
+import UserMenu from "@/components/ui/UserMenu";
 import DemoModeToggle from "@/components/ui/DemoModeToggle";
 import TourToggle from "@/components/tour/TourToggle";
 import { useAuth } from "@/lib/auth";
@@ -115,6 +118,7 @@ export default function NavBar({ variant }: NavBarProps) {
   const initial = user?.displayName?.[0]?.toUpperCase() || user?.handle?.[0]?.toUpperCase() || "A";
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const isRouteEnabled = useRouteEnabled();
   const cachedTier = typeof window !== "undefined" ? getCachedTier() : null;
   const { shouldShowDot } = useNavDiscovery();
@@ -123,12 +127,14 @@ export default function NavBar({ variant }: NavBarProps) {
   useEffect(() => {
     setMobileOpen(false);
     setNotifOpen(false);
+    setUserMenuOpen(false);
   }, [pathname]);
 
   useEffect(() => {
     if (!hasUser) {
       setMobileOpen(false);
       setNotifOpen(false);
+      setUserMenuOpen(false);
     }
   }, [hasUser]);
 
@@ -227,27 +233,39 @@ export default function NavBar({ variant }: NavBarProps) {
                 </button>
                 <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
               </div>
-              <div
-                aria-label={cachedTier ? `${cachedTier.tier.name} (#${cachedTier.rank})` : "Signed in"}
-                className={`w-8 h-8 rounded-full bg-atlas-surface border-2 flex items-center justify-center text-xs font-medium ${
-                  cachedTier
-                    ? `${cachedTier.tier.borderColor} ${cachedTier.tier.color}`
-                    : "border-glass-border text-atlas-text-secondary"
-                }`}
-                title={cachedTier ? `${cachedTier.tier.name} · #${cachedTier.rank} · ${cachedTier.score} pts` : undefined}
-              >
-                {user.avatarUrl ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={user.avatarUrl}
-                    alt={`${user.displayName || user.handle} avatar`}
-                    width={32}
-                    height={32}
-                    className="h-full w-full rounded-full object-cover"
-                  />
-                ) : (
-                  initial
-                )}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setUserMenuOpen((o) => !o)}
+                  aria-haspopup="menu"
+                  aria-expanded={userMenuOpen}
+                  aria-controls="user-menu-dropdown"
+                  aria-label={
+                    user.displayName || user.handle
+                      ? `User menu for ${user.displayName || user.handle}`
+                      : "User menu"
+                  }
+                  title={cachedTier ? `${cachedTier.tier.name} · #${cachedTier.rank} · ${cachedTier.score} pts` : undefined}
+                  className={`w-8 h-8 rounded-full bg-atlas-surface border-2 flex items-center justify-center text-xs font-medium transition-colors hover:border-atlas-teal focus:outline-none focus:ring-2 focus:ring-atlas-teal ${
+                    cachedTier
+                      ? `${cachedTier.tier.borderColor} ${cachedTier.tier.color}`
+                      : "border-glass-border text-atlas-text-secondary"
+                  }`}
+                >
+                  {user.avatarUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={user.avatarUrl}
+                      alt={`${user.displayName || user.handle} avatar`}
+                      width={32}
+                      height={32}
+                      className="h-full w-full rounded-full object-cover"
+                    />
+                  ) : (
+                    initial
+                  )}
+                </button>
+                <UserMenu isOpen={userMenuOpen} onClose={() => setUserMenuOpen(false)} />
               </div>
             </>
           )}
