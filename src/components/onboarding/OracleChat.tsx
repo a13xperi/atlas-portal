@@ -41,7 +41,7 @@ import ContentSignalsPreview from "./ContentSignalsPreview";
 import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import GradientButton from "@/components/ui/GradientButton";
 import ContentInput from "@/components/ui/ContentInput";
-import { CheckCircle, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 
 const referenceAccountLookup = getReferenceAccountLookup(
   REFERENCE_ACCOUNT_FALLBACK
@@ -59,6 +59,7 @@ export default function OracleChat() {
   const [state, dispatch] = useReducer(oracleReducer, null, initialOracleState);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const calibratingRef = useRef(false);
+  const scanErrorRef = useRef(false);
   const drainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const streamCleanupRef = useRef<(() => void) | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
@@ -401,6 +402,7 @@ export default function OracleChat() {
   useEffect(() => {
     if (state.currentStep === "TRACK_A_SCANNING" && state.calibrationResult === null) {
       calibratingRef.current = false;
+      scanErrorRef.current = false;
     }
   }, [state.currentStep, state.calibrationResult]);
 
@@ -419,9 +421,12 @@ export default function OracleChat() {
 
     (async () => {
       try {
-        const { profile, calibration } = await api.voice.calibrate(state.xHandle, {
-          signal: controller.signal,
-        });
+        const { profile, calibration } = await Promise.race([
+          api.voice.calibrate(state.xHandle, { signal: controller.signal }),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("calibration_timeout")), 30_000)
+          ),
+        ]);
         clearTimeout(timeoutId);
 
         dispatch({
@@ -473,7 +478,7 @@ export default function OracleChat() {
         // analysis above is sufficient commentary during onboarding.
       } catch (err: any) {
         clearTimeout(timeoutId);
-        if (err.name === "AbortError") {
+        if (err.name === "AbortError" || err.message === "calibration_timeout") {
           console.warn("Calibration timed out (30s limit hit)");
         } else {
           console.error("Calibration failed:", err);
@@ -486,6 +491,8 @@ export default function OracleChat() {
           dimensions: TRACK_A_INITIAL_DIMENSIONS,
         });
         const reason = err instanceof Error ? err.message : "something went wrong";
+        scanErrorRef.current = true;
+        dispatch({ type: "ADVANCE", payload: undefined });
         dispatch({
           type: "ENQUEUE_MESSAGES",
           messages: [
@@ -497,7 +504,6 @@ export default function OracleChat() {
             },
           ],
         });
-        dispatch({ type: "ADVANCE", payload: undefined });
       } finally {
         calibratingRef.current = false;
       }
@@ -519,12 +525,16 @@ export default function OracleChat() {
               <div className="flex items-center gap-2">
                 {state.calibrationResult ? (
                   <CheckCircle className="h-4 w-4 text-atlas-teal" />
+                ) : scanErrorRef.current ? (
+                  <AlertCircle className="h-4 w-4 text-atlas-text-secondary" />
                 ) : (
                   <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
                 )}
                 <span className="text-sm text-atlas-text-secondary">
                   {state.calibrationResult
                     ? `Calibrated from ${state.calibrationResult.tweetsAnalyzed} tweets`
+                    : scanErrorRef.current
+                    ? "Couldn't complete scan — using starter values"
                     : `Scanning @${state.xHandle}...`}
                 </span>
               </div>
