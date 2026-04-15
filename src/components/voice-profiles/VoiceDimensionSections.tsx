@@ -69,6 +69,8 @@ export default function VoiceDimensionSections({
                   valueLabel={formatVoiceDimensionValue(
                     resolvedValues[dimension.field] ?? 50
                   )}
+                  minLabel={dimension.minLabel}
+                  maxLabel={dimension.maxLabel}
                 />
               )
             )}

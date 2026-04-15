@@ -7,6 +7,8 @@ export interface DimensionBarProps {
   onChange?: (value: number) => void;
   step?: number;
   valueLabel?: string;
+  minLabel?: string;
+  maxLabel?: string;
 }
 
 export default function DimensionBar({
@@ -16,6 +18,8 @@ export default function DimensionBar({
   onChange,
   step = 1,
   valueLabel,
+  minLabel,
+  maxLabel,
 }: DimensionBarProps) {
   const clampedPercentage = Math.min(100, Math.max(0, percentage));
 
@@ -82,6 +86,15 @@ export default function DimensionBar({
           />
         )}
       </div>
+      {(minLabel || maxLabel) && (
+        <div
+          aria-hidden="true"
+          className="mt-1 flex justify-between text-[11px] uppercase tracking-[0.12em] text-atlas-text-muted"
+        >
+          <span>{minLabel}</span>
+          <span>{maxLabel}</span>
+        </div>
+      )}
     </div>
   );
 }
