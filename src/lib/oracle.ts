@@ -313,21 +313,61 @@ export function oracleReducer(
 }
 
 /** Create a ReadableStream that yields words from `text` one at a time. */
-export function createTextStream(text: string, wordDelayMs = 30): ReadableStream<string> {
+export function createTextStream(
+  text: string,
+  wordDelayMs = 30,
+  signal?: AbortSignal
+): ReadableStream<string> {
   const tokens = text.split(/(\s+)/);
   return new ReadableStream<string>({
     start(controller) {
+      if (signal?.aborted) {
+        controller.close();
+        return;
+      }
       let i = 0;
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      let closed = false;
+      const close = () => {
+        if (closed) return;
+        closed = true;
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        try {
+          controller.error(new Error("Aborted"));
+        } catch {
+          // already closed
+        }
+      };
+      if (signal) {
+        signal.addEventListener("abort", close, { once: true });
+      }
       function push() {
+        if (closed) return;
         if (i >= tokens.length) {
-          controller.close();
+          closed = true;
+          try {
+            controller.close();
+          } catch {
+            // already closed
+          }
           return;
         }
-        controller.enqueue(tokens[i]);
+        try {
+          controller.enqueue(tokens[i]);
+        } catch {
+          closed = true;
+          return;
+        }
         i++;
-        setTimeout(push, wordDelayMs);
+        timer = setTimeout(push, wordDelayMs);
       }
       push();
+    },
+    cancel() {
+      // Cleanup handled implicitly; closed flag prevents further enqueue.
     },
   });
 }

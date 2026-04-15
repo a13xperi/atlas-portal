@@ -64,6 +64,34 @@ export function middleware(request: NextRequest) {
     ? new URL(process.env.NEXT_PUBLIC_API_URL).origin
     : "";
 
+  const styleSrc = [
+    "style-src 'self' 'unsafe-inline'",
+    publicOrigins.googleFontsStylesOrigin,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const imgSrc = [
+    "img-src 'self' data: blob:",
+    publicOrigins.unavatarOrigin,
+    publicOrigins.xImageCdnOrigin,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const connectSrc = [
+    "connect-src 'self'",
+    apiOrigin,
+    publicOrigins.apiOrigin,
+    publicOrigins.supabaseOrigin,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const fontSrc = [
+    "font-src 'self' data:",
+    publicOrigins.googleFontsAssetsOrigin,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   // TODO(H-2): Migrate script-src off 'unsafe-inline' by adopting per-request
   // nonces for Next.js App Router hydration scripts (see follow-up ticket
   // H-2-nonce-migration). 'unsafe-eval' has been removed — Next.js 14 App

@@ -60,6 +60,12 @@ import OracleInspector from "@/components/oracle/OracleInspector";
 import CharacterCounter from "@/components/crafting/CharacterCounter";
 import type { InspectableEntity } from "@/lib/oracle-agent-types";
 import { useToast } from "@/components/ui/Toast";
+import {
+  useVoiceGate,
+  MIN_TWEETS_FOR_VOICE_CALIBRATION,
+} from "@/lib/useVoiceGate";
+import { MultiAnglePanel } from "@/components/crafting/MultiAnglePanel";
+import { SchedulePopover } from "@/components/ui/SchedulePopover";
 
 const CRAFTING_MODES = [
   { id: "new_post", label: "New Post" },
@@ -257,7 +263,6 @@ function CraftingPage() {
   const regenerationGuidanceId = useId();
   const draftFeedbackHintId = useId();
   const { user } = useAuth();
-  const { toast } = useToast();
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [draftHistory, setDraftHistory] = useState<DraftHistoryItem[]>([]);
   const [draftVersions, setDraftVersions] = useState<TweetDraft[]>([]);

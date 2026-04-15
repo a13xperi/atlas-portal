@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback } f
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "./auth";
 import type { Alert } from "./api";
+import { publicUrls } from "./public-urls";
 
 export type SocketAlert = Omit<Alert, "context"> & {
   context?: string | null;

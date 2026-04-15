@@ -829,50 +829,9 @@ function AdminBugsContent() {
 }
 
 export default function AdminBugsPage() {
-  const bugs = listBugReports();
-  const openCount = bugs.filter((bug) => bug.status === "open").length;
-  const fixedCount = bugs.filter((bug) => bug.status === "fixed").length;
-  const criticalCount = bugs.filter((bug) => bug.severity === "critical" && bug.status !== "fixed").length;
-
   return (
     <FeatureGate flagKey="super_admin">
-      <AppShell>
-        <div className="space-y-6">
-          <section className="rounded-2xl border border-glass-border bg-glass p-6 backdrop-blur-xl">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div className="max-w-2xl">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-atlas-text-muted">Admin</p>
-                <div className="mt-3 flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-glass-border bg-atlas-surface text-atlas-teal">
-                    <Bug className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h1 className="font-heading text-3xl font-bold text-atlas-text">Bug Tracker</h1>
-                    <p className="mt-1 text-sm text-atlas-text-secondary">
-                      Minimal internal list for reported issues. Create new reports through `POST /api/bugs`.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-xl border border-glass-border bg-atlas-surface px-4 py-3 text-xs text-atlas-text-secondary">
-                Accepts `title`, optional `description`, `route`, `severity`, `status`, and `reporter`.
-              </div>
-            </div>
-          </section>
-
-          <section className="grid gap-4 sm:grid-cols-3">
-            <StatsCard label="Total Reports" value={bugs.length} />
-            <StatsCard label="Open" value={openCount} />
-            <StatsCard label="Critical Outstanding" value={criticalCount} />
-          </section>
-
-          <BugsTable bugs={bugs} />
-
-          <section className="rounded-2xl border border-glass-border bg-glass p-5 text-sm text-atlas-text-secondary backdrop-blur-xl">
-            Fixed reports currently listed: <span className="font-medium text-atlas-text">{fixedCount}</span>
-          </section>
-        </div>
-      </AppShell>
+      <AdminBugsContent />
     </FeatureGate>
   );
 }
