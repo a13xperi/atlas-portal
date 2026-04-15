@@ -71,7 +71,8 @@ export function getVisibleNavLinks(role?: string): typeof navLinks {
     (link) => CORE_NAV_HREFS.has(link.href) || (isManager && MANAGER_NAV_HREFS.has(link.href))
   );
   if (isAdmin) {
-    links.push({ label: "Admin", href: "/admin", icon: Settings });
+    links.unshift({ label: "Report Bug", href: "/admin/bugs?action=report", icon: Bug });
+    links.unshift({ label: "Admin", href: "/admin", icon: Settings });
   }
   return links;
 }
