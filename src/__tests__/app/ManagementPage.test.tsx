@@ -28,8 +28,8 @@ jest.mock("@/components/layout/AppShell", () => ({
   default: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
-jest.mock("@/components/ui/Toast", () => ({
-  useToast: () => ({ toast: mockToast }),
+jest.mock("@/hooks/useToast", () => ({
+  useToast: () => ({ push: mockToast, toasts: [], dismiss: jest.fn() }),
 }));
 
 jest.mock("@/lib/api", () => ({
@@ -111,7 +111,7 @@ describe("ManagementPage", () => {
     deferred.resolve({ message: "Queued", affected: 12 });
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith("Top profiles pushed to team", "success");
+      expect(mockToast).toHaveBeenCalledWith({ title: "Top profiles pushed to team", kind: "success" });
     });
 
     expect(
@@ -129,7 +129,7 @@ describe("ManagementPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Push Style" }));
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith("Style push failed", "error");
+      expect(mockToast).toHaveBeenCalledWith({ title: "Style push failed", kind: "error" });
     });
   });
 });

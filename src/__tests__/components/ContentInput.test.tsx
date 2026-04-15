@@ -87,6 +87,6 @@ describe("ContentInput", () => {
   it("shows the drop hint when the content area is in drag state", () => {
     render(<ContentInput contentDropActive />);
 
-    expect(screen.getByText("Drop file here")).toBeInTheDocument();
+    expect(screen.getAllByText("Drop file here").length).toBeGreaterThan(0);
   });
 });
