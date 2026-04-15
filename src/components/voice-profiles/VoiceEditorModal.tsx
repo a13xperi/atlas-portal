@@ -193,7 +193,7 @@ export default function VoiceEditorModal({
               Search your follows
             </label>
             <div className="relative mt-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-atlas-text-muted" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-atlas-text-muted" aria-hidden="true" />
               <input
                 id="voice-follow-search"
                 type="text"
@@ -228,6 +228,7 @@ export default function VoiceEditorModal({
                   <li key={follow.id}>
                     <button
                       type="button"
+                      aria-selected={isSelected}
                       onClick={() => handleSelectFollow(follow)}
                       className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
                         isSelected

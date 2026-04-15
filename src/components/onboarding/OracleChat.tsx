@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { publicUrls } from "@/lib/public-urls";
 import {
   canAdvance,
+  createTextStream,
   getContinueLabel,
   getOnboardingCompletionHref,
   getTrackMeta,
@@ -15,7 +16,6 @@ import {
   oracleReducer,
 } from "@/lib/oracle";
 import {
-  generateVoiceProfileName,
   styleToDimensions,
   TRACK_A_INITIAL_DIMENSIONS,
 } from "@/lib/voice-profile-dimensions";
@@ -25,6 +25,7 @@ import {
   buildReferenceBlendVoices,
   REFERENCE_ACCOUNT_FALLBACK,
 } from "@/lib/reference-accounts";
+import { generateVoiceProfileName } from "@/lib/voice-naming";
 
 import OracleAvatar from "./OracleAvatar";
 import OracleMessage from "./OracleMessage";
@@ -54,11 +55,12 @@ const styleOptions = [
 
 export default function OracleChat() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [state, dispatch] = useReducer(oracleReducer, null, initialOracleState);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const calibratingRef = useRef(false);
   const drainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const streamCleanupRef = useRef<(() => void) | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [resumeTrackAAfterOAuth, setResumeTrackAAfterOAuth] = useState(false);
   const [tweetRatings, setTweetRatings] = useState<
@@ -175,20 +177,15 @@ export default function OracleChat() {
     }
   }, [state.currentStep, state.xConnected, state.xHandle]);
 
-  // ── Typing animation: drain pending messages with delay ──────────
-  // NOTE: We deliberately do NOT depend on `state.isTyping` here. Doing so
-  // creates a race where dispatching SET_TYPING(true) inside the effect
-  // triggers a re-run, whose cleanup clears the pending dequeue timer
-  // before it can fire — leaving the chat stuck on the typing indicator
-  // forever (the original "blank /onboarding screen" bug).
+  // ── Streaming animation: drain pending messages via ReadableStream ─
+  // Messages stream in word-by-word using a client-side ReadableStream,
+  // giving the Oracle a natural typing effect instead of appearing all at once.
   useEffect(() => {
     if (state.pendingMessages.length === 0) {
-      // Nothing to drain — make sure the typing indicator clears.
       if (state.isTyping) dispatch({ type: "SET_TYPING", isTyping: false });
       return;
     }
 
-    // A drain is already scheduled — let it complete.
     if (drainTimerRef.current) return;
 
     if (!state.isTyping) {
@@ -197,26 +194,56 @@ export default function OracleChat() {
 
     const msg = state.pendingMessages[0];
     const wordCount = msg.content.split(/\s+/).length;
-    const delay = Math.min(1200, Math.max(300, wordCount * 40));
+    const initialDelay = Math.min(800, Math.max(200, wordCount * 30));
 
     drainTimerRef.current = setTimeout(() => {
       drainTimerRef.current = null;
-      dispatch({ type: "DEQUEUE_MESSAGE" });
-    }, delay);
+      dispatch({ type: "START_STREAM_MESSAGE" });
+
+      // System messages appear instantly; Oracle messages stream word-by-word.
+      if (msg.role === "system") {
+        dispatch({ type: "APPEND_TO_LAST_MESSAGE", text: msg.content });
+        dispatch({ type: "SET_TYPING", isTyping: false });
+        return;
+      }
+
+      const stream = createTextStream(msg.content, 25);
+      const reader = stream.getReader();
+
+      async function pump() {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            dispatch({ type: "APPEND_TO_LAST_MESSAGE", text: value });
+          }
+        } catch {
+          // Ignore cancellation errors
+        } finally {
+          reader.releaseLock();
+          dispatch({ type: "SET_TYPING", isTyping: false });
+        }
+      }
+
+      pump();
+      streamCleanupRef.current = () => reader.cancel().catch(() => {});
+    }, initialDelay);
 
     return () => {
       if (drainTimerRef.current) {
         clearTimeout(drainTimerRef.current);
         drainTimerRef.current = null;
       }
+      streamCleanupRef.current?.();
+      streamCleanupRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.pendingMessages]);
 
-  // ── Auto-scroll on new messages ──────────────────────────────────
+  // ── Auto-scroll on new messages or streaming content ─────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [state.messages.length, state.isTyping]);
+  }, [state.messages.length, state.isTyping, state.messages.at(-1)?.content]);
 
   // ── API persistence side effects ─────────────────────────────────
   const persistAfterStep = useCallback(
@@ -246,13 +273,32 @@ export default function OracleChat() {
         if (step === "NAME_VOICE") {
           setBlendSaveStatus("saving");
           try {
+            const blendVoices = buildReferenceBlendVoices(
+              state.selectedRefs,
+              state.selfPercentage,
+              REFERENCE_ACCOUNT_FALLBACK
+            );
+            const blendName = generateVoiceProfileName(state.dimensions, [
+              {
+                isPersonal: true,
+                label: "My voice",
+                percentage: state.selfPercentage,
+              },
+              ...state.selectedRefs.map((refId, index) => {
+                const account = referenceAccountLookup.get(refId);
+                const blendVoice = blendVoices[index + 1];
+
+                return {
+                  category: account?.category,
+                  handle: account?.handle ?? blendVoice?.label ?? refId,
+                  label: blendVoice?.label ?? account?.displayName ?? refId,
+                  percentage: blendVoice?.percentage ?? 0,
+                };
+              }),
+            ]);
             const result = await api.voice.createBlend(
-              state.blendName.trim() || "My voice",
-              buildReferenceBlendVoices(
-                state.selectedRefs,
-                state.selfPercentage,
-                REFERENCE_ACCOUNT_FALLBACK
-              )
+              blendName,
+              blendVoices
             );
             setSavedBlendId(result.blend.id);
             setBlendSaveStatus("saved");
@@ -297,7 +343,7 @@ export default function OracleChat() {
         return;
       }
       if (value === "skip-x") {
-        dispatch({ type: "SET_TRACK", track: "b" });
+        dispatch({ type: "ADVANCE", payload: "Continue without X (limited features)" });
         return;
       }
       if (value === "track-a" || value === "track-b") {
@@ -336,7 +382,15 @@ export default function OracleChat() {
     if (step === "TOPICS") {
       // Finish the wizard on the final preferences step and land users in the
       // next surface they should act in, rather than the legacy handoff screen.
-      router.replace(getOnboardingCompletionHref(state.track));
+      router.replace(
+        getOnboardingCompletionHref({
+          track: state.track,
+          voiceCalibrated:
+            state.calibrationResult !== null &&
+            (state.calibrationResult?.tweetsAnalyzed ?? 0) >= 3,
+          onboardingComplete: !!user?.onboardingTrack,
+        })
+      );
       return;
     }
 
@@ -377,6 +431,7 @@ export default function OracleChat() {
             tweetsAnalyzed: calibration.tweetsAnalyzed,
           },
         });
+        await refreshUser();
         dispatch({
           type: "SET_DIMENSIONS",
           dimensions: {
@@ -492,6 +547,46 @@ export default function OracleChat() {
             </div>
           );
 
+        case "tweet-ratings": {
+          const sampleTweets = [
+            "ETH staking yields are compressing fast. The easy alpha is gone — now it's about execution risk and DVT adoption.",
+            "Everyone's talking about L2 fees but nobody's asking why L1 gas is still this high during a bear market.",
+            "Hot take: most DeFi governance is theater. Token holders vote, whales decide.",
+            "The merge was 18 months ago and we're still arguing about MEV. Builders are the new miners.",
+          ];
+          return (
+            <div className="space-y-3">
+              {sampleTweets.map((tweet, i) => (
+                <div
+                  key={i}
+                  className="flex items-start justify-between gap-4 rounded-2xl bg-atlas-surface p-4"
+                >
+                  <p className="flex-1 text-sm text-atlas-text">{tweet}</p>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTweetRatings(prev => ({ ...prev, [i]: prev[i] === 'up' ? null : 'up' }))}
+                      className={tweetRatings[i] === 'up' ? 'text-atlas-teal transition-colors' : 'text-atlas-text-secondary hover:text-atlas-teal transition-colors'}
+                      aria-label="Rate as more like me"
+                      aria-pressed={tweetRatings[i] === 'up'}
+                    >
+                      <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z" /></svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTweetRatings(prev => ({ ...prev, [i]: prev[i] === 'down' ? null : 'down' }))}
+                      className={tweetRatings[i] === 'down' ? 'text-red-400 transition-colors' : 'text-atlas-text-secondary hover:text-red-400 transition-colors'}
+                      aria-label="Rate as less like me"
+                      aria-pressed={tweetRatings[i] === 'down'}
+                    >
+                      <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z" /></svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        }
 
         case "style-picker":
           return (
@@ -500,6 +595,7 @@ export default function OracleChat() {
                 <button
                   key={label}
                   type="button"
+                  aria-pressed={state.selectedStyle === label}
                   onClick={() => {
                     dispatch({ type: "SET_STYLE", style: label });
                     dispatch({
@@ -608,7 +704,15 @@ export default function OracleChat() {
                         })
                         .catch(() => {});
                     }
-                    router.push(getOnboardingCompletionHref(state.track));
+                    router.push(
+                      getOnboardingCompletionHref({
+                        track: state.track,
+                        voiceCalibrated:
+                          state.calibrationResult !== null &&
+                          (state.calibrationResult?.tweetsAnalyzed ?? 0) >= 3,
+                        onboardingComplete: true, // updateProfile just set it above
+                      })
+                    );
                   }}
                 >
                   Go to Dashboard
@@ -636,11 +740,11 @@ export default function OracleChat() {
                     setOauthLoading(false);
                   }
                 }}
-                className="w-full rounded-xl bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full rounded-xl bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-6 py-3 text-sm font-semibold text-atlas-bg transition-opacity hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {oauthLoading ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                     Connecting...
                   </>
                 ) : (

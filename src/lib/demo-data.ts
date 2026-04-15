@@ -17,6 +17,7 @@ import type {
   AlertSubscription,
   DailyActivity,
   TeamMember,
+  CampaignAnalytics,
 } from "./api";
 import { publicUrls } from "./public-urls";
 
@@ -286,6 +287,60 @@ const demoCampaigns: DemoCampaign[] = [
   },
 ];
 
+// ── Campaign Analytics ───────────────────────────────────────────────────────
+
+function makeCampaignAnalytics(campaign: DemoCampaign): CampaignAnalytics {
+  const posted = campaign.drafts.filter((d) => d.status === "POSTED");
+  const tweets = posted.map((d) => {
+    const base = Math.max(1000, Math.floor((d.actualEngagement ?? d.predictedEngagement ?? 2000) * 0.8));
+    return {
+      draftId: d.id,
+      content: d.content,
+      postedAt: (d as any).postedAt ?? d.createdAt,
+      impressions: Math.floor(base * 2.5),
+      likes: Math.floor(base * 0.06),
+      retweets: Math.floor(base * 0.02),
+      replies: Math.floor(base * 0.01),
+    };
+  });
+
+  const totals = tweets.reduce(
+    (acc, t) => ({
+      impressions: acc.impressions + t.impressions,
+      likes: acc.likes + t.likes,
+      retweets: acc.retweets + t.retweets,
+      replies: acc.replies + t.replies,
+    }),
+    { impressions: 0, likes: 0, retweets: 0, replies: 0 }
+  );
+
+  const daily = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(Date.now() - (13 - i) * 86400000);
+    const dayLabel = d.toLocaleDateString("en-US", { weekday: "short" });
+    const dayEngagement = tweets
+      .filter((t) => {
+        const postedDate = new Date(t.postedAt ?? d.toISOString()).toISOString().slice(0, 10);
+        return postedDate === d.toISOString().slice(0, 10);
+      })
+      .reduce((sum, t) => sum + t.impressions + t.likes + t.retweets + t.replies, 0);
+    // Add some background noise so chart isn't empty on days without posts
+    const noise = Math.floor(Math.random() * 500);
+    return {
+      date: d.toISOString().slice(0, 10),
+      dayLabel,
+      engagement: dayEngagement + noise,
+    };
+  });
+
+  return { tweets, totals, daily };
+}
+
+const campaignAnalyticsMap: Record<string, CampaignAnalytics> = {
+  [demoCampaigns[0].id]: makeCampaignAnalytics(demoCampaigns[0]),
+  [demoCampaigns[1].id]: makeCampaignAnalytics(demoCampaigns[1]),
+  [demoCampaigns[2].id]: makeCampaignAnalytics(demoCampaigns[2]),
+};
+
 // ── Voice Profile ────────────────────────────────────────────────────────────
 
 const voiceProfile: { profile: VoiceProfile } = {
@@ -318,18 +373,24 @@ const voiceReferences: { voices: ReferenceVoice[] } = {
       name: "Cobie",
       handle: "coaboratecobie",
       isActive: true,
+      avatarUrl: "https://unavatar.io/twitter/coaboratecobie",
+      voiceProfile: makeVoiceProfile({ humor: 78, formality: 30, brevity: 85, contrarianTone: 72, maturity: "ADVANCED", tweetsAnalyzed: 420 }),
     },
     {
       id: "demo-ref-2",
       name: "Hasu",
       handle: "hasufl",
       isActive: true,
+      avatarUrl: "https://unavatar.io/twitter/hasufl",
+      voiceProfile: makeVoiceProfile({ humor: 40, formality: 82, brevity: 60, contrarianTone: 55, maturity: "ADVANCED", tweetsAnalyzed: 380 }),
     },
     {
       id: "demo-ref-3",
       name: "GCR",
       handle: "GCRClassic",
       isActive: true,
+      avatarUrl: "https://unavatar.io/twitter/GCRClassic",
+      voiceProfile: makeVoiceProfile({ humor: 65, formality: 45, brevity: 70, contrarianTone: 88, maturity: "ADVANCED", tweetsAnalyzed: 290 }),
     },
   ],
 };
@@ -919,6 +980,20 @@ export function getDemoResponse(path: string, method: string = "GET", body?: unk
         createdAt: now,
       },
     };
+  }
+
+  // Campaign analytics
+  if (method === "GET" && /^\/api\/campaigns\/[^/]+\/analytics$/.test(cleanPath)) {
+    const id = cleanPath.split("/")[3] as string;
+    return campaignAnalyticsMap[id] ?? makeCampaignAnalytics({
+      id,
+      name: "New Campaign",
+      description: "",
+      status: "DRAFT",
+      draftCount: 1,
+      createdAt: now,
+      drafts: [drafts.drafts[0]],
+    });
   }
 
   // Campaign create — return a synthetic campaign the UI can route to

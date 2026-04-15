@@ -68,8 +68,8 @@ test.describe("Accessibility — keyboard navigation", () => {
     await authedPage.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await authedPage.locator("main, [role='main'], #__next > div").first().waitFor({ state: "visible", timeout: 10_000 });
 
-    // Open command palette with Cmd+K
-    await authedPage.keyboard.press("Meta+k");
+    // Open command palette with Cmd+K (ControlOrMeta works cross-platform)
+    await authedPage.keyboard.press("ControlOrMeta+k");
 
     // Wait for command palette to actually appear
     const palette = authedPage.locator("[role='dialog'], [data-testid='command-palette'], [class*='command']").first();

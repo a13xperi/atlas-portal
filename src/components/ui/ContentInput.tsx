@@ -7,6 +7,7 @@ import type { RecordingState } from "@/lib/useVoiceRecorder";
 export interface ContentInputProps {
   placeholder?: string;
   value?: string;
+  disabled?: boolean;
   onDrop?: (files: FileList) => void;
   onTextChange?: (text: string) => void;
   onTextSubmit?: (
@@ -30,6 +31,7 @@ export interface ContentInputProps {
 export default function ContentInput({
   placeholder = "Paste a tweet idea or link…",
   value,
+  disabled = false,
   onDrop,
   onTextChange,
   onTextSubmit,
@@ -51,6 +53,7 @@ export default function ContentInput({
   const contentErrorId = useId();
   const sourceErrorId = useId();
   const contentHintId = useId();
+  const dropZoneHintId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const [internalText, setInternalText] = useState("");
@@ -118,6 +121,7 @@ export default function ContentInput({
         ref={fileInputRef}
         aria-label="Upload report file"
         aria-describedby={sourceError ? sourceErrorId : undefined}
+        aria-invalid={Boolean(sourceError)}
         type="file"
         accept={acceptFileTypes}
         onChange={handleFileSelect}
@@ -125,6 +129,9 @@ export default function ContentInput({
       />
 
       <div
+        role="region"
+        aria-label="File upload"
+        aria-describedby={dropZoneHintId}
         onDrop={handleDrop}
         onDragOver={(event) => event.preventDefault()}
         className="rounded-2xl border border-dashed border-glass-border bg-atlas-bg/30 p-6 text-center transition-colors hover:border-atlas-teal/50 sm:p-8"
@@ -155,7 +162,7 @@ export default function ContentInput({
             <span className="text-xs">Pick a trending alert</span>
           </button>
         </div>
-        <p className="text-atlas-text-muted text-xs">
+        <p id={dropZoneHintId} className="text-atlas-text-muted text-xs">
           Drag and drop files or click an option above
         </p>
       </div>
@@ -182,6 +189,7 @@ export default function ContentInput({
             ref={textInputRef}
             aria-describedby={contentDescriptionIds || undefined}
             aria-invalid={Boolean(contentError)}
+            aria-errormessage={contentError ? contentErrorId : undefined}
             placeholder={placeholder}
             value={text}
             rows={3}
@@ -201,7 +209,8 @@ export default function ContentInput({
               type="button"
               aria-label="Generate draft"
               onClick={handleSubmit}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-atlas-teal/50 bg-atlas-teal/10 p-3 text-atlas-teal transition-colors hover:bg-atlas-teal/20 sm:w-auto sm:self-stretch"
+              disabled={disabled}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-atlas-teal/50 bg-atlas-teal/10 p-3 text-atlas-teal transition-colors hover:bg-atlas-teal/20 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:self-stretch"
             >
               <ArrowUp className="w-4 h-4" aria-hidden="true" />
             </button>
@@ -233,8 +242,11 @@ export default function ContentInput({
             </button>
           ) : null}
         </div>
+        <div role="status" aria-live="assertive" className="sr-only">
+          {contentDropActive ? "Drop file here" : ""}
+        </div>
         {contentDropActive ? (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl border-2 border-dashed border-atlas-teal bg-atlas-surface/95 backdrop-blur-sm">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl border-2 border-dashed border-atlas-teal bg-atlas-surface/95 backdrop-blur-sm">
             <span className="text-sm font-medium text-atlas-teal">
               Drop file here
             </span>

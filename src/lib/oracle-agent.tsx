@@ -9,7 +9,8 @@ import {
   useState,
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { api, readSSEStream } from "@/lib/api";
+import { api, ApiError, readSSEStream } from "@/lib/api";
+import { buildOracleErrorMessage, isTransientError } from "@/lib/oracle-errors";
 import { executeAction, summarizeResult } from "@/lib/oracle-action-executor";
 import type {
   AgentChatMessage,
@@ -238,7 +239,7 @@ export function OracleAgentProvider({
       setMessages((prev) => [...prev, userMsg]);
       setIsThinking(true);
 
-      try {
+      const attemptStream = async () => {
         const history = [...messagesRef.current, userMsg]
           .slice(-20)
           .map((m) => ({ role: m.role, content: m.text }));
@@ -268,13 +269,42 @@ export function OracleAgentProvider({
             return prev;
           });
         }
-      } catch {
+      };
+
+      try {
+        try {
+          await attemptStream();
+        } catch (err) {
+          if (isTransientError(err)) {
+            await new Promise((r) => setTimeout(r, 600));
+            await attemptStream();
+          } else {
+            throw err;
+          }
+        }
+      } catch (err) {
+        try {
+          const Sentry = await import("@sentry/nextjs");
+          Sentry.addBreadcrumb({
+            category: "oracle",
+            level: "error",
+            message: "Oracle chat stream failed",
+            data: {
+              status: (err as { statusCode?: number })?.statusCode,
+              name: (err as { name?: string })?.name,
+            },
+          });
+          Sentry.captureException(err);
+        } catch {
+          /* ignore sentry failures */
+        }
+
         setMessages((prev) => [
           ...prev,
           {
             id: msgId(),
             role: "oracle",
-            text: "I\u2019m having trouble connecting right now. Try again in a moment.",
+            text: buildOracleErrorMessage(err),
             timestamp: Date.now(),
           },
         ]);

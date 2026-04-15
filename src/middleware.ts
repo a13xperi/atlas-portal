@@ -60,32 +60,33 @@ export function middleware(request: NextRequest) {
   // - connect-src: allow self + Railway backend API
   // - font-src: allow self + Google Fonts (Playfair Display, Inter)
   // - frame-ancestors 'none': same as X-Frame-Options DENY but for modern browsers
+  const apiOrigin = process.env.NEXT_PUBLIC_API_URL
+    ? new URL(process.env.NEXT_PUBLIC_API_URL).origin
+    : "";
+
   const styleSrc = [
     "style-src 'self' 'unsafe-inline'",
     publicOrigins.googleFontsStylesOrigin,
   ]
     .filter(Boolean)
     .join(" ");
-
   const imgSrc = [
     "img-src 'self' data: blob:",
-    publicOrigins.xImageCdnOrigin,
     publicOrigins.unavatarOrigin,
+    publicOrigins.xImageCdnOrigin,
   ]
     .filter(Boolean)
     .join(" ");
-
   const connectSrc = [
     "connect-src 'self'",
+    apiOrigin,
     publicOrigins.apiOrigin,
     publicOrigins.supabaseOrigin,
-    "wss:",
   ]
     .filter(Boolean)
     .join(" ");
-
   const fontSrc = [
-    "font-src 'self'",
+    "font-src 'self' data:",
     publicOrigins.googleFontsAssetsOrigin,
   ]
     .filter(Boolean)

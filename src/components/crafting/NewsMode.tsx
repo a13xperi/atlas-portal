@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, ReactNode, useState } from "react";
+import { FormEvent, ReactNode, useId, useState } from "react";
 import { Loader2 } from "lucide-react";
 import GradientButton from "@/components/ui/GradientButton";
 
@@ -29,6 +29,7 @@ export default function NewsMode({
   const [articleUrl, setArticleUrl] = useState("");
   const [fallbackText, setFallbackText] = useState("");
   const [showFallback, setShowFallback] = useState(false);
+  const errorId = useId();
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -56,6 +57,8 @@ export default function NewsMode({
         <input
           id="news-article-url"
           type="url"
+          aria-invalid={Boolean(error)}
+          aria-errormessage={error ? errorId : undefined}
           value={articleUrl}
           onChange={(event) => {
             const nextArticleUrl = event.target.value;
@@ -80,6 +83,8 @@ export default function NewsMode({
           </label>
           <textarea
             id="news-fallback-text"
+            aria-invalid={Boolean(error)}
+            aria-errormessage={error ? errorId : undefined}
             value={fallbackText}
             onChange={(event) => setFallbackText(event.target.value)}
             placeholder="Paste the article text or key points"
@@ -94,6 +99,7 @@ export default function NewsMode({
 
       {error ? (
         <div
+          id={errorId}
           role="alert"
           className="flex items-center justify-between rounded-lg border border-atlas-error/30 bg-atlas-error/10 px-3 py-2 text-sm text-atlas-error"
         >

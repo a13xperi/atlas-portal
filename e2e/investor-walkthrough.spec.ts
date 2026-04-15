@@ -61,12 +61,14 @@ test.describe("Investor Walkthrough", () => {
     await expect(page.getByText("QA Checklist")).toBeVisible();
 
     // ── Step 9: Command Palette ────────────────────────────────────────
-    await page.keyboard.press("Meta+k");
-    await expect(page.getByRole("dialog")).toBeVisible();
+    // ControlOrMeta maps to Cmd on macOS, Ctrl on Linux/Windows — works in CI.
+    await page.keyboard.press("ControlOrMeta+k");
+    const palette = page.locator("#command-palette");
+    await expect(palette).toBeVisible();
     // Type "arena" to search
-    await page.getByRole("dialog").getByRole("textbox").fill("arena");
-    // Scope to dialog to avoid strict mode violation — "Arena" appears in NavBar too
-    await expect(page.getByRole("dialog").getByText("Arena").first()).toBeVisible();
+    await palette.getByRole("textbox").fill("arena");
+    // Scope to palette to avoid strict mode violation — "Arena" appears in NavBar too
+    await expect(palette.getByText("Arena").first()).toBeVisible();
     // Close palette
     await page.keyboard.press("Escape");
   });

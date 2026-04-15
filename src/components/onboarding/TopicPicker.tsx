@@ -50,7 +50,7 @@ export default function TopicPicker({
               onClick={() => toggleTopic(topic)}
               className={`inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-atlas-teal/30 ${
                 isSelected
-                  ? "border-atlas-teal bg-atlas-teal text-atlas-text shadow-sm shadow-atlas-teal/30"
+                  ? "border-atlas-teal bg-atlas-teal text-atlas-bg shadow-sm shadow-atlas-teal/30"
                   : "border-glass-border bg-atlas-surface text-atlas-text-secondary hover:border-atlas-teal/50 hover:bg-atlas-teal/10 hover:text-atlas-text"
               }`}
             >
