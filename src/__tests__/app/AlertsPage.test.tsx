@@ -66,7 +66,7 @@ describe("AlertsPage", () => {
     expect(screen.getByText("Signals Feed")).toBeInTheDocument();
     expect(
       screen.getByText(
-        /configure your subscriptions to start receiving signals/i
+        /Set up your subscriptions and Atlas will surface signals worth drafting on/i
       )
     ).toBeInTheDocument();
     expect(

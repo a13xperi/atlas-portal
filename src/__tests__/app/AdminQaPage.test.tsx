@@ -31,8 +31,8 @@ jest.mock("@/components/layout/AppShell", () => ({
   default: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
-jest.mock("@/components/ui/Toast", () => ({
-  useToast: () => ({ toast: mockToast }),
+jest.mock("@/hooks/useToast", () => ({
+  useToast: () => ({ push: mockToast, toasts: [], dismiss: jest.fn() }),
 }));
 
 jest.mock("@/lib/api", () => ({
@@ -124,7 +124,7 @@ describe("QaTestRunnerPage", () => {
     });
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith("Action completed", "success");
+      expect(mockToast).toHaveBeenCalledWith({ title: "Action completed", kind: "success" });
     });
 
     expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
@@ -162,7 +162,7 @@ describe("QaTestRunnerPage", () => {
     );
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith("Delete failed", "error");
+      expect(mockToast).toHaveBeenCalledWith({ title: "Delete failed", kind: "error" });
     });
   });
 });
