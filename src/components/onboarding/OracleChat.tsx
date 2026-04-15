@@ -41,6 +41,7 @@ import { CheckCircle, Loader2 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import VoiceTinderCard from "@/components/voice-tinder/VoiceTinderCard";
 import ArchetypeReveal from "./ArchetypeReveal";
+import VoiceEvidencePanel from "./VoiceEvidencePanel";
 import type { TweetExemplarItem, VoiceTinderSwipe, VoiceArchetype } from "@/lib/api";
 
 const referenceAccountLookup = getReferenceAccountLookup(
@@ -78,6 +79,7 @@ export default function OracleChat() {
   const [ownTinderExit, setOwnTinderExit] = useState<"KEEP" | "SKIP">("KEEP");
   const [calibrating, setCalibrating] = useState(false);
   const [localArchetype, setLocalArchetype] = useState<VoiceArchetype | null>(null);
+  const [evidenceData, setEvidenceData] = useState<{ topTweets: { text: string; likeCount: number; retweetCount: number; replyCount: number }[]; dimensionExamples: { dimension: string; score: number; tweetExcerpt: string }[] } | null>(null);
 
   const [referenceHandle, setReferenceHandle] = useState("");
   const [referenceTweets, setReferenceTweets] = useState<TweetExemplarItem[]>([]);
@@ -456,18 +458,13 @@ export default function OracleChat() {
       .then((res) => {
         setLocalArchetype(res.archetype);
         dispatch({ type: "SET_ARCHETYPE", archetype: res.archetype });
-        dispatch({
-          type: "ENQUEUE_MESSAGES",
-          messages: [
-            {
-              id: `archetype-reveal-${Date.now()}`,
-              role: "oracle",
-              content: `Your archetype is ready — say hello to the **${res.archetype.label}**.`,
-              component: { type: "archetype-reveal" },
-              timestamp: Date.now(),
-            },
-          ],
-        });
+        const evidence = {
+          topTweets: res.topTweets ?? [],
+          dimensionExamples: res.dimensionExamples ?? [],
+        };
+        setEvidenceData(evidence);
+        dispatch({ type: "SET_EVIDENCE_DATA", data: evidence });
+        dispatch({ type: "ADVANCE", payload: `Archetype: ${res.archetype.label}` });
       })
       .catch((err: Error) => {
         console.error("Calibration failed:", err);
@@ -487,6 +484,13 @@ export default function OracleChat() {
       })
       .finally(() => setCalibrating(false));
   }, [state.currentStep, calibrating, localArchetype, ownSwipes.length, ownTweets.length]);
+
+  // ── Auto-skip evidence panel if no data returned ─────────────────
+  useEffect(() => {
+    if (state.currentStep === "TRACK_A_EVIDENCE" && !evidenceData?.topTweets?.length) {
+      dispatch({ type: "ADVANCE", payload: "Archetype ready" });
+    }
+  }, [state.currentStep, evidenceData]);
 
   // ── Render inline components ─────────────────────────────────────
   const renderComponent = useCallback(
@@ -692,6 +696,16 @@ export default function OracleChat() {
             <ArchetypeReveal archetype={localArchetype} onContinue={handleContinue} />
           ) : null;
 
+        case "voice-evidence-panel":
+          return evidenceData ? (
+            <VoiceEvidencePanel
+              topTweets={evidenceData.topTweets}
+              dimensionExamples={evidenceData.dimensionExamples}
+              tweetsAnalyzed={state.calibrationResult?.tweetsAnalyzed ?? 0}
+              onConfirm={handleContinue}
+            />
+          ) : null;
+
         case "style-picker":
           return (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -849,7 +863,7 @@ export default function OracleChat() {
           return null;
       }
     },
-    [oauthLoading, router, state, ownTweets, ownTinderIndex, ownTinderExit, ownTinderLoading, ownTinderError, localArchetype, calibrating, referenceHandle, referenceTweets, referenceTinderIndex, referenceTinderExit, referenceValidating, referenceError, handleContinue]
+    [oauthLoading, router, state, ownTweets, ownTinderIndex, ownTinderExit, ownTinderLoading, ownTinderError, localArchetype, calibrating, evidenceData, referenceHandle, referenceTweets, referenceTinderIndex, referenceTinderExit, referenceValidating, referenceError, handleContinue]
   );
 
   // ── Determine ActionZone config per step ─────────────────────────
@@ -866,6 +880,7 @@ export default function OracleChat() {
     // Steps that need a Continue button
     const continueSteps = [
       "OWN_TWEET_TINDER",
+      "TRACK_A_EVIDENCE",
       "REFERENCE_TINDER",
       "TRACK_B_STYLE",
       "REFERENCES",

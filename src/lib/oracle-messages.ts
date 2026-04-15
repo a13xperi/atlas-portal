@@ -57,6 +57,16 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
     ),
   ],
 
+  TRACK_A_EVIDENCE: [
+    msg(
+      "oracle",
+      "Your archetype is ready. Here's what shaped it.",
+      {
+        component: { type: "voice-evidence-panel" },
+      }
+    ),
+  ],
+
   REFERENCE_TINDER: [
     msg(
       "oracle",

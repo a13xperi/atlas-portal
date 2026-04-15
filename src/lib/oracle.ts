@@ -77,7 +77,8 @@ export function getContinueLabel(
 const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
   WELCOME: "OWN_TWEET_TINDER",
   CONNECT_X: "WELCOME",
-  OWN_TWEET_TINDER: "REFERENCE_TINDER",
+  OWN_TWEET_TINDER: "TRACK_A_EVIDENCE",
+  TRACK_A_EVIDENCE: "REFERENCE_TINDER",
   REFERENCE_TINDER: "REFERENCES",
   TRACK_B_STYLE: "REFERENCES",
   REFERENCES: "NAME_VOICE",
@@ -123,6 +124,8 @@ export function canAdvance(state: OracleState): boolean {
       return true; // allow skip
     case "OWN_TWEET_TINDER":
       return state.archetype !== null || state.calibrationResult !== null;
+    case "TRACK_A_EVIDENCE":
+      return true;
     case "REFERENCE_TINDER":
       return true; // optional skip
     case "TRACK_B_STYLE":
@@ -151,6 +154,7 @@ export function initialOracleState(): OracleState {
     xHandle: "",
     xConnected: false,
     calibrationResult: null,
+    evidenceData: null,
     archetype: null,
     dimensions: DEFAULT_VOICE_DIMENSIONS,
     selectedStyle: null,
@@ -249,6 +253,9 @@ export function oracleReducer(
     case "SET_CALIBRATION":
       console.log("[oracleReducer] SET_CALIBRATION", action.result);
       return { ...state, calibrationResult: action.result };
+
+    case "SET_EVIDENCE_DATA":
+      return { ...state, evidenceData: action.data };
 
     case "SET_ARCHETYPE":
       return { ...state, archetype: action.archetype };

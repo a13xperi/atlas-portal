@@ -28,6 +28,7 @@ export type OracleStep =
   | "WELCOME"
   | "CONNECT_X"
   | "OWN_TWEET_TINDER"
+  | "TRACK_A_EVIDENCE"
   | "REFERENCE_TINDER"
   | "TRACK_B_STYLE"
   | "REFERENCES"
@@ -42,6 +43,7 @@ export type InlineComponentType =
   | "own-tweet-tinder"
   | "reference-tinder"
   | "archetype-reveal"
+  | "voice-evidence-panel"
   | "style-picker"
   | "references"
   | "blend"
@@ -85,6 +87,7 @@ export interface OracleState {
   xHandle: string;
   xConnected: boolean;
   calibrationResult: { analysis: string; tweetsAnalyzed: number; dimensions?: VoiceDimensions } | null;
+  evidenceData: { topTweets: { text: string; likeCount: number; retweetCount: number; replyCount: number }[]; dimensionExamples: { dimension: string; score: number; tweetExcerpt: string }[] } | null;
   archetype: VoiceArchetype | null;
   dimensions: VoiceDimensions;
   selectedStyle: string | null;
@@ -109,6 +112,7 @@ export type OracleAction =
   | { type: "SET_HANDLE"; handle: string }
   | { type: "SET_X_CONNECTED"; connected: boolean }
   | { type: "SET_CALIBRATION"; result: OracleState["calibrationResult"] }
+  | { type: "SET_EVIDENCE_DATA"; data: OracleState["evidenceData"] }
   | { type: "SET_ARCHETYPE"; archetype: VoiceArchetype | null }
   | { type: "SET_DIMENSIONS"; dimensions: VoiceDimensions }
   | { type: "SET_STYLE"; style: string }

@@ -18,6 +18,7 @@ interface GenerateDraftInput {
   sourceContent: string;
   sourceType: string;
   blendId?: string;
+  blendWith?: string;
   replyAngle?: string;
   angleInstruction?: string;
 }
@@ -872,7 +873,16 @@ export const api = {
         hasArchetype: boolean;
         ownerDone: boolean;
         referenceDone: boolean;
+        references?: Array<{ handle: string; status: "ACTIVE" | "PENDING" }>;
       }>("/api/voice-tinder/session"),
+    getArchetype: () =>
+      request<{ archetype: VoiceArchetype }>("/api/voice-tinder/archetype"),
+    getReference: (handle: string) =>
+      request<{
+        handle: string;
+        archetype?: VoiceArchetype;
+        status: "ACTIVE" | "PENDING";
+      }>(`/api/voice-tinder/reference/${handle}`),
     getOwnSession: () =>
       request<{
         tweets: TweetExemplarItem[];
@@ -886,7 +896,7 @@ export const api = {
         body: { swipes },
       }),
     calibrate: () =>
-      request<{ archetype: VoiceArchetype }>("/api/voice-tinder/calibrate", {
+      request<{ archetype: VoiceArchetype; topTweets?: CalibrationResult["topTweets"]; dimensionExamples?: CalibrationResult["dimensionExamples"] }>("/api/voice-tinder/calibrate", {
         method: "POST",
       }),
     getReferenceSession: (handle: string) =>
@@ -1058,6 +1068,8 @@ export interface CalibrationResult {
   source?: { mode: string; pool: number; topN: number; recentN: number };
   twitterUser: { username: string; name: string };
   dimensions?: VoiceDimensions;
+  topTweets?: { text: string; likeCount: number; retweetCount: number; replyCount: number }[];
+  dimensionExamples?: { dimension: string; score: number; tweetExcerpt: string }[];
 }
 
 export interface ReferenceVoice {

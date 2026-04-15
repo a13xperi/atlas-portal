@@ -62,7 +62,6 @@ import {
   pickVoiceDimensions,
 } from "@/lib/voice-profile-dimensions";
 import { applyGeneratedBlendNames } from "@/lib/voice-naming";
-import { resolveVoiceAvatar, voiceInitials } from "@/lib/voice-avatar";
 import OracleWidget from "@/components/oracle/OracleWidget";
 import OracleCraftingHints from "@/components/oracle/OracleCraftingHints";
 import OracleInspector from "@/components/oracle/OracleInspector";
@@ -75,7 +74,7 @@ import {
 } from "@/lib/useVoiceGate";
 import { MultiAnglePanel } from "@/components/crafting/MultiAnglePanel";
 import { SchedulePopover } from "@/components/ui/SchedulePopover";
-import VoicePillBar from "@/components/ui/VoicePillBar";
+import CraftingVoiceSelector from "@/components/crafting/CraftingVoiceSelector";
 
 const CRAFTING_MODES = [
   { id: "new_post", label: "New Post" },
@@ -261,45 +260,12 @@ function buildVoiceVariationInstruction(
   ].join(" ");
 }
 
-function VoiceAvatarChip({
-  blend,
-  user,
-}: {
-  blend: SavedBlend;
-  user: User | null;
-}) {
-  const firstVoice = blend.voices[0];
-  if (!firstVoice) {
-    return (
-      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-atlas-nav text-[10px] font-medium text-atlas-text">
-        ?
-      </span>
-    );
-  }
-  const avatar = resolveVoiceAvatar(firstVoice, user);
-  if (avatar) {
-    return (
-      <img
-        src={avatar}
-        alt={blend.name || "blend avatar"}
-        className="h-5 w-5 rounded-full object-cover"
-      />
-    );
-  }
-  return (
-    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-atlas-nav text-[10px] font-medium text-atlas-text">
-      {voiceInitials(firstVoice, user)}
-    </span>
-  );
-}
-
 function CraftingPage() {
   useTour("crafting");
 
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const blendIntensityLabelId = useId();
   const regenerationGuidanceId = useId();
   const draftFeedbackHintId = useId();
   const { user } = useAuth();
@@ -313,7 +279,7 @@ function CraftingPage() {
   const [blends, setBlends] = useState<SavedBlend[]>([]);
   const [referenceAccounts, setReferenceAccounts] = useState<ReferenceAccount[]>([]);
   const [selectedBlendId, setSelectedBlendId] = useState<string | null>(null);
-  const [blendValue, setBlendValue] = useState(30);
+  const [selectedReferenceId, setSelectedReferenceId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState("");
   const [feedbackText, setFeedbackText] = useState("");
   const [showFeedback, setShowFeedback] = useState(false);
@@ -853,7 +819,7 @@ function CraftingPage() {
       const { draft, blendWarning: warn } = await api.drafts.generate({
         sourceContent: trimmedContent,
         sourceType,
-        blendId: selectedBlendId || undefined,
+        blendWith: selectedReferenceId || undefined,
         replyAngle: angle || undefined,
       });
       if (warn === "blend_not_found") {
@@ -878,7 +844,7 @@ function CraftingPage() {
   }, [
     commitDraft,
     isVoiceCalibrationBlocked,
-    selectedBlendId,
+    selectedReferenceId,
     toast,
     user,
     validateDraftSubmission,
@@ -1092,7 +1058,7 @@ function CraftingPage() {
       const { draft } = await api.drafts.generate({
         sourceContent: trimmedFallbackText || trimmedArticleUrl,
         sourceType: trimmedFallbackText ? "MANUAL" : "ARTICLE",
-        blendId: selectedBlendId || undefined,
+        blendWith: selectedReferenceId || undefined,
       });
       setVoiceComparison(null);
       setCompareMode(false);
@@ -1408,7 +1374,7 @@ function CraftingPage() {
         api.drafts.generate({
           sourceContent: trimmedContent,
           sourceType,
-          blendId: selectedBlendId || undefined,
+          blendWith: selectedReferenceId || undefined,
           replyAngle: replyAngleParam,
         }),
         api.drafts.generate({
@@ -1916,126 +1882,12 @@ function CraftingPage() {
               className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6"
               data-tour="voice-selector"
             >
-              <div className="flex flex-wrap gap-2 py-2">
-              <button
-                type="button"
-                onClick={() => setSelectedBlendId(null)}
-                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${
-                  selectedBlendId === null
-                    ? "border-atlas-teal bg-atlas-teal/10 text-atlas-teal"
-                    : "border-glass-border text-atlas-text-muted hover:border-atlas-text-muted"
-                }`}
-              >
-                {user?.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt=""
-                    className="h-5 w-5 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-atlas-nav text-[10px] font-medium text-atlas-text">
-                    {(user?.displayName || user?.handle || "M").trim().charAt(0).toUpperCase()}
-                  </span>
-                )}
-                <span className="text-sm">My Voice</span>
-              </button>
-              {namedBlends.map((blend) => {
-                const isActive = selectedBlendId === blend.id;
-                return (
-                  <button
-                    key={blend.id}
-                    type="button"
-                    onClick={() => setSelectedBlendId(isActive ? null : blend.id)}
-                    className={`flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${
-                      isActive
-                        ? "border-atlas-teal bg-atlas-teal/10 text-atlas-teal"
-                        : "border-glass-border text-atlas-text-muted hover:border-atlas-text-muted"
-                    }`}
-                  >
-                    <VoiceAvatarChip blend={blend} user={user ?? null} />
-                    <span className="text-sm">{blend.name ?? "Untitled blend"}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {selectedBlendId && (
-              <div className="w-full">
-                {(() => {
-                  const activeBlend = blends.find((b) => b.id === selectedBlendId);
-                  if (!activeBlend) return null;
-                  return (
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-atlas-text-secondary">
-                          Active voice
-                        </span>
-                        <span className="text-sm font-semibold text-atlas-teal">
-                          {activeBlend.name ?? "Untitled blend"}
-                        </span>
-                      </div>
-                      <VoicePillBar
-                        voices={activeBlend.voices.map((voice) => ({
-                          handle: voice.label,
-                          avatarUrl: voice.referenceVoice?.avatarUrl || undefined,
-                          pct: voice.percentage,
-                        }))}
-                      />
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-            <div className="flex w-full flex-col gap-2 sm:min-w-[200px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span
-                id={blendIntensityLabelId}
-                className="shrink-0 text-sm text-atlas-text-secondary"
-              >
-                {selectedBlendId
-                  ? `My Voice ↔ ${
-                      namedBlends.find((blend) => blend.id === selectedBlendId)?.name || "Blend"
-                    }`
-                  : "Blend:"}
-              </span>
-              <div className="flex flex-1 items-center gap-2">
-                {(() => {
-                  const blend = blends.find((b) => b.id === selectedBlendId);
-                  const leftVoice = blend?.voices?.[0]?.referenceVoice;
-                  return leftVoice?.avatarUrl ? (
-                    <img
-                      src={leftVoice.avatarUrl}
-                      alt=""
-                      className="h-5 w-5 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-5 w-5 rounded-full bg-atlas-nav" />
-                  );
-                })()}
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={blendValue}
-                  onChange={(event) => setBlendValue(Number(event.target.value))}
-                  aria-labelledby={blendIntensityLabelId}
-                  aria-valuetext={`${blendValue} percent`}
-                  className="flex-1"
-                  style={{ "--range-progress": `${blendValue}%` } as React.CSSProperties}
+              <div className="flex flex-col gap-3 w-full">
+                <span className="text-sm text-atlas-text-secondary">Inspired by</span>
+                <CraftingVoiceSelector
+                  selectedId={selectedReferenceId}
+                  onSelect={setSelectedReferenceId}
                 />
-                {(() => {
-                  const blend = blends.find((b) => b.id === selectedBlendId);
-                  const rightVoice = blend?.voices?.[blend.voices.length - 1]?.referenceVoice;
-                  return rightVoice?.avatarUrl ? (
-                    <img
-                      src={rightVoice.avatarUrl}
-                      alt=""
-                      className="h-5 w-5 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-5 w-5 rounded-full bg-atlas-nav" />
-                  );
-                })()}
-              </div>
-                <span className="w-10 text-right text-sm text-atlas-text">{blendValue}%</span>
               </div>
             </div>
           </ShadowGate>
