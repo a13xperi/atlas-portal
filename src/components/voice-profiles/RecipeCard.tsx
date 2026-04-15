@@ -16,10 +16,13 @@ import type { BlendVoice, SavedBlend } from "@/lib/api";
 import type { VoiceDimensionSnapshot } from "@/lib/voice-recipes";
 import {
   formatVoiceDimensionValue,
-  generateVoiceProfileName,
   type VoiceDimensions,
   VOICE_DIMENSION_SECTIONS,
 } from "@/lib/voice-profile-dimensions";
+import {
+  shouldGenerateVoiceProfileName,
+  generateVoiceProfileName,
+} from "@/lib/voice-naming";
 import { resolveVoiceAvatar, voiceInitials, type MinimalUser } from "@/lib/voice-avatar";
 
 interface RecipeCardProps {
@@ -153,24 +156,36 @@ export default function RecipeCard({
             )}
           </div>
           <h3 className="mt-4 font-heading text-2xl font-semibold tracking-tight text-atlas-text">
-            {blend.name ||
-              generateVoiceProfileName(
-                dimensions,
-                blend.voices
-                  .map((v) => v.referenceVoice?.handle)
-                  .filter(Boolean) as string[]
-              )}
+            {shouldGenerateVoiceProfileName(blend.name)
+              ? generateVoiceProfileName(
+                  dimensions,
+                  blend.voices.map((voice) => ({
+                    handle: voice.referenceVoice?.handle,
+                    percentage: voice.percentage,
+                    label: voice.label,
+                  }))
+                )
+              : blend.name}
           </h3>
           <div className="mt-3 flex items-center gap-3">
             <div className="flex flex-row-reverse items-center">
-              {[...blend.voices].reverse().map((voice, reverseIndex) => (
+              {blend.voices.length > 3 && (
+                <span
+                  className="flex shrink-0 items-center justify-center rounded-full border-2 border-atlas-bg bg-atlas-surface text-[10px] font-medium text-atlas-text-secondary -ml-2"
+                  style={{ width: 28, height: 28 }}
+                  aria-hidden="true"
+                >
+                  +{blend.voices.length - 3}
+                </span>
+              )}
+              {[...blend.voices].slice(0, 3).reverse().map((voice, reverseIndex) => (
                 <VoiceAvatar
                   key={`${blend.id}-${voice.id ?? voice.label}-cluster`}
                   voice={voice}
                   user={user}
                   size={28}
                   className={`border-2 border-atlas-bg ring-0 ${
-                    reverseIndex === blend.voices.length - 1 ? "" : "-ml-2"
+                    reverseIndex === 0 ? "" : "-ml-2"
                   }`}
                 />
               ))}
