@@ -65,6 +65,7 @@ describe("NavBar", () => {
       login: jest.fn(),
       register: jest.fn(),
       logout: jest.fn(),
+      refreshUser: jest.fn(),
     });
     mockUseAlertSocket.mockReturnValue({
       connected: true,
@@ -126,6 +127,7 @@ describe("NavBar", () => {
       login: jest.fn(),
       register: jest.fn(),
       logout: jest.fn(),
+      refreshUser: jest.fn(),
     });
 
     render(<NavBar variant="app" />);
@@ -145,6 +147,7 @@ describe("NavBar", () => {
       login: jest.fn(),
       register: jest.fn(),
       logout: jest.fn(),
+      refreshUser: jest.fn(),
     });
 
     render(<NavBar variant="app" />);
@@ -199,6 +202,7 @@ describe("NavBar", () => {
       login: jest.fn(),
       register: jest.fn(),
       logout: jest.fn(),
+      refreshUser: jest.fn(),
     });
 
     const { container } = render(<NavBar variant="onboarding" />);
@@ -215,6 +219,7 @@ describe("NavBar", () => {
       login: jest.fn(),
       register: jest.fn(),
       logout: jest.fn(),
+      refreshUser: jest.fn(),
     });
 
     render(<NavBar variant="app" />);

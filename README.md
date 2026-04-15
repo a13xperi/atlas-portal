@@ -40,6 +40,8 @@ npm run lint
 npm run test
 ```
 
+This repo is the **frontend** (Next.js on Vercel). The **backend** is [atlas-backend](https://github.com/a13xperi/atlas-backend) (Express on Railway). Clone both as sibling directories, then open [`atlas.code-workspace`](./atlas.code-workspace) in Cursor or VS Code to load frontend + API in one multi-root workspace.
+
 ## Environments
 
 | Env | Frontend | Backend |
@@ -67,6 +69,7 @@ npm run test
 
 ## Related
 
+- **Session prompts (multi-root):** [ATLAS-WORKSPACE-PROMPT.md](./ATLAS-WORKSPACE-PROMPT.md) — copy-paste context for portal + backend agents
 - **Backend:** [atlas-backend](https://github.com/a13xperi/atlas-backend) — Express + Prisma + PostgreSQL
 - **Figma:** File key `XYp41bfZdl8O00QCJqAdaK`
 - **CLAUDE.md:** Full workspace rules, auto-behaviors, skills, and lane protocol

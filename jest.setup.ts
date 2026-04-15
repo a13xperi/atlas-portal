@@ -1,3 +1,5 @@
+import "@testing-library/jest-dom";
+
 process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
 process.env.NEXT_PUBLIC_APP_URL = "https://delphi-atlas.vercel.app";
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://zoirudjyqfqvpxsrxepr.supabase.co";

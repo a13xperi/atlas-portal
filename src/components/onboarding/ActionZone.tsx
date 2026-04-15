@@ -57,7 +57,7 @@ export default function ActionZone({
             onClick={handleSubmit}
             disabled={!text.trim()}
             aria-label="Send message"
-            className="rounded-lg bg-atlas-teal px-3 py-2.5 text-white transition-colors hover:bg-atlas-teal/80 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-lg bg-atlas-teal px-3 py-2.5 text-atlas-bg transition-colors hover:bg-atlas-teal/80 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send className="h-4 w-4" aria-hidden="true" />
           </button>

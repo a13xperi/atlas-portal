@@ -230,7 +230,7 @@ test.describe("Navigation", () => {
   test("NAV-01: command palette opens with Cmd+K", async ({ page }) => {
     await page.goto("/dashboard");
     await page.waitForLoadState("networkidle");
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press("ControlOrMeta+k");
     // Look for command palette overlay
     const palette = page.locator("[class*='command'], [class*='palette'], [role='dialog']").first();
     if (await palette.isVisible({ timeout: 2000 }).catch(() => false)) {

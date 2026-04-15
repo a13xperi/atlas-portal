@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useId } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { X, Send, Sparkles, Check, XCircle } from "lucide-react";
+import { X, Send, Sparkles, Check, XCircle, Minus } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useOracleAgent } from "@/lib/oracle-agent";
+import { useOracleUI } from "@/lib/oracle-ui";
 
 interface NudgeMessage {
   text: string;
@@ -15,7 +16,7 @@ function getNudge(pathname: string): NudgeMessage {
   if (pathname === "/dashboard") return { text: "Welcome back. What would you like to work on today?" };
   if (pathname === "/crafting") return { text: "Drop an article or hot take above. I’ll help you turn it into a thread." };
   if (pathname === "/voice-profiles") return { text: "Your voice dimensions shape how Atlas writes for you. Tweak them until it feels right." };
-  if (pathname === "/analytics") return { text: "Track what’s working. Your best posts share a pattern \u2014 can you spot it?" };
+  if (pathname === "/analytics") return { text: "Track what’s working. Your best posts share a pattern — can you spot it?" };
   if (pathname === "/alerts") return { text: "Signals are live topics worth posting about. Pick one and draft a take." };
   if (pathname === "/arena") return { text: "The Arena ranks analysts by output, engagement, and consistency. Climb the board." };
   if (pathname === "/team-library") return { text: "These are approved team styles. Use one as a starting point for your next draft." };
@@ -31,12 +32,11 @@ const QUICK_ACTIONS = [
 ];
 
 export default function FloatingOracle() {
-  const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
-  const { messages: agentMessages, isThinking, pendingActions, send, confirmAction, rejectAction, reset } = useOracleAgent();
+  const { messages: agentMessages, isThinking, pendingActions, send, confirmAction, rejectAction } = useOracleAgent();
+  const { view, open, minimize, close } = useOracleUI();
 
-  const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [imgError, setImgError] = useState(false);
   const [hasUnread, setHasUnread] = useState(true);
@@ -49,7 +49,7 @@ export default function FloatingOracle() {
   // Contextual nudge on page change
   useEffect(() => {
     setNudge(getNudge(pathname));
-    if (!isOpen) setHasUnread(true);
+    if (view !== "open") setHasUnread(true);
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-scroll
@@ -57,39 +57,30 @@ export default function FloatingOracle() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [agentMessages, pendingActions]);
 
-  // Focus input on open; return focus to trigger on close
+  // Focus input on open; return focus to trigger on minimize
   useEffect(() => {
-    if (isOpen) {
+    if (view === "open") {
       setHasUnread(false);
       setTimeout(() => inputRef.current?.focus(), 100);
-    } else {
-      // Only pull focus back if the trigger button is actually in the DOM
-      // (user may have navigated away). Avoid stealing focus on first mount.
+    } else if (view === "minimized") {
       if (document.activeElement instanceof HTMLElement && triggerRef.current) {
         triggerRef.current.focus({ preventScroll: true });
       }
     }
-  }, [isOpen]);
+  }, [view]);
 
-  // Escape closes the panel when open
+  // Escape minimizes the panel when open
   useEffect(() => {
-    if (!isOpen) return;
+    if (view !== "open") return;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        setIsOpen(false);
+        minimize();
       }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [isOpen]);
-
-  // Wire Cmd+K "Open Oracle" command palette action
-  useEffect(() => {
-    const handleOracleOpen = () => setIsOpen(true);
-    window.addEventListener("oracle:open", handleOracleOpen);
-    return () => window.removeEventListener("oracle:open", handleOracleOpen);
-  }, []);
+  }, [view, minimize]);
 
   const handleSend = useCallback(() => {
     const text = input.trim();
@@ -105,7 +96,7 @@ export default function FloatingOracle() {
     [send],
   );
 
-  if (!user) return null;
+  if (!user || view === "closed") return null;
 
   return (
     <>
@@ -117,12 +108,12 @@ export default function FloatingOracle() {
       `}</style>
 
       {/* Floating bubble */}
-      {!isOpen && (
+      {view !== "open" && (
         <button
           ref={triggerRef}
           type="button"
           onClick={() => {
-            setIsOpen(true);
+            open();
             try { localStorage.setItem("atlas_discovered_oracle", "1"); } catch {}
           }}
           data-tour="oracle-widget"
@@ -151,7 +142,7 @@ export default function FloatingOracle() {
       )}
 
       {/* Chat panel */}
-      {isOpen && (
+      {view === "open" && (
         <div
           id={panelTitleId}
           role="dialog"
@@ -173,9 +164,14 @@ export default function FloatingOracle() {
               <p id={`${panelTitleId}-heading`} className="text-sm font-medium text-atlas-text">The Oracle</p>
               <p className="text-[10px] text-atlas-text-muted">Your Atlas copilot</p>
             </div>
-            <button type="button" onClick={() => setIsOpen(false)} className="text-atlas-text-muted hover:text-atlas-text" aria-label="Close Oracle">
-              <X className="h-4 w-4" aria-hidden="true" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={minimize} className="p-1 text-atlas-text-muted hover:text-atlas-text" aria-label="Minimize Oracle">
+                <Minus className="h-4 w-4" aria-hidden="true" />
+              </button>
+              <button type="button" onClick={close} className="p-1 text-atlas-text-muted hover:text-atlas-text" aria-label="Close Oracle">
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
           </div>
 
           {/* Messages — aria-live so screen readers announce Oracle replies as they arrive */}

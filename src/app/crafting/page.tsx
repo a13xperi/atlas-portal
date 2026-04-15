@@ -46,19 +46,20 @@ import RefinementChips, {
 import {
   api,
   AnalyticsSummary,
+  DraftPerformance,
   SavedBlend,
   TrendingTopic,
   TweetDraft,
 } from "@/lib/api";
+import PerformanceCard from "@/components/analytics/PerformanceCard";
 import { useAuth } from "@/lib/auth";
 import { hasCalibratedVoiceDimensions } from "@/lib/voice-profile-dimensions";
 import OracleWidget from "@/components/oracle/OracleWidget";
 import OracleCraftingHints from "@/components/oracle/OracleCraftingHints";
 import OracleInspector from "@/components/oracle/OracleInspector";
-import { MultiAnglePanel } from "@/components/crafting/MultiAnglePanel";
+import CharacterCounter from "@/components/crafting/CharacterCounter";
 import type { InspectableEntity } from "@/lib/oracle-agent-types";
 import { useToast } from "@/components/ui/Toast";
-import { SchedulePopover } from "@/components/ui/SchedulePopover";
 
 const CRAFTING_MODES = [
   { id: "new_post", label: "New Post" },
@@ -75,8 +76,8 @@ const TWEET_TEMPLATES = [
 ] as const;
 
 const NEWS_SOURCE_PREFIX = "source:";
+const MIN_TWEETS_FOR_CRAFTING = MIN_TWEETS_FOR_VOICE_CALIBRATION;
 const VOICE_COMPARISON_DELTA = { humor: 20 } as const;
-
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
 type DraftSourceType = "REPORT" | "ARTICLE" | "MANUAL";
@@ -249,6 +250,7 @@ function CraftingPage() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   const voiceModeLabelId = useId();
   const savedBlendLabelId = useId();
   const blendIntensityLabelId = useId();
@@ -260,7 +262,8 @@ function CraftingPage() {
   const [draftHistory, setDraftHistory] = useState<DraftHistoryItem[]>([]);
   const [draftVersions, setDraftVersions] = useState<TweetDraft[]>([]);
   const [activeDraft, setActiveDraft] = useState<TweetDraft | null>(null);
-  const [activeMode, setActiveMode] = useState<CraftingMode>("new_post");
+  const activeMode =
+    (searchParams.get("mode") as CraftingMode) || "new_post";
   const [replyAngle, setReplyAngle] = useState<string | null>(null);
   const [voiceMode, setVoiceMode] = useState<"my_voice" | "blended" | "specific">(
     "my_voice"
@@ -287,6 +290,8 @@ function CraftingPage() {
   const [compareMode, setCompareMode] = useState(false);
   const [compareVersion, setCompareVersion] = useState<number | null>(null);
   const [comparingVoices, setComparingVoices] = useState(false);
+  const [draftPerformance, setDraftPerformance] = useState<import("@/lib/api").DraftPerformance | null>(null);
+  const [performanceLoading, setPerformanceLoading] = useState(false);
   const [voiceComparison, setVoiceComparison] = useState<{
     options: VoiceComparisonOption[];
   } | null>(null);
@@ -317,10 +322,6 @@ function CraftingPage() {
   const handleDraftTextChangeRef = useRef<((text: string) => void) | null>(null);
   const voiceRecorder = useVoiceRecorder(useCallback((text: string) => {
     handleDraftTextChangeRef.current?.(text);
-    // Auto-generate after voice transcription
-    setTimeout(() => {
-      handleCreateDraftRef.current?.(text);
-    }, 50);
   }, []));
   const feedbackRecorder = useVoiceRecorder(useCallback((text: string) => {
     setFeedback((prev) => prev ? `${prev} ${text}` : text);
@@ -377,8 +378,25 @@ function CraftingPage() {
     currentBrevity,
     currentContrarianTone
   );
-  const voiceReady = hasCalibratedVoiceDimensions(user?.voiceProfile);
-  const isVoiceCalibrationBlocked = !voiceReady;
+  const voiceGate = useVoiceGate({ existingDraftCount: drafts.length });
+  const isVoiceCalibrationBlocked = voiceGate.isBlocked;
+  const voiceTweetsAnalyzed = voiceGate.tweetsAnalyzed;
+  const calibrationTweetsRemaining = voiceGate.tweetsRemaining;
+
+  // Auto-fetch performance data when a POSTED draft becomes active
+  useEffect(() => {
+    if (activeDraft?.status !== "POSTED" || !activeDraft.id) {
+      setDraftPerformance(null);
+      return;
+    }
+    let cancelled = false;
+    api.drafts.performance(activeDraft.id).then((res) => {
+      if (!cancelled) setDraftPerformance(res.performance);
+    }).catch(() => {
+      // Performance endpoint may not be available yet — fail silently
+    });
+    return () => { cancelled = true; };
+  }, [activeDraft?.id, activeDraft?.status]);
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -453,6 +471,58 @@ function CraftingPage() {
     };
   }, []);
 
+  // Oracle-Crafting Bridge: listen for events from Oracle actions
+  useEffect(() => {
+    const handlePopulateDraft = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { content: string };
+      if (detail?.content) {
+        setDraftInputText(detail.content);
+        draftInputValueRef.current = detail.content;
+      }
+    };
+
+    const handleApplyFeedback = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { feedback: string };
+      if (detail?.feedback) {
+        setFeedback(detail.feedback);
+        // Auto-focus the feedback input so the user can hit Enter
+        setTimeout(() => {
+          document.getElementById("feedback-input")?.focus();
+        }, 100);
+      }
+    };
+
+    const handleSetDraft = (e: Event) => {
+      const detail = (e as CustomEvent).detail as {
+        draft: { id: string; content: string; [key: string]: unknown };
+      };
+      if (detail?.draft) {
+        // Refresh drafts list so the new/updated draft shows up
+        loadDrafts();
+        // Set as active draft if it has the expected shape
+        const incoming = detail.draft as unknown as TweetDraft;
+        if (incoming.id && incoming.content) {
+          setActiveDraft(incoming);
+          setDraftVersions((prev) => {
+            const exists = prev.some((d) => d.id === incoming.id);
+            return exists
+              ? prev.map((d) => (d.id === incoming.id ? incoming : d))
+              : [incoming, ...prev];
+          });
+        }
+      }
+    };
+
+    window.addEventListener("oracle:populate-draft", handlePopulateDraft);
+    window.addEventListener("oracle:apply-feedback", handleApplyFeedback);
+    window.addEventListener("oracle:set-draft", handleSetDraft);
+    return () => {
+      window.removeEventListener("oracle:populate-draft", handlePopulateDraft);
+      window.removeEventListener("oracle:apply-feedback", handleApplyFeedback);
+      window.removeEventListener("oracle:set-draft", handleSetDraft);
+    };
+  }, [loadDrafts]);
+
   useEffect(() => {
     if (!compareMode) {
       return;
@@ -480,7 +550,10 @@ function CraftingPage() {
   }, [activeDraft, compareMode, compareVersion, draftVersions]);
 
   const handleModeChange = (mode: CraftingMode) => {
-    setActiveMode(mode);
+    setReplyAngle(null); // prevent stale reply angle leaking into other modes
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("mode", mode);
+    router.replace(`/crafting?${params.toString()}`, { scroll: false });
     setIsContentDragActive(false);
     setError(null);
     setContentError("");
@@ -691,7 +764,12 @@ function CraftingPage() {
     hasSource: boolean,
     angle?: string | null
   ) => {
-    if (!user || isVoiceCalibrationBlocked) return false;
+    if (!user || isVoiceCalibrationBlocked) {
+      if (isVoiceCalibrationBlocked) {
+        toast("Complete voice calibration before generating drafts.", "warning");
+      }
+      return false;
+    }
 
     setError(null);
     const { isValid, trimmedContent } = validateDraftSubmission(content, hasSource);
@@ -729,6 +807,7 @@ function CraftingPage() {
     commitDraft,
     isVoiceCalibrationBlocked,
     selectedBlendId,
+    toast,
     user,
     validateDraftSubmission,
   ]);
@@ -1198,6 +1277,9 @@ function CraftingPage() {
 
   const handleCompareVoices = async (text = draftInputValueRef.current) => {
     if (!user || isVoiceCalibrationBlocked) {
+      if (isVoiceCalibrationBlocked) {
+        toast("Complete voice calibration before comparing voices.", "warning");
+      }
       return false;
     }
 
@@ -1219,53 +1301,54 @@ function CraftingPage() {
     setVoiceComparison(null);
 
     try {
-      const [currentVoiceResult, variantVoiceResult] = await Promise.all([
+      const replyAngleParam =
+        activeMode === "reply_to_tweet" ? replyAngle || undefined : undefined;
+
+      const [yourVoiceResult, genericResult] = await Promise.all([
         api.drafts.generate({
           sourceContent: trimmedContent,
           sourceType,
           blendId: selectedBlendId || undefined,
-          replyAngle:
-            activeMode === "reply_to_tweet" ? replyAngle || undefined : undefined,
+          replyAngle: replyAngleParam,
         }),
         api.drafts.generate({
           sourceContent: trimmedContent,
           sourceType,
-          blendId: selectedBlendId || undefined,
-          replyAngle:
-            activeMode === "reply_to_tweet" ? replyAngle || undefined : undefined,
-          angleInstruction: voiceVariationInstruction,
+          replyAngle: replyAngleParam,
+          angleInstruction:
+            "Write this as a straightforward, generic tweet. Do not apply any personal voice profile, tone dimensions, or style calibration. Use a neutral, professional crypto-analyst tone.",
         }),
       ]);
 
-      const normalizedCurrentDraft = prependDraftHistory(currentVoiceResult.draft);
-      const normalizedVariantDraft = prependDraftHistory(variantVoiceResult.draft);
+      const normalizedYourDraft = prependDraftHistory(yourVoiceResult.draft);
+      const normalizedGenericDraft = prependDraftHistory(genericResult.draft);
 
       setDrafts((previousDrafts) => [
-        normalizedCurrentDraft,
-        normalizedVariantDraft,
+        normalizedYourDraft,
+        normalizedGenericDraft,
         ...previousDrafts.filter(
           (draft) =>
-            draft.id !== normalizedCurrentDraft.id &&
-            draft.id !== normalizedVariantDraft.id
+            draft.id !== normalizedYourDraft.id &&
+            draft.id !== normalizedGenericDraft.id
         ),
       ]);
-      setDraftVersions([normalizedCurrentDraft]);
-      setActiveDraft(normalizedCurrentDraft);
+      setDraftVersions([normalizedYourDraft]);
+      setActiveDraft(normalizedYourDraft);
       setCompareMode(false);
       setCompareVersion(null);
       setVoiceComparison({
         options: [
           {
-            draft: normalizedCurrentDraft,
-            label: "Current profile",
+            draft: normalizedYourDraft,
+            label: "Your voice",
             summary: currentVoiceSummary,
-            ctaLabel: "Pick current voice",
+            ctaLabel: "Use my voice",
           },
           {
-            draft: normalizedVariantDraft,
-            label: "Variation",
-            summary: variantVoiceSummary,
-            ctaLabel: "Pick funnier variation",
+            draft: normalizedGenericDraft,
+            label: "Generic",
+            summary: "Default AI tone — no personalization",
+            ctaLabel: "Use generic",
           },
         ],
       });
@@ -1317,12 +1400,35 @@ function CraftingPage() {
 
   return (
     <AppShell>
-      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-start sm:gap-6">
-        <div className="min-w-0 flex-1">
-          <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Crafting Station</h1>
-          <p className="mt-2 text-atlas-text-secondary max-w-2xl">Drop in a report, signal, or idea — Atlas drafts it in your voice. Refine it, and the model gets sharper every time.</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-3 sm:items-start">
+      <div className="mb-6">
+        <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Crafting Station</h1>
+        <p className="mt-2 text-atlas-text-secondary max-w-2xl">Drop in a report, signal, or idea — Atlas drafts it in your voice. Refine it, and the model gets sharper every time.</p>
+      </div>
+
+      <div className="mb-6" data-tour="oracle-banner">
+        <OracleWidget
+          message={
+            activeDraft
+              ? "Draft in progress — refine it, rate it, or ship it. Every piece of feedback sharpens your model."
+              : "Drop a report, article, or idea below. I'll help you craft it into a tweet that sounds like you."
+          }
+          context="crafting"
+        />
+        {activeDraft && (
+          <OracleCraftingHints
+            draftContent={activeDraft.content}
+            onApplyHint={(hint) => {
+              setFeedback(hint);
+              setTimeout(() => {
+                document.getElementById("feedback-input")?.focus();
+              }, 100);
+            }}
+          />
+        )}
+      </div>
+
+      <div className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:gap-0 sm:rounded-3xl sm:px-6">
+        <div className="flex items-center gap-4 sm:gap-6">
           <svg
             aria-hidden="true"
             focusable="false"
@@ -1374,11 +1480,18 @@ function CraftingPage() {
         >
           <div>
             <p className="font-semibold text-atlas-text">
-              Connect X and calibrate your voice to unlock tweet generation.
+              {voiceGate.reason === "no_profile"
+                ? "Connect your X account to unlock tweet generation."
+                : "Analyze at least 20 tweets to unlock drafting."}
             </p>
             <p className="mt-1 text-atlas-text-secondary">
-              Atlas writes in your voice — we need your X handle and a few sample tweets first.
-              Need more tweets? The more we analyze, the better your drafts will sound.
+              {voiceGate.reason === "no_profile"
+                ? "Atlas writes in your voice — connect X so we can analyze your writing style."
+                : <>
+                    We need more writing samples to learn your style.
+                    Analyze {voiceGate.tweetsRemaining} more tweets in the
+                    Voice Lab to get started.
+                  </>}
             </p>
           </div>
           <Link
@@ -1534,6 +1647,7 @@ function CraftingPage() {
                         : "Paste a tweet idea or link…"
                     }
                     value={draftInputText}
+                    disabled={creating || isVoiceCalibrationBlocked}
                     contentDropActive={isContentDragActive}
                     onContentDragOver={handleContentDragOver}
                     onContentDragLeave={handleContentDragLeave}
@@ -1845,66 +1959,8 @@ function CraftingPage() {
               />
               {activeDraft.content ? (
                 <>
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="relative h-5 w-5">
-                        <svg
-                          aria-hidden="true"
-                          focusable="false"
-                          className="h-5 w-5 -rotate-90"
-                          viewBox="0 0 20 20"
-                        >
-                          <circle
-                            cx="10"
-                            cy="10"
-                            r="8"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            className="text-atlas-surface"
-                          />
-                          <circle
-                            cx="10"
-                            cy="10"
-                            r="8"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeDasharray={`${Math.min(
-                              (activeDraft.content.length / 280) * 50.3,
-                              50.3
-                            )} 50.3`}
-                            className={
-                              activeDraft.content.length > 280
-                                ? "text-atlas-error"
-                                : activeDraft.content.length > 250
-                                  ? "text-atlas-warning"
-                                  : activeDraft.content.length > 200
-                                    ? "text-yellow-400"
-                                    : "text-atlas-teal"
-                            }
-                          />
-                        </svg>
-                      </div>
-                      <span
-                        className={`text-xs font-mono ${
-                          activeDraft.content.length > 280
-                            ? "text-atlas-error"
-                            : activeDraft.content.length > 250
-                              ? "text-atlas-warning"
-                              : activeDraft.content.length > 200
-                                ? "text-yellow-400"
-                                : "text-atlas-text-secondary"
-                        }`}
-                      >
-                        {activeDraft.content.length}/280
-                      </span>
-                    </div>
-                    {activeDraft.content.length > 280 ? (
-                      <span className="text-xs text-atlas-error">
-                        {activeDraft.content.length - 280} over limit
-                      </span>
-                    ) : null}
+                  <div className="mt-2 flex items-center justify-end">
+                    <CharacterCounter value={activeDraft.content.length} />
                   </div>
                   <div className="mt-1 flex items-center gap-3 text-[10px] text-atlas-text-muted">
                     <span>{activeDraftWordCount} words</span>
@@ -2256,69 +2312,55 @@ function CraftingPage() {
                 </div>
               ) : null}
 
-              {/* Engagement Metrics — shown for POSTED drafts */}
+              {/* Performance Card — shown for POSTED drafts */}
               {activeDraft.status === "POSTED" ? (
-                <div className="mt-4 rounded-xl border border-glass-border bg-atlas-surface/60 p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-atlas-text-muted">
-                      <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
-                      Engagement
-                    </p>
-                    {activeDraft.actualEngagement ? (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            const result = await api.drafts.fetchMetrics(activeDraft.id);
-                            setActiveDraft(result.draft);
-                            syncDraftReferences(result.draft);
-                          } catch { /* silently fail */ }
-                        }}
-                        className="text-[10px] text-atlas-text-muted hover:text-atlas-teal transition-colors"
-                      >
-                        ↻ Refresh
-                      </button>
-                    ) : null}
-                  </div>
-                  {activeDraft.actualEngagement ? (
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-                      <div>
-                        <span className="text-atlas-text-muted text-xs">Impressions</span>
-                        <p className="font-semibold text-atlas-text">{activeDraft.actualEngagement.toLocaleString()}</p>
-                      </div>
-                      {activeDraft.predictedEngagement ? (
-                        <div className="ml-auto">
-                          <span className="text-atlas-text-muted text-xs">vs Predicted</span>
-                          <p className={`font-semibold text-sm ${
-                            activeDraft.actualEngagement >= activeDraft.predictedEngagement
-                              ? "text-atlas-success" : "text-atlas-warning"
-                          }`}>
-                            {activeDraft.actualEngagement >= activeDraft.predictedEngagement ? "↑" : "↓"}{" "}
-                            {Math.abs(Math.round(((activeDraft.actualEngagement - activeDraft.predictedEngagement) / activeDraft.predictedEngagement) * 100))}%
-                          </p>
-                        </div>
-                      ) : null}
-                    </div>
+                <div className="mt-4">
+                  {draftPerformance ? (
+                    <PerformanceCard
+                      performance={draftPerformance}
+                      onRefresh={async () => {
+                        setPerformanceLoading(true);
+                        try {
+                          const [metricsResult, perfResult] = await Promise.all([
+                            api.drafts.fetchMetrics(activeDraft.id),
+                            api.drafts.performance(activeDraft.id),
+                          ]);
+                          setActiveDraft(metricsResult.draft);
+                          syncDraftReferences(metricsResult.draft);
+                          setDraftPerformance(perfResult.performance);
+                        } catch { /* silently fail */ }
+                        setPerformanceLoading(false);
+                      }}
+                      refreshing={performanceLoading}
+                    />
                   ) : (
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className="rounded-xl border border-glass-border bg-atlas-surface/60 p-4">
+                      <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-atlas-text-muted mb-3">
+                        <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
+                        Performance
+                      </p>
                       <button
                         type="button"
                         onClick={async () => {
+                          setPerformanceLoading(true);
                           try {
-                            const result = await api.drafts.fetchMetrics(activeDraft.id);
-                            setActiveDraft(result.draft);
-                            syncDraftReferences(result.draft);
+                            const [metricsResult, perfResult] = await Promise.all([
+                              api.drafts.fetchMetrics(activeDraft.id),
+                              api.drafts.performance(activeDraft.id),
+                            ]);
+                            setActiveDraft(metricsResult.draft);
+                            syncDraftReferences(metricsResult.draft);
+                            setDraftPerformance(perfResult.performance);
                           } catch {
-                            setError("Could not fetch metrics — tweet may not have been posted via Atlas");
+                            setError("Could not fetch performance data");
                           }
+                          setPerformanceLoading(false);
                         }}
-                        className="rounded-lg bg-atlas-teal/20 px-4 py-2 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/30"
+                        disabled={performanceLoading}
+                        className="rounded-lg bg-atlas-teal/20 px-4 py-2 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/30 disabled:opacity-50"
                       >
-                        Fetch from X
+                        {performanceLoading ? "Loading..." : "Load Performance"}
                       </button>
-                      <span className="text-xs text-atlas-text-muted">
-                        Metrics auto-update every few hours for tweets posted via Atlas
-                      </span>
                     </div>
                   )}
                 </div>
@@ -2481,7 +2523,7 @@ function CraftingPage() {
                       setFeedbackText("");
                       setShowFeedback(false);
                     }}
-                    className="rounded-lg bg-atlas-teal px-3 py-1.5 text-xs font-medium text-white"
+                    className="rounded-lg bg-atlas-teal px-3 py-1.5 text-xs font-medium text-atlas-bg"
                   >
                     Go
                   </button>

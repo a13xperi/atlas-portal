@@ -78,8 +78,8 @@ export function getContinueLabel(
 
 // ── Step transition map ────────────────────────────────────────────
 const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
-  WELCOME: "CONNECT_X",
-  CONNECT_X: "TRACK_A_SCANNING",
+  WELCOME: "TRACK_A_SCANNING",
+  CONNECT_X: "WELCOME",
   TRACK_A_SCANNING: "TRACK_A_RESULT",
   TRACK_A_RESULT: "REFERENCES",
   TRACK_B_STYLE: "TRACK_B_CONTENT",
@@ -92,13 +92,30 @@ const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
   HANDOFF: null, // terminal
 };
 
+export interface OnboardingRoutingState {
+  track: OracleState["track"];
+  voiceCalibrated: boolean; // tweetsAnalyzed >= MIN_TWEETS_FOR_VOICE_CALIBRATION
+  onboardingComplete: boolean; // user.onboardingTrack !== null
+}
+
 export function getOnboardingCompletionHref(
-  track: OracleState["track"]
+  state: OnboardingRoutingState
 ): string {
-  if (track === "b") {
-    return "/voice-lab?prompt=complete-voice-setup";
+  const { track, voiceCalibrated, onboardingComplete } = state;
+
+  // Stage 1: voice not calibrated → steer to calibration
+  if (!voiceCalibrated) {
+    return track === "b"
+      ? "/voice-lab?prompt=complete-voice-setup"
+      : "/voice-profiles?prompt=calibrate";
   }
 
+  // Stage 2: calibrated but onboarding not persisted → finish onboarding
+  if (!onboardingComplete) {
+    return "/onboarding?resume=handoff";
+  }
+
+  // Stage 3: fully done
   return "/dashboard?banner=voice-calibrated";
 }
 
@@ -108,7 +125,7 @@ export function canAdvance(state: OracleState): boolean {
     case "WELCOME":
       return true;
     case "CONNECT_X":
-      return state.xConnected && state.xHandle.trim().length > 0;
+      return true; // allow skip
     case "TRACK_A_SCANNING":
       return state.calibrationResult !== null;
     case "TRACK_A_RESULT":
@@ -135,10 +152,10 @@ export function canAdvance(state: OracleState): boolean {
 // ── Initial state ──────────────────────────────────────────────────
 export function initialOracleState(): OracleState {
   return {
-    currentStep: "WELCOME",
+    currentStep: "CONNECT_X",
     track: null,
     messages: [],
-    pendingMessages: prepareMessages("WELCOME", null),
+    pendingMessages: prepareMessages("CONNECT_X", null),
     isTyping: false,
     xHandle: "",
     xConnected: false,
@@ -162,11 +179,11 @@ export function oracleReducer(
     case "SET_TRACK": {
       const track = action.track;
       const nextStep: OracleStep =
-        track === "a" ? "CONNECT_X" : "TRACK_B_STYLE";
+        track === "a" ? "TRACK_A_SCANNING" : "TRACK_B_STYLE";
       const userMsg = {
         id: `user-track-${Date.now()}`,
         role: "user" as const,
-        content: track === "a" ? "Connect X" : "Set up manually",
+        content: track === "a" ? "X-Powered" : "Hand-Crafted",
         timestamp: Date.now(),
       };
       return {
@@ -263,6 +280,30 @@ export function oracleReducer(
       };
     }
 
+    case "START_STREAM_MESSAGE": {
+      const [next, ...rest] = state.pendingMessages;
+      if (!next) return { ...state, isTyping: false };
+      return {
+        ...state,
+        messages: [...state.messages, { ...next, content: "" }],
+        pendingMessages: rest,
+        isTyping: true,
+      };
+    }
+
+    case "APPEND_TO_LAST_MESSAGE": {
+      if (state.messages.length === 0) return state;
+      const lastIndex = state.messages.length - 1;
+      const last = state.messages[lastIndex];
+      return {
+        ...state,
+        messages: [
+          ...state.messages.slice(0, lastIndex),
+          { ...last, content: last.content + action.text },
+        ],
+      };
+    }
+
     case "SET_TYPING":
       return { ...state, isTyping: action.isTyping };
 
@@ -271,53 +312,50 @@ export function oracleReducer(
   }
 }
 
-export function createTextStream(
-  text: string,
-  wordDelayMs = 30,
-  signal?: AbortSignal
-): ReadableStream<string> {
+/** Create a ReadableStream that yields words from `text` one at a time. */
+export function createTextStream(text: string, wordDelayMs = 30): ReadableStream<string> {
   const tokens = text.split(/(\s+)/);
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  let cancelled = false;
-
-  const cleanup = () => {
-    cancelled = true;
-    if (timer) {
-      clearTimeout(timer);
-      timer = null;
-    }
-  };
-
   return new ReadableStream<string>({
     start(controller) {
-      if (signal?.aborted) {
-        try { controller.close(); } catch {}
-        cleanup();
-        return;
-      }
-
-      signal?.addEventListener("abort", () => {
-        cleanup();
-        try { controller.error(signal.reason); } catch {}
-      }, { once: true });
-
       let i = 0;
       function push() {
-        timer = null;
-        if (cancelled) return;
         if (i >= tokens.length) {
-          try { controller.close(); } catch {}
+          controller.close();
           return;
         }
-        if (controller.desiredSize === null) return;
-        try { controller.enqueue(tokens[i]); } catch { return; }
+        controller.enqueue(tokens[i]);
         i++;
-        timer = setTimeout(push, wordDelayMs);
+        setTimeout(push, wordDelayMs);
       }
       push();
     },
-    cancel() {
-      cleanup();
-    },
   });
+}
+
+/** Parse a server-sent events (SSE) stream into yielded JSON objects. */
+export async function* readSSEStream<T = unknown>(stream: ReadableStream<Uint8Array>): AsyncGenerator<T, void, unknown> {
+  const reader = stream.pipeThrough(new TextDecoderStream() as unknown as ReadableWritablePair<string, Uint8Array>).getReader();
+  let buffer = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += value;
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data: ")) continue;
+        const data = trimmed.slice(6);
+        if (data === "[DONE]") return;
+        try {
+          yield JSON.parse(data) as T;
+        } catch {
+          yield data as unknown as T;
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
 }

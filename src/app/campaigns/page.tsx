@@ -31,7 +31,7 @@ export default function CampaignsPage() {
   return (
     <FeatureGate flagKey="campaigns">
     <AppShell>
-      <div className="mx-auto max-w-4xl px-4 py-8 font-body sm:px-6">
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
         <div className="flex items-center gap-3">
           <Megaphone className="h-6 w-6 text-atlas-teal" />
           <h1 className="font-heading text-2xl font-bold tracking-tight text-atlas-text">
