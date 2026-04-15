@@ -421,6 +421,19 @@ export default function OracleChat() {
     setScanLoading(true);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30_000);
+    const slowMessageId = setTimeout(() => {
+      dispatch({
+        type: "ENQUEUE_MESSAGES",
+        messages: [
+          {
+            id: `calibration-slow-${Date.now()}`,
+            role: "system" as const,
+            content: "Still scanning... this can take up to 30 seconds.",
+            timestamp: Date.now(),
+          },
+        ],
+      });
+    }, 12_000);
 
     (async () => {
       try {
@@ -456,7 +469,8 @@ export default function OracleChat() {
             dimensions: calibratedDimensions,
           },
         });
-        await refreshUser();
+        // Fire-and-forget so a slow /auth/me call can't stall the spinner
+        refreshUser().catch(() => {});
         const profileDimensions = {
           humor: profile.humor ?? 50,
           formality: profile.formality ?? 50,
@@ -528,6 +542,7 @@ export default function OracleChat() {
           ],
         });
       } finally {
+        clearTimeout(slowMessageId);
         setScanLoading(false);
         calibratingRef.current = false;
       }
@@ -535,6 +550,7 @@ export default function OracleChat() {
 
     return () => {
       clearTimeout(timeoutId);
+      clearTimeout(slowMessageId);
       controller.abort();
     };
   }, [state.currentStep, state.xHandle, state.calibrationResult]);
