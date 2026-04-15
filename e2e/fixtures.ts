@@ -238,12 +238,31 @@ function json(route: Route, body: unknown) {
   return route.fulfill({
     status: 200,
     contentType: "application/json",
+    headers: {
+      "access-control-allow-origin": "*",
+      "access-control-allow-credentials": "true",
+    },
     body: JSON.stringify(body),
   });
 }
 
 /** Stub all auth endpoints so the app thinks we're logged in. */
 async function stubAuth(target: RouteTarget) {
+  await target.route("**/api/**", (route, req) => {
+    if (req.method() === "OPTIONS") {
+      return route.fulfill({
+        status: 204,
+        headers: {
+          "access-control-allow-origin": "*",
+          "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS",
+          "access-control-allow-headers": "*",
+          "access-control-allow-credentials": "true",
+        },
+      });
+    }
+    return route.fallback();
+  });
+
   await target.route("**/api/auth/**", (route) => {
     const url = new URL(route.request().url());
     switch (url.pathname) {
@@ -339,6 +358,20 @@ async function stubDataEndpoints(target: RouteTarget) {
   });
 }
 
+async function blockRailway(target: RouteTarget) {
+  await target.route("https://api-production-9bef.up.railway.app/**", (route) => {
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: {
+        "access-control-allow-origin": "*",
+        "access-control-allow-credentials": "true",
+      },
+      body: "{}",
+    });
+  });
+}
+
 /** Return the Vercel deployment-protection bypass cookie if the env var is set. */
 export function vercelBypassCookies(
   domain: string,
@@ -371,6 +404,7 @@ export const test = base.extend<{ authedPage: Page }>({
 
     await stubAuth(context);
     await stubDataEndpoints(context);
+    await blockRailway(context);
 
     // Abort external avatar requests so they resolve instantly (404 → initials fallback).
     // Without this, waitForLoadState("networkidle") hangs waiting for unavatar.io
@@ -385,5 +419,5 @@ export const test = base.extend<{ authedPage: Page }>({
   },
 });
 
-export { stubAuth, stubDataEndpoints, vercelBypassCookies, mockUser, mockSummary, mockDrafts, mockEngagementDaily, mockActivityDaily, mockLearningLog };
+export { stubAuth, stubDataEndpoints, blockRailway, vercelBypassCookies, mockUser, mockSummary, mockDrafts, mockEngagementDaily, mockActivityDaily, mockLearningLog };
 export { expect } from "@playwright/test";
