@@ -96,4 +96,36 @@ test.describe("Analytics page", () => {
     await expect(page.getByText("Predicted")).toBeVisible();
     await expect(page.getByText("Actual")).toBeVisible();
   });
+
+  test("renders without crash when all analytics arrays are undefined/empty", async ({ authedPage: page, context }) => {
+    // Override analytics endpoints to return missing array fields (empty data)
+    await context.route("**/api/analytics/summary", (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ summary: null }) }),
+    );
+    await context.route("**/api/analytics/learning-log", (route) => {
+      if (route.request().method() === "GET") {
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({}) });
+      }
+      return route.fallback();
+    });
+    await context.route("**/api/analytics/engagement-daily", (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({}) }),
+    );
+    await context.route("**/api/analytics/activity-daily", (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({}) }),
+    );
+    await context.route("**/api/drafts*", (route) => {
+      if (route.request().method() === "GET") {
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ drafts: [] }) });
+      }
+      return route.fallback();
+    });
+
+    await page.goto("/analytics");
+    await page.waitForLoadState("networkidle");
+
+    // Should show empty state instead of crashing
+    await expect(page.getByText("Nothing here yet")).toBeVisible();
+    await expect(page.getByText("Craft your first draft and the numbers will start rolling in.")).toBeVisible();
+  });
 });

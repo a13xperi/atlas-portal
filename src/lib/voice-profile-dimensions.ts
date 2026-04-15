@@ -23,6 +23,8 @@ export interface VoiceDimensionSection {
   dimensions: Array<{
     field: VoiceDimensionField;
     label: string;
+    minLabel: string;
+    maxLabel: string;
   }>;
 }
 
@@ -62,30 +64,30 @@ export const VOICE_DIMENSION_SECTIONS: VoiceDimensionSection[] = [
     title: "Core Voice",
     description: "The high-level signals that shape the overall tone of every post.",
     dimensions: [
-      { field: "humor", label: "Humor" },
-      { field: "formality", label: "Formality" },
-      { field: "brevity", label: "Brevity" },
-      { field: "contrarianTone", label: "Contrarian tone" },
+      { field: "humor", label: "Humor", minLabel: "Serious", maxLabel: "Playful" },
+      { field: "formality", label: "Formality", minLabel: "Casual", maxLabel: "Formal" },
+      { field: "brevity", label: "Brevity", minLabel: "Wordy", maxLabel: "Punchy" },
+      { field: "contrarianTone", label: "Contrarian tone", minLabel: "Consensus", maxLabel: "Contrarian" },
     ],
   },
   {
     title: "Communication Style",
     description: "How the voice sounds in delivery, confidence, and complexity.",
     dimensions: [
-      { field: "directness", label: "Directness" },
-      { field: "warmth", label: "Warmth" },
-      { field: "technicalDepth", label: "Technical depth" },
-      { field: "confidence", label: "Confidence" },
+      { field: "directness", label: "Directness", minLabel: "Diplomatic", maxLabel: "Blunt" },
+      { field: "warmth", label: "Warmth", minLabel: "Cool", maxLabel: "Warm" },
+      { field: "technicalDepth", label: "Technical depth", minLabel: "Plain", maxLabel: "Technical" },
+      { field: "confidence", label: "Confidence", minLabel: "Tentative", maxLabel: "Assertive" },
     ],
   },
   {
     title: "Content Approach",
     description: "What the writing optimizes for when it makes a point.",
     dimensions: [
-      { field: "evidenceOrientation", label: "Evidence orientation" },
-      { field: "solutionOrientation", label: "Solution orientation" },
-      { field: "socialPosture", label: "Social posture" },
-      { field: "selfPromotionalIntensity", label: "Self-promotional intensity" },
+      { field: "evidenceOrientation", label: "Evidence orientation", minLabel: "Intuitive", maxLabel: "Data-driven" },
+      { field: "solutionOrientation", label: "Solution orientation", minLabel: "Problem-framing", maxLabel: "Solution-focused" },
+      { field: "socialPosture", label: "Social posture", minLabel: "Reserved", maxLabel: "Outgoing" },
+      { field: "selfPromotionalIntensity", label: "Self-promotional intensity", minLabel: "Humble", maxLabel: "Promotional" },
     ],
   },
 ];
@@ -120,6 +122,19 @@ export function applyVoiceDimensionDelta(
 
 export function hasAnyVoiceDimension(dimensions: VoiceDimensions) {
   return Object.values(dimensions).some((value) => value > 0);
+}
+
+export function hasCalibratedVoiceDimensions(
+  profile: Partial<VoiceDimensions> & { tweetsAnalyzed?: number; maturity?: string | null } | null | undefined
+): boolean {
+  if (!profile) return false;
+  const anyDimDifferent = VOICE_DIMENSION_FIELDS.some(
+    (field) => (profile[field] ?? 50) !== 50
+  );
+  if (anyDimDifferent) return true;
+  if ((profile.tweetsAnalyzed ?? 0) > 0) return true;
+  if (profile.maturity !== null && profile.maturity !== undefined) return true;
+  return false;
 }
 
 export function formatVoiceDimensionValue(value: number) {

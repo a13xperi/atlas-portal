@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Check, ExternalLink, Loader2, Plus, X } from "lucide-react";
 import GradientButton from "@/components/ui/GradientButton";
 import { api, type ReferenceAccount, type TwitterFollow } from "@/lib/api";
+import { getXProfileUrl } from "@/lib/public-urls";
 import {
   normalizeReferenceAccount,
   normalizeReferenceAccounts,
@@ -193,6 +194,7 @@ export default function ReferenceVoiceSelector({
             const isSelected = selected.includes(account.id);
             const avatarUrl = account.profileImageUrl ?? account.avatarUrl;
             const label = account.displayName || account.handle || account.name || account.id;
+            const profileUrl = getXProfileUrl(account.handle);
             return (
               <button
                 key={account.id}
@@ -227,9 +229,9 @@ export default function ReferenceVoiceSelector({
                   </div>
                 )}
                 <p className="mt-3 text-xs text-atlas-text-muted">
-                  {account.handle ? (
+                  {account.handle && profileUrl ? (
                     <a
-                      href={`https://twitter.com/${account.handle}`}
+                      href={profileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}

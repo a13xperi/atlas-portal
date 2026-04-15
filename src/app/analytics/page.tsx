@@ -100,7 +100,7 @@ function AnalyticsPage() {
   // When the analytics API reports zero drafts but we can confirm posted drafts exist from
   // the drafts endpoint, use the known count as a floor. The analytics_events table can
   // lag behind the drafts table, causing the summary to show 0 while the detail table has data.
-  const knownPostedCount = topDrafts.length;
+  const knownPostedCount = (topDrafts ?? []).length;
   const usageStats = summary
     ? [
         { label: "Drafts", value: String(summary.draftsCreated > 0 ? summary.draftsCreated : knownPostedCount), href: "/crafting" },
@@ -119,18 +119,18 @@ function AnalyticsPage() {
   const hasNoAnalyticsData = !loading
     && !error
     && !summary
-    && engagementDays.length === 0
-    && activityDays.length === 0
-    && logEntries.length === 0
-    && topDrafts.length === 0;
+    && (engagementDays ?? []).length === 0
+    && (activityDays ?? []).length === 0
+    && (logEntries ?? []).length === 0
+    && (topDrafts ?? []).length === 0;
   const latestActivityCount =
-    activityDays.length > 0 ? activityDays[activityDays.length - 1]?.count ?? 0 : 0;
+    (activityDays ?? []).length > 0 ? (activityDays ?? [])[(activityDays ?? []).length - 1]?.count ?? 0 : 0;
   const activitySparklineSummary =
-    activityDays.length > 0
-      ? `Activity over ${activityDays.length} days. Peak day had ${activityMax} actions and the latest day had ${latestActivityCount}.`
+    (activityDays ?? []).length > 0
+      ? `Activity over ${(activityDays ?? []).length} days. Peak day had ${activityMax} actions and the latest day had ${latestActivityCount}.`
       : "No activity data yet. Activity data will appear as you create drafts.";
-  const recentLogEntries = logEntries.slice(-20);
-  const positiveSignalCount = logEntries.filter((entry) => entry.positive).length;
+  const recentLogEntries = (logEntries ?? []).slice(-20);
+  const positiveSignalCount = (logEntries ?? []).filter((entry) => entry.positive).length;
   const confidenceTrendSummary =
     recentLogEntries.length > 0
       ? `Confidence trend across ${recentLogEntries.length} recent learning events. ${positiveSignalCount} positive signals detected so far.`
@@ -196,7 +196,7 @@ function AnalyticsPage() {
                 ))}
           </div>
           {/* Sparkline */}
-          {activityDays.length > 0 ? (() => {
+          {(activityDays ?? []).length > 0 ? (() => {
             const sparkData = activityDays ?? [];
             return (
               <div
@@ -284,9 +284,9 @@ function AnalyticsPage() {
 
         <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-4">
           <h3 className="mb-3 text-sm font-medium text-atlas-text">Top Performing Drafts</h3>
-          {topDrafts.length > 0 ? (
+          {(topDrafts ?? []).length > 0 ? (
             <div className="space-y-3">
-              {topDrafts.map((draft, i) => (
+              {(topDrafts ?? []).map((draft, i) => (
                 <Link
                   key={draft.id}
                   href="/crafting"

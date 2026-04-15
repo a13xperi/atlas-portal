@@ -33,7 +33,7 @@ function validateEnv() {
   } catch {
     throw new Error(
       `[Atlas] NEXT_PUBLIC_API_URL is not a valid URL: "${apiUrl}"\n` +
-        `Expected format: https://your-api.up.railway.app`
+        "Expected format: a fully-qualified URL beginning with http:// or https://"
     );
   }
 }

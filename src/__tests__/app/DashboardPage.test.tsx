@@ -207,7 +207,7 @@ describe("DashboardPage", () => {
       await screen.findByRole("heading", { name: "Ready to craft your first draft?" })
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Drop your first report or hot take to get rolling")
+      screen.getByText(/Atlas helps you write tweets that sound like you/)
     ).toBeInTheDocument();
 
     fireEvent.click(
@@ -252,5 +252,69 @@ describe("DashboardPage", () => {
     expect(
       screen.queryByText("Some dashboard data is temporarily unavailable.")
     ).not.toBeInTheDocument();
+  });
+
+  it("opens the keyboard shortcuts modal when the ? key is pressed", async () => {
+    render(<DashboardPage />);
+    expect(await screen.findByText("Drafts this week")).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "?" });
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("Keyboard Shortcuts")).toBeInTheDocument();
+  });
+
+  it("opens the keyboard shortcuts modal when the shortcuts button is clicked", async () => {
+    render(<DashboardPage />);
+    expect(await screen.findByText("Drafts this week")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open keyboard shortcuts" }));
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("Keyboard Shortcuts")).toBeInTheDocument();
+  });
+
+  it("closes the keyboard shortcuts modal with Escape", async () => {
+    render(<DashboardPage />);
+    expect(await screen.findByText("Drafts this week")).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "?" });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("navigates to the first nav card when 1 is pressed", async () => {
+    render(<DashboardPage />);
+    expect(await screen.findByText("Drafts this week")).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "1" });
+
+    expect(mockPush).toHaveBeenCalledWith("/crafting");
+  });
+
+  it("focuses the quick draft input when q is pressed", async () => {
+    render(<DashboardPage />);
+    expect(await screen.findByText("Drafts this week")).toBeInTheDocument();
+
+    const quickDraftInput = screen.getByRole("textbox", { name: "Quick Draft" });
+    expect(document.activeElement).not.toBe(quickDraftInput);
+
+    fireEvent.keyDown(document, { key: "q" });
+
+    expect(document.activeElement).toBe(quickDraftInput);
+  });
+
+  it("does not trigger shortcuts when typing in an input", async () => {
+    render(<DashboardPage />);
+    expect(await screen.findByText("Drafts this week")).toBeInTheDocument();
+
+    const quickDraftInput = screen.getByRole("textbox", { name: "Quick Draft" });
+    fireEvent.focus(quickDraftInput);
+    fireEvent.keyDown(quickDraftInput, { key: "1" });
+
+    expect(mockPush).not.toHaveBeenCalled();
   });
 });

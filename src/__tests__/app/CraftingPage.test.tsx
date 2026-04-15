@@ -69,6 +69,9 @@ jest.mock("@/lib/api", () => ({
       regenerate: jest.fn(),
       delete: jest.fn(),
       refine: jest.fn(),
+      schedule: jest.fn(),
+      postToX: jest.fn(),
+      enqueue: jest.fn(),
     },
     analytics: {
       summary: jest.fn(),
@@ -102,6 +105,9 @@ const mockedApi = api as unknown as {
     regenerate: jest.Mock;
     delete: jest.Mock;
     refine: jest.Mock;
+    schedule: jest.Mock;
+    postToX: jest.Mock;
+    enqueue: jest.Mock;
   };
   analytics: {
     summary: jest.Mock;
@@ -153,6 +159,9 @@ describe("CraftingPage", () => {
     mockedApi.drafts.regenerate.mockReset();
     mockedApi.drafts.delete.mockReset();
     mockedApi.drafts.refine.mockReset();
+    mockedApi.drafts.schedule.mockReset();
+    mockedApi.drafts.postToX.mockReset();
+    mockedApi.drafts.enqueue.mockReset();
     mockedApi.auth.x.status.mockReset();
     mockedApi.auth.x.authorize.mockReset();
     mockedApi.analytics.summary.mockReset();
@@ -470,7 +479,7 @@ describe("CraftingPage", () => {
 
     await waitFor(() =>
       expect(openSpy).toHaveBeenCalledWith(
-        "https://twitter.com/intent/tweet?text=BTC%20looks%20constructive%20above%20range%20highs.",
+        "https://twitter.com/intent/tweet?text=BTC+looks+constructive+above+range+highs.",
         "_blank",
         "width=550,height=420"
       )
@@ -491,5 +500,120 @@ describe("CraftingPage", () => {
     expect(
       screen.queryByRole("button", { name: "Post to X" })
     ).not.toBeInTheDocument();
+  });
+
+  it("shows the Schedule button for draft and approved statuses", async () => {
+    mockedApi.drafts.list.mockResolvedValue({
+      drafts: [createDraft({ status: "DRAFT" })],
+    });
+
+    render(<CraftingPage />);
+
+    await screen.findByRole("textbox", { name: "Generated draft" });
+
+    expect(screen.getByRole("button", { name: "Schedule" })).toBeInTheDocument();
+  });
+
+  it("opens the schedule popover and schedules the draft", async () => {
+    const draft = createDraft({ status: "APPROVED" });
+    const scheduledDraft = createDraft({ status: "SCHEDULED", scheduledAt: "2026-04-15T12:00:00.000Z" });
+
+    mockedApi.drafts.list.mockResolvedValue({ drafts: [draft] });
+    mockedApi.drafts.schedule.mockResolvedValue({ draft: scheduledDraft });
+
+    render(<CraftingPage />);
+
+    await screen.findByRole("textbox", { name: "Generated draft" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Schedule" }));
+
+    const dateInput = await screen.findByLabelText("Schedule date and time");
+    expect(dateInput).toBeInTheDocument();
+
+    fireEvent.change(dateInput, { target: { value: "2026-04-15T12:00" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() =>
+      expect(mockedApi.drafts.schedule).toHaveBeenCalledWith(
+        "draft-1",
+        expect.stringMatching(/^2026-04-15T\d{2}:00:00\.000Z$/)
+      )
+    );
+  });
+
+  it("does not show the Schedule button for archived drafts", async () => {
+    mockedApi.drafts.list.mockResolvedValue({
+      drafts: [createDraft({ status: "ARCHIVED" })],
+    });
+
+    render(<CraftingPage />);
+
+    await screen.findByRole("textbox", { name: "Generated draft" });
+
+    expect(screen.queryByRole("button", { name: "Schedule" })).not.toBeInTheDocument();
+  });
+
+  it("shows multi-angle button after pasting substantial text and opens panel on click", async () => {
+    render(<CraftingPage />);
+
+    fireEvent.change(screen.getByPlaceholderText("Paste a tweet idea or link…"), {
+      target: { value: "a".repeat(600) },
+    });
+
+    const multiAngleButton = await screen.findByRole("button", {
+      name: "Generate Multi-Angle Tweets",
+    });
+    expect(multiAngleButton).toBeInTheDocument();
+
+    mockedApi.drafts.generate.mockResolvedValue({ draft: createDraft() });
+
+    fireEvent.click(multiAngleButton);
+
+    await waitFor(() =>
+      expect(screen.getByText("Multi-Angle Tweets")).toBeInTheDocument()
+    );
+  });
+
+  it("batch approves multi-angle drafts and refreshes the sidebar", async () => {
+    render(<CraftingPage />);
+
+    fireEvent.change(screen.getByPlaceholderText("Paste a tweet idea or link…"), {
+      target: { value: "a".repeat(600) },
+    });
+
+    const multiAngleButton = await screen.findByRole("button", {
+      name: "Generate Multi-Angle Tweets",
+    });
+
+    mockedApi.drafts.generate.mockResolvedValue({
+      draft: createDraft({ id: "draft-angle-1", content: "Angle draft content" }),
+    });
+    mockedApi.drafts.update.mockResolvedValue({
+      draft: createDraft({ id: "draft-angle-1", status: "APPROVED" }),
+    });
+    mockedApi.drafts.enqueue.mockResolvedValue({
+      draft: createDraft({ id: "draft-angle-1", status: "APPROVED" }),
+    });
+
+    fireEvent.click(multiAngleButton);
+
+    await waitFor(() =>
+      expect(screen.getAllByText("Angle draft content").length).toBeGreaterThan(0)
+    );
+
+    const batchApproveButton = screen.getByRole("button", {
+      name: "Approve 5 to Queue",
+    });
+    fireEvent.click(batchApproveButton);
+
+    await waitFor(() =>
+      expect(mockedApi.drafts.update).toHaveBeenCalledWith(
+        "draft-angle-1",
+        expect.objectContaining({ status: "APPROVED" })
+      )
+    );
+    await waitFor(() =>
+      expect(mockedApi.drafts.enqueue).toHaveBeenCalledWith("draft-angle-1")
+    );
   });
 });

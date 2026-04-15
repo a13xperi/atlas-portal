@@ -19,6 +19,7 @@ jest.mock("next/link", () => {
 
 jest.mock("next/navigation", () => ({
   usePathname: jest.fn(),
+  useRouter: jest.fn(),
 }));
 
 jest.mock("@/lib/auth", () => ({
@@ -33,12 +34,13 @@ jest.mock("@/components/ui/CommandPalette", () => ({
   useCommandPalette: jest.fn(),
 }));
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useAlertSocket } from "@/lib/alertSocket";
 import { useCommandPalette } from "@/components/ui/CommandPalette";
 
 const mockUsePathname = jest.mocked(usePathname);
+const mockUseRouter = jest.mocked(useRouter);
 const mockUseAuth = jest.mocked(useAuth);
 const mockUseAlertSocket = jest.mocked(useAlertSocket);
 const mockUseCommandPalette = jest.mocked(useCommandPalette);
@@ -46,6 +48,13 @@ const mockUseCommandPalette = jest.mocked(useCommandPalette);
 describe("NavBar", () => {
   beforeEach(() => {
     mockUsePathname.mockReturnValue("/crafting");
+    mockUseRouter.mockReturnValue({
+      push: jest.fn(),
+      replace: jest.fn(),
+      refresh: jest.fn(),
+      back: jest.fn(),
+      prefetch: jest.fn(),
+    } as unknown as ReturnType<typeof useRouter>);
     mockUseAuth.mockReturnValue({
       user: {
         id: "user-1",
@@ -165,6 +174,25 @@ describe("NavBar", () => {
     expect(
       screen.queryByRole("navigation", { name: "Mobile navigation" })
     ).not.toBeInTheDocument();
+  });
+
+  it("opens the avatar dropdown with profile and logout actions", () => {
+    render(<NavBar variant="app" />);
+
+    expect(
+      screen.queryByRole("menu", { name: "User menu" })
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "User menu for atlas" }));
+
+    expect(screen.getByRole("menu", { name: "User menu" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Profile" })).toHaveAttribute(
+      "href",
+      "/profile"
+    );
+    expect(
+      screen.getByRole("menuitem", { name: "Log out" })
+    ).toBeInTheDocument();
   });
 
   it("hides auth-only controls when no user is authenticated", () => {

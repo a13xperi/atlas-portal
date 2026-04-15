@@ -19,6 +19,7 @@ import type {
   TeamMember,
   CampaignAnalytics,
 } from "./api";
+import { publicUrls } from "./public-urls";
 
 const now = new Date().toISOString();
 const daysAgo = (n: number) => new Date(Date.now() - n * 86400000).toISOString();
@@ -697,7 +698,7 @@ const alertsFeed: { alerts: Alert[] } = {
       context:
         "Solana hits new ATH. Content opportunity around ecosystem comparison takes.",
       category: "SIGNAL",
-      sourceUrl: "https://example.com/sol-ath",
+      sourceUrl: publicUrls.demoSourceUrl,
       sentiment: "bullish",
       relevance: 0.78,
       createdAt: daysAgo(1),
@@ -1006,6 +1007,23 @@ export function getDemoResponse(path: string, method: string = "GET", body?: unk
         status: "DRAFT" as const,
         draftCount: 0,
         drafts: [],
+        createdAt: now,
+      },
+    };
+  }
+
+  // Campaign clone
+  if (method === "POST" && /^\/api\/campaigns\/[^/]+\/clone$/.test(cleanPath)) {
+    const id = cleanPath.split("/")[3] as string;
+    const existing = demoCampaigns.find((c) => c.id === id);
+    return {
+      campaign: {
+        id: `camp-clone-${Date.now()}`,
+        name: `${existing?.name ?? "Campaign"} (Copy)`,
+        description: existing?.description ?? null,
+        status: "DRAFT" as const,
+        draftCount: existing?.draftCount ?? 0,
+        drafts: existing?.drafts ?? [],
         createdAt: now,
       },
     };

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AppShell from "@/components/layout/AppShell";
+import { publicUrls } from "@/lib/public-urls";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -12,7 +13,7 @@ import {
   Search,
 } from "lucide-react";
 
-const SUPA_URL = "https://zoirudjyqfqvpxsrxepr.supabase.co";
+const SUPA_URL = publicUrls.supabaseUrl;
 const SUPA_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 const headers = {

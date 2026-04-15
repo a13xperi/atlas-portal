@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import { getDemoResponse } from "./demo-data";
+import { getDemoTopTweets, getDemoTopTweetsByHandle } from "./demo-tweets";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -10,6 +11,7 @@ const BASE_DELAY_MS = 200;
 interface RequestOptions {
   method?: string;
   body?: unknown;
+  signal?: AbortSignal;
 }
 
 interface GenerateDraftInput {
@@ -317,15 +319,14 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   }
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10_000);
+    const signal = opts.signal ?? AbortSignal.timeout(45_000);
 
     try {
       const res = await fetch(`${API_URL}${path}`, {
         method,
         headers,
         body: body ? JSON.stringify(body) : undefined,
-        signal: controller.signal,
+        signal,
         credentials: "include",
       });
 
@@ -354,12 +355,9 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
         return json as T;
       }
     } catch (e) {
-      clearTimeout(timeout);
       if (e instanceof ApiError && !RETRYABLE_STATUSES.has(e.statusCode)) throw e;
       if (attempt === MAX_RETRIES - 1) throw e;
       // Network errors and retryable status codes fall through to retry
-    } finally {
-      clearTimeout(timeout);
     }
 
     await new Promise((r) => setTimeout(r, BASE_DELAY_MS * Math.pow(2, attempt)));
@@ -450,7 +448,13 @@ export const api = {
       ),
     calibrate: (handle: string) =>
       request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/calibrate", {
-        method: "POST", body: { handle },
+        method: "POST", body: { handle }, signal: AbortSignal.timeout(45_000),
+      }),
+    swipeSignals: (payload: SwipeSignalsPayload) =>
+      request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/swipe-signals", {
+        method: "POST",
+        body: payload,
+        signal: AbortSignal.timeout(45_000),
       }),
     getGlobalReferenceAccounts: () =>
       request<{ accounts: (ReferenceVoice & { avatarUrl?: string })[] }>("/api/voice/reference-accounts"),
@@ -859,6 +863,32 @@ export const api = {
       };
     },
     likes: () => request<{ likes: TwitterLike[]; cached: boolean }>("/api/twitter/likes"),
+    topTweets: async (limit = 10) => {
+      try {
+        return await request<{ tweets: TwitterLike[]; cached: boolean; fallback?: "demo" }>(
+          `/api/twitter/me/top-tweets?limit=${limit}`
+        );
+      } catch {
+        return {
+          tweets: getDemoTopTweets(limit),
+          cached: false,
+          fallback: "demo" as const,
+        };
+      }
+    },
+    topTweetsByHandle: async (handle: string, limit = 10) => {
+      try {
+        return await request<{ tweets: TwitterLike[]; cached: boolean; fallback?: "demo" }>(
+          `/api/twitter/handle/${encodeURIComponent(handle)}/top-tweets?limit=${limit}`
+        );
+      } catch {
+        return {
+          tweets: getDemoTopTweetsByHandle(handle, limit),
+          cached: false,
+          fallback: "demo" as const,
+        };
+      }
+    },
   },
 
 
@@ -885,6 +915,8 @@ export const api = {
       request<{ campaign: Campaign }>(`/api/campaigns/${id}`, { method: "PATCH", body: data }),
     delete: (id: string) =>
       request<{ success: boolean }>(`/api/campaigns/${id}`, { method: "DELETE" }),
+    clone: (id: string) =>
+      request<{ campaign: Campaign }>(`/api/campaigns/${id}/clone`, { method: "POST" }),
     addDraft: (campaignId: string, draftId: string, sortOrder?: number) =>
       request<{ success: boolean }>(`/api/campaigns/${campaignId}/drafts`, { method: "POST", body: { draftId, sortOrder } }),
     removeDraft: (campaignId: string, draftId: string) =>
@@ -923,6 +955,19 @@ export const api = {
     },
     postAll: (id: string) =>
       request<{ posted: number }>(`/api/campaigns/${id}/post-all`, { method: "POST" }),
+  },
+
+  bugs: {
+    list: (status?: string) =>
+      request<{ bugs: BugRecord[] }>(`/api/bugs${status ? `?status=${status}` : ""}`),
+    get: (id: string) =>
+      request<{ bug: BugRecord }>(`/api/bugs/${id}`),
+    create: (data: BugCreateInput) =>
+      request<{ bug: BugRecord }>("/api/bugs", { method: "POST", body: data }),
+    update: (id: string, data: BugUpdateInput) =>
+      request<{ bug: BugRecord }>(`/api/bugs/${id}`, { method: "PATCH", body: data }),
+    delete: (id: string) =>
+      request<{ bug: BugRecord }>(`/api/bugs/${id}`, { method: "DELETE" }),
   },
 
   bugs: {
@@ -977,6 +1022,20 @@ export interface CalibrationResult {
   analysis: string;
   tweetsAnalyzed: number;
   twitterUser: { username: string; name: string };
+}
+
+export interface SwipeSignalRequestItem {
+  tweetId: string;
+  text: string;
+  reasons: string[];
+  handle?: string | null;
+}
+
+export interface SwipeSignalsPayload {
+  ownLikes: SwipeSignalRequestItem[];
+  ownDislikes: SwipeSignalRequestItem[];
+  refLikes: SwipeSignalRequestItem[];
+  refDislikes: SwipeSignalRequestItem[];
 }
 
 export interface ReferenceVoice {

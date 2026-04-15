@@ -7,22 +7,16 @@ import {
   FileText,
   Loader2,
   Check,
+  X,
   Sparkles,
   ArrowLeft,
   ArrowRight,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
+import GlassCard from "@/components/ui/GlassCard";
 import GradientButton from "@/components/ui/GradientButton";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import CampaignDraftCard from "@/components/campaigns/CampaignDraftCard";
-import {
-  classifyFormat,
-  recommendTiming,
-  suggestAnalysts,
-  buildStrategyBullets,
-  type ContentFormat,
-} from "@/lib/campaign-recommendations";
 
 type WizardStep = "upload" | "analyzing" | "review" | "done";
 type SourceType = "REPORT" | "ARTICLE";
@@ -42,14 +36,17 @@ interface InsightData {
   angle: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
-
-const FORMAT_LABELS: Record<ContentFormat | "all", string> = {
-  all: "All",
-  "one-liner": "One-liner",
-  thread: "Thread",
-  article: "Article",
+const ANGLE_COLORS: Record<string, string> = {
+  "contrarian take": "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  "data highlight": "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  prediction: "bg-violet-500/20 text-violet-400 border-violet-500/30",
+  "practical advice": "bg-green-500/20 text-green-400 border-green-500/30",
+  "narrative arc": "bg-teal-500/20 text-teal-400 border-teal-500/30",
+  "hot take": "bg-red-500/20 text-red-400 border-red-500/30",
+  explainer: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
 };
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export default function CampaignWizardPage() {
   const { user } = useAuth();
@@ -72,7 +69,6 @@ export default function CampaignWizardPage() {
     id: string;
     title: string;
   } | null>(null);
-  const [formatFilter, setFormatFilter] = useState<ContentFormat | "all">("all");
 
   const handleFileSelect = async (files: FileList) => {
     const file = files[0];
@@ -81,36 +77,8 @@ export default function CampaignWizardPage() {
     if (file.type === "text/plain" || file.name.endsWith(".txt") || file.name.endsWith(".md")) {
       const text = await file.text();
       setContent(text);
-    } else if ((file.type === "application/pdf" || file.name.endsWith(".pdf")) && content.trim() === "") {
-      // One-shot PDF → campaign path
-      try {
-        setError("");
-        setStep("analyzing");
-        setStatusText("Extracting insights and drafting tweets...");
-        const result = await api.campaigns.generateFromPdf(file, {
-          name: campaignName || undefined,
-        });
-        setDrafts(
-          (result.drafts || []).map((d: any) => ({
-            ...d,
-            qualityScore: d.score ?? 0,
-            discarded: false,
-          }))
-        );
-        if (result.campaignId) {
-          setSavedCampaign({
-            id: result.campaignId,
-            title: campaignName.trim() || result.filename || "Untitled Campaign",
-          });
-        }
-        setStatusText("");
-        setStep("review");
-      } catch (err: any) {
-        setError(err.message || "Failed to generate campaign from PDF. Please try again.");
-        setStep("upload");
-      }
     } else if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
-      // Fallback: extract text and populate content when content field is not empty
+      // Send to backend for proper PDF text extraction
       try {
         setStatusText("Extracting PDF text…");
         const form = new FormData();
@@ -169,7 +137,6 @@ export default function CampaignWizardPage() {
           discarded: false,
         }))
       );
-      setSavedCampaign(null);
       setStatusText("");
       setStep("review");
     } catch (err: any) {
@@ -221,7 +188,7 @@ export default function CampaignWizardPage() {
         }
       }
 
-      if (createCampaign && !savedCampaign && campaignName.trim()) {
+      if (createCampaign && campaignName.trim()) {
         const { campaign } = await api.campaigns.create(campaignName.trim());
         for (let i = 0; i < activeDrafts.length; i++) {
           await api.campaigns.addDraft(campaign.id, activeDrafts[i].id, i + 1);
@@ -238,21 +205,6 @@ export default function CampaignWizardPage() {
   };
 
   const activeDraftCount = drafts.filter((d) => !d.discarded).length;
-
-  const formatCounts = {
-    all: activeDraftCount,
-    "one-liner": drafts.filter((d) => !d.discarded && classifyFormat(d.content) === "one-liner").length,
-    thread: drafts.filter((d) => !d.discarded && classifyFormat(d.content) === "thread").length,
-    article: drafts.filter((d) => !d.discarded && classifyFormat(d.content) === "article").length,
-  };
-
-  const visibleDrafts = drafts.filter((d) => {
-    if (d.discarded) return false;
-    if (formatFilter === "all") return true;
-    return classifyFormat(d.content) === formatFilter;
-  });
-
-  const strategyBullets = buildStrategyBullets(insights, drafts);
 
   return (
     <AppShell>
@@ -456,59 +408,78 @@ export default function CampaignWizardPage() {
               </p>
             </div>
 
-            {/* Strategy guide */}
-            {strategyBullets.length > 0 && (
-              <div className="rounded-2xl border border-glass-border bg-glass p-5 backdrop-blur-xl">
-                <h3 className="mb-2 text-sm font-medium text-atlas-text">
-                  Content strategy for this report
-                </h3>
-                <ul className="list-disc space-y-1 pl-4 text-sm text-atlas-text-secondary">
-                  {strategyBullets.map((b, i) => (
-                    <li key={i}>{b}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
             {/* Summary */}
             <p className="text-sm text-atlas-text-secondary">
               {insights.length} insights extracted, {activeDraftCount} drafts generated.
             </p>
 
-            {/* Format filter */}
-            <div className="flex flex-wrap items-center gap-2">
-              {(["all", "one-liner", "thread", "article"] as const).map((fmt) => (
-                <button
-                  key={fmt}
-                  type="button"
-                  onClick={() => setFormatFilter(fmt)}
-                  className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
-                    formatFilter === fmt
-                      ? "border border-atlas-teal bg-atlas-teal/10 text-atlas-teal"
-                      : "border border-glass-border bg-atlas-surface text-atlas-text-muted hover:text-atlas-text"
-                  }`}
-                >
-                  {FORMAT_LABELS[fmt]} ({formatCounts[fmt]})
-                </button>
-              ))}
-            </div>
-
             {/* Draft cards */}
             <div className="space-y-5">
-              {visibleDrafts.map((draft) => {
-                const format = classifyFormat(draft.content);
-                const timing = recommendTiming(draft.angle, format);
-                const analysts = suggestAnalysts(draft.angle, format);
+              {drafts.map((draft, index) => {
+                if (draft.discarded) return null;
+                const insight = insights[index];
+                const angleClass =
+                  ANGLE_COLORS[draft.angle] ||
+                  "bg-atlas-text-muted/20 text-atlas-text-muted border-atlas-text-muted/30";
+
                 return (
-                  <CampaignDraftCard
+                  <div
                     key={draft.id}
-                    draft={draft}
-                    onContentChange={updateDraftContent}
-                    onDiscard={discardDraft}
-                    format={format}
-                    timing={timing}
-                    analysts={analysts}
-                  />
+                    className="rounded-2xl border border-glass-border bg-glass p-6 backdrop-blur-xl"
+                  >
+                    {/* Insight header */}
+                    {insight && (
+                      <div className="mb-3">
+                        <p className="text-xs font-medium text-atlas-text-muted">
+                          {insight.title}
+                        </p>
+                        <p className="mt-0.5 text-xs text-atlas-text-muted/70">
+                          {insight.summary}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Angle badge + actions */}
+                    <div className="mb-3 flex items-center justify-between">
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${angleClass}`}
+                      >
+                        {draft.angle}
+                      </span>
+                      <div className="flex items-center gap-3">
+                        {/* Quality bar */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-atlas-text-muted">Quality</span>
+                          <div className="h-1.5 w-16 overflow-hidden rounded-full bg-atlas-surface">
+                            <div
+                              className="h-full rounded-full bg-atlas-teal"
+                              style={{
+                                width: `${Math.min(100, draft.qualityScore)}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => discardDraft(draft.id)}
+                          className="rounded-lg p-1.5 text-atlas-text-muted transition-colors hover:text-atlas-error"
+                          aria-label="Discard draft"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Editable draft content */}
+                    <textarea
+                      value={draft.content}
+                      onChange={(e) =>
+                        updateDraftContent(draft.id, e.target.value)
+                      }
+                      rows={4}
+                      className="w-full rounded-lg border border-glass-border bg-atlas-surface px-3 py-2 text-sm text-atlas-text placeholder:text-atlas-text-muted focus:border-atlas-teal focus:outline-none"
+                    />
+                  </div>
                 );
               })}
             </div>

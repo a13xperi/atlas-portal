@@ -20,7 +20,7 @@ const adminTools = [
   },
   {
     label: "Bug & Test Tracker",
-    description: "Live bug reports and test case status from Supabase",
+    description: "Internal bug tracker with severity and status",
     href: "/admin/bugs",
     icon: Bug,
   },

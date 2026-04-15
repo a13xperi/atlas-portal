@@ -57,10 +57,50 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
     ),
   ],
 
+  SWIPE_OWN: [
+    msg(
+      "oracle",
+      "Start with your own strongest tweets. Swipe right on the posts that feel most like you on your best day, and left on the ones that miss.",
+      {
+        component: { type: "swipe-own" },
+      }
+    ),
+  ],
+
+  SWIPE_OWN_REASONS: [
+    msg(
+      "oracle",
+      "For the tweets you liked, tell me what worked. These tags help me turn your instincts into an actual voice shape.",
+      {
+        component: { type: "swipe-reasons" },
+      }
+    ),
+  ],
+
+  REFERENCE_HANDLES: [
+    msg(
+      "oracle",
+      "Now give me up to three accounts you respect. I'll pull their strongest tweets so you can show me the outer edge of your taste.",
+      {
+        component: { type: "reference-handle-picker" },
+      }
+    ),
+  ],
+
+  SWIPE_REFS: [
+    msg(
+      "oracle",
+      "Swipe through those reference tweets next. Like the ones that feel directionally right, skip the ones that don't belong in your blend.",
+      {
+        component: { type: "swipe-reference-tweets" },
+      }
+    ),
+  ],
+
   TRACK_A_RESULT: [
     msg(
       "oracle",
-      "Here's what I think your voice looks like. Adjust anything that feels off — most people tweak 2-3 dimensions after seeing this.",
+      "Here's what your swipes told me. Slide if anything feels off — otherwise hit continue.",
       {
         component: { type: "dimensions" },
       }
@@ -119,6 +159,16 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
       "How much should I lean on your style vs. theirs? You can always change this later.",
       {
         component: { type: "blend" },
+      }
+    ),
+  ],
+
+  NAME_VOICE: [
+    msg(
+      "oracle",
+      "What should we call this voice? You can rename it anytime.",
+      {
+        component: { type: "voice-name-input" },
       }
     ),
   ],

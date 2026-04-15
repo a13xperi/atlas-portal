@@ -61,6 +61,14 @@ export function getContinueLabel(
   track: OracleState["track"],
 ): string {
   switch (step) {
+    case "SWIPE_OWN":
+      return "Lock these swipes in";
+    case "SWIPE_OWN_REASONS":
+      return "These reasons fit";
+    case "REFERENCE_HANDLES":
+      return "Use these handles";
+    case "SWIPE_REFS":
+      return "See what the swipes say";
     case "TRACK_A_RESULT":
       return "Looks right — continue";
     case "TRACK_B_STYLE":
@@ -78,43 +86,31 @@ export function getContinueLabel(
 
 // ── Step transition map ────────────────────────────────────────────
 const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
-  WELCOME: "TRACK_A_SCANNING",
-  CONNECT_X: "WELCOME",
-  TRACK_A_SCANNING: "TRACK_A_RESULT",
+  WELCOME: "CONNECT_X",
+  CONNECT_X: "TRACK_A_SCANNING",
+  TRACK_A_SCANNING: "SWIPE_OWN",
+  SWIPE_OWN: "SWIPE_OWN_REASONS",
+  SWIPE_OWN_REASONS: "REFERENCE_HANDLES",
+  REFERENCE_HANDLES: "SWIPE_REFS",
+  SWIPE_REFS: "TRACK_A_RESULT",
   TRACK_A_RESULT: "REFERENCES",
+  REFERENCES: "HANDOFF",
   TRACK_B_STYLE: "TRACK_B_CONTENT",
   TRACK_B_CONTENT: "TRACK_B_DIMENSIONS",
   TRACK_B_DIMENSIONS: "REFERENCES",
-  REFERENCES: "HANDOFF",
   BLEND: "HANDOFF",
+  NAME_VOICE: "HANDOFF",
   TOPICS: "HANDOFF", // legacy fallback, step skipped in flow
   HANDOFF: null, // terminal
 };
 
-export interface OnboardingRoutingState {
-  track: OracleState["track"];
-  voiceCalibrated: boolean; // tweetsAnalyzed >= MIN_TWEETS_FOR_VOICE_CALIBRATION
-  onboardingComplete: boolean; // user.onboardingTrack !== null
-}
-
 export function getOnboardingCompletionHref(
-  state: OnboardingRoutingState
+  track: OracleState["track"]
 ): string {
-  const { track, voiceCalibrated, onboardingComplete } = state;
-
-  // Stage 1: voice not calibrated → steer to calibration
-  if (!voiceCalibrated) {
-    return track === "b"
-      ? "/voice-lab?prompt=complete-voice-setup"
-      : "/voice-profiles?prompt=calibrate";
+  if (track === "b") {
+    return "/voice-lab?prompt=complete-voice-setup";
   }
 
-  // Stage 2: calibrated but onboarding not persisted → finish onboarding
-  if (!onboardingComplete) {
-    return "/onboarding?resume=handoff";
-  }
-
-  // Stage 3: fully done
   return "/dashboard?banner=voice-calibrated";
 }
 
@@ -124,9 +120,17 @@ export function canAdvance(state: OracleState): boolean {
     case "WELCOME":
       return true;
     case "CONNECT_X":
-      return true; // allow skip
+      return state.xConnected && state.xHandle.trim().length > 0;
     case "TRACK_A_SCANNING":
-      return state.calibrationResult !== null;
+      return true;
+    case "SWIPE_OWN":
+      return state.swipeResults.own.length >= 5;
+    case "SWIPE_OWN_REASONS":
+      return true;
+    case "REFERENCE_HANDLES":
+      return state.referenceHandles.length >= 1;
+    case "SWIPE_REFS":
+      return true;
     case "TRACK_A_RESULT":
       return true;
     case "TRACK_B_STYLE":
@@ -139,6 +143,8 @@ export function canAdvance(state: OracleState): boolean {
       return state.selectedRefs.length >= 1;
     case "BLEND":
       return true;
+    case "NAME_VOICE":
+      return state.blendName.trim().length > 0;
     case "TOPICS":
       return true; // step skipped in flow, kept for type exhaustiveness
     case "HANDOFF":
@@ -149,19 +155,22 @@ export function canAdvance(state: OracleState): boolean {
 // ── Initial state ──────────────────────────────────────────────────
 export function initialOracleState(): OracleState {
   return {
-    currentStep: "CONNECT_X",
+    currentStep: "WELCOME",
     track: null,
     messages: [],
-    pendingMessages: prepareMessages("CONNECT_X", null),
+    pendingMessages: prepareMessages("WELCOME", null),
     isTyping: false,
     xHandle: "",
     xConnected: false,
     calibrationResult: null,
     dimensions: DEFAULT_VOICE_DIMENSIONS,
     selectedStyle: null,
+    swipeResults: { own: [], ref: [] },
+    referenceHandles: [],
     selectedRefs: [],
     selfPercentage: 50,
     selectedTopics: [],
+    blendName: "",
     stepHistory: [],
   };
 }
@@ -175,11 +184,11 @@ export function oracleReducer(
     case "SET_TRACK": {
       const track = action.track;
       const nextStep: OracleStep =
-        track === "a" ? "TRACK_A_SCANNING" : "TRACK_B_STYLE";
+        track === "a" ? "CONNECT_X" : "TRACK_B_STYLE";
       const userMsg = {
         id: `user-track-${Date.now()}`,
         role: "user" as const,
-        content: track === "a" ? "X-Powered" : "Hand-Crafted",
+        content: track === "a" ? "Connect X" : "Set up manually",
         timestamp: Date.now(),
       };
       return {
@@ -189,11 +198,16 @@ export function oracleReducer(
         messages: [...state.messages, userMsg],
         pendingMessages: prepareMessages(nextStep, track),
         selfPercentage: track === "a" ? 50 : 30,
+        swipeResults: { own: [], ref: [] },
+        referenceHandles: [],
       };
     }
 
     case "ADVANCE": {
-      const next = NEXT_STEP[state.currentStep];
+      let next = NEXT_STEP[state.currentStep];
+      if (state.currentStep === "REFERENCES" && state.track === "b") {
+        next = "NAME_VOICE";
+      }
       if (!next) return state;
       const userContent = action.payload;
       const userMsg = userContent
@@ -247,6 +261,54 @@ export function oracleReducer(
     case "SET_STYLE":
       return { ...state, selectedStyle: action.style };
 
+    case "RECORD_SWIPE": {
+      const nextSwipeResults = {
+        own: [...state.swipeResults.own],
+        ref: [...state.swipeResults.ref],
+      };
+
+      for (const signal of action.signals) {
+        const bucket = signal.source === "OWN" ? "own" : "ref";
+        const existingIndex = nextSwipeResults[bucket].findIndex(
+          (candidate) =>
+            candidate.tweetId === signal.tweetId &&
+            candidate.direction === signal.direction &&
+            (candidate.handle ?? null) === (signal.handle ?? null)
+        );
+
+        if (existingIndex >= 0) {
+          nextSwipeResults[bucket][existingIndex] = signal;
+        } else {
+          nextSwipeResults[bucket].push(signal);
+        }
+      }
+
+      return { ...state, swipeResults: nextSwipeResults };
+    }
+
+    case "SET_REF_HANDLES":
+      return {
+        ...state,
+        referenceHandles: Array.from(
+          new Set(
+            action.handles
+              .map((handle) => handle.replace(/^@/, "").trim().toLowerCase())
+              .filter(Boolean)
+          )
+        ).slice(0, 3),
+      };
+
+    case "RESET_SWIPES": {
+      const scope = action.scope ?? "all";
+      return {
+        ...state,
+        swipeResults: {
+          own: scope === "ref" ? state.swipeResults.own : [],
+          ref: scope === "own" ? state.swipeResults.ref : [],
+        },
+      };
+    }
+
     case "SET_REFS":
       return { ...state, selectedRefs: action.ids };
 
@@ -255,6 +317,9 @@ export function oracleReducer(
 
     case "SET_TOPICS":
       return { ...state, selectedTopics: action.topics };
+
+    case "SET_BLEND_NAME":
+      return { ...state, blendName: action.name };
 
     case "ENQUEUE_MESSAGES":
       return {
@@ -273,30 +338,6 @@ export function oracleReducer(
       };
     }
 
-    case "START_STREAM_MESSAGE": {
-      const [next, ...rest] = state.pendingMessages;
-      if (!next) return { ...state, isTyping: false };
-      return {
-        ...state,
-        messages: [...state.messages, { ...next, content: "" }],
-        pendingMessages: rest,
-        isTyping: true,
-      };
-    }
-
-    case "APPEND_TO_LAST_MESSAGE": {
-      if (state.messages.length === 0) return state;
-      const lastIndex = state.messages.length - 1;
-      const last = state.messages[lastIndex];
-      return {
-        ...state,
-        messages: [
-          ...state.messages.slice(0, lastIndex),
-          { ...last, content: last.content + action.text },
-        ],
-      };
-    }
-
     case "SET_TYPING":
       return { ...state, isTyping: action.isTyping };
 
@@ -305,50 +346,53 @@ export function oracleReducer(
   }
 }
 
-/** Create a ReadableStream that yields words from `text` one at a time. */
-export function createTextStream(text: string, wordDelayMs = 30): ReadableStream<string> {
+export function createTextStream(
+  text: string,
+  wordDelayMs = 30,
+  signal?: AbortSignal
+): ReadableStream<string> {
   const tokens = text.split(/(\s+)/);
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let cancelled = false;
+
+  const cleanup = () => {
+    cancelled = true;
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+
   return new ReadableStream<string>({
     start(controller) {
+      if (signal?.aborted) {
+        try { controller.close(); } catch {}
+        cleanup();
+        return;
+      }
+
+      signal?.addEventListener("abort", () => {
+        cleanup();
+        try { controller.error(signal.reason); } catch {}
+      }, { once: true });
+
       let i = 0;
       function push() {
+        timer = null;
+        if (cancelled) return;
         if (i >= tokens.length) {
-          controller.close();
+          try { controller.close(); } catch {}
           return;
         }
-        controller.enqueue(tokens[i]);
+        if (controller.desiredSize === null) return;
+        try { controller.enqueue(tokens[i]); } catch { return; }
         i++;
-        setTimeout(push, wordDelayMs);
+        timer = setTimeout(push, wordDelayMs);
       }
       push();
     },
+    cancel() {
+      cleanup();
+    },
   });
-}
-
-/** Parse a server-sent events (SSE) stream into yielded JSON objects. */
-export async function* readSSEStream<T = unknown>(stream: ReadableStream<Uint8Array>): AsyncGenerator<T, void, unknown> {
-  const reader = stream.pipeThrough(new TextDecoderStream() as unknown as ReadableWritablePair<string, Uint8Array>).getReader();
-  let buffer = "";
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += value;
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith("data: ")) continue;
-        const data = trimmed.slice(6);
-        if (data === "[DONE]") return;
-        try {
-          yield JSON.parse(data) as T;
-        } catch {
-          yield data as unknown as T;
-        }
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
 }

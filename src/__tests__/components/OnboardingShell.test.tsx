@@ -4,6 +4,7 @@ import { render, screen } from "@testing-library/react";
 import OnboardingShell from "@/components/layout/OnboardingShell";
 
 const mockUsePathname = jest.fn();
+const mockUseRouter = jest.fn();
 const mockUseAuth = jest.fn();
 const mockUseAlertSocket = jest.fn();
 const mockUseCommandPalette = jest.fn();
@@ -24,6 +25,7 @@ jest.mock("next/link", () => {
 
 jest.mock("next/navigation", () => ({
   usePathname: () => mockUsePathname(),
+  useRouter: () => mockUseRouter(),
 }));
 
 jest.mock("@/lib/auth", () => ({
@@ -41,6 +43,13 @@ jest.mock("@/components/ui/CommandPalette", () => ({
 describe("OnboardingShell", () => {
   beforeEach(() => {
     mockUsePathname.mockReturnValue("/dashboard");
+    mockUseRouter.mockReturnValue({
+      push: jest.fn(),
+      replace: jest.fn(),
+      refresh: jest.fn(),
+      back: jest.fn(),
+      prefetch: jest.fn(),
+    });
     mockUseAuth.mockReturnValue({
       user: { id: "1", handle: "test", role: "ANALYST" },
       loading: false,

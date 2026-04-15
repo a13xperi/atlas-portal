@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Calendar,
+  Copy,
   ListOrdered,
   Loader2,
   Megaphone,
@@ -135,6 +136,11 @@ function CampaignsTab() {
     setCampaigns((prev) => prev.filter((c) => c.id !== id));
   };
 
+  const handleClone = async (id: string) => {
+    const { campaign: cloned } = await api.campaigns.clone(id);
+    setCampaigns((prev) => [cloned, ...prev]);
+  };
+
   return (
     <div className="mt-6">
       <div className="mb-6 flex items-center justify-between">
@@ -238,13 +244,24 @@ function CampaignsTab() {
                         <span>{campaign.draftCount} post{campaign.draftCount !== 1 ? "s" : ""}</span>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.preventDefault(); handleDelete(campaign.id); }}
-                      className="shrink-0 rounded-lg p-2 text-atlas-text-muted transition-colors hover:text-atlas-error"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); handleClone(campaign.id); }}
+                        className="rounded-lg p-2 text-atlas-text-muted transition-colors hover:text-atlas-teal"
+                        title="Clone campaign"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); handleDelete(campaign.id); }}
+                        className="rounded-lg p-2 text-atlas-text-muted transition-colors hover:text-atlas-error"
+                        title="Delete campaign"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </GlassCard>
               </Link>

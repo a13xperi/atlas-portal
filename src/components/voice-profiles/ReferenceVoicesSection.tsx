@@ -9,6 +9,7 @@ import ImportFromXFollowsModal from "@/components/voice-profiles/ImportFromXFoll
 import ImportFromXLikesModal from "@/components/voice-profiles/ImportFromXLikesModal";
 import { api, type ReferenceAccount, type ReferenceVoice } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { getTwitterAvatarUrl, getXProfileUrl } from "@/lib/public-urls";
 import { colors } from "@/lib/tokens";
 import {
   getEqualReferenceWeights,
@@ -145,11 +146,7 @@ export default function ReferenceVoicesSection({
       handle: matchingReference?.handle ?? id,
       name: matchingReference?.name ?? id,
       profileImageUrl: matchingReference?.avatarUrl
-        ?? (matchingReference?.handle
-          ? `https://unavatar.io/twitter/${normalizeTwitterHandle(
-              matchingReference.handle
-            )}`
-          : null),
+        ?? getTwitterAvatarUrl(normalizeTwitterHandle(matchingReference?.handle)),
     });
   });
 
@@ -281,6 +278,7 @@ export default function ReferenceVoicesSection({
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {selectedAccounts.map((account) => {
               const normalizedHandle = normalizeTwitterHandle(account.handle);
+              const profileUrl = getXProfileUrl(normalizedHandle);
 
               return (
                 <div
@@ -319,9 +317,9 @@ export default function ReferenceVoicesSection({
                     <p className="truncate text-sm font-semibold text-atlas-text">
                       {account.displayName || account.name || account.handle || account.id}
                     </p>
-                    {normalizedHandle ? (
+                    {normalizedHandle && profileUrl ? (
                       <a
-                        href={`https://twitter.com/${normalizedHandle}`}
+                        href={profileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-0.5 text-xs text-atlas-text-secondary hover:text-atlas-teal hover:underline"

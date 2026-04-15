@@ -9,8 +9,8 @@ interface ModelReliabilitySectionProps {
 export default function ModelReliabilitySection({
   logEntries,
 }: ModelReliabilitySectionProps) {
-  const recentEntries = logEntries.slice(-20);
-  const positiveSignals = logEntries.filter((entry) => entry.positive).length;
+  const recentEntries = (logEntries ?? []).slice(-20);
+  const positiveSignals = (logEntries ?? []).filter((entry) => entry.positive).length;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -22,8 +22,8 @@ export default function ModelReliabilitySection({
           Model Reliability
         </h3>
         <div className="mt-4 h-20 flex items-end gap-0.5">
-          {recentEntries.length > 0 ? (
-            recentEntries.map((entry, index) => {
+          {(recentEntries ?? []).length > 0 ? (
+            (recentEntries ?? []).map((entry, index) => {
               const score = entry.positive ? 70 + index * 1.5 : 30 + index * 1.5;
               return (
                 <div
@@ -43,7 +43,7 @@ export default function ModelReliabilitySection({
         </div>
       </div>
       <div className="bg-atlas-surface border border-glass-border rounded-xl p-6 flex items-center">
-        {logEntries.length > 0 ? (
+        {(logEntries ?? []).length > 0 ? (
           <p className="font-heading font-medium text-base text-atlas-text italic leading-relaxed">
             {positiveSignals} positive signals detected across your recent activity.
           </p>

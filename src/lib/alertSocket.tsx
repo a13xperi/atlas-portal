@@ -3,19 +3,22 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "./auth";
-import type { Alert } from "./api";
+import { publicUrls } from "./public-urls";
 
-export type SocketAlert = Omit<Alert, "context"> & {
+interface Alert {
+  id: string;
+  type: string;
+  title: string;
   context?: string | null;
-  message?: string | null;
-};
+  createdAt: string;
+}
 
 interface AlertSocketState {
   connected: boolean;
   unreadNotifications: number;
-  latestAlert: SocketAlert | null;
+  latestAlert: Alert | null;
   clearUnread: () => void;
-  onNewAlert: (cb: (alert: SocketAlert) => void) => () => void;
+  onNewAlert: (cb: (alert: Alert) => void) => () => void;
 }
 
 const AlertSocketContext = createContext<AlertSocketState>({
@@ -26,15 +29,15 @@ const AlertSocketContext = createContext<AlertSocketState>({
   onNewAlert: () => () => {},
 });
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API_URL = publicUrls.apiUrl;
 
 export function AlertSocketProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const socketRef = useRef<Socket | null>(null);
-  const listenersRef = useRef<Set<(alert: SocketAlert) => void>>(new Set());
+  const listenersRef = useRef<Set<(alert: Alert) => void>>(new Set());
   const [connected, setConnected] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const [latestAlert, setLatestAlert] = useState<SocketAlert | null>(null);
+  const [latestAlert, setLatestAlert] = useState<Alert | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -55,7 +58,7 @@ export function AlertSocketProvider({ children }: { children: React.ReactNode })
     socket.on("connect", () => setConnected(true));
     socket.on("disconnect", () => setConnected(false));
 
-    socket.on("new-alert", (alert: SocketAlert) => {
+    socket.on("new-alert", (alert: Alert) => {
       setLatestAlert(alert);
       setUnreadNotifications((count) => count + 1);
       listenersRef.current.forEach((cb) => cb(alert));
@@ -72,7 +75,7 @@ export function AlertSocketProvider({ children }: { children: React.ReactNode })
 
   const clearUnread = useCallback(() => setUnreadNotifications(0), []);
 
-  const onNewAlert = useCallback((cb: (alert: SocketAlert) => void) => {
+  const onNewAlert = useCallback((cb: (alert: Alert) => void) => {
     listenersRef.current.add(cb);
     return () => { listenersRef.current.delete(cb); };
   }, []);

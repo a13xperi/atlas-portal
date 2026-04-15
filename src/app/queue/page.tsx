@@ -1,162 +1,542 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Loader2, Calendar, Clock, ListOrdered, Sparkles } from "lucide-react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import Link from "next/link";
+import {
+  Clock,
+  Calendar,
+  ListOrdered,
+  Archive,
+  PenTool,
+  GripVertical,
+  RotateCcw,
+  CheckCircle2,
+  X,
+  Send,
+  Sparkles,
+} from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import AppShell from "@/components/layout/AppShell";
 import FeatureGate from "@/components/ui/FeatureGate";
-import GlassCard from "@/components/ui/GlassCard";
-import GradientButton from "@/components/ui/GradientButton";
-import { api, TweetDraft } from "@/lib/api";
+import QueueTimeline from "@/components/queue/QueueTimeline";
+import OracleInspector from "@/components/oracle/OracleInspector";
+import type { InspectableEntity } from "@/lib/oracle-agent-types";
+import { api, QueuedDraft } from "@/lib/api";
+import { SchedulePopover } from "@/components/ui/SchedulePopover";
+import { rankQueue } from "@/lib/queue-rank";
 
-type QueueDraft = TweetDraft & { optimalTime?: string; optimalTimeBadge?: string };
+type FilterKey = "all" | "draft" | "scheduled" | "posted" | "archived";
 
-function toLocalDateTimeInput(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`;
-}
+const FILTERS: { key: FilterKey; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "draft", label: "Drafts" },
+  { key: "scheduled", label: "Scheduled" },
+  { key: "posted", label: "Posted" },
+  { key: "archived", label: "Archived" },
+];
 
-function fromLocalDateTimeInput(value: string): string {
-  return new Date(value).toISOString();
-}
-
-function getStatusBadge(status: TweetDraft["status"]) {
+function statusVariant(status: QueuedDraft["status"]): {
+  label: string;
+  className: string;
+} {
   switch (status) {
-    case "APPROVED":
-      return (
-        <span className="rounded-full bg-atlas-warning/15 px-2 py-0.5 text-[10px] font-medium text-atlas-warning">
-          Approved
-        </span>
-      );
-    case "SCHEDULED":
-      return (
-        <span className="rounded-full bg-atlas-teal/15 px-2 py-0.5 text-[10px] font-medium text-atlas-teal">
-          Scheduled
-        </span>
-      );
     case "POSTED":
-      return (
-        <span className="rounded-full bg-atlas-success/15 px-2 py-0.5 text-[10px] font-medium text-atlas-success">
-          Posted
-        </span>
-      );
+      return {
+        label: "Posted",
+        className: "bg-atlas-success/15 text-atlas-success",
+      };
+    case "SCHEDULED":
+      return {
+        label: "Scheduled",
+        className: "bg-atlas-teal/15 text-atlas-teal",
+      };
     case "ARCHIVED":
-      return (
-        <span className="rounded-full bg-atlas-text-muted/15 px-2 py-0.5 text-[10px] font-medium text-atlas-text-muted">
-          Archived
-        </span>
-      );
+      return {
+        label: "Archived",
+        className: "bg-atlas-text-muted/15 text-atlas-text-muted",
+      };
+    case "APPROVED":
+      return {
+        label: "Approved",
+        className: "bg-atlas-warning/15 text-atlas-warning",
+      };
+    case "DRAFT":
     default:
-      return (
-        <span className="rounded-full bg-glass-border/30 px-2 py-0.5 text-[10px] font-medium text-atlas-text-secondary">
-          Draft
-        </span>
-      );
+      return {
+        label: "Draft",
+        className: "bg-glass-border/30 text-atlas-text-secondary",
+      };
   }
 }
 
-function QueuePage() {
-  const [drafts, setDrafts] = useState<QueueDraft[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [schedulingAll, setSchedulingAll] = useState(false);
-  const [smartRanking, setSmartRanking] = useState(false);
+/* ---- Sortable queue item ---- */
+function SortableQueueItem({
+  item,
+  index,
+  isSelected,
+  draggable,
+  onToggleSelect,
+  onSchedule,
+  onPost,
+  onArchive,
+  onInspect,
+  formatTime,
+}: {
+  item: QueuedDraft;
+  index: number;
+  isSelected: boolean;
+  draggable: boolean;
+  onToggleSelect: (id: string) => void;
+  onSchedule: (id: string, at: string) => Promise<void> | void;
+  onPost: (id: string) => void;
+  onArchive: (id: string) => void;
+  onInspect: (id: string) => void;
+  formatTime: (d: QueuedDraft) => string;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id, disabled: !draggable });
 
-  const loadDrafts = async () => {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
+  const timeLabel = formatTime(item);
+  const status = statusVariant(item.status);
+  const isFirst = index === 0 && draggable;
+  const isPostedOrArchived =
+    item.status === "POSTED" || item.status === "ARCHIVED";
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      onMouseEnter={() => onInspect(item.id)}
+      onFocus={() => onInspect(item.id)}
+      tabIndex={0}
+      className={`relative rounded-xl border bg-atlas-surface p-4 transition-colors hover:border-atlas-teal/30 focus:border-atlas-teal/50 focus:outline-none ${
+        isFirst
+          ? "border-2 border-atlas-teal/30 rounded-2xl p-6"
+          : "border-glass-border"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          {/* Drag handle */}
+          {draggable && (
+            <button
+              {...attributes}
+              {...listeners}
+              className="mt-1 shrink-0 cursor-grab touch-none text-atlas-text-muted hover:text-atlas-teal active:cursor-grabbing"
+              aria-label="Drag to reorder"
+            >
+              <GripVertical className="h-4 w-4" />
+            </button>
+          )}
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggleSelect(item.id)}
+            className="mt-1 h-4 w-4 shrink-0 accent-atlas-teal"
+            aria-label="Select draft"
+          />
+          {/* Position number */}
+          {draggable && (
+            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-atlas-teal/10 text-[11px] font-semibold text-atlas-teal">
+              #{index + 1}
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="mb-1.5 flex flex-wrap items-center gap-2">
+              {isFirst && (
+                <span className="rounded bg-atlas-teal/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-atlas-teal">
+                  Next up
+                </span>
+              )}
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${status.className}`}
+              >
+                {status.label}
+              </span>
+              <span className="text-[10px] text-atlas-text-muted">
+                Score: {item._score}
+              </span>
+              {item.sourceType && (
+                <span className="rounded bg-atlas-nav px-1.5 py-0.5 text-[10px] text-atlas-text-muted">
+                  {item.sourceType.replace("_", " ")}
+                </span>
+              )}
+            </div>
+            <p className="text-sm leading-relaxed text-atlas-text">
+              {item.content.length > 200
+                ? `${item.content.slice(0, 200)}...`
+                : item.content}
+            </p>
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <div className="flex items-center gap-1 text-xs text-atlas-text-muted">
+            <Clock className="h-3 w-3" />
+            <span>{timeLabel}</span>
+          </div>
+          {!isPostedOrArchived && (
+            <div className="relative flex items-center gap-1.5">
+              <button
+                onClick={() => setPickerOpen((v) => !v)}
+                className="rounded-lg border border-glass-border px-2.5 py-1 text-[11px] font-medium text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal"
+                aria-label="Pick schedule time"
+              >
+                <Calendar className="mr-1 inline h-3 w-3" />
+                Schedule
+              </button>
+              <button
+                onClick={() => onPost(item.id)}
+                className="rounded-lg bg-atlas-teal px-2.5 py-1 text-[11px] font-semibold text-atlas-bg transition-opacity hover:opacity-90"
+              >
+                <Send className="mr-1 inline h-3 w-3" />
+                Post Now
+              </button>
+              <button
+                onClick={() => onArchive(item.id)}
+                className="rounded-lg border border-glass-border px-2.5 py-1 text-[11px] text-atlas-text-muted hover:border-red-400/30 hover:text-red-400"
+              >
+                <Archive className="mr-1 inline h-3 w-3" />
+                Archive
+              </button>
+              {pickerOpen && (
+                <SchedulePopover
+                  initialAt={item.suggestedAt}
+                  busy={scheduling}
+                  onCancel={() => setPickerOpen(false)}
+                  onConfirm={async (iso) => {
+                    setScheduling(true);
+                    try {
+                      await onSchedule(item.id, iso);
+                      setPickerOpen(false);
+                    } finally {
+                      setScheduling(false);
+                    }
+                  }}
+                />
+              )}
+            </div>
+          )}
+          {isPostedOrArchived && (
+            <span className="text-[10px] text-atlas-text-muted">
+              No actions
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function QueuePage() {
+  const [queue, setQueue] = useState<QueuedDraft[]>([]);
+  const [allDrafts, setAllDrafts] = useState<QueuedDraft[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<FilterKey>("all");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchScheduling, setBatchScheduling] = useState(false);
+  const [batchArchiving, setBatchArchiving] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(true);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [isManualOrder, setIsManualOrder] = useState(false);
+  // Which row Oracle is currently narrating. Tracks hover + keyboard
+  // focus so the Inspector line updates as the user scans the queue.
+  const [inspectedId, setInspectedId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  const loadQueue = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.drafts.list();
-      setDrafts(res.drafts ?? []);
+      const [{ queue: items }, draftRes] = await Promise.all([
+        api.drafts.queue(),
+        // Load all drafts to power Posted / Archived / Drafts filters
+        api.drafts.list(),
+      ]);
+      setQueue(items ?? []);
+      // Coerce TweetDraft list into QueuedDraft shape so a single render path works.
+      const coerced: QueuedDraft[] = (draftRes.drafts ?? []).map((d) => ({
+        ...d,
+        _score: 0,
+        suggestedAt: d.createdAt,
+      }));
+      setAllDrafts(coerced);
+      setIsManualOrder(false);
+      setError(null);
     } catch (e) {
-      console.error("Failed to load drafts", e);
+      setError(e instanceof Error ? e.message : "Failed to load queue");
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    void loadDrafts();
   }, []);
 
-  const approvedDrafts = useMemo(() => {
-    const approved = drafts.filter((d) => d.status === "APPROVED");
-    return approved.sort((a, b) => {
-      const aOrder = (a as TweetDraft & { sortOrder?: number }).sortOrder ?? 0;
-      const bOrder = (b as TweetDraft & { sortOrder?: number }).sortOrder ?? 0;
-      if (aOrder !== bOrder) return aOrder - bOrder;
-      return (
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+  useEffect(() => {
+    void loadQueue();
+  }, [loadQueue]);
+
+  const handleSchedule = async (id: string, scheduledAt: string) => {
+    await api.drafts.schedule(id, scheduledAt);
+    setQueue((q) =>
+      q.map((d) =>
+        d.id === id
+          ? { ...d, status: "SCHEDULED" as const, suggestedAt: scheduledAt }
+          : d
+      )
+    );
+    setAllDrafts((q) =>
+      q.map((d) =>
+        d.id === id
+          ? { ...d, status: "SCHEDULED" as const, suggestedAt: scheduledAt }
+          : d
+      )
+    );
+  };
+
+  const handlePost = async (id: string) => {
+    await api.drafts.postToX(id);
+    setQueue((q) => q.filter((d) => d.id !== id));
+    setAllDrafts((q) =>
+      q.map((d) => (d.id === id ? { ...d, status: "POSTED" as const } : d))
+    );
+  };
+
+  const handleArchive = async (id: string) => {
+    await api.drafts.update(id, { status: "ARCHIVED" });
+    setQueue((q) => q.filter((d) => d.id !== id));
+    setAllDrafts((q) =>
+      q.map((d) => (d.id === id ? { ...d, status: "ARCHIVED" as const } : d))
+    );
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
-  }, [drafts]);
-
-  const handleScheduleChange = async (id: string, value: string) => {
-    const iso = fromLocalDateTimeInput(value);
-    try {
-      await api.drafts.update(id, { scheduledAt: iso });
-      setDrafts((prev) =>
-        prev.map((d) => (d.id === id ? { ...d, scheduledAt: iso } : d))
-      );
-    } catch (e) {
-      console.error("Failed to update schedule", e);
-    }
   };
 
-  const handleScheduleAll = async () => {
-    if (approvedDrafts.length === 0) return;
-    setSchedulingAll(true);
+  const handleBatchSchedule = async () => {
+    setBatchScheduling(true);
     try {
-      const slots = [9, 12, 17, 20];
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-
+      const toSchedule = queue.filter((d) => selectedIds.has(d.id));
       await Promise.all(
-        approvedDrafts.map((draft, i) => {
-          const dayOffset = Math.floor(i / slots.length);
-          const hour = slots[i % slots.length];
-          const scheduled = new Date(tomorrow);
-          scheduled.setDate(scheduled.getDate() + dayOffset);
-          scheduled.setHours(hour, 0, 0, 0);
-          return api.drafts.update(draft.id, {
-            scheduledAt: scheduled.toISOString(),
-            status: "SCHEDULED",
-          });
-        })
+        toSchedule.map((d) => api.drafts.schedule(d.id, d.suggestedAt))
       );
-
-      await loadDrafts();
-    } catch (e) {
-      console.error("Failed to schedule all", e);
+      setQueue((q) =>
+        q.map((d) =>
+          selectedIds.has(d.id) ? { ...d, status: "SCHEDULED" as const } : d
+        )
+      );
+      setAllDrafts((q) =>
+        q.map((d) =>
+          selectedIds.has(d.id) ? { ...d, status: "SCHEDULED" as const } : d
+        )
+      );
+      setSelectedIds(new Set());
+    } catch (err) {
+      console.error("Batch schedule failed:", err);
     } finally {
-      setSchedulingAll(false);
+      setBatchScheduling(false);
     }
   };
 
-  const handleSmartOrder = async () => {
-    if (approvedDrafts.length === 0) return;
-    setSmartRanking(true);
+  const handleBatchArchive = async () => {
+    setBatchArchiving(true);
     try {
-      const res = await api.queue.smartRank(approvedDrafts);
-      const ranked = res.drafts ?? [];
-      setDrafts((prev) => {
-        const map = new Map(ranked.map((d) => [d.id, d]));
-        return prev.map((d) => map.get(d.id) ?? d);
-      });
-    } catch (e) {
-      console.error("Failed to smart rank", e);
+      const ids = Array.from(selectedIds);
+      await Promise.all(
+        ids.map((id) => api.drafts.update(id, { status: "ARCHIVED" }))
+      );
+      setQueue((q) => q.filter((d) => !selectedIds.has(d.id)));
+      setAllDrafts((q) =>
+        q.map((d) =>
+          selectedIds.has(d.id) ? { ...d, status: "ARCHIVED" as const } : d
+        )
+      );
+      setSelectedIds(new Set());
+    } catch (err) {
+      console.error("Batch archive failed:", err);
     } finally {
-      setSmartRanking(false);
+      setBatchArchiving(false);
     }
   };
 
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveDragId(event.active.id as string);
+  }, []);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    setActiveDragId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setQueue((prev) => {
+      const oldIndex = prev.findIndex((d) => d.id === active.id);
+      const newIndex = prev.findIndex((d) => d.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      const reordered = arrayMove(prev, oldIndex, newIndex);
+      // Persist to backend
+      api.drafts
+        .reorderQueue(reordered.map((d) => d.id))
+        .catch((err) => console.error("Failed to persist reorder:", err));
+      return reordered;
+    });
+    setIsManualOrder(true);
+  }, []);
+
+  const handleResetOrder = useCallback(async () => {
+    try {
+      await api.drafts.resetQueueOrder();
+      const { queue: items } = await api.drafts.queue();
+      setQueue(items ?? []);
+      setIsManualOrder(false);
+    } catch (err) {
+      console.error("Failed to reset queue order:", err);
+    }
+  }, []);
+
+  const handleRank = useCallback(async () => {
+    const ranked = rankQueue(queue);
+    setQueue(ranked);
+    setIsManualOrder(true);
+    try {
+      await api.drafts.reorderQueue(ranked.map((d) => d.id));
+    } catch (err) {
+      console.error("Failed to persist ranked order:", err);
+    }
+  }, [queue]);
+
+  // Filter logic — "all" and "scheduled" use the ranked queue, every other
+  // status pulls from the full draft list so users can manage the entire pipeline.
+  const filteredQueue = useMemo(() => {
+    if (filter === "all") return queue;
+    if (filter === "scheduled")
+      return queue.filter((d) => d.status === "SCHEDULED");
+    if (filter === "draft")
+      return allDrafts.filter(
+        (d) => d.status === "DRAFT" || d.status === "APPROVED"
+      );
+    if (filter === "posted")
+      return allDrafts.filter((d) => d.status === "POSTED");
+    if (filter === "archived")
+      return allDrafts.filter((d) => d.status === "ARCHIVED");
+    return queue;
+  }, [filter, queue, allDrafts]);
+
+  const draggable = filter === "all";
+
+  const activeDragItem = activeDragId
+    ? filteredQueue.find((d) => d.id === activeDragId) ?? null
+    : null;
+
+  function formatTime(item: QueuedDraft) {
+    const suggestedTime = new Date(item.suggestedAt);
+    const isToday =
+      suggestedTime.toDateString() === new Date().toDateString();
+    return isToday
+      ? suggestedTime.toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      : suggestedTime.toLocaleDateString([], {
+          weekday: "short",
+          hour: "numeric",
+          minute: "2-digit",
+        });
+  }
+
+  /* ---------- Loading ---------- */
   if (loading) {
     return (
       <AppShell>
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-atlas-teal" />
+        <div className="space-y-4">
+          <div className="h-8 w-48 animate-pulse rounded-lg bg-atlas-surface" />
+          <div className="h-4 w-72 animate-pulse rounded bg-atlas-surface" />
+          <div className="mt-6 space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-28 animate-pulse rounded-xl bg-atlas-surface"
+              />
+            ))}
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  /* ---------- Error ---------- */
+  if (error) {
+    return (
+      <AppShell>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <p className="text-sm text-red-400">{error}</p>
+          <button
+            onClick={() => void loadQueue()}
+            className="mt-4 rounded-lg border border-glass-border px-4 py-2 text-sm text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal"
+          >
+            Retry
+          </button>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const totalEmpty = queue.length === 0 && allDrafts.length === 0;
+
+  /* ---------- Empty ---------- */
+  if (totalEmpty) {
+    return (
+      <AppShell>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <ListOrdered className="mb-4 h-10 w-10 text-atlas-text-muted" />
+          <p className="text-sm text-atlas-text-secondary">
+            No drafts in your queue. Create drafts from the Crafting Station or
+            Signals page.
+          </p>
+          <Link
+            href="/crafting"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-atlas-teal px-4 py-2 text-sm font-semibold text-atlas-bg transition-opacity hover:opacity-90"
+          >
+            <PenTool className="h-4 w-4" />
+            Go to Crafting
+          </Link>
         </div>
       </AppShell>
     );
@@ -164,113 +544,205 @@ function QueuePage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-3xl space-y-6 py-8">
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="font-heading text-2xl font-extrabold tracking-tight text-atlas-text">
-              Draft Queue
-            </h1>
-            <p className="mt-1 text-sm text-atlas-text-muted">
-              Review, prioritize, and schedule your approved drafts.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <GradientButton
-              onClick={handleSmartOrder}
-              disabled={smartRanking || approvedDrafts.length === 0}
-              size="sm"
-              variant="outline"
-            >
-              <Sparkles className="mr-1.5 h-4 w-4" />
-              {smartRanking ? "Ranking..." : "Smart Order"}
-            </GradientButton>
-            <GradientButton
-              onClick={handleScheduleAll}
-              disabled={schedulingAll || approvedDrafts.length === 0}
-              size="sm"
-            >
-              <Calendar className="mr-1.5 h-4 w-4" />
-              {schedulingAll ? "Scheduling..." : "Schedule All"}
-            </GradientButton>
-          </div>
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-heading text-atlas-text">Queue</h1>
+          <p className="mt-1 text-sm text-atlas-text-muted">
+            Your ranked drafts, ready to schedule and post.
+            {draggable ? " Drag to reorder." : ""}
+          </p>
         </div>
-
-        {/* Queue list */}
-        {approvedDrafts.length === 0 ? (
-          <GlassCard maxWidth="full" className="py-12 text-center">
-            <ListOrdered className="mx-auto mb-3 h-8 w-8 text-atlas-text-muted" />
-            <p className="text-sm text-atlas-text-secondary">
-              No approved drafts in the queue.
-            </p>
-          </GlassCard>
-        ) : (
-          <div className="space-y-4">
-            {approvedDrafts.map((draft) => {
-              const rawEngagement = draft.predictedEngagement ?? 0;
-              const engagementPct =
-                rawEngagement > 1
-                  ? Math.min(100, Math.round(rawEngagement))
-                  : Math.round(rawEngagement * 100);
-
-              return (
-                <GlassCard
-                  key={draft.id}
-                  maxWidth="full"
-                  className="space-y-3"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="min-w-0 flex-1 text-sm leading-relaxed text-atlas-text">
-                      {draft.content.length > 100
-                        ? `${draft.content.slice(0, 100)}...`
-                        : draft.content}
-                    </p>
-                    <div className="shrink-0">
-                      {getStatusBadge(draft.status)}
-                    </div>
-                  </div>
-
-                  {/* Optimal time badge */}
-                  {draft.optimalTimeBadge && (
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-atlas-teal/10 px-2 py-0.5 text-[10px] font-medium text-atlas-teal">
-                        Optimal: {draft.optimalTimeBadge}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Engagement bar */}
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between text-[10px] text-atlas-text-muted">
-                      <span>Predicted engagement</span>
-                      <span>{engagementPct}%</span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-atlas-surface">
-                      <div
-                        className="h-full rounded-full bg-atlas-teal transition-all"
-                        style={{ width: `${Math.min(100, engagementPct)}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Schedule picker */}
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-3.5 w-3.5 text-atlas-text-muted" />
-                    <input
-                      type="datetime-local"
-                      value={toLocalDateTimeInput(draft.scheduledAt)}
-                      onChange={(e) =>
-                        void handleScheduleChange(draft.id, e.target.value)
-                      }
-                      className="rounded-lg border border-glass-border bg-atlas-surface px-2 py-1 text-xs text-atlas-text focus:border-atlas-teal focus:outline-none"
-                    />
-                  </div>
-                </GlassCard>
-              );
-            })}
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Smart Rank */}
+          {draggable && (
+            <button
+              onClick={() => void handleRank()}
+              className="flex items-center gap-1 rounded-full border border-glass-border px-3 py-1 text-xs font-medium text-atlas-text-muted transition-colors hover:border-atlas-teal hover:text-atlas-teal"
+              aria-label="Rank queue by predicted engagement"
+            >
+              <Sparkles className="h-3 w-3" />
+              Rank
+            </button>
+          )}
+          {/* Reset to Auto */}
+          {isManualOrder && draggable && (
+            <button
+              onClick={() => void handleResetOrder()}
+              className="flex items-center gap-1 rounded-full border border-glass-border px-3 py-1 text-xs font-medium text-atlas-text-muted transition-colors hover:border-atlas-teal hover:text-atlas-teal"
+            >
+              <RotateCcw className="h-3 w-3" />
+              Reset to Auto
+            </button>
+          )}
+          {/* Select all */}
+          <label className="flex cursor-pointer items-center gap-1.5 text-xs text-atlas-text-muted hover:text-atlas-text-secondary">
+            <input
+              type="checkbox"
+              checked={
+                filteredQueue.length > 0 &&
+                filteredQueue.every((d) => selectedIds.has(d.id))
+              }
+              onChange={() => {
+                const allSelected = filteredQueue.every((d) =>
+                  selectedIds.has(d.id)
+                );
+                if (allSelected) {
+                  setSelectedIds(new Set());
+                } else {
+                  setSelectedIds(new Set(filteredQueue.map((d) => d.id)));
+                }
+              }}
+              className="h-4 w-4 accent-atlas-teal"
+            />
+            Select all
+          </label>
+          <div className="mx-1 h-4 w-px bg-glass-border" />
+          {/* Filter toggles */}
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => {
+                setFilter(f.key);
+                setSelectedIds(new Set());
+              }}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                filter === f.key
+                  ? "bg-atlas-teal/15 text-atlas-teal"
+                  : "text-atlas-text-muted hover:text-atlas-text-secondary"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+          {/* Count badge */}
+          <span className="rounded-full bg-atlas-teal/15 px-2 py-0.5 text-[10px] font-medium text-atlas-teal">
+            {filteredQueue.length}
+          </span>
+        </div>
       </div>
+
+      {/* Timeline */}
+      <button
+        onClick={() => setShowTimeline(!showTimeline)}
+        className="mb-4 mt-4 text-xs text-atlas-text-muted hover:text-atlas-teal"
+      >
+        {showTimeline ? "Hide" : "Show"} Timeline
+      </button>
+      {showTimeline && <QueueTimeline queue={queue} />}
+
+      {/* Oracle ambient narration — follows hover/focus across the queue
+          list and renders a single line about the currently-inspected
+          draft. The row's own focus ring doubles as the visual anchor. */}
+      {(() => {
+        const inspected = filteredQueue.find((d) => d.id === inspectedId)
+          ?? filteredQueue[0];
+        if (!inspected) return null;
+        const inspectorEntity: InspectableEntity = {
+          type: "draft",
+          id: inspected.id,
+          name: inspected.status === "SCHEDULED" ? "scheduled draft" : "draft",
+          meta: {
+            status: inspected.status,
+            charCount: inspected.content?.length ?? 0,
+            score:
+              typeof inspected._score === "number"
+                ? Math.min(1, Math.max(0, inspected._score))
+                : undefined,
+          },
+        };
+        return (
+          <div className="mt-4">
+            <OracleInspector entity={inspectorEntity} />
+          </div>
+        );
+      })()}
+
+      {/* Drag-sortable queue list */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={filteredQueue.map((d) => d.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="mt-6 space-y-3">
+            {filteredQueue.length === 0 ? (
+              <div className="rounded-xl border border-glass-border bg-atlas-surface p-8 text-center text-sm text-atlas-text-muted">
+                No drafts in this view.
+              </div>
+            ) : (
+              filteredQueue.map((item, index) => (
+                <SortableQueueItem
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  isSelected={selectedIds.has(item.id)}
+                  draggable={draggable}
+                  onToggleSelect={toggleSelect}
+                  onSchedule={handleSchedule}
+                  onPost={handlePost}
+                  onArchive={handleArchive}
+                  onInspect={setInspectedId}
+                  formatTime={formatTime}
+                />
+              ))
+            )}
+          </div>
+        </SortableContext>
+
+        {/* Drag overlay for visual feedback */}
+        <DragOverlay>
+          {activeDragItem ? (
+            <div className="rounded-xl border-2 border-atlas-teal/50 bg-atlas-surface p-4 shadow-2xl">
+              <div className="flex items-start gap-3">
+                <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-atlas-teal" />
+                <p className="text-sm leading-relaxed text-atlas-text">
+                  {activeDragItem.content.length > 120
+                    ? `${activeDragItem.content.slice(0, 120)}...`
+                    : activeDragItem.content}
+                </p>
+              </div>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      {/* Floating batch action bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-glass-border bg-atlas-nav/95 px-5 py-3 shadow-xl backdrop-blur-xl">
+          <CheckCircle2 className="h-4 w-4 text-atlas-teal" />
+          <span className="text-sm text-atlas-text">
+            {selectedIds.size} selected
+          </span>
+          <button
+            onClick={() => void handleBatchSchedule()}
+            disabled={batchScheduling || batchArchiving}
+            className="rounded-lg bg-atlas-teal px-4 py-2 text-sm font-semibold text-atlas-bg transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {batchScheduling
+              ? "Scheduling..."
+              : `Schedule ${selectedIds.size}`}
+          </button>
+          <button
+            onClick={() => void handleBatchArchive()}
+            disabled={batchScheduling || batchArchiving}
+            className="rounded-lg border border-glass-border px-3 py-2 text-sm text-atlas-text-secondary transition-colors hover:border-red-400/40 hover:text-red-400 disabled:opacity-50"
+          >
+            {batchArchiving ? "Archiving..." : `Archive ${selectedIds.size}`}
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="rounded-lg border border-glass-border px-3 py-2 text-xs text-atlas-text-muted hover:text-atlas-text"
+            aria-label="Clear selection"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
     </AppShell>
   );
 }
