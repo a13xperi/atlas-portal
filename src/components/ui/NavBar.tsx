@@ -221,26 +221,7 @@ export default function NavBar({ variant }: NavBarProps) {
                     Feedback
                   </Link>
                 </>
-              ) : (
-                <>
-                  <Link
-                    href="/admin/bugs?action=report"
-                    className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-atlas-text-secondary hover:text-atlas-teal hover:bg-atlas-surface transition-colors border border-glass-border"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
-                    Feedback
-                  </Link>
-                  {user.role === "MANAGER" && (
-                    <Link
-                      href="/admin/bugs"
-                      className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-atlas-text-secondary hover:text-amber-400 hover:bg-atlas-surface transition-colors border border-glass-border"
-                    >
-                      <Shield className="w-3.5 h-3.5" aria-hidden="true" />
-                      Admin
-                    </Link>
-                  )}
-                </>
-              )}
+              ) : null}
               <TourToggle />
               <DemoModeToggle />
             </>
