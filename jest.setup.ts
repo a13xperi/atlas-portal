@@ -8,6 +8,7 @@ process.env.NEXT_PUBLIC_X_IMAGE_CDN_ORIGIN = "https://pbs.twimg.com";
 process.env.NEXT_PUBLIC_GOOGLE_FONTS_STYLES_ORIGIN = "https://fonts.googleapis.com";
 process.env.NEXT_PUBLIC_GOOGLE_FONTS_ASSETS_ORIGIN = "https://fonts.gstatic.com";
 process.env.NEXT_PUBLIC_DEMO_SOURCE_URL = "https://example.com/sol-ath";
+process.env.NEXT_PUBLIC_ALERTS_ADVANCED = "true";
 
 // Polyfill HTMLDialogElement methods for jsdom
 if (typeof HTMLDialogElement !== "undefined") {

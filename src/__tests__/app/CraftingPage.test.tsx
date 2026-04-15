@@ -440,7 +440,7 @@ describe("CraftingPage", () => {
 
     await waitFor(() =>
       expect(openSpy).toHaveBeenCalledWith(
-        "https://twitter.com/intent/tweet?text=BTC%20looks%20constructive%20above%20range%20highs.",
+        "https://twitter.com/intent/tweet?text=BTC+looks+constructive+above+range+highs.",
         "_blank",
         "width=550,height=420"
       )
