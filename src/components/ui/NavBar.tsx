@@ -66,10 +66,15 @@ export const coreNavLinks = navLinks.filter((link) => CORE_NAV_HREFS.has(link.hr
 
 /** Returns the visible nav links for a given user role. Managers/admins see Analytics + Signals in addition to core tabs. */
 export function getVisibleNavLinks(role?: string): typeof navLinks {
-  const isManager = role === "MANAGER" || role === "ADMIN";
-  return navLinks.filter(
+  const isAdmin = role === "ADMIN";
+  const isManager = role === "MANAGER" || isAdmin;
+  const links = navLinks.filter(
     (link) => CORE_NAV_HREFS.has(link.href) || (isManager && MANAGER_NAV_HREFS.has(link.href))
   );
+  if (isAdmin) {
+    links.push({ label: "Admin", href: "/admin", icon: Settings });
+  }
+  return links;
 }
 
 function DelphiLogo() {
