@@ -2,7 +2,7 @@ import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useRouter } from "next/navigation";
-import AlertsPage from "@/app/alerts/page";
+import AlertsPage from "@/components/alerts/AlertsPage";
 
 const mockPush = jest.fn();
 
