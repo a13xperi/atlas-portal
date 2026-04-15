@@ -270,3 +270,31 @@ export function oracleReducer(
       return state;
   }
 }
+
+export function createTextStream(text: string, wordDelayMs = 30): ReadableStream<string> {
+  const tokens = text.split(/(\s+)/);
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let cancelled = false;
+  return new ReadableStream<string>({
+    start(controller) {
+      let i = 0;
+      function push() {
+        timer = null;
+        if (cancelled) return;
+        if (i >= tokens.length) {
+          try { controller.close(); } catch {}
+          return;
+        }
+        if (controller.desiredSize === null) return;
+        try { controller.enqueue(tokens[i]); } catch { return; }
+        i++;
+        timer = setTimeout(push, wordDelayMs);
+      }
+      push();
+    },
+    cancel() {
+      cancelled = true;
+      if (timer) { clearTimeout(timer); timer = null; }
+    },
+  });
+}
