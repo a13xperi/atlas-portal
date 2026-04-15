@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Pause, Play, Trash2 } from "lucide-react";
 import { AlertSubscription, api } from "@/lib/api";
 
@@ -48,6 +48,7 @@ export default function MonitorBuilder({
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const errorId = useId();
 
   const handleAddKeyword = () => {
     const trimmed = keywordInput.trim();
@@ -150,6 +151,7 @@ export default function MonitorBuilder({
                 <button
                   key={mt.id}
                   type="button"
+                  aria-pressed={monitorType === mt.id}
                   onClick={() => setMonitorType(mt.id)}
                   className={`rounded-lg border px-3 py-2 text-xs transition-colors ${
                     monitorType === mt.id
@@ -174,6 +176,8 @@ export default function MonitorBuilder({
                 <input
                   type="text"
                   aria-label="Keyword"
+                  aria-invalid={Boolean(error)}
+                  aria-errormessage={error ? errorId : undefined}
                   value={keywordInput}
                   onChange={(e) => setKeywordInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -222,6 +226,8 @@ export default function MonitorBuilder({
               <input
                 type="text"
                 aria-label={monitorType === "ACCOUNT" ? "X Handle" : "Topic"}
+                aria-invalid={Boolean(error)}
+                aria-errormessage={error ? errorId : undefined}
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder={
@@ -237,6 +243,7 @@ export default function MonitorBuilder({
                     <button
                       key={topic}
                       type="button"
+                      aria-label={`Use topic: ${topic}`}
                       onClick={() => setValue(topic)}
                       className="rounded-full border border-glass-border px-2.5 py-1 text-[10px] text-atlas-text-secondary transition-colors hover:border-atlas-teal/50 hover:text-atlas-text"
                     >
@@ -258,6 +265,7 @@ export default function MonitorBuilder({
                 <button
                   key={s}
                   type="button"
+                  aria-pressed={sentiment === s}
                   onClick={() => setSentiment(s)}
                   className={`rounded-lg border px-3 py-1.5 text-xs capitalize transition-colors ${
                     sentiment === s
@@ -283,6 +291,7 @@ export default function MonitorBuilder({
                   <button
                     key={d.id}
                     type="button"
+                    aria-pressed={active}
                     onClick={() =>
                       setDelivery(
                         active
@@ -304,7 +313,7 @@ export default function MonitorBuilder({
           </div>
 
           {error && (
-            <p className="text-xs text-atlas-error">{error}</p>
+            <p id={errorId} role="alert" className="text-xs text-atlas-error">{error}</p>
           )}
 
           {/* Create Button */}

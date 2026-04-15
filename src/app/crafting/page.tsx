@@ -37,6 +37,7 @@ import NewsMode from "@/components/crafting/NewsMode";
 import { CraftingAdvisor } from "@/components/crafting/CraftingAdvisor";
 import ContentInput from "@/components/ui/ContentInput";
 import { useVoiceRecorder } from "@/lib/useVoiceRecorder";
+import { useVoiceGate } from "@/lib/useVoiceGate";
 import GradientButton from "@/components/ui/GradientButton";
 import ReplyAngleSelector from "@/components/ui/ReplyAngleSelector";
 import { getXIntentUrl } from "@/lib/public-urls";
@@ -46,16 +47,19 @@ import RefinementChips, {
 import {
   api,
   AnalyticsSummary,
+  DraftPerformance,
   SavedBlend,
   TrendingTopic,
   TweetDraft,
 } from "@/lib/api";
+import PerformanceCard from "@/components/analytics/PerformanceCard";
 import { useAuth } from "@/lib/auth";
 import { hasCalibratedVoiceDimensions } from "@/lib/voice-profile-dimensions";
 import OracleWidget from "@/components/oracle/OracleWidget";
 import OracleCraftingHints from "@/components/oracle/OracleCraftingHints";
 import OracleInspector from "@/components/oracle/OracleInspector";
 import { MultiAnglePanel } from "@/components/crafting/MultiAnglePanel";
+import CharacterCounter from "@/components/crafting/CharacterCounter";
 import type { InspectableEntity } from "@/lib/oracle-agent-types";
 import { useToast } from "@/components/ui/Toast";
 import { SchedulePopover } from "@/components/ui/SchedulePopover";
@@ -76,7 +80,6 @@ const TWEET_TEMPLATES = [
 
 const NEWS_SOURCE_PREFIX = "source:";
 const VOICE_COMPARISON_DELTA = { humor: 20 } as const;
-
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
 type DraftSourceType = "REPORT" | "ARTICLE" | "MANUAL";
@@ -249,18 +252,19 @@ function CraftingPage() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   const voiceModeLabelId = useId();
   const savedBlendLabelId = useId();
   const blendIntensityLabelId = useId();
   const regenerationGuidanceId = useId();
   const draftFeedbackHintId = useId();
   const { user } = useAuth();
-  const { toast } = useToast();
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [draftHistory, setDraftHistory] = useState<DraftHistoryItem[]>([]);
   const [draftVersions, setDraftVersions] = useState<TweetDraft[]>([]);
   const [activeDraft, setActiveDraft] = useState<TweetDraft | null>(null);
-  const [activeMode, setActiveMode] = useState<CraftingMode>("new_post");
+  const activeMode =
+    (searchParams.get("mode") as CraftingMode) || "new_post";
   const [replyAngle, setReplyAngle] = useState<string | null>(null);
   const [voiceMode, setVoiceMode] = useState<"my_voice" | "blended" | "specific">(
     "my_voice"
@@ -287,6 +291,8 @@ function CraftingPage() {
   const [compareMode, setCompareMode] = useState(false);
   const [compareVersion, setCompareVersion] = useState<number | null>(null);
   const [comparingVoices, setComparingVoices] = useState(false);
+  const [draftPerformance, setDraftPerformance] = useState<import("@/lib/api").DraftPerformance | null>(null);
+  const [performanceLoading, setPerformanceLoading] = useState(false);
   const [voiceComparison, setVoiceComparison] = useState<{
     options: VoiceComparisonOption[];
   } | null>(null);
@@ -317,10 +323,6 @@ function CraftingPage() {
   const handleDraftTextChangeRef = useRef<((text: string) => void) | null>(null);
   const voiceRecorder = useVoiceRecorder(useCallback((text: string) => {
     handleDraftTextChangeRef.current?.(text);
-    // Auto-generate after voice transcription
-    setTimeout(() => {
-      handleCreateDraftRef.current?.(text);
-    }, 50);
   }, []));
   const feedbackRecorder = useVoiceRecorder(useCallback((text: string) => {
     setFeedback((prev) => prev ? `${prev} ${text}` : text);
@@ -377,8 +379,25 @@ function CraftingPage() {
     currentBrevity,
     currentContrarianTone
   );
-  const voiceReady = hasCalibratedVoiceDimensions(user?.voiceProfile);
-  const isVoiceCalibrationBlocked = !voiceReady;
+  const voiceGate = useVoiceGate({ existingDraftCount: drafts.length });
+  const isVoiceCalibrationBlocked = voiceGate.isBlocked;
+  const voiceTweetsAnalyzed = voiceGate.tweetsAnalyzed;
+  const calibrationTweetsRemaining = voiceGate.tweetsRemaining;
+
+  // Auto-fetch performance data when a POSTED draft becomes active
+  useEffect(() => {
+    if (activeDraft?.status !== "POSTED" || !activeDraft.id) {
+      setDraftPerformance(null);
+      return;
+    }
+    let cancelled = false;
+    api.drafts.performance(activeDraft.id).then((res) => {
+      if (!cancelled) setDraftPerformance(res.performance);
+    }).catch(() => {
+      // Performance endpoint may not be available yet — fail silently
+    });
+    return () => { cancelled = true; };
+  }, [activeDraft?.id, activeDraft?.status]);
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -453,6 +472,58 @@ function CraftingPage() {
     };
   }, []);
 
+  // Oracle-Crafting Bridge: listen for events from Oracle actions
+  useEffect(() => {
+    const handlePopulateDraft = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { content: string };
+      if (detail?.content) {
+        setDraftInputText(detail.content);
+        draftInputValueRef.current = detail.content;
+      }
+    };
+
+    const handleApplyFeedback = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { feedback: string };
+      if (detail?.feedback) {
+        setFeedback(detail.feedback);
+        // Auto-focus the feedback input so the user can hit Enter
+        setTimeout(() => {
+          document.getElementById("feedback-input")?.focus();
+        }, 100);
+      }
+    };
+
+    const handleSetDraft = (e: Event) => {
+      const detail = (e as CustomEvent).detail as {
+        draft: { id: string; content: string; [key: string]: unknown };
+      };
+      if (detail?.draft) {
+        // Refresh drafts list so the new/updated draft shows up
+        loadDrafts();
+        // Set as active draft if it has the expected shape
+        const incoming = detail.draft as unknown as TweetDraft;
+        if (incoming.id && incoming.content) {
+          setActiveDraft(incoming);
+          setDraftVersions((prev) => {
+            const exists = prev.some((d) => d.id === incoming.id);
+            return exists
+              ? prev.map((d) => (d.id === incoming.id ? incoming : d))
+              : [incoming, ...prev];
+          });
+        }
+      }
+    };
+
+    window.addEventListener("oracle:populate-draft", handlePopulateDraft);
+    window.addEventListener("oracle:apply-feedback", handleApplyFeedback);
+    window.addEventListener("oracle:set-draft", handleSetDraft);
+    return () => {
+      window.removeEventListener("oracle:populate-draft", handlePopulateDraft);
+      window.removeEventListener("oracle:apply-feedback", handleApplyFeedback);
+      window.removeEventListener("oracle:set-draft", handleSetDraft);
+    };
+  }, [loadDrafts]);
+
   useEffect(() => {
     if (!compareMode) {
       return;
@@ -480,7 +551,10 @@ function CraftingPage() {
   }, [activeDraft, compareMode, compareVersion, draftVersions]);
 
   const handleModeChange = (mode: CraftingMode) => {
-    setActiveMode(mode);
+    setReplyAngle(null); // prevent stale reply angle leaking into other modes
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("mode", mode);
+    router.replace(`/crafting?${params.toString()}`, { scroll: false });
     setIsContentDragActive(false);
     setError(null);
     setContentError("");
@@ -691,7 +765,12 @@ function CraftingPage() {
     hasSource: boolean,
     angle?: string | null
   ) => {
-    if (!user || isVoiceCalibrationBlocked) return false;
+    if (!user || isVoiceCalibrationBlocked) {
+      if (isVoiceCalibrationBlocked) {
+        toast("Complete voice calibration before generating drafts.", "warning");
+      }
+      return false;
+    }
 
     setError(null);
     const { isValid, trimmedContent } = validateDraftSubmission(content, hasSource);
@@ -729,6 +808,7 @@ function CraftingPage() {
     commitDraft,
     isVoiceCalibrationBlocked,
     selectedBlendId,
+    toast,
     user,
     validateDraftSubmission,
   ]);
@@ -1198,6 +1278,9 @@ function CraftingPage() {
 
   const handleCompareVoices = async (text = draftInputValueRef.current) => {
     if (!user || isVoiceCalibrationBlocked) {
+      if (isVoiceCalibrationBlocked) {
+        toast("Complete voice calibration before comparing voices.", "warning");
+      }
       return false;
     }
 
@@ -1219,53 +1302,54 @@ function CraftingPage() {
     setVoiceComparison(null);
 
     try {
-      const [currentVoiceResult, variantVoiceResult] = await Promise.all([
+      const replyAngleParam =
+        activeMode === "reply_to_tweet" ? replyAngle || undefined : undefined;
+
+      const [yourVoiceResult, genericResult] = await Promise.all([
         api.drafts.generate({
           sourceContent: trimmedContent,
           sourceType,
           blendId: selectedBlendId || undefined,
-          replyAngle:
-            activeMode === "reply_to_tweet" ? replyAngle || undefined : undefined,
+          replyAngle: replyAngleParam,
         }),
         api.drafts.generate({
           sourceContent: trimmedContent,
           sourceType,
-          blendId: selectedBlendId || undefined,
-          replyAngle:
-            activeMode === "reply_to_tweet" ? replyAngle || undefined : undefined,
-          angleInstruction: voiceVariationInstruction,
+          replyAngle: replyAngleParam,
+          angleInstruction:
+            "Write this as a straightforward, generic tweet. Do not apply any personal voice profile, tone dimensions, or style calibration. Use a neutral, professional crypto-analyst tone.",
         }),
       ]);
 
-      const normalizedCurrentDraft = prependDraftHistory(currentVoiceResult.draft);
-      const normalizedVariantDraft = prependDraftHistory(variantVoiceResult.draft);
+      const normalizedYourDraft = prependDraftHistory(yourVoiceResult.draft);
+      const normalizedGenericDraft = prependDraftHistory(genericResult.draft);
 
       setDrafts((previousDrafts) => [
-        normalizedCurrentDraft,
-        normalizedVariantDraft,
+        normalizedYourDraft,
+        normalizedGenericDraft,
         ...previousDrafts.filter(
           (draft) =>
-            draft.id !== normalizedCurrentDraft.id &&
-            draft.id !== normalizedVariantDraft.id
+            draft.id !== normalizedYourDraft.id &&
+            draft.id !== normalizedGenericDraft.id
         ),
       ]);
-      setDraftVersions([normalizedCurrentDraft]);
-      setActiveDraft(normalizedCurrentDraft);
+      setDraftVersions([normalizedYourDraft]);
+      setActiveDraft(normalizedYourDraft);
       setCompareMode(false);
       setCompareVersion(null);
       setVoiceComparison({
         options: [
           {
-            draft: normalizedCurrentDraft,
-            label: "Current profile",
+            draft: normalizedYourDraft,
+            label: "Your voice",
             summary: currentVoiceSummary,
-            ctaLabel: "Pick current voice",
+            ctaLabel: "Use my voice",
           },
           {
-            draft: normalizedVariantDraft,
-            label: "Variation",
-            summary: variantVoiceSummary,
-            ctaLabel: "Pick funnier variation",
+            draft: normalizedGenericDraft,
+            label: "Generic",
+            summary: "Default AI tone — no personalization",
+            ctaLabel: "Use generic",
           },
         ],
       });
@@ -1374,11 +1458,18 @@ function CraftingPage() {
         >
           <div>
             <p className="font-semibold text-atlas-text">
-              Connect X and calibrate your voice to unlock tweet generation.
+              {voiceGate.reason === "no_profile"
+                ? "Connect your X account to unlock tweet generation."
+                : "Analyze at least 20 tweets to unlock drafting."}
             </p>
             <p className="mt-1 text-atlas-text-secondary">
-              Atlas writes in your voice — we need your X handle and a few sample tweets first.
-              Need more tweets? The more we analyze, the better your drafts will sound.
+              {voiceGate.reason === "no_profile"
+                ? "Atlas writes in your voice — connect X so we can analyze your writing style."
+                : <>
+                    We need more writing samples to learn your style.
+                    Analyze {voiceGate.tweetsRemaining} more tweets in the
+                    Voice Lab to get started.
+                  </>}
             </p>
           </div>
           <Link
@@ -1534,6 +1625,7 @@ function CraftingPage() {
                         : "Paste a tweet idea or link…"
                     }
                     value={draftInputText}
+                    disabled={creating || isVoiceCalibrationBlocked}
                     contentDropActive={isContentDragActive}
                     onContentDragOver={handleContentDragOver}
                     onContentDragLeave={handleContentDragLeave}
@@ -1845,674 +1937,191 @@ function CraftingPage() {
               />
               {activeDraft.content ? (
                 <>
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="relative h-5 w-5">
-                        <svg
-                          aria-hidden="true"
-                          focusable="false"
-                          className="h-5 w-5 -rotate-90"
-                          viewBox="0 0 20 20"
-                        >
-                          <circle
-                            cx="10"
-                            cy="10"
-                            r="8"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            className="text-atlas-surface"
-                          />
-                          <circle
-                            cx="10"
-                            cy="10"
-                            r="8"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeDasharray={`${Math.min(
-                              (activeDraft.content.length / 280) * 50.3,
-                              50.3
-                            )} 50.3`}
-                            className={
-                              activeDraft.content.length > 280
-                                ? "text-atlas-error"
-                                : activeDraft.content.length > 250
-                                  ? "text-atlas-warning"
-                                  : activeDraft.content.length > 200
-                                    ? "text-yellow-400"
-                                    : "text-atlas-teal"
-                            }
-                          />
-                        </svg>
-                      </div>
-                      <span
-                        className={`text-xs font-mono ${
-                          activeDraft.content.length > 280
-                            ? "text-atlas-error"
-                            : activeDraft.content.length > 250
-                              ? "text-atlas-warning"
-                              : activeDraft.content.length > 200
-                                ? "text-yellow-400"
-                                : "text-atlas-text-secondary"
-                        }`}
-                      >
-                        {activeDraft.content.length}/280
-                      </span>
-                    </div>
-                    {activeDraft.content.length > 280 ? (
-                      <span className="text-xs text-atlas-error">
-                        {activeDraft.content.length - 280} over limit
-                      </span>
-                    ) : null}
+                  <div className="mt-2 flex items-center justify-end">
+                    <CharacterCounter value={activeDraft.content.length} />
                   </div>
                   <div className="mt-1 flex items-center gap-3 text-[10px] text-atlas-text-muted">
                     <span>{activeDraftWordCount} words</span>
-                    <span>&middot;</span>
-                    <span>~{activeDraftReadingTime} min read</span>
+                    <span>{activeDraftReadingTime} min read</span>
+                    {activeDraft.predictedEngagement !== undefined && (
+                      <span className="flex items-center gap-1 text-atlas-teal">
+                        <TrendingUp className="h-3 w-3" />
+                        {(activeDraft.predictedEngagement * 100).toFixed(0)}% score
+                      </span>
+                    )}
                   </div>
-                  {activeDraft.confidence != null ||
-                  activeDraft.predictedEngagement != null ? (
-                    <div className="mt-3 flex items-center gap-4 border-t border-glass-border/50 pt-3">
-                      {activeDraft.confidence != null ? (
-                        <div className="flex items-center gap-1.5">
-                          <div className="relative h-4 w-4">
-                            <svg
-                              aria-hidden="true"
-                              focusable="false"
-                              className="h-4 w-4 -rotate-90"
-                              viewBox="0 0 16 16"
-                            >
-                              <circle
-                                cx="8"
-                                cy="8"
-                                r="6"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                className="text-atlas-surface"
-                              />
-                              <circle
-                                cx="8"
-                                cy="8"
-                                r="6"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeDasharray={`${
-                                  activeDraft.confidence * 37.7
-                                } 37.7`}
-                                className={
-                                  activeDraft.confidence > 0.8
-                                    ? "text-atlas-teal"
-                                    : activeDraft.confidence > 0.5
-                                      ? "text-atlas-warning"
-                                      : "text-atlas-error"
-                                }
-                              />
-                            </svg>
-                          </div>
-                          <span className="text-[10px] text-atlas-text-muted">
-                            {Math.round(activeDraft.confidence * 100)}% match
-                          </span>
-                        </div>
-                      ) : null}
-                      {activeDraft.predictedEngagement != null ? (
-                        <div className="flex items-center gap-1.5">
-                          <TrendingUp className="h-3.5 w-3.5 text-atlas-text-muted" aria-hidden="true" />
-                          <span className="text-[10px] text-atlas-text-muted">
-                            ~{activeDraft.predictedEngagement.toLocaleString()} predicted
-                            reach
-                          </span>
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
                 </>
               ) : null}
-              <div className="mt-4 border-t border-glass-border pt-4">
-                <div className="flex items-center gap-1.5">
-                  {DRAFT_WORKFLOW_STEPS.map((step, index) => {
-                    const stepIndex = DRAFT_WORKFLOW_STEPS.findIndex(
-                      (s) => s.status === activeDraft.status,
-                    );
-                    const isCompleted = index < stepIndex;
-                    const isCurrent = step.status === activeDraft.status;
 
-                    return (
-                      <div key={step.status} className="flex items-center gap-1.5">
-                        {index > 0 ? (
-                          <ChevronRight
-                            aria-hidden="true"
-                            className={`h-3 w-3 ${
-                              isCompleted
-                                ? "text-atlas-success"
-                                : "text-atlas-text-muted"
-                            }`}
-                          />
-                        ) : null}
-                        <span
-                          className={`text-xs font-medium ${
-                            isCurrent
-                              ? "text-atlas-text"
-                              : isCompleted
-                                ? "text-atlas-success"
-                                : "text-atlas-text-muted"
-                          }`}
-                        >
-                          {isCompleted ? (
-                            <span className="inline-flex items-center gap-1">
-                              <Check className="h-3 w-3" aria-hidden="true" />
-                              {step.label}
-                            </span>
-                          ) : (
-                            step.label
-                          )}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${DRAFT_STATUS_PILL_STYLES[activeDraft.status]}`}
-                    >
-                      {DRAFT_STATUS_LABELS[activeDraft.status]}
-                    </span>
-                    <span className="text-xs text-atlas-text-muted">
-                      {DRAFT_STATUS_HINTS[activeDraft.status]}
-                    </span>
-                  </div>
-                  <div className="flex-1" />
-                  <div className="flex flex-wrap items-center gap-2">
-                    {activeDraft.status === "DRAFT" ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => void handleUpdateDraftStatus("APPROVED")}
-                          disabled={statusUpdating}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-atlas-teal/20 px-3 py-1.5 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/30 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {statusUpdating ? (
-                            <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-                          ) : (
-                            <CheckCircle className="h-3 w-3" aria-hidden="true" />
-                          )}
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleUpdateDraftStatus("ARCHIVED")}
-                          disabled={statusUpdating}
-                          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-atlas-text-muted transition-colors hover:text-atlas-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <Archive className="h-3 w-3" aria-hidden="true" />
-                          Archive
-                        </button>
-                      </>
-                    ) : null}
-                    {activeDraft.status === "APPROVED" ? (
-                      <button
-                        type="button"
-                        onClick={() => void handleUpdateDraftStatus("POSTED")}
-                        disabled={statusUpdating}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {statusUpdating ? (
-                          <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-                        ) : (
-                          <Check className="h-3 w-3" aria-hidden="true" />
-                        )}
-                        Mark as Posted
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => void handleDelete(activeDraft.id)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-atlas-error/30 bg-atlas-error/10 px-3 py-1.5 text-sm text-atlas-error transition-colors hover:border-atlas-error hover:bg-atlas-error/15 focus:outline-none focus:border-atlas-error"
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <GradientButton
+                  variant="outline"
+                  onClick={handleCopyDraft}
+                  disabled={!activeDraft.content}
                 >
-                  <span className="text-xs">Delete draft</span>
-                </button>
-                <div className="flex items-center gap-3">
-                  {activeDraft.status === "APPROVED" || activeDraft.status === "DRAFT" ? (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          setError(null);
-                          // Check if X account is linked
-                          const xStatus = await api.auth.x.status();
-                          if (!xStatus.linked) {
-                            // X not linked — start OAuth link flow
-                            const { url } = await api.auth.x.authorize();
-                            window.location.href = url;
-                            return;
-                          }
-                          // Backend auto-refreshes expired tokens — just try to post
-                          const result = await api.drafts.postToX(activeDraft.id);
-                          setActiveDraft(result.draft);
-                          syncDraftReferences(result.draft);
-                        } catch (postError: unknown) {
-                          console.error("Post to X failed:", postError);
-                          // Fallback to intent
-                          const intentUrl = getXIntentUrl(activeDraft.content);
-                          if (!intentUrl) {
-                            setError("X fallback URL is not configured.");
-                            return;
-                          }
-                          window.open(intentUrl, "_blank", "width=550,height=420");
-                        }
-                      }}
-                      className="flex items-center gap-1.5 rounded-lg border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs font-medium text-atlas-text transition-colors hover:border-atlas-teal/50"
-                    >
-                      <svg
-                        className="h-3.5 w-3.5"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                      </svg>
-                      Post to X
-                    </button>
-                  ) : null}
-                  {activeDraft.status === "APPROVED" || activeDraft.status === "DRAFT" ? (
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setSchedulePopoverOpen(true)}
-                        title="Schedule this draft"
-                        className="flex items-center gap-1.5 rounded-lg border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs font-medium text-atlas-text transition-colors hover:border-atlas-teal/50 hover:text-atlas-teal"
-                      >
-                        <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
-                        Schedule
-                      </button>
-                      {schedulePopoverOpen && (
-                        <SchedulePopover
-                          initialAt={activeDraft.scheduledAt || new Date(Date.now() + 3600000).toISOString()}
-                          onCancel={() => setSchedulePopoverOpen(false)}
-                          onConfirm={(iso) => void handleScheduleDraft(iso)}
-                          busy={scheduleLoading}
-                        />
-                      )}
-                    </div>
-                  ) : null}
-                  {activeDraft.status === "APPROVED" || activeDraft.status === "DRAFT" ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        router.push(`/campaigns?newCampaign=true&draftId=${activeDraft.id}`)
-                      }
-                      title="Add this draft to a new campaign"
-                      className="flex items-center gap-1.5 rounded-lg border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs font-medium text-atlas-text transition-colors hover:border-atlas-teal/50 hover:text-atlas-teal"
-                    >
-                      <Megaphone className="h-3.5 w-3.5" aria-hidden="true" />
-                      Add to Campaign
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={handleCopyDraft}
-                    aria-label={
-                      copiedDraftId === activeDraft.id
-                        ? "Draft copied to clipboard"
-                        : "Copy draft to clipboard"
-                    }
-                    title={
-                      copiedDraftId === activeDraft.id
-                        ? "Copied!"
-                        : "Copy to clipboard"
-                    }
-                    className={`inline-flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-1.5 text-sm transition-colors hover:border-atlas-teal focus:outline-none focus:border-atlas-teal ${
-                      copiedDraftId === activeDraft.id
-                        ? "text-atlas-success"
-                        : "text-atlas-text-secondary hover:text-atlas-teal"
-                    }`}
-                  >
-                    {copiedDraftId === activeDraft.id ? (
-                      <>
-                        <Check className="h-4 w-4" aria-hidden="true" />
-                        <span className="text-xs" aria-live="polite">
-                          Copied!
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <Clipboard className="h-4 w-4" aria-hidden="true" />
-                        <span className="text-xs" aria-live="polite">
-                          Copy
-                        </span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Try in another voice — quick side-by-side comparison */}
-              {blends.length > 0 && activeDraft.sourceContent ? (
-                <div className="mt-4 rounded-xl border border-glass-border bg-atlas-surface/40 p-4">
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-atlas-text-muted">
-                    Try in another voice
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <label htmlFor="compare-blend-select" className="sr-only">
-                      Choose a blend to compare
-                    </label>
-                    <select
-                      id="compare-blend-select"
-                      value={compareBlendId || ""}
-                      onChange={(event) =>
-                        setCompareBlendId(event.target.value || null)
-                      }
-                      className="flex-1 min-w-[180px] rounded-lg border border-glass-border bg-atlas-surface px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none"
-                    >
-                      <option value="">Select a blend...</option>
-                      {blends
-                        .filter((blend) => blend.id !== selectedBlendId)
-                        .map((blend) => (
-                          <option key={blend.id} value={blend.id}>
-                            {blend.name}
-                          </option>
-                        ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => void handleCompareInAnotherVoice()}
-                      disabled={
-                        !compareBlendId ||
-                        compareBlendId === selectedBlendId ||
-                        compareBlendLoading
-                      }
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-atlas-teal/30 px-3 py-2 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/10 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {compareBlendLoading ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                      ) : null}
-                      Compare
-                    </button>
-                  </div>
-                  {compareBlendDraft && compareBlendName ? (
-                    <div className="mt-3 rounded-lg border border-atlas-teal/20 bg-atlas-bg/60 p-3">
-                      <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-atlas-teal">
-                        {compareBlendName}
-                      </p>
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-atlas-text">
-                        {compareBlendDraft}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleUseComparisonDraft}
-                        className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-atlas-teal/30 px-3 py-1.5 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/10"
-                      >
-                        Use this instead
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {/* Engagement Metrics — shown for POSTED drafts */}
-              {activeDraft.status === "POSTED" ? (
-                <div className="mt-4 rounded-xl border border-glass-border bg-atlas-surface/60 p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-atlas-text-muted">
-                      <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
-                      Engagement
-                    </p>
-                    {activeDraft.actualEngagement ? (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            const result = await api.drafts.fetchMetrics(activeDraft.id);
-                            setActiveDraft(result.draft);
-                            syncDraftReferences(result.draft);
-                          } catch { /* silently fail */ }
-                        }}
-                        className="text-[10px] text-atlas-text-muted hover:text-atlas-teal transition-colors"
-                      >
-                        ↻ Refresh
-                      </button>
-                    ) : null}
-                  </div>
-                  {activeDraft.actualEngagement ? (
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-                      <div>
-                        <span className="text-atlas-text-muted text-xs">Impressions</span>
-                        <p className="font-semibold text-atlas-text">{activeDraft.actualEngagement.toLocaleString()}</p>
-                      </div>
-                      {activeDraft.predictedEngagement ? (
-                        <div className="ml-auto">
-                          <span className="text-atlas-text-muted text-xs">vs Predicted</span>
-                          <p className={`font-semibold text-sm ${
-                            activeDraft.actualEngagement >= activeDraft.predictedEngagement
-                              ? "text-atlas-success" : "text-atlas-warning"
-                          }`}>
-                            {activeDraft.actualEngagement >= activeDraft.predictedEngagement ? "↑" : "↓"}{" "}
-                            {Math.abs(Math.round(((activeDraft.actualEngagement - activeDraft.predictedEngagement) / activeDraft.predictedEngagement) * 100))}%
-                          </p>
-                        </div>
-                      ) : null}
-                    </div>
+                  {copiedDraftId === activeDraft.id ? (
+                    <span className="flex items-center gap-2">
+                      <Check className="h-4 w-4" />
+                      Copied!
+                    </span>
                   ) : (
-                    <div className="flex flex-wrap items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            const result = await api.drafts.fetchMetrics(activeDraft.id);
-                            setActiveDraft(result.draft);
-                            syncDraftReferences(result.draft);
-                          } catch {
-                            setError("Could not fetch metrics — tweet may not have been posted via Atlas");
-                          }
-                        }}
-                        className="rounded-lg bg-atlas-teal/20 px-4 py-2 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/30"
-                      >
-                        Fetch from X
-                      </button>
-                      <span className="text-xs text-atlas-text-muted">
-                        Metrics auto-update every few hours for tweets posted via Atlas
-                      </span>
-                    </div>
+                    <span className="flex items-center gap-2">
+                      <Clipboard className="h-4 w-4" />
+                      Copy to X
+                    </span>
                   )}
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6 text-center text-atlas-text-secondary">
-              <p>No drafts yet. Feed some content above to get started.</p>
-            </div>
-          )}
+                </GradientButton>
 
-          {/* Oracle inline narration — "demo money shot" (v2 Step 8).
-              Oracle whispers what it sees the moment the user lands on a
-              draft: real size + status + confidence → concrete nudge. */}
-          {inspectorEntity && !voiceComparison ? (
-            <div className="mt-3">
-              <OracleInspector entity={inspectorEntity} />
-            </div>
-          ) : null}
-
-          {!voiceComparison && canReviseActiveDraft ? (
-            <div className="mt-4">
-              <RefinementChips
-                onRefine={handleRefine}
-                disabled={creating}
-                loading={refiningChip}
-              />
-            </div>
-          ) : null}
-
-          {!voiceComparison && versionDrafts.length > 0 ? (
-            <div className="mt-6 space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                {versionDrafts.map((draft, index) => (
-                  <button
-                    key={draft.version}
-                    type="button"
-                    onClick={() => handleSelectDraft(draft)}
-                    className={`rounded-lg px-4 py-2 text-sm transition-colors ${
-                      activeVersion === index
-                        ? "border-b-2 border-atlas-teal text-atlas-teal"
-                        : "text-atlas-text-secondary hover:text-atlas-text"
+                {activeDraft.status === "DRAFT" ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateDraftStatus("APPROVED")}
+                      disabled={statusUpdating}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-glass-border bg-glass px-4 py-3 text-sm font-medium text-atlas-text transition-colors hover:border-atlas-teal/50 hover:text-atlas-teal disabled:opacity-50"
+                    >
+                      {statusUpdating ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4" />
+                      )}
+                      Approve
+                    </button>
+                    <SchedulePopover
+                      isOpen={schedulePopoverOpen}
+                      onOpenChange={setSchedulePopoverOpen}
+                      onSchedule={handleScheduleDraft}
+                      loading={scheduleLoading}
+                    />
+                  </>
+                ) : (
+                  <div
+                    className={`inline-flex items-center gap-2 rounded-full border border-glass-border px-3 py-1.5 text-xs font-medium ${
+                      DRAFT_STATUS_PILL_STYLES[activeDraft.status]
                     }`}
                   >
-                    Version {draft.version}
-                  </button>
-                ))}
-
-                {versionDrafts.length > 1 ? (
-                  <button
-                    type="button"
-                    onClick={handleToggleCompareMode}
-                    className={`rounded px-2 py-1 text-xs ${
-                      compareMode
-                        ? "bg-atlas-teal text-atlas-bg"
-                        : "text-atlas-text-secondary hover:text-atlas-text"
-                    }`}
-                  >
-                    Compare
-                  </button>
-                ) : null}
-              </div>
-
-              {compareMode && versionDrafts.length > 1 ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <label
-                    htmlFor="compare-version"
-                    className="text-xs uppercase tracking-wide text-atlas-text-secondary"
-                  >
-                    Compare against
-                  </label>
-                  <select
-                    id="compare-version"
-                    value={compareVersion ?? ""}
-                    onChange={(event) =>
-                      setCompareVersion(
-                        event.target.value ? Number(event.target.value) : null
-                      )
-                    }
-                    className="rounded-lg border border-glass-border bg-atlas-surface px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none"
-                  >
-                    <option value="">Select a version</option>
-                    {versionDrafts
-                      .filter((draft) => draft.version !== activeDraft?.version)
-                      .map((draft) => (
-                        <option key={draft.version} value={draft.version}>
-                          Version {draft.version}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              ) : null}
-
-              {compareMode && activeDraft && compareDraft ? (
-                <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="rounded-xl border border-glass-border bg-atlas-surface p-4">
-                    <p className="mb-2 text-xs text-atlas-text-muted">
-                      Version {compareDraft.version}
-                    </p>
-                    <p className="whitespace-pre-wrap text-sm text-atlas-text">
-                      {compareDraft.content}
-                    </p>
+                    <div
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        activeDraft.status === "POSTED"
+                          ? "bg-atlas-success"
+                          : activeDraft.status === "SCHEDULED"
+                            ? "bg-delphi-blue-400"
+                            : "bg-atlas-text-secondary"
+                      }`}
+                    />
+                    {DRAFT_STATUS_LABELS[activeDraft.status]}
                   </div>
-                  <div className="rounded-xl border border-atlas-teal/30 bg-atlas-surface p-4">
-                    <p className="mb-2 text-xs text-atlas-teal">
-                      Current (v{activeDraft.version})
-                    </p>
-                    <p className="whitespace-pre-wrap text-sm text-atlas-text">
-                      {activeDraft.content}
-                    </p>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+                )}
 
-          {!voiceComparison && canReviseActiveDraft ? (
-            <div className="mt-6 flex flex-wrap gap-3">
-              <GradientButton
-                variant="outline-warning"
-                onClick={() => document.getElementById("feedback-input")?.focus()}
-              >
-                Not quite — tell me what&apos;s off
-              </GradientButton>
-              {!showFeedback ? (
+                <div className="flex-1" />
+
                 <button
                   type="button"
-                  onClick={() => setShowFeedback(true)}
-                  className="flex items-center gap-1.5 rounded-lg border border-glass-border px-3 py-1.5 text-xs font-medium text-atlas-text-secondary transition-colors hover:border-atlas-teal/50 hover:text-atlas-text"
+                  onClick={() => handleDelete(activeDraft.id)}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-glass-border bg-glass text-atlas-text-secondary transition-colors hover:border-red-500/50 hover:text-red-400"
+                  aria-label="Delete draft"
                 >
-                  <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-                  Regenerate
+                  <Archive className="h-4 w-4" />
                 </button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <label htmlFor={regenerationGuidanceId} className="sr-only">
-                    Describe how Atlas should regenerate the draft
-                  </label>
-                  <input
-                    id={regenerationGuidanceId}
-                    type="text"
-                    value={feedbackText}
-                    onChange={(event) => setFeedbackText(event.target.value)}
-                    placeholder="Make it shorter, more data-driven..."
-                    className="flex-1 rounded-lg border border-glass-border bg-atlas-bg px-3 py-1.5 text-xs text-atlas-text placeholder-atlas-text-muted focus:border-atlas-teal focus:outline-none"
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        void handleTryAgain(feedbackText || undefined);
-                        setFeedbackText("");
-                        setShowFeedback(false);
-                      }
-                      if (event.key === "Escape") setShowFeedback(false);
-                    }}
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void handleTryAgain(feedbackText || undefined);
-                      setFeedbackText("");
-                      setShowFeedback(false);
-                    }}
-                    className="rounded-lg bg-atlas-teal px-3 py-1.5 text-xs font-medium text-white"
-                  >
-                    Go
-                  </button>
+              </div>
+
+              {activeDraft.status === "POSTED" && draftPerformance && (
+                <div className="mt-6 border-t border-glass-border pt-6">
+                  <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-atlas-text-muted">
+                    Post Performance
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <PerformanceCard
+                      label="Impressions"
+                      value={draftPerformance.impressions}
+                      trend={draftPerformance.impressionsTrend}
+                    />
+                    <PerformanceCard
+                      label="Engagement"
+                      value={`${(draftPerformance.engagementRate * 100).toFixed(1)}%`}
+                      trend={draftPerformance.engagementTrend}
+                    />
+                    <PerformanceCard
+                      label="Sentiment"
+                      value={draftPerformance.sentiment}
+                      variant="sentiment"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {canReviseActiveDraft && (
+                <div className="mt-6 border-t border-glass-border pt-6">
+                  <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-atlas-text-muted">
+                    Refine with one click
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <RefinementChips
+                      onRefine={handleRefine}
+                      disabled={creating || Boolean(refiningChip)}
+                      loadingLabel={refiningChip ?? undefined}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleTryAgain()}
+                      disabled={creating}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs font-medium text-atlas-text-secondary transition-colors hover:border-atlas-teal/50 hover:text-atlas-text disabled:opacity-50"
+                    >
+                      {creating && !refiningChip ? (
+                        <RefreshCw className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3 w-3" />
+                      )}
+                      Surprise me
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
-          ) : null}
+          ) : (
+            <div className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-dashed border-glass-border bg-glass/20 py-20 text-center backdrop-blur-xl">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-atlas-surface text-atlas-text-muted">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <h3 className="mt-4 text-sm font-medium text-atlas-text">No active draft</h3>
+              <p className="mt-1 text-xs text-atlas-text-secondary">
+                Select a draft from the history or feed Atlas to generate a new one.
+              </p>
+            </div>
+          )}
 
-          {!voiceComparison && canReviseActiveDraft ? (
-            <div className="mt-6">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <label htmlFor="feedback-input" className="sr-only">
-                  Feedback for the current draft
-                </label>
-                <input
-                  id="feedback-input"
-                  aria-describedby={draftFeedbackHintId}
-                  type="text"
-                  value={feedback}
-                  onChange={(event) => setFeedback(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      void handleFeedback();
-                    }
-                  }}
-                  placeholder="Tell me what's off — type or drop a voice note."
-                  className="flex-1 rounded-lg border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
-                />
+          {activeDraft && activeDraft.status === "DRAFT" ? (
+            <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6">
+              <label
+                htmlFor="feedback-input"
+                className="mb-3 block text-xs font-semibold uppercase tracking-wider text-atlas-text-muted"
+              >
+                Personalize further
+              </label>
+              <div className="flex gap-3">
+                <div className="relative flex-1">
+                  <textarea
+                    id="feedback-input"
+                    rows={2}
+                    placeholder="e.g. 'Make it more bullish', 'Add a thread starter', 'Use more emoji'"
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                        e.preventDefault();
+                        if (feedback.trim()) void handleFeedback();
+                      }
+                    }}
+                    className="w-full resize-none rounded-xl border border-glass-border bg-atlas-bg/40 px-4 py-3 text-sm text-atlas-text placeholder:text-atlas-text-muted focus:border-atlas-teal/50 focus:outline-none"
+                  />
+                </div>
                 <button
                   type="button"
-                  aria-label={feedbackRecorder.state === "recording" ? "Stop recording" : "Record voice feedback"}
+                  aria-label={
+                    feedbackRecorder.state === "recording"
+                      ? "Stop recording"
+                      : "Record feedback"
+                  }
                   onClick={() => {
                     if (feedbackRecorder.state === "recording") {
                       feedbackRecorder.stopRecording();
@@ -2520,7 +2129,7 @@ function CraftingPage() {
                       feedbackRecorder.startRecording();
                     }
                   }}
-                  className={`flex items-center justify-center rounded-lg border p-3 text-sm transition-colors ${
+                  className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-all ${
                     feedbackRecorder.state === "recording"
                       ? "border-red-500 bg-red-500/10 text-red-400"
                       : feedbackRecorder.state === "transcribing"

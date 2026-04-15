@@ -20,14 +20,15 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
     msg("system", "Initializing DELPHI OS..."),
     msg(
       "oracle",
-      "Welcome. I am The Oracle.\n\nI'm going to learn how you write so I can help you craft tweets that sound like you — but sharper."
+      "Great — now choose how you'd like to build your voice."
     ),
     msg(
       "oracle",
-      "Let\'s get started.",
+      "• X-Powered: I scan your tweets to learn your voice, then you refine.\n• Hand-Crafted: Pick a starter style and we dial it in together from scratch.",
       {
         actions: [
-          { label: "Let\'s go", value: "start-onboarding", variant: "primary" },
+          { label: "X-Powered", value: "track-a", variant: "primary" },
+          { label: "Hand-Crafted", value: "track-b", variant: "secondary" },
         ],
       }
     ),
@@ -40,7 +41,7 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
       {
         component: { type: "x-oauth" },
         actions: [
-          { label: "Skip for now", value: "skip-x", variant: "ghost" },
+          { label: "Continue without X (limited features)", value: "skip-x", variant: "ghost" },
         ],
       }
     ),

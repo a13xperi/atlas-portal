@@ -72,7 +72,7 @@
   }
 
   .gradient-cta {
-    @apply bg-gradient-to-r from-atlas-teal via-atlas-teal/80 to-atlas-teal/60 rounded-lg font-body font-semibold text-white transition-all duration-200;
+    @apply bg-gradient-to-r from-atlas-teal via-atlas-teal/80 to-atlas-teal/60 rounded-lg font-body font-semibold text-atlas-bg transition-all duration-200;
   }
 
   .gradient-cta:hover {

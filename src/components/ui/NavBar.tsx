@@ -6,6 +6,7 @@ import {
   Bell,
   Menu,
   X,
+  Settings,
   LayoutDashboard,
   PenTool,
   Mic2,
@@ -20,6 +21,9 @@ import {
   ListOrdered,
   User,
   LogOut,
+  MessageSquare,
+  Shield,
+  Bug,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -54,9 +58,8 @@ export const navLinks = [
 ];
 
 // Core tabs always visible in navigation (DM-322, updated for demo flow).
-// Demo flow: Dashboard → Crafting → Voices → Analytics → Signals → Library → Arena
-// Other tabs (Feed, Briefings, Queue, Campaigns) are hidden from nav but accessible.
-const CORE_NAV_HREFS = new Set(["/dashboard", "/crafting", "/voice-profiles", "/analytics", "/alerts", "/team-library", "/arena"]);
+// Demo flow: Dashboard → Crafting → Voices → Analytics → Signals → Library → Arena → Queue
+const CORE_NAV_HREFS = new Set(["/dashboard", "/crafting", "/voice-profiles", "/analytics", "/alerts", "/team-library", "/arena", "/queue"]);
 const MANAGER_NAV_HREFS = new Set<string>();
 
 export const coreNavLinks = navLinks.filter((link) => CORE_NAV_HREFS.has(link.href));
@@ -155,7 +158,7 @@ export default function NavBar({ variant }: NavBarProps) {
     <nav aria-label="Main navigation" className="fixed top-0 left-0 right-0 z-50 bg-atlas-nav border-b border-glass-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link href="/dashboard" className="flex items-center gap-2">
+          <Link href="/feed" className="flex items-center gap-2">
             <DelphiLogo />
             <span className="text-atlas-text font-semibold text-sm">Atlas</span>
           </Link>
@@ -199,6 +202,22 @@ export default function NavBar({ variant }: NavBarProps) {
           )}
           {variant === "app" && user && (
             <>
+              <Link
+                href="/admin/bugs?action=report"
+                className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-atlas-text-secondary hover:text-atlas-teal hover:bg-atlas-surface transition-colors border border-glass-border"
+              >
+                <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
+                Feedback
+              </Link>
+              {(user.role === "ADMIN" || user.role === "MANAGER") && (
+                <Link
+                  href="/admin/bugs"
+                  className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-atlas-text-secondary hover:text-amber-400 hover:bg-atlas-surface transition-colors border border-glass-border"
+                >
+                  <Shield className="w-3.5 h-3.5" aria-hidden="true" />
+                  Admin
+                </Link>
+              )}
               <TourToggle />
               <DemoModeToggle />
             </>
@@ -345,6 +364,21 @@ export default function NavBar({ variant }: NavBarProps) {
             >
               Search (⌘K)
             </button>
+            <div className="mt-6 border-t border-glass-border pt-4">
+              <Link
+                href="/settings"
+                onClick={() => setMobileOpen(false)}
+                aria-current={pathname === "/settings" ? "page" : undefined}
+                className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                  pathname === "/settings"
+                    ? "bg-atlas-surface font-medium text-atlas-text"
+                    : "text-atlas-text-secondary hover:bg-atlas-surface hover:text-atlas-text"
+                }`}
+              >
+                <Settings className="h-4 w-4" aria-hidden="true" />
+                Settings
+              </Link>
+            </div>
           </aside>
         </div>
       ) : null}

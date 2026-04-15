@@ -140,8 +140,8 @@ function AnalyticsPage() {
     return (
       <AppShell>
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Nothing here yet</h2>
-          <p className="mt-2 text-atlas-text-secondary">Craft your first draft and the numbers will start rolling in.</p>
+          <h2 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Your analytics will appear here</h2>
+          <p className="mt-2 text-sm text-atlas-text-secondary">Craft your first draft and the numbers will start rolling in. Every draft, refinement, and piece of feedback lights up a new metric.</p>
         </div>
       </AppShell>
     );
@@ -162,7 +162,7 @@ function AnalyticsPage() {
 
         {/* SECTION 1: Header */}
         <div className="mb-8">
-          <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">
+          <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
             Your Analytics
           </h1>
           <p className="text-atlas-text-secondary mt-2 max-w-2xl text-sm leading-relaxed">
@@ -324,6 +324,77 @@ function AnalyticsPage() {
           )}
         </div>
 
+        {/* SECTION 5b: Predicted vs Actual Performance */}
+        <div className="mb-6 rounded-xl border border-glass-border bg-atlas-surface p-6 sm:p-8">
+          <h2 className="font-heading font-bold tracking-tight text-xl text-atlas-text mb-2">
+            Predicted vs Actual
+          </h2>
+          <p className="text-sm text-atlas-text-secondary mb-6">
+            How well Atlas predicts your tweet performance over the last 7 days.
+          </p>
+          {engagementDays.length > 0 ? (
+            <>
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                {(() => {
+                  const daysWithBoth = engagementDays.filter((d) => d.predicted > 0 && d.actual > 0);
+                  const avgPredicted = daysWithBoth.length > 0
+                    ? Math.round(daysWithBoth.reduce((s, d) => s + d.predicted, 0) / daysWithBoth.length)
+                    : 0;
+                  const avgActual = daysWithBoth.length > 0
+                    ? Math.round(daysWithBoth.reduce((s, d) => s + d.actual, 0) / daysWithBoth.length)
+                    : 0;
+                  const deltaPct = avgPredicted > 0 ? Math.round(((avgActual - avgPredicted) / avgPredicted) * 100) : 0;
+                  const outperformed = deltaPct >= 0;
+                  return (
+                    <>
+                      <div className="rounded-lg bg-atlas-nav/50 p-3 text-center">
+                        <p className="text-[10px] text-atlas-text-muted">Avg Predicted</p>
+                        <p className="text-lg font-semibold text-atlas-text">{avgPredicted.toLocaleString()}</p>
+                      </div>
+                      <div className="rounded-lg bg-atlas-nav/50 p-3 text-center">
+                        <p className="text-[10px] text-atlas-text-muted">Avg Actual</p>
+                        <p className="text-lg font-semibold text-atlas-text">{avgActual.toLocaleString()}</p>
+                      </div>
+                      <div className="rounded-lg bg-atlas-nav/50 p-3 text-center">
+                        <p className="text-[10px] text-atlas-text-muted">Accuracy Delta</p>
+                        <p className={`text-lg font-bold ${outperformed ? "text-atlas-success" : "text-atlas-warning"}`}>
+                          {outperformed ? "+" : ""}{deltaPct}%
+                        </p>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+              <div className="space-y-2">
+                {engagementDays.slice(-7).map((day) => {
+                  const delta = day.predicted > 0 ? ((day.actual - day.predicted) / day.predicted) * 100 : 0;
+                  const barWidth = day.predicted > 0 ? Math.min(Math.round((day.actual / day.predicted) * 100), 200) : 0;
+                  return (
+                    <div key={day.date} className="flex items-center gap-3">
+                      <span className="w-10 shrink-0 text-[10px] text-atlas-text-muted">{day.dayLabel}</span>
+                      <div className="flex-1 h-2 rounded-full bg-atlas-surface overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${delta >= 0 ? "bg-atlas-success" : "bg-atlas-warning"}`}
+                          style={{ width: `${Math.min(barWidth, 100)}%` }}
+                        />
+                      </div>
+                      <span className={`w-12 text-right text-[10px] font-medium ${delta >= 0 ? "text-atlas-success" : "text-atlas-warning"}`}>
+                        {delta >= 0 ? "+" : ""}{Math.round(delta)}%
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <div className="py-6 text-center">
+              <p className="text-sm text-atlas-text-muted">
+                Prediction accuracy data will appear once you have posted tweets with engagement metrics.
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* SECTION 6: Learning Log */}
         <div data-tour="analytics-learning" className="mb-6 rounded-xl border border-glass-border bg-atlas-surface p-6 sm:p-8">
           <h2 className="font-heading font-bold tracking-tight text-xl text-atlas-text mb-6">
@@ -425,7 +496,7 @@ function AnalyticsPage() {
         {/* SECTION 8: Footer */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 pt-4">
           <span className="text-sm text-atlas-text-secondary">
-            Page 10 of Atlas System
+            Atlas Analytics
           </span>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:gap-4">
             <button

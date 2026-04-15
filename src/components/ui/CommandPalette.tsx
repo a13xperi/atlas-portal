@@ -69,6 +69,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
   const paletteId = useId();
   const listboxId = `${paletteId}-listbox`;
   const optionId = (index: number) => `${paletteId}-option-${index}`;
+  const paletteRef = useRef<HTMLDivElement>(null);
 
   // Load favorites from localStorage on mount
   useEffect(() => {
@@ -171,6 +172,22 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
       } else if (e.key === "Enter") {
         e.preventDefault();
         flatItems[activeIndex]?.action();
+      } else if (e.key === "Tab") {
+        const panel = paletteRef.current;
+        if (!panel) return;
+        const focusable = panel.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
     window.addEventListener("keydown", handler);
@@ -201,7 +218,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
           />
 
           {/* Panel */}
-          <div className="relative w-full max-w-lg bg-atlas-nav border border-glass-border rounded-2xl shadow-2xl overflow-hidden">
+          <div ref={paletteRef} className="relative w-full max-w-lg bg-atlas-nav border border-glass-border rounded-2xl shadow-2xl overflow-hidden">
             {/* Search input — combobox pattern per WAI-ARIA 1.2 */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-glass-border">
               <Search className="w-4 h-4 text-atlas-text-muted shrink-0" aria-hidden="true" />
@@ -282,7 +299,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
                           type="button"
                           onClick={(e) => toggleFavorite(cmd.id, e)}
                           aria-label={favorites.has(cmd.id) ? `Remove ${cmd.label} from favorites` : `Add ${cmd.label} to favorites`}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-white/10"
+                          className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity p-1 rounded hover:bg-white/10"
                         >
                           {favorites.has(cmd.id)
                             ? <Star className="w-3.5 h-3.5 text-atlas-warning fill-atlas-warning" aria-hidden="true" />

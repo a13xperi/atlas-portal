@@ -111,8 +111,8 @@ test.describe("Oracle widget + Cmd+K", () => {
     // Wait for page to settle
     await page.waitForTimeout(500);
 
-    // Trigger Cmd+K (Meta+K on Mac, Control+K on others)
-    await page.keyboard.press("Meta+k");
+    // ControlOrMeta maps to Cmd on macOS, Ctrl on Linux/Windows — works in CI.
+    await page.keyboard.press("ControlOrMeta+k");
 
     // Command palette should be visible
     const palette = page.locator('[role="dialog"]').first();
@@ -123,7 +123,7 @@ test.describe("Oracle widget + Cmd+K", () => {
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(500);
 
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press("ControlOrMeta+k");
 
     // Type 'oracle' in the search field
     await page.keyboard.type("oracle");
