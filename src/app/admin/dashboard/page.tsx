@@ -572,6 +572,24 @@ export default function AdminDashboardPage() {
     }
   }
 
+  async function handleResetUser(userId: string) {
+    if (!window.confirm("Are you sure you want to reset this user to 'New User' status? This clears their voice profile and onboarding state.")) return;
+    try {
+      await api.admin.resetUser(userId);
+      alert("User reset successfully.");
+      // Minimal refresh — re-fetch roster to show updated state
+      const { users } = await api.admin.roster();
+      setRoster(users.sort((a, b) => {
+        if (!a.lastSeen && !b.lastSeen) return 0;
+        if (!a.lastSeen) return 1;
+        if (!b.lastSeen) return -1;
+        return new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime();
+      }));
+    } catch (err: any) {
+      alert(`Error resetting user: ${err.message || "Unknown error"}`);
+    }
+  }
+
   function handleActionFirst(which: "nudge" | "push") {
     if (which === "nudge") {
       setNudgeState("confirm");
@@ -907,6 +925,18 @@ export default function AdminDashboardPage() {
                                         </option>
                                       ))}
                                     </select>
+                                    {u.role === "ANALYST" && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleResetUser(u.id);
+                                        }}
+                                        className="rounded-md border border-red-400/30 bg-red-400/10 px-2 py-1 text-[10px] font-semibold text-red-400 hover:bg-red-400/20 transition-colors"
+                                      >
+                                        Reset
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                                 {expanded && (

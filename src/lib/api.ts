@@ -827,6 +827,11 @@ export const api = {
     feed: () => request<{ events: AdminFeedEvent[] }>("/api/admin/feed"),
     leaderboard: () =>
       request<{ entries: AdminLeaderboardEntry[] }>("/api/analytics/leaderboard"),
+    resetUser: (userId: string) =>
+      request<{ success: boolean }>("/api/admin/reset-user", {
+        method: "POST",
+        body: { userId },
+      }),
     getPrompts: () =>
       request<{ prompts: PromptConfig[] }>("/api/admin/prompts"),
     testPrompt: (promptId: string, variables: Record<string, string>) =>
