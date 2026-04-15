@@ -6,6 +6,7 @@ import {
   Bell,
   Menu,
   X,
+  Settings,
   LayoutDashboard,
   PenTool,
   Mic2,
@@ -227,6 +228,18 @@ export default function NavBar({ variant }: NavBarProps) {
                 </button>
                 <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
               </div>
+              <Link
+                href="/settings"
+                aria-label="Settings"
+                title="Settings"
+                className={`hidden sm:inline-flex rounded-full border p-2 transition-colors ${
+                  pathname === "/settings"
+                    ? "border-atlas-teal bg-atlas-teal/10 text-atlas-teal"
+                    : "border-glass-border text-atlas-text-secondary hover:border-atlas-teal/40 hover:text-atlas-text"
+                }`}
+              >
+                <Settings className="h-4 w-4" aria-hidden="true" />
+              </Link>
               <div
                 aria-label={cachedTier ? `${cachedTier.tier.name} (#${cachedTier.rank})` : "Signed in"}
                 className={`w-8 h-8 rounded-full bg-atlas-surface border-2 flex items-center justify-center text-xs font-medium ${
@@ -327,6 +340,21 @@ export default function NavBar({ variant }: NavBarProps) {
             >
               Search (⌘K)
             </button>
+            <div className="mt-6 border-t border-glass-border pt-4">
+              <Link
+                href="/settings"
+                onClick={() => setMobileOpen(false)}
+                aria-current={pathname === "/settings" ? "page" : undefined}
+                className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                  pathname === "/settings"
+                    ? "bg-atlas-surface font-medium text-atlas-text"
+                    : "text-atlas-text-secondary hover:bg-atlas-surface hover:text-atlas-text"
+                }`}
+              >
+                <Settings className="h-4 w-4" aria-hidden="true" />
+                Settings
+              </Link>
+            </div>
           </aside>
         </div>
       ) : null}
