@@ -24,6 +24,8 @@ function formatAlertTimestamp(createdAt: string) {
   }).format(new Date(createdAt));
 }
 
+const showAdvanced = process.env.NEXT_PUBLIC_ALERTS_ADVANCED === "true";
+
 function AlertsPage() {
   const router = useRouter();
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -105,14 +107,19 @@ function AlertsPage() {
             </p>
           </div>
           <div className="flex flex-col items-start gap-3 sm:items-end">
-            <button
-              data-tour="signals-subscribe"
-              onClick={() => setShowSubscriptions(!showSubscriptions)}
-              className="flex items-center gap-1.5 rounded-lg border border-glass-border px-3 py-1.5 text-xs font-medium text-atlas-text-secondary transition-colors hover:text-atlas-text"
-            >
-              <Settings className="h-3.5 w-3.5" aria-hidden="true" />
-              Monitors ({subscriptions.filter((sub) => sub.isActive).length})
-            </button>
+            {/** Demo-suppressed advanced UI — gated by NEXT_PUBLIC_ALERTS_ADVANCED, not deleted. */}
+            {showAdvanced ? (
+              <button
+                data-tour="signals-subscribe"
+                onClick={() => setShowSubscriptions(!showSubscriptions)}
+                className="flex items-center gap-1.5 rounded-lg border border-glass-border px-3 py-1.5 text-xs font-medium text-atlas-text-secondary transition-colors hover:text-atlas-text"
+              >
+                <Settings className="h-3.5 w-3.5" aria-hidden="true" />
+                Monitors ({subscriptions.filter((sub) => sub.isActive).length})
+              </button>
+            ) : (
+              <div data-testid="alerts-advanced-gated" />
+            )}
             {!loading && alerts.length > 0 && (
               <p className="text-xs font-medium uppercase tracking-[0.2em] text-atlas-text-muted">
                 {alerts.length} live signals
@@ -121,16 +128,20 @@ function AlertsPage() {
           </div>
         </div>
 
-        {showSubscriptions && (
-          <MonitorBuilder
-            subscriptions={subscriptions}
-            onSubscriptionChange={() => {
-              api.alerts
-                .subscriptions()
-                .then((res) => setSubscriptions(res.subscriptions ?? []))
-                .catch(() => {});
-            }}
-          />
+        {showAdvanced ? (
+          showSubscriptions && (
+            <MonitorBuilder
+              subscriptions={subscriptions}
+              onSubscriptionChange={() => {
+                api.alerts
+                  .subscriptions()
+                  .then((res) => setSubscriptions(res.subscriptions ?? []))
+                  .catch(() => {});
+              }}
+            />
+          )
+        ) : (
+          <div data-testid="alerts-advanced-gated" />
         )}
 
         {error && (
