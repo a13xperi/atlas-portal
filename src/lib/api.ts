@@ -816,6 +816,38 @@ export const api = {
       request<{ success: boolean }>(`/api/campaigns/${campaignId}/drafts`, { method: "POST", body: { draftId, sortOrder } }),
     removeDraft: (campaignId: string, draftId: string) =>
       request<{ success: boolean }>(`/api/campaigns/${campaignId}/drafts/${draftId}`, { method: "DELETE" }),
+    generateFromPdf: async (
+      file: File,
+      options?: { angles?: number; tone?: string; name?: string; description?: string },
+    ): Promise<{
+      campaignId: string;
+      filename: string;
+      mimeType: string;
+      wordCount: number;
+      truncated: boolean;
+      drafts: Array<{ id: string; content: string; angle: string; score: number }>;
+    }> => {
+      const form = new FormData();
+      form.append("file", file);
+      if (options?.angles) form.append("angles", String(options.angles));
+      if (options?.tone) form.append("tone", options.tone);
+      if (options?.name) form.append("name", options.name);
+      if (options?.description) form.append("description", options.description);
+      const headers: Record<string, string> = {};
+      if (_accessToken) headers["Authorization"] = `Bearer ${_accessToken}`;
+      const res = await fetch(`${API_URL}/api/campaigns/generate-from-pdf`, {
+        method: "POST",
+        headers,
+        body: form,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new ApiError(err.error || "Generate-from-PDF failed", res.status);
+      }
+      const json = await res.json();
+      return json && typeof json === "object" && "data" in json ? (json as { data: typeof json }).data as any : json;
+    },
   },
 };
 
