@@ -343,7 +343,7 @@ describe("CraftingPage", () => {
     });
 
     expect(generatedDraftBox).toHaveValue(generatedDraft);
-    expect(screen.getByText(`${generatedDraft.length}/280`)).toBeInTheDocument();
+    expect(screen.getByText(`${280 - generatedDraft.length}`)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Shorter" }));
 
