@@ -1987,12 +1987,17 @@ function CraftingPage() {
                       )}
                       Approve
                     </button>
-                    <SchedulePopover
-                      isOpen={schedulePopoverOpen}
-                      onOpenChange={setSchedulePopoverOpen}
-                      onSchedule={handleScheduleDraft}
-                      loading={scheduleLoading}
-                    />
+                    {schedulePopoverOpen && (
+                      <SchedulePopover
+                        initialAt={activeDraft.scheduledAt ?? new Date().toISOString()}
+                        onCancel={() => setSchedulePopoverOpen(false)}
+                        onConfirm={async (iso) => {
+                          setSchedulePopoverOpen(false);
+                          await handleScheduleDraft(iso);
+                        }}
+                        busy={scheduleLoading}
+                      />
+                    )}
                   </>
                 ) : (
                   <div
@@ -2030,23 +2035,7 @@ function CraftingPage() {
                   <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-atlas-text-muted">
                     Post Performance
                   </p>
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    <PerformanceCard
-                      label="Impressions"
-                      value={draftPerformance.impressions}
-                      trend={draftPerformance.impressionsTrend}
-                    />
-                    <PerformanceCard
-                      label="Engagement"
-                      value={`${(draftPerformance.engagementRate * 100).toFixed(1)}%`}
-                      trend={draftPerformance.engagementTrend}
-                    />
-                    <PerformanceCard
-                      label="Sentiment"
-                      value={draftPerformance.sentiment}
-                      variant="sentiment"
-                    />
-                  </div>
+                  <PerformanceCard performance={draftPerformance} />
                 </div>
               )}
 
@@ -2059,7 +2048,7 @@ function CraftingPage() {
                     <RefinementChips
                       onRefine={handleRefine}
                       disabled={creating || Boolean(refiningChip)}
-                      loadingLabel={refiningChip ?? undefined}
+                      loading={refiningChip ?? null}
                     />
                     <button
                       type="button"

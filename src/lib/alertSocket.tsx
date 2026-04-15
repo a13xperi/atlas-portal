@@ -5,10 +5,11 @@ import { io, Socket } from "socket.io-client";
 import { useAuth } from "./auth";
 import { publicUrls } from "./public-urls";
 
-interface Alert {
+export interface Alert {
   id: string;
   type: string;
   title: string;
+  message?: string | null;
   context?: string | null;
   createdAt: string;
 }
@@ -86,6 +87,8 @@ export function AlertSocketProvider({ children }: { children: React.ReactNode })
     </AlertSocketContext.Provider>
   );
 }
+
+export type SocketAlert = Alert;
 
 export function useAlertSocket() {
   return useContext(AlertSocketContext);
