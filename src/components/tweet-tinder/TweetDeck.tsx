@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { AnimatePresence, useAnimation } from "framer-motion";
+import { useState, useCallback } from "react";
+import { AnimatePresence } from "framer-motion";
 import { CheckCircle } from "lucide-react";
 import TweetCard, { type TwitterLike } from "./TweetCard";
 import SwipeActions from "./SwipeActions";
@@ -75,10 +75,8 @@ export default function TweetDeck({
       } else {
         setDislikedTweets((prev) => [...prev, tweets[currentIndex]]);
       }
-
       const nextIndex = currentIndex + 1;
       setCurrentIndex(nextIndex);
-
       if (nextIndex >= tweets.length) {
         setPhase("complete");
       }
@@ -169,15 +167,16 @@ export default function TweetDeck({
     <div className="space-y-6">
       {/* Card stack */}
       <div className="relative mx-auto h-80 w-full max-w-md">
-        <AnimatePresence>
+        <AnimatePresence onExitComplete={() => setIsAnimating(false)}>
           {visibleCards
             .map((tweet, i) => (
               <TweetCard
                 key={tweet.id}
                 tweet={tweet}
-                onSwipe={handleCardSwipe}
+                onSwipe={handleSwipe}
                 isTop={i === 0}
                 stackIndex={i}
+                exitDirection={exitDirection}
               />
             ))
             .reverse()}
