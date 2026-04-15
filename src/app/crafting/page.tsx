@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useId,
@@ -47,13 +48,20 @@ import {
   api,
   AnalyticsSummary,
   DraftPerformance,
+  ReferenceAccount,
   SavedBlend,
   TrendingTopic,
   TweetDraft,
+  User,
 } from "@/lib/api";
 import PerformanceCard from "@/components/analytics/PerformanceCard";
 import { useAuth } from "@/lib/auth";
-import { hasCalibratedVoiceDimensions } from "@/lib/voice-profile-dimensions";
+import {
+  hasCalibratedVoiceDimensions,
+  pickVoiceDimensions,
+} from "@/lib/voice-profile-dimensions";
+import { applyGeneratedBlendNames } from "@/lib/voice-naming";
+import { resolveVoiceAvatar, voiceInitials } from "@/lib/voice-avatar";
 import OracleWidget from "@/components/oracle/OracleWidget";
 import OracleCraftingHints from "@/components/oracle/OracleCraftingHints";
 import OracleInspector from "@/components/oracle/OracleInspector";
@@ -252,6 +260,38 @@ function buildVoiceVariationInstruction(
   ].join(" ");
 }
 
+function VoiceAvatarChip({
+  blend,
+  user,
+}: {
+  blend: SavedBlend;
+  user: User | null;
+}) {
+  const firstVoice = blend.voices[0];
+  if (!firstVoice) {
+    return (
+      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-atlas-nav text-[10px] font-medium text-atlas-text">
+        ?
+      </span>
+    );
+  }
+  const avatar = resolveVoiceAvatar(firstVoice, user);
+  if (avatar) {
+    return (
+      <img
+        src={avatar}
+        alt={blend.name || "blend avatar"}
+        className="h-5 w-5 rounded-full object-cover"
+      />
+    );
+  }
+  return (
+    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-atlas-nav text-[10px] font-medium text-atlas-text">
+      {voiceInitials(firstVoice, user)}
+    </span>
+  );
+}
+
 function CraftingPage() {
   useTour("crafting");
 
@@ -270,6 +310,7 @@ function CraftingPage() {
     (searchParams.get("mode") as CraftingMode) || "new_post";
   const [replyAngle, setReplyAngle] = useState<string | null>(null);
   const [blends, setBlends] = useState<SavedBlend[]>([]);
+  const [referenceAccounts, setReferenceAccounts] = useState<ReferenceAccount[]>([]);
   const [selectedBlendId, setSelectedBlendId] = useState<string | null>(null);
   const [blendValue, setBlendValue] = useState(30);
   const [feedback, setFeedback] = useState("");
@@ -447,6 +488,25 @@ function CraftingPage() {
     }
   }, []);
 
+  const loadReferenceAccounts = useCallback(async () => {
+    try {
+      const { accounts } = await api.voice.getReferenceAccounts();
+      setReferenceAccounts(accounts ?? []);
+    } catch {
+      // Reference accounts are optional — avatar fallbacks will still work.
+    }
+  }, []);
+
+  const personalDimensions = useMemo(
+    () => pickVoiceDimensions(user?.voiceProfile ?? null),
+    [user?.voiceProfile]
+  );
+
+  const namedBlends = useMemo(
+    () => applyGeneratedBlendNames(blends, personalDimensions, referenceAccounts),
+    [blends, personalDimensions, referenceAccounts]
+  );
+
   const loadTrending = useCallback(async () => {
     try {
       const { topics } = await api.trending.topics();
@@ -461,7 +521,14 @@ function CraftingPage() {
     loadSummary();
     loadTrending();
     loadBlends();
-  }, [loadBlends, loadDrafts, loadSummary, loadTrending]);
+    loadReferenceAccounts();
+  }, [
+    loadBlends,
+    loadDrafts,
+    loadReferenceAccounts,
+    loadSummary,
+    loadTrending,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -1815,8 +1882,29 @@ function CraftingPage() {
             data-tour="voice-selector"
           >
             <div className="flex flex-wrap gap-2 py-2">
-              {blends.map((blend) => {
-                const voice = blend.voices?.[0]?.referenceVoice;
+              <button
+                type="button"
+                onClick={() => setSelectedBlendId(null)}
+                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${
+                  selectedBlendId === null
+                    ? "border-atlas-teal bg-atlas-teal/10 text-atlas-teal"
+                    : "border-glass-border text-atlas-text-muted hover:border-atlas-text-muted"
+                }`}
+              >
+                {user?.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt=""
+                    className="h-5 w-5 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-atlas-nav text-[10px] font-medium text-atlas-text">
+                    {(user?.displayName || user?.handle || "M").trim().charAt(0).toUpperCase()}
+                  </span>
+                )}
+                <span className="text-sm">My Voice</span>
+              </button>
+              {namedBlends.map((blend) => {
                 const isActive = selectedBlendId === blend.id;
                 return (
                   <button
@@ -1829,15 +1917,7 @@ function CraftingPage() {
                         : "border-glass-border text-atlas-text-muted hover:border-atlas-text-muted"
                     }`}
                   >
-                    {voice?.avatarUrl ? (
-                      <img
-                        src={voice.avatarUrl}
-                        alt=""
-                        className="h-5 w-5 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="h-5 w-5 rounded-full bg-atlas-nav" />
-                    )}
+                    <VoiceAvatarChip blend={blend} user={user ?? null} />
                     <span className="text-sm">{blend.name ?? "Untitled blend"}</span>
                   </button>
                 );
@@ -1867,7 +1947,7 @@ function CraftingPage() {
               >
                 {selectedBlendId
                   ? `My Voice ↔ ${
-                      blends.find((blend) => blend.id === selectedBlendId)?.name || "Blend"
+                      namedBlends.find((blend) => blend.id === selectedBlendId)?.name || "Blend"
                     }`
                   : "Blend:"}
               </span>
@@ -2289,7 +2369,7 @@ function CraftingPage() {
                       className="flex-1 min-w-[180px] rounded-lg border border-glass-border bg-atlas-surface px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none"
                     >
                       <option value="">Select a blend...</option>
-                      {blends
+                      {namedBlends
                         .filter((blend) => blend.id !== selectedBlendId)
                         .map((blend) => (
                           <option key={blend.id} value={blend.id}>
