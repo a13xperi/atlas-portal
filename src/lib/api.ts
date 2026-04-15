@@ -982,6 +982,19 @@ export const api = {
     delete: (id: string) =>
       request<{ bug: BugRecord }>(`/api/bugs/${id}`, { method: "DELETE" }),
   },
+
+  bugs: {
+    list: (status?: string) =>
+      request<{ bugs: BugRecord[] }>(`/api/bugs${status ? `?status=${status}` : ""}`),
+    get: (id: string) =>
+      request<{ bug: BugRecord }>(`/api/bugs/${id}`),
+    create: (data: BugCreateInput) =>
+      request<{ bug: BugRecord }>("/api/bugs", { method: "POST", body: data }),
+    update: (id: string, data: BugUpdateInput) =>
+      request<{ bug: BugRecord }>(`/api/bugs/${id}`, { method: "PATCH", body: data }),
+    delete: (id: string) =>
+      request<{ bug: BugRecord }>(`/api/bugs/${id}`, { method: "DELETE" }),
+  },
 };
 
 // Types
