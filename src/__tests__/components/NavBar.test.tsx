@@ -181,7 +181,7 @@ describe("NavBar", () => {
 
     const profileLink = screen.getByRole("link", { name: "Signed in" });
     expect(profileLink).toBeInTheDocument();
-    expect(profileLink).toHaveAttribute("href", "/profile");
+    expect(profileLink).toHaveAttribute("href", "/settings");
   });
 
   it("hides auth-only controls when no user is authenticated", () => {
