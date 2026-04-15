@@ -2,33 +2,36 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronDown, ChevronUp, Copy, Sparkles } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import FeatureGate from "@/components/ui/FeatureGate";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth";
-import { api, TeamDraft } from "@/lib/api";
+import { api, TeamMember } from "@/lib/api";
+import RecipeCard from "@/components/voice-profiles/RecipeCard";
+import {
+  pickVoiceDimensions,
+  generateVoiceProfileName,
+} from "@/lib/voice-profile-dimensions";
+import { getNotableVoiceDimensions } from "@/lib/voice-recipes";
+import { Sparkles } from "lucide-react";
 
 function TeamLibraryPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [libraryItems, setLibraryItems] = useState<TeamDraft[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
-  const [totalCount, setTotalCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState("recent");
-  const [filterBy, setFilterBy] = useState("all");
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    if (!user) { setLoading(false); return; }
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const draftsRes = await api.drafts.team(6);
-      setLibraryItems(draftsRes.drafts);
-      setTotalCount(draftsRes.total);
+      const { team } = await api.users.team();
+      setTeamMembers(team);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load team library");
     } finally {
@@ -36,96 +39,54 @@ function TeamLibraryPage() {
     }
   }, [user]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-  const sortedItems = useMemo(() => {
-    const items = [...(libraryItems ?? [])];
-    if (sortBy === "engagement") items.sort((a, b) => (b.actualEngagement ?? 0) - (a.actualEngagement ?? 0));
-    if (sortBy === "confidence") items.sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0));
-    if (sortBy === "recent") items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return items;
-  }, [libraryItems, sortBy]);
+  const membersWithProfiles = useMemo(
+    () => teamMembers.filter((m) => m.voiceProfile),
+    [teamMembers]
+  );
 
-  const visibleItems = useMemo(() => {
-    if (filterBy === "with-engagement") {
-      return sortedItems.filter((item) => (item.actualEngagement ?? 0) > 0);
-    }
-    if (filterBy === "with-confidence") {
-      return sortedItems.filter((item) => (item.confidence ?? 0) > 0);
-    }
-    return sortedItems;
-  }, [filterBy, sortedItems]);
-
-  function formatEngagement(item: TeamDraft) {
-    const engagement = item.predictedEngagement ?? item.actualEngagement;
-    if (engagement == null || engagement === 0) return "—";
-    if (engagement >= 1000) return `${(engagement / 1000).toFixed(1)}k`;
-    return String(Math.round(engagement));
-  }
-
-  const handleCopy = async (item: TeamDraft) => {
-    await navigator.clipboard.writeText(item.content);
-    setCopiedId(item.id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const handleUseStyle = (item: TeamDraft) => {
-    // Navigate to crafting with the draft content pre-loaded as inspiration
-    const params = new URLSearchParams({ source: item.content });
-    if (item.blendName) params.set("blend", item.blendName);
+  const handleUse = (memberId: string) => {
+    const member = teamMembers.find((m) => m.id === memberId);
+    if (!member) return;
+    const params = new URLSearchParams({ voice: member.handle });
     router.push(`/crafting?${params.toString()}`);
   };
 
   return (
     <AppShell>
       {error && (
-        <div role="alert" className="mb-6 px-4 py-3 bg-atlas-error/10 border border-atlas-error/30 rounded-xl text-atlas-error text-sm">
+        <div
+          role="alert"
+          className="mb-6 rounded-xl border border-atlas-error/30 bg-atlas-error/10 px-4 py-3 text-sm text-atlas-error"
+        >
           {error}
         </div>
       )}
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">
+        <h1 className="font-heading text-2xl font-bold tracking-tight text-atlas-text">
           Team Style Library
         </h1>
-        <p className="text-sm text-atlas-text-secondary mt-2">
-          Browse and remix approved styles from across the team.
+        <p className="mt-2 text-sm text-atlas-text-secondary">
+          Browse and remix voice recipes from across the team.
         </p>
       </div>
 
-      {/* Filter Bar */}
-      <div className="flex flex-wrap gap-4 mb-8">
-        <select
-          aria-label="Sort team library styles"
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          className="bg-atlas-surface rounded-lg text-atlas-text-secondary px-3 py-2 text-sm border border-glass-border focus:outline-none focus:border-atlas-teal"
-        >
-          <option value="recent">Most Recent</option>
-          <option value="engagement">Highest Engagement</option>
-          <option value="confidence">Highest Confidence</option>
-        </select>
-        <select
-          aria-label="Filter team library styles"
-          value={filterBy}
-          onChange={(e) => setFilterBy(e.target.value)}
-          className="bg-atlas-surface rounded-lg text-atlas-text-secondary px-3 py-2 text-sm border border-glass-border focus:outline-none focus:border-atlas-teal"
-        >
-          <option value="all">All Styles</option>
-          <option value="with-engagement">With Engagement</option>
-          <option value="with-confidence">With Confidence</option>
-        </select>
-      </div>
-
-      {/* Masonry Grid */}
+      {/* Loading state */}
       {loading && (
-        <div className="columns-1 md:columns-2 gap-6 space-y-6 mb-8">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="break-inside-avoid bg-atlas-surface border border-glass-border rounded-2xl p-8 space-y-3">
+            <div
+              key={i}
+              className="break-inside-avoid rounded-2xl border border-glass-border bg-atlas-surface p-6 space-y-4"
+            >
+              <Skeleton className="h-5 w-1/3" />
+              <Skeleton className="h-8 w-2/3" />
               <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-5/6" />
-              <Skeleton className="h-4 w-3/4" />
               <div className="pt-4 border-t border-glass-border space-y-2">
                 <Skeleton className="h-3 w-24" />
                 <Skeleton className="h-3 w-16" />
@@ -134,115 +95,59 @@ function TeamLibraryPage() {
           ))}
         </div>
       )}
-      {visibleItems.length === 0 && !loading && (
-        <div className="bg-atlas-surface border border-glass-border rounded-2xl p-12 text-center mb-8">
-          <p className="text-sm text-atlas-text-secondary">No approved styles yet. Approve drafts in the Crafting Station and they will show up here for the team to reference.</p>
+
+      {/* Empty state */}
+      {!loading && membersWithProfiles.length === 0 && (
+        <div className="rounded-2xl border border-glass-border bg-atlas-surface p-12 text-center">
+          <p className="text-sm text-atlas-text-secondary">
+            No team voice recipes yet. Team members need to calibrate their voice profiles before they appear here.
+          </p>
         </div>
       )}
-      <div className="columns-1 md:columns-2 gap-6 space-y-6">
-        {visibleItems.map((item) => {
-          const isCopied = copiedId === item.id;
-          const isExpanded = expandedId === item.id;
 
-          return (
-            <div
-              key={item.id}
-              className="flex flex-col rounded-2xl border border-glass-border bg-atlas-surface p-8 break-inside-avoid transition-colors hover:border-atlas-teal/30"
-            >
-              <p className="text-lg text-atlas-text leading-relaxed">{item.content}</p>
-              {item.feedback && (
-                <p className="text-sm text-atlas-text-secondary mt-3 italic">&ldquo;{item.feedback}&rdquo;</p>
-              )}
+      {/* Recipe cards grid */}
+      {!loading && membersWithProfiles.length > 0 && (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {membersWithProfiles.map((member) => {
+            const dimensions = pickVoiceDimensions(member.voiceProfile);
+            const notableDimensions = getNotableVoiceDimensions(dimensions);
+            const blend = {
+              id: member.id,
+              name:
+                generateVoiceProfileName(dimensions, [member.handle]) ||
+                member.displayName ||
+                member.handle,
+              voices: [
+                {
+                  id: member.id,
+                  label: member.displayName || member.handle,
+                  percentage: 100,
+                  referenceVoiceId: null,
+                  referenceVoice: null,
+                },
+              ],
+            };
 
-              <div className="mt-auto pt-4 border-t border-glass-border">
-                <div className="flex items-center gap-2 mt-3">
-                  <div className="h-6 w-6 rounded-full bg-gradient-to-r from-delphi-blue-500 to-atlas-teal flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
-                    {item.user?.handle?.[0]?.toUpperCase() || item.user?.displayName?.[0]?.toUpperCase() || "?"}
-                  </div>
-                  <span className="text-xs text-atlas-text-secondary truncate">
-                    {item.user?.displayName || item.user?.handle || "Unknown"}
-                  </span>
-                </div>
-                {item.blendName && (
-                  <span className="text-[10px] text-atlas-teal">
-                    via {item.blendName}
-                  </span>
-                )}
-                <p className="text-sm text-atlas-text-secondary font-medium">Team voice</p>
-                <p className="text-xs text-atlas-teal font-bold mt-1">{formatEngagement(item)} Engagement</p>
-              </div>
-
-              {/* Expanded preview */}
-              {isExpanded && (
-                <div className="mt-4 rounded-xl border border-glass-border/50 bg-atlas-bg/50 p-4 space-y-2">
-                  <p className="text-[10px] uppercase tracking-wide text-atlas-text-muted font-semibold">Draft Details</p>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-atlas-text-muted">Status:</span>{" "}
-                      <span className="text-atlas-text">{item.status}</span>
-                    </div>
-                    <div>
-                      <span className="text-atlas-text-muted">Length:</span>{" "}
-                      <span className="text-atlas-text">{item.content.length}/280</span>
-                    </div>
-                    {item.confidence != null && (
-                      <div>
-                        <span className="text-atlas-text-muted">Confidence:</span>{" "}
-                        <span className="text-atlas-text">{Math.round(item.confidence * 100)}%</span>
-                      </div>
-                    )}
-                    {item.sourceType && (
-                      <div>
-                        <span className="text-atlas-text-muted">Source:</span>{" "}
-                        <span className="text-atlas-text">{item.sourceType.replace(/_/g, " ")}</span>
-                      </div>
-                    )}
-                  </div>
-                  {item.blendName && (
-                    <p className="text-xs text-atlas-teal">Voice blend: {item.blendName}</p>
-                  )}
-                  <p className="text-[10px] text-atlas-text-muted">
-                    Created {new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                  </p>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="mt-3 flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleUseStyle(item)}
-                  className="flex items-center gap-1.5 text-xs font-bold text-atlas-teal transition-colors hover:text-atlas-text"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Use this style
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleCopy(item)}
-                  className="flex items-center gap-1.5 text-xs font-bold text-atlas-text-secondary transition-colors hover:text-atlas-teal"
-                >
-                  {isCopied ? <Check className="h-3.5 w-3.5 text-atlas-success" /> : <Copy className="h-3.5 w-3.5" />}
-                  {isCopied ? "Copied!" : "Copy"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setExpandedId(isExpanded ? null : item.id)}
-                  className="flex items-center gap-1 text-xs font-bold text-atlas-text-secondary transition-colors hover:text-atlas-teal"
-                >
-                  {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                  {isExpanded ? "Less" : "Preview"}
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Footer count */}
-      <p className="text-sm text-atlas-text-secondary mt-6 text-center">
-        {totalCount > 0 ? `${visibleItems.length} of ${totalCount} styles` : `${visibleItems.length} styles`}
-      </p>
+            return (
+              <RecipeCard
+                key={member.id}
+                blend={blend}
+                dimensions={dimensions}
+                fingerprintDescription={`${member.displayName || member.handle}'s calibrated voice profile.`}
+                notableDimensions={notableDimensions}
+                isActive={false}
+                onUse={() => handleUse(member.id)}
+                onPreviewSample={() => {}}
+                user={{
+                  handle: member.handle,
+                  displayName: member.displayName || null,
+                  avatarUrl: null,
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
     </AppShell>
   );
 }
