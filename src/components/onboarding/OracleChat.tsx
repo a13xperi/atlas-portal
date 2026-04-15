@@ -340,6 +340,13 @@ export default function OracleChat() {
     dispatch({ type: "ADVANCE", payload: echo });
   }, [state, persistAfterStep, router]);
 
+  // ── Reset calibration lock on scanning re-entry ──────────────────
+  useEffect(() => {
+    if (state.currentStep === "TRACK_A_SCANNING" && state.calibrationResult === null) {
+      calibratingRef.current = false;
+    }
+  }, [state.currentStep, state.calibrationResult]);
+
   // ── Auto-trigger calibration for Track A scanning step ───────────
   useEffect(() => {
     if (
@@ -350,15 +357,16 @@ export default function OracleChat() {
       return;
 
     calibratingRef.current = true;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
+
     (async () => {
       try {
-        const CLIENT_RACE_MS = 50_000;
-        const { profile, calibration } = await Promise.race([
-          api.voice.calibrate(state.xHandle),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("calibration_timeout")), CLIENT_RACE_MS)
-          ),
-        ]);
+        const { profile, calibration } = await api.voice.calibrate(state.xHandle, {
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
         dispatch({
           type: "SET_CALIBRATION",
           result: {
@@ -405,8 +413,14 @@ export default function OracleChat() {
         // Anil feedback (Apr 10): don't generate tweet content until after
         // HANDOFF is complete and a voice blend is configured. The calibration
         // analysis above is sufficient commentary during onboarding.
-      } catch (err) {
-        console.error("Calibration failed:", err);
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        if (err.name === "AbortError") {
+          console.warn("Calibration timed out (30s limit hit)");
+        } else {
+          console.error("Calibration failed:", err);
+        }
+
         // Fallback to Track-A-like dimensions so the user sees non-default
         // values and the crafting gate becomes passable.
         dispatch({
@@ -430,6 +444,11 @@ export default function OracleChat() {
         calibratingRef.current = false;
       }
     })();
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [state.currentStep, state.xHandle, state.calibrationResult]);
 
   // ── Render inline components ─────────────────────────────────────
