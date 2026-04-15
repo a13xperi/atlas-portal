@@ -18,9 +18,16 @@ interface TweetCardProps {
   onSwipe: (direction: "left" | "right") => void;
   isTop: boolean;
   stackIndex: number;
+  exitDirection?: "left" | "right";
 }
 
-export default function TweetCard({ tweet, onSwipe, isTop, stackIndex }: TweetCardProps) {
+export default function TweetCard({
+  tweet,
+  onSwipe,
+  isTop,
+  stackIndex,
+  exitDirection = "right",
+}: TweetCardProps) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 0, 200], [-12, 0, 12]);
   const likeOpacity = useTransform(x, [0, 80], [0, 1]);
@@ -60,9 +67,9 @@ export default function TweetCard({ tweet, onSwipe, isTop, stackIndex }: TweetCa
         dragElastic={0.8}
         onDragEnd={isTop ? handleDragEnd : undefined}
         exit={{
-          x: 400,
+          x: exitDirection === "right" ? 400 : -400,
           opacity: 0,
-          rotate: 15,
+          rotate: exitDirection === "right" ? 15 : -15,
           transition: { type: "spring", stiffness: 200, damping: 25 },
         }}
       >
