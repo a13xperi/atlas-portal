@@ -33,6 +33,8 @@ jest.mock("@/lib/auth", () => ({
 
 describe("ResetMeButton", () => {
   const originalNodeEnv = process.env.NODE_ENV;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const envWritable = process.env as any;
 
   beforeEach(() => {
     mockUser = { id: "admin-1", handle: "admin", role: "ADMIN" };
@@ -40,12 +42,12 @@ describe("ResetMeButton", () => {
     mockReplace.mockReset();
     mockSetAccessToken.mockReset();
     document.cookie = "atlas_session=; path=/; max-age=0";
-    process.env.NODE_ENV = originalNodeEnv;
+    envWritable.NODE_ENV = originalNodeEnv;
     window.confirm = jest.fn(() => true);
   });
 
   afterAll(() => {
-    process.env.NODE_ENV = originalNodeEnv;
+    envWritable.NODE_ENV = originalNodeEnv;
   });
 
   it("renders for admins", () => {
@@ -68,7 +70,7 @@ describe("ResetMeButton", () => {
 
   it("renders in development for non-admin users", () => {
     mockUser = { id: "analyst-1", handle: "analyst", role: "ANALYST" };
-    process.env.NODE_ENV = "development";
+    envWritable.NODE_ENV = "development";
 
     render(<ResetMeButton />);
 
