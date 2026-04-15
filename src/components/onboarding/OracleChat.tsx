@@ -395,7 +395,7 @@ export default function OracleChat() {
               {
                 id: `calibration-commentary-${Date.now()}`,
                 role: "oracle",
-                content: calibration.analysis,
+                content: `I analyzed your top-engaged and most-recent tweets (${calibration.tweetsAnalyzed} total) — here's what I picked up: ${calibration.analysis}`,
                 timestamp: Date.now(),
               },
             ],
@@ -413,16 +413,14 @@ export default function OracleChat() {
           type: "SET_DIMENSIONS",
           dimensions: TRACK_A_INITIAL_DIMENSIONS,
         });
-        // Surface a friendly Oracle message, then silently advance so the
-        // user isn't stuck and doesn't see a raw error echoed as their reply.
+        const reason = err instanceof Error ? err.message : "something went wrong";
         dispatch({
           type: "ENQUEUE_MESSAGES",
           messages: [
             {
               id: `calibration-skip-${Date.now()}`,
               role: "oracle" as const,
-              content:
-                "I couldn't scan your tweets right now — no worries, we can calibrate later. Let's keep going.",
+              content: `I couldn't scan your tweets right now — ${reason}. No worries, we can calibrate later. Let's keep going.`,
               timestamp: Date.now(),
             },
           ],
