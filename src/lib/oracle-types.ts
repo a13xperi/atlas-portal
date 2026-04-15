@@ -21,6 +21,7 @@ export type OracleStep =
   | "TRACK_B_DIMENSIONS"
   | "REFERENCES"
   | "BLEND"
+  | "NAME_VOICE"
   | "TOPICS"
   | "HANDOFF";
 
@@ -32,6 +33,7 @@ export type InlineComponentType =
   | "style-picker"
   | "references"
   | "blend"
+  | "voice-name-input"
   | "topics"
   | "content-signals"
   | "handoff-telegram";
@@ -77,6 +79,7 @@ export interface OracleState {
   selectedRefs: string[];
   selfPercentage: number;
   selectedTopics: string[];
+  blendName: string;
 
   // Back-navigation
   stepHistory: Array<{ step: OracleStep; messageCount: number; snapshot: Omit<OracleState, 'stepHistory'> }>;
@@ -94,6 +97,7 @@ export type OracleAction =
   | { type: "SET_REFS"; ids: string[] }
   | { type: "SET_BLEND"; percentage: number }
   | { type: "SET_TOPICS"; topics: string[] }
+  | { type: "SET_BLEND_NAME"; name: string }
   | { type: "ENQUEUE_MESSAGES"; messages: ChatMessage[] }
   | { type: "DEQUEUE_MESSAGE" }
   | { type: "START_STREAM_MESSAGE" }
