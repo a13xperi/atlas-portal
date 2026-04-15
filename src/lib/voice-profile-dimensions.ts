@@ -176,3 +176,73 @@ export function styleToDimensions(style: string | null): VoiceDimensions {
       return { ...DEFAULT_VOICE_DIMENSIONS };
   }
 }
+
+export interface VoiceProfileDimensions {
+  humor?: number;
+  formality?: number;
+  brevity?: number;
+  contrarianTone?: number;
+  directness?: number;
+  warmth?: number;
+  technicalDepth?: number;
+  confidence?: number;
+  evidenceOrientation?: number;
+  solutionOrientation?: number;
+  socialPosture?: number;
+  selfPromotionalIntensity?: number;
+}
+
+const ARCHETYPES = [
+  "Analyst", "Engineer", "Educator", "Pundit", "Contrarian",
+  "Shitposter", "Researcher", "Influencer", "Builder",
+  "Signal Caller", "Commentator",
+];
+
+const MODIFIERS = [
+  "Witty", "Dry", "Formal", "Casual", "Sharp", "Bold",
+  "Warm", "Cold", "Concise", "Deep", "Blunt", "Data-Driven", "Balanced",
+];
+
+export function generateVoiceProfileName(
+  dimensions: VoiceProfileDimensions,
+  handles: string[] = [],
+): string {
+  // Archetype selection
+  const technical = dimensions.technicalDepth ?? 50;
+  const evidence = dimensions.evidenceOrientation ?? 50;
+  const contrarian = dimensions.contrarianTone ?? 50;
+  const humor = dimensions.humor ?? 50;
+  const solution = dimensions.solutionOrientation ?? 50;
+  const confidence = dimensions.confidence ?? 50;
+
+  let archetype = "Commentator";
+  if (technical > 70 && evidence > 60) archetype = "Analyst";
+  else if (technical > 70 && solution > 60) archetype = "Engineer";
+  else if (humor > 70 && contrarian > 60) archetype = "Shitposter";
+  else if (contrarian > 70) archetype = "Contrarian";
+  else if (solution > 70 && confidence > 60) archetype = "Builder";
+  else if (evidence > 70 && technical > 50) archetype = "Researcher";
+  else if (confidence > 70 && humor < 40) archetype = "Pundit";
+  else if (technical > 60) archetype = "Educator";
+  else if (confidence > 70) archetype = "Signal Caller";
+
+  // Modifier selection
+  const formality = dimensions.formality ?? 50;
+  const directness = dimensions.directness ?? 50;
+  let modifier = "Balanced";
+  if (humor > 70 && directness > 60) modifier = "Witty";
+  else if (humor < 30 && formality > 60) modifier = "Dry";
+  else if (formality > 70) modifier = "Formal";
+  else if (formality < 30) modifier = "Casual";
+  else if (directness > 70 && confidence > 60) modifier = "Sharp";
+  else if (confidence > 70) modifier = "Bold";
+  else if (evidence > 70) modifier = "Data-Driven";
+  else if (directness > 70) modifier = "Blunt";
+
+  const baseName = `${modifier} ${archetype}`;
+  if (handles.length > 0) {
+    return `${baseName} (a la @${handles[0]})`;
+  }
+  return baseName;
+}
+
