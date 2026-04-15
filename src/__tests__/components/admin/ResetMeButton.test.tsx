@@ -33,8 +33,7 @@ jest.mock("@/lib/auth", () => ({
 
 describe("ResetMeButton", () => {
   const originalNodeEnv = process.env.NODE_ENV;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const envWritable = process.env as any;
+  const envWritable = process.env as any; // eslint-disable-line
 
   beforeEach(() => {
     mockUser = { id: "admin-1", handle: "admin", role: "ADMIN" };
