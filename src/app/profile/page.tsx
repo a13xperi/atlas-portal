@@ -161,7 +161,15 @@ export default function ProfilePage() {
   }, [saveState]);
 
   const currentUser = profileUser ?? authUser;
-  const sourceAvatarUrl = currentUser?.xAvatarUrl ?? currentUser?.avatarUrl ?? null;
+  const xFallbackAvatarUrl =
+    currentUser?.twitterId && currentUser?.handle
+      ? `https://unavatar.io/twitter/${currentUser.handle}`
+      : null;
+  const sourceAvatarUrl =
+    currentUser?.xAvatarUrl ??
+    currentUser?.avatarUrl ??
+    xFallbackAvatarUrl ??
+    null;
 
   useEffect(() => {
     setAvatarFailed(false);
@@ -291,7 +299,16 @@ export default function ProfilePage() {
                 <h1 className="mt-3 font-heading text-3xl font-bold tracking-tight text-atlas-text">
                   {currentUser.displayName || currentUser.handle}
                 </h1>
-                <p className="mt-1 text-sm text-atlas-text-secondary">
+                <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-atlas-text-secondary">
+                  {isXConnected && (
+                    <span
+                      aria-label="Connected via X"
+                      title="X (formerly Twitter) handle"
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-sm bg-atlas-text/90 text-[10px] font-bold leading-none text-atlas-surface"
+                    >
+                      𝕏
+                    </span>
+                  )}
                   @{currentUser.handle}
                 </p>
               </div>
