@@ -2,7 +2,7 @@ import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useRouter } from "next/navigation";
-import AlertsPage from "@/app/alerts/page";
+import AlertsPage from "@/components/alerts/AlertsPage";
 
 const mockPush = jest.fn();
 
@@ -66,7 +66,7 @@ describe("AlertsPage", () => {
     expect(screen.getByText("Signals Feed")).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Set up your subscriptions and Atlas will surface signals worth drafting on/i
+        /configure your subscriptions to start receiving/i
       )
     ).toBeInTheDocument();
     expect(
@@ -231,5 +231,43 @@ describe("AlertsPage", () => {
     expect(screen.getByText("ETH")).toBeInTheDocument();
     expect(screen.getByText("Active")).toBeInTheDocument();
     expect(screen.getByText("Paused")).toBeInTheDocument();
+  });
+
+  describe("advanced controls gating", () => {
+    const originalEnv = process.env.NEXT_PUBLIC_ALERTS_ADVANCED;
+
+    afterEach(() => {
+      process.env.NEXT_PUBLIC_ALERTS_ADVANCED = originalEnv;
+    });
+
+    it("renders the gated placeholder when NEXT_PUBLIC_ALERTS_ADVANCED is absent", async () => {
+      delete process.env.NEXT_PUBLIC_ALERTS_ADVANCED;
+      render(<AlertsPage />);
+
+      expect(
+        await screen.findByTestId("alerts-advanced-gated")
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Auto-fire" })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Subscribe" })
+      ).not.toBeInTheDocument();
+    });
+
+    it("renders Auto-fire and Subscribe buttons when NEXT_PUBLIC_ALERTS_ADVANCED is true", async () => {
+      process.env.NEXT_PUBLIC_ALERTS_ADVANCED = "true";
+      render(<AlertsPage />);
+
+      expect(
+        await screen.findByRole("button", { name: "Auto-fire" })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Subscribe" })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("alerts-advanced-gated")
+      ).not.toBeInTheDocument();
+    });
   });
 });
