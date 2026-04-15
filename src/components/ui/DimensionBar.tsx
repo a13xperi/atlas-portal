@@ -29,7 +29,7 @@ export default function DimensionBar({
           {valueLabel ?? `${clampedPercentage}%`}
         </span>
       </div>
-      <div className="relative flex h-6 items-center">
+      <div className="relative flex h-8 items-center">
         <div className="pointer-events-none absolute inset-x-0 h-1 rounded-full bg-atlas-text-secondary/30" />
         <div
           className="pointer-events-none absolute left-0 h-1 rounded-full bg-gradient-to-r from-atlas-teal to-atlas-teal transition-all duration-300"
