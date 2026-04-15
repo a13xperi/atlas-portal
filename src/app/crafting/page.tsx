@@ -259,6 +259,7 @@ function CraftingPage() {
   const regenerationGuidanceId = useId();
   const draftFeedbackHintId = useId();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [drafts, setDrafts] = useState<TweetDraft[]>([]);
   const [draftHistory, setDraftHistory] = useState<DraftHistoryItem[]>([]);
   const [draftVersions, setDraftVersions] = useState<TweetDraft[]>([]);
