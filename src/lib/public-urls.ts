@@ -47,16 +47,18 @@ export const publicUrls = {
   appUrl: stripTrailingSlash(process.env.NEXT_PUBLIC_APP_URL ?? ""),
   supabaseUrl: stripTrailingSlash(process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""),
   xBaseUrl: stripTrailingSlash(process.env.NEXT_PUBLIC_X_BASE_URL ?? ""),
-  unavatarOrigin: stripTrailingSlash(process.env.NEXT_PUBLIC_UNAVATAR_ORIGIN ?? ""),
+  unavatarOrigin: stripTrailingSlash(
+    process.env.NEXT_PUBLIC_UNAVATAR_ORIGIN ?? "https://unavatar.io"
+  ),
   telegramBotUrl: stripTrailingSlash(process.env.NEXT_PUBLIC_TELEGRAM_BOT_URL ?? ""),
   xImageCdnOrigin: stripTrailingSlash(
-    process.env.NEXT_PUBLIC_X_IMAGE_CDN_ORIGIN ?? ""
+    process.env.NEXT_PUBLIC_X_IMAGE_CDN_ORIGIN ?? "https://pbs.twimg.com"
   ),
   googleFontsStylesOrigin: stripTrailingSlash(
-    process.env.NEXT_PUBLIC_GOOGLE_FONTS_STYLES_ORIGIN ?? ""
+    process.env.NEXT_PUBLIC_GOOGLE_FONTS_STYLES_ORIGIN ?? "https://fonts.googleapis.com"
   ),
   googleFontsAssetsOrigin: stripTrailingSlash(
-    process.env.NEXT_PUBLIC_GOOGLE_FONTS_ASSETS_ORIGIN ?? ""
+    process.env.NEXT_PUBLIC_GOOGLE_FONTS_ASSETS_ORIGIN ?? "https://fonts.gstatic.com"
   ),
   demoSourceUrl: stripTrailingSlash(process.env.NEXT_PUBLIC_DEMO_SOURCE_URL ?? ""),
 } as const;
