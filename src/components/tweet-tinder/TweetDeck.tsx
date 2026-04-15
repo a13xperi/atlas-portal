@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { AnimatePresence, useAnimation } from "framer-motion";
+import { useState, useCallback } from "react";
+import { AnimatePresence } from "framer-motion";
 import { CheckCircle } from "lucide-react";
 import TweetCard, { type TwitterLike } from "./TweetCard";
 import SwipeActions from "./SwipeActions";
@@ -26,59 +26,21 @@ export default function TweetDeck({
   const [submissionState, setSubmissionState] = useState<
     "idle" | "submitting" | "submitted"
   >("idle");
-  const controls = useAnimation();
-  const directionRef = useRef<"left" | "right">("right");
+  const [blendSent, setBlendSent] = useState(false);
+  const [exitDirection, setExitDirection] = useState<"left" | "right">("right");
 
   const handleSwipe = useCallback(
     (direction: "left" | "right") => {
       if (isAnimating || currentIndex >= tweets.length) return;
       setIsAnimating(true);
-      directionRef.current = direction;
-
-      const exitX = direction === "right" ? 400 : -400;
-      const exitRotate = direction === "right" ? 15 : -15;
-
-      controls
-        .start({
-          x: exitX,
-          opacity: 0,
-          rotate: exitRotate,
-          transition: { type: "spring", stiffness: 200, damping: 25 },
-        })
-        .then(() => {
-          if (direction === "right") {
-            setLikedTweets((prev) => [...prev, tweets[currentIndex]]);
-          } else {
-            setDislikedTweets((prev) => [...prev, tweets[currentIndex]]);
-          }
-
-          const nextIndex = currentIndex + 1;
-          setCurrentIndex(nextIndex);
-
-          if (nextIndex >= tweets.length) {
-            setPhase("complete");
-          }
-
-          controls.set({ x: 0, opacity: 1, rotate: 0 });
-          setIsAnimating(false);
-        });
-    },
-    [isAnimating, currentIndex, tweets, controls]
-  );
-
-  const handleCardSwipe = useCallback(
-    (direction: "left" | "right") => {
-      if (isAnimating || currentIndex >= tweets.length) return;
-
+      setExitDirection(direction);
       if (direction === "right") {
         setLikedTweets((prev) => [...prev, tweets[currentIndex]]);
       } else {
         setDislikedTweets((prev) => [...prev, tweets[currentIndex]]);
       }
-
       const nextIndex = currentIndex + 1;
       setCurrentIndex(nextIndex);
-
       if (nextIndex >= tweets.length) {
         setPhase("complete");
       }
@@ -169,15 +131,16 @@ export default function TweetDeck({
     <div className="space-y-6">
       {/* Card stack */}
       <div className="relative mx-auto h-80 w-full max-w-md">
-        <AnimatePresence>
+        <AnimatePresence onExitComplete={() => setIsAnimating(false)}>
           {visibleCards
             .map((tweet, i) => (
               <TweetCard
                 key={tweet.id}
                 tweet={tweet}
-                onSwipe={handleCardSwipe}
+                onSwipe={handleSwipe}
                 isTop={i === 0}
                 stackIndex={i}
+                exitDirection={exitDirection}
               />
             ))
             .reverse()}
