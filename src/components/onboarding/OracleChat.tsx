@@ -422,17 +422,36 @@ export default function OracleChat() {
 
     (async () => {
       try {
+        console.log("[OracleChat] calibrate dispatch xHandle:", state.xHandle);
         const { profile, calibration } = await api.voice.calibrate(state.xHandle, {
           signal: controller.signal,
         });
         clearTimeout(timeoutId);
         setScanError(null);
 
+        // Align schema: backend may return calibrated dimensions inside
+        // calibration.dimensions; fall back to profile for compatibility.
+        const calibratedDimensions = {
+          humor: (calibration as any).dimensions?.humor ?? profile.humor ?? 50,
+          formality: (calibration as any).dimensions?.formality ?? profile.formality ?? 50,
+          brevity: (calibration as any).dimensions?.brevity ?? profile.brevity ?? 50,
+          contrarianTone: (calibration as any).dimensions?.contrarianTone ?? profile.contrarianTone ?? 50,
+          directness: (calibration as any).dimensions?.directness ?? profile.directness ?? 50,
+          warmth: (calibration as any).dimensions?.warmth ?? profile.warmth ?? 50,
+          technicalDepth: (calibration as any).dimensions?.technicalDepth ?? profile.technicalDepth ?? 50,
+          confidence: (calibration as any).dimensions?.confidence ?? profile.confidence ?? 50,
+          evidenceOrientation: (calibration as any).dimensions?.evidenceOrientation ?? profile.evidenceOrientation ?? 50,
+          solutionOrientation: (calibration as any).dimensions?.solutionOrientation ?? profile.solutionOrientation ?? 50,
+          socialPosture: (calibration as any).dimensions?.socialPosture ?? profile.socialPosture ?? 50,
+          selfPromotionalIntensity: (calibration as any).dimensions?.selfPromotionalIntensity ?? profile.selfPromotionalIntensity ?? 50,
+        };
+
         dispatch({
           type: "SET_CALIBRATION",
           result: {
             analysis: calibration.analysis,
             tweetsAnalyzed: calibration.tweetsAnalyzed,
+            dimensions: calibratedDimensions,
           },
         });
         await refreshUser();
@@ -454,7 +473,7 @@ export default function OracleChat() {
         const isAllZero = Object.values(calibratedDimensions).every((v) => v <= 4);
         dispatch({
           type: "SET_DIMENSIONS",
-          dimensions: isAllZero ? TRACK_A_INITIAL_DIMENSIONS : calibratedDimensions,
+          dimensions: calibratedDimensions,
         });
         // Auto-advance after calibration, then add personalized commentary
         dispatch({
@@ -519,7 +538,7 @@ export default function OracleChat() {
 
   // ── Render inline components ─────────────────────────────────────
   const renderComponent = useCallback(
-    (type: string): ReactNode => {
+    (type: string, props?: Record<string, unknown>): ReactNode => {
       switch (type) {
         case "scan-progress":
           return (
@@ -551,11 +570,17 @@ export default function OracleChat() {
             </div>
           );
 
-        case "dimensions":
+        case "dimensions": {
+          // Prop-driven from calibrationResult for Track A so sliders always
+          // show the calibrated values even if state.dimensions is stale.
+          const dimensionValues =
+            (props?.values as typeof state.dimensions) ??
+            state.calibrationResult?.dimensions ??
+            state.dimensions;
           return (
             <div className="bg-atlas-surface/50 rounded-2xl p-4">
               <VoiceDimensionSections
-                values={state.dimensions}
+                values={dimensionValues}
                 interactive
                 onChange={(field, value) =>
                   dispatch({
@@ -566,6 +591,7 @@ export default function OracleChat() {
               />
             </div>
           );
+        }
 
         case "tweet-ratings": {
           const sampleTweets = [

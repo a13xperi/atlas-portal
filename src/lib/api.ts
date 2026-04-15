@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import { getDemoResponse } from "./demo-data";
+import type { VoiceDimensions } from "./voice-profile-dimensions";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -979,6 +980,7 @@ export interface CalibrationResult {
   tweetsAnalyzed: number;
   source?: { mode: string; pool: number; topN: number; recentN: number };
   twitterUser: { username: string; name: string };
+  dimensions?: VoiceDimensions;
 }
 
 export interface ReferenceVoice {

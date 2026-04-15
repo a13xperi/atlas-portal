@@ -248,10 +248,18 @@ export function oracleReducer(
       return { ...state, xConnected: action.connected };
 
     case "SET_CALIBRATION":
+      console.log("[oracleReducer] SET_CALIBRATION", action.result);
       return { ...state, calibrationResult: action.result };
 
     case "SET_DIMENSIONS":
-      return { ...state, dimensions: action.dimensions };
+      console.log("[oracleReducer] SET_DIMENSIONS", action.dimensions);
+      return {
+        ...state,
+        dimensions: action.dimensions,
+        calibrationResult: state.calibrationResult
+          ? { ...state.calibrationResult, dimensions: action.dimensions }
+          : null,
+      };
 
     case "SET_STYLE":
       return { ...state, selectedStyle: action.style };
