@@ -114,7 +114,7 @@ const searchParams = useSearchParams();
               .then((r) => {
                 if (!cancelled) setBriefingText(r.text);
               })
-              .catch(() => null)
+              .catch((err: unknown) => { if (!cancelled) setBriefingText(null); console.warn('[Oracle] briefing failed:', (err as Error)?.message); })
               .finally(() => {
                 if (!cancelled) setBriefingLoading(false);
               });
