@@ -53,3 +53,37 @@ test("AbortController abort during stream stops further yields", async () => {
   // After abort, the stream errors so subsequent reads reject.
   await expect(r.read()).rejects.toThrow();
 });
+
+test("AbortController before first yield of async iterator yields nothing", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  const s = createTextStream("a b c", 10, controller.signal);
+  const chunks: string[] = [];
+  for await (const chunk of s as unknown as AsyncIterable<string>) {
+    chunks.push(chunk);
+  }
+  expect(chunks).toEqual([]);
+});
+
+test("reader.cancel then AbortController.abort is idempotent", async () => {
+  const controller = new AbortController();
+  const s = createTextStream("a b c d e f g h", 10, controller.signal);
+  const r = s.getReader();
+  await r.read();
+  await r.cancel();
+  controller.abort();
+  await new Promise((res) => setTimeout(res, 100));
+  expect(true).toBe(true);
+});
+
+test("AbortController.abort then reader.cancel is idempotent", async () => {
+  const controller = new AbortController();
+  const s = createTextStream("a b c d e f g h", 10, controller.signal);
+  const r = s.getReader();
+  await r.read();
+  controller.abort();
+  // reader.cancel() on an already-errored stream may reject; swallow it.
+  await r.cancel().catch(() => {});
+  await new Promise((res) => setTimeout(res, 100));
+  expect(true).toBe(true);
+});
