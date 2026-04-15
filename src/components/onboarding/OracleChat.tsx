@@ -191,19 +191,20 @@ export default function OracleChat() {
       return;
     }
 
+    let cancelled = false;
     api.auth.x
       .status()
       .then((res) => {
-        if (!res.linked) {
-          return;
-        }
-
+        if (cancelled || !res.linked) return;
         if (res.xHandle) {
           dispatch({ type: "SET_HANDLE", handle: res.xHandle.replace(/^@/, "") });
         }
         dispatch({ type: "SET_X_CONNECTED", connected: true });
       })
       .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [state.currentStep, state.xConnected, state.xHandle]);
 
   // Auto-advance from CONNECT_X when connected
