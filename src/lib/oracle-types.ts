@@ -10,11 +10,27 @@ export interface ContentSignal {
   addedLabel?: string;
 }
 
+export type SwipeSignalDirection = "like" | "dislike";
+export type SwipeSignalSource = "OWN" | "REF";
+
+export interface SwipeSignal {
+  tweetId: string;
+  text: string;
+  direction: SwipeSignalDirection;
+  source: SwipeSignalSource;
+  handle?: string | null;
+  reasons: string[];
+}
+
 // ── Steps ──────────────────────────────────────────────────────────
 export type OracleStep =
   | "WELCOME"
   | "CONNECT_X"
   | "TRACK_A_SCANNING"
+  | "SWIPE_OWN"
+  | "SWIPE_OWN_REASONS"
+  | "REFERENCE_HANDLES"
+  | "SWIPE_REFS"
   | "TRACK_A_RESULT"
   | "TRACK_B_STYLE"
   | "TRACK_B_CONTENT"
@@ -29,6 +45,10 @@ export type OracleStep =
 export type InlineComponentType =
   | "x-oauth"
   | "scan-progress"
+  | "swipe-own"
+  | "swipe-reasons"
+  | "reference-handle-picker"
+  | "swipe-reference-tweets"
   | "dimensions"
   | "style-picker"
   | "references"
@@ -76,6 +96,11 @@ export interface OracleState {
   calibrationResult: { analysis: string; tweetsAnalyzed: number } | null;
   dimensions: VoiceDimensions;
   selectedStyle: string | null;
+  swipeResults: {
+    own: SwipeSignal[];
+    ref: SwipeSignal[];
+  };
+  referenceHandles: string[];
   selectedRefs: string[];
   selfPercentage: number;
   selectedTopics: string[];
@@ -94,6 +119,9 @@ export type OracleAction =
   | { type: "SET_CALIBRATION"; result: OracleState["calibrationResult"] }
   | { type: "SET_DIMENSIONS"; dimensions: VoiceDimensions }
   | { type: "SET_STYLE"; style: string }
+  | { type: "RECORD_SWIPE"; signals: SwipeSignal[] }
+  | { type: "SET_REF_HANDLES"; handles: string[] }
+  | { type: "RESET_SWIPES"; scope?: "own" | "ref" | "all" }
   | { type: "SET_REFS"; ids: string[] }
   | { type: "SET_BLEND"; percentage: number }
   | { type: "SET_TOPICS"; topics: string[] }

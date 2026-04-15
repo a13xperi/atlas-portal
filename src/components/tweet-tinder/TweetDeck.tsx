@@ -9,14 +9,23 @@ import { api } from "@/lib/api";
 
 interface TweetDeckProps {
   tweets: TwitterLike[];
+  onComplete?: (likes: TwitterLike[], dislikes: TwitterLike[]) => void | Promise<void>;
+  finishCtaLabel?: string;
 }
 
-export default function TweetDeck({ tweets }: TweetDeckProps) {
+export default function TweetDeck({
+  tweets,
+  onComplete,
+  finishCtaLabel,
+}: TweetDeckProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [likedTweets, setLikedTweets] = useState<TwitterLike[]>([]);
+  const [dislikedTweets, setDislikedTweets] = useState<TwitterLike[]>([]);
   const [phase, setPhase] = useState<"swiping" | "complete">("swiping");
   const [isAnimating, setIsAnimating] = useState(false);
-  const [blendSent, setBlendSent] = useState(false);
+  const [submissionState, setSubmissionState] = useState<
+    "idle" | "submitting" | "submitted"
+  >("idle");
   const controls = useAnimation();
   const directionRef = useRef<"left" | "right">("right");
 
@@ -39,6 +48,8 @@ export default function TweetDeck({ tweets }: TweetDeckProps) {
         .then(() => {
           if (direction === "right") {
             setLikedTweets((prev) => [...prev, tweets[currentIndex]]);
+          } else {
+            setDislikedTweets((prev) => [...prev, tweets[currentIndex]]);
           }
 
           const nextIndex = currentIndex + 1;
@@ -61,6 +72,8 @@ export default function TweetDeck({ tweets }: TweetDeckProps) {
 
       if (direction === "right") {
         setLikedTweets((prev) => [...prev, tweets[currentIndex]]);
+      } else {
+        setDislikedTweets((prev) => [...prev, tweets[currentIndex]]);
       }
 
       const nextIndex = currentIndex + 1;
@@ -73,20 +86,47 @@ export default function TweetDeck({ tweets }: TweetDeckProps) {
     [isAnimating, currentIndex, tweets]
   );
 
-  const handleFinish = useCallback(() => {
-    if (blendSent || likedTweets.length === 0) return;
-    setBlendSent(true);
-    // Fire-and-forget voice blend update
-    api.voice
-      .createBlend("Tweet Tinder Selection", [
-        { label: "Liked Tweets", percentage: 100 },
-      ])
-      .catch(() => {
-        // Silently fail — the user can retry from Voice Lab
-      });
-  }, [blendSent, likedTweets]);
+  const handleFinish = useCallback(async () => {
+    const isDefaultFlow = typeof onComplete !== "function";
+    const hasNothingToSubmit =
+      isDefaultFlow && likedTweets.length === 0;
+
+    if (submissionState !== "idle" || hasNothingToSubmit) {
+      return;
+    }
+
+    setSubmissionState("submitting");
+
+    try {
+      if (onComplete) {
+        await onComplete(likedTweets, dislikedTweets);
+      } else {
+        await api.voice.createBlend("Tweet Tinder Selection", [
+          { label: "Liked Tweets", percentage: 100 },
+        ]);
+      }
+
+      setSubmissionState("submitted");
+    } catch {
+      if (!onComplete) {
+        // Silently fail — the user can retry from Voice Lab.
+      }
+      setSubmissionState("idle");
+    }
+  }, [dislikedTweets, likedTweets, onComplete, submissionState]);
 
   if (phase === "complete") {
+    const canSubmit =
+      typeof onComplete === "function" ? true : likedTweets.length > 0;
+    const isSubmitted = submissionState === "submitted";
+    const isSubmitting = submissionState === "submitting";
+    const pendingCopy =
+      typeof onComplete === "function"
+        ? " Save them to keep going."
+        : likedTweets.length > 0
+          ? " Updating your voice profile..."
+          : "";
+
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-glass-border bg-atlas-surface px-6 py-12 text-center">
         <CheckCircle className="h-12 w-12 text-atlas-teal" />
@@ -99,20 +139,23 @@ export default function TweetDeck({ tweets }: TweetDeckProps) {
             {likedTweets.length}
           </span>{" "}
           of {tweets.length} tweets.
-          {likedTweets.length > 0 && " Updating your voice profile..."}
+          {pendingCopy}
         </p>
-        {likedTweets.length > 0 && !blendSent && (
+        {canSubmit && !isSubmitted && (
           <button
             type="button"
             onClick={handleFinish}
-            className="mt-4 rounded-lg bg-atlas-teal/15 px-6 py-2 text-sm font-semibold text-atlas-teal transition-colors hover:bg-atlas-teal/25"
+            disabled={isSubmitting}
+            className="mt-4 rounded-lg bg-atlas-teal/15 px-6 py-2 text-sm font-semibold text-atlas-teal transition-colors hover:bg-atlas-teal/25 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Apply to voice profile
+            {finishCtaLabel ?? "Apply to voice profile"}
           </button>
         )}
-        {blendSent && (
+        {isSubmitted && (
           <p className="mt-3 text-xs text-atlas-text-muted">
-            Voice profile update submitted.
+            {typeof onComplete === "function"
+              ? "Swipes saved."
+              : "Voice profile update submitted."}
           </p>
         )}
       </div>

@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import { getDemoResponse } from "./demo-data";
+import { getDemoTopTweets, getDemoTopTweetsByHandle } from "./demo-tweets";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -446,6 +447,12 @@ export const api = {
       request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/calibrate", {
         method: "POST", body: { handle }, signal: AbortSignal.timeout(45_000),
       }),
+    swipeSignals: (payload: SwipeSignalsPayload) =>
+      request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/swipe-signals", {
+        method: "POST",
+        body: payload,
+        signal: AbortSignal.timeout(45_000),
+      }),
     getGlobalReferenceAccounts: () =>
       request<{ accounts: (ReferenceVoice & { avatarUrl?: string })[] }>("/api/voice/reference-accounts"),
   },
@@ -845,6 +852,32 @@ export const api = {
       };
     },
     likes: () => request<{ likes: TwitterLike[]; cached: boolean }>("/api/twitter/likes"),
+    topTweets: async (limit = 10) => {
+      try {
+        return await request<{ tweets: TwitterLike[]; cached: boolean; fallback?: "demo" }>(
+          `/api/twitter/me/top-tweets?limit=${limit}`
+        );
+      } catch {
+        return {
+          tweets: getDemoTopTweets(limit),
+          cached: false,
+          fallback: "demo" as const,
+        };
+      }
+    },
+    topTweetsByHandle: async (handle: string, limit = 10) => {
+      try {
+        return await request<{ tweets: TwitterLike[]; cached: boolean; fallback?: "demo" }>(
+          `/api/twitter/handle/${encodeURIComponent(handle)}/top-tweets?limit=${limit}`
+        );
+      } catch {
+        return {
+          tweets: getDemoTopTweetsByHandle(handle, limit),
+          cached: false,
+          fallback: "demo" as const,
+        };
+      }
+    },
   },
 
 
@@ -929,6 +962,20 @@ export interface CalibrationResult {
   analysis: string;
   tweetsAnalyzed: number;
   twitterUser: { username: string; name: string };
+}
+
+export interface SwipeSignalRequestItem {
+  tweetId: string;
+  text: string;
+  reasons: string[];
+  handle?: string | null;
+}
+
+export interface SwipeSignalsPayload {
+  ownLikes: SwipeSignalRequestItem[];
+  ownDislikes: SwipeSignalRequestItem[];
+  refLikes: SwipeSignalRequestItem[];
+  refDislikes: SwipeSignalRequestItem[];
 }
 
 export interface ReferenceVoice {
