@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, readSSEStream } from "@/lib/api";
 import { executeAction, summarizeResult } from "@/lib/oracle-action-executor";
 import type {
   AgentChatMessage,
@@ -243,91 +243,30 @@ export function OracleAgentProvider({
           .slice(-20)
           .map((m) => ({ role: m.role, content: m.text }));
 
-        const res = await api.oracle.agent({
+        const stream = await api.oracle.chatStream({
           messages: history,
           page: pathname,
-          sessionId: sessionIdRef.current ?? undefined,
         });
 
-        const oracleActions = (res.actions ?? []) as OracleAgentAction[];
+        const oracleMsgId = msgId();
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: oracleMsgId,
+            role: "oracle",
+            text: "",
+            timestamp: Date.now(),
+          },
+        ]);
 
-        // Add Oracle's text response
-        if (res.text) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: msgId(),
-              role: "oracle",
-              text: res.text,
-              actions: oracleActions.length > 0 ? oracleActions : undefined,
-              timestamp: Date.now(),
-            },
-          ]);
-        }
-
-        // Separate confirmation-required from auto-execute
-        const needsConfirmation = oracleActions.filter(
-          (a) => a.requiresConfirmation,
-        );
-        const autoExecute = oracleActions.filter(
-          (a) => !a.requiresConfirmation,
-        );
-
-        if (needsConfirmation.length > 0) {
-          setPendingActions(needsConfirmation);
-        }
-
-        // Auto-execute non-confirmation actions
-        if (autoExecute.length > 0) {
-          const results = await executeActions(autoExecute);
-
-          // Send results back to backend for continuation/narration
-          if (results.some((r) => r.data)) {
-            const continuationHistory = [
-              ...history,
-              { role: "oracle" as const, content: res.text || "" },
-              {
-                role: "user" as const,
-                content: `[Action results: ${results.map((r) => `${r.type}=${r.success ? "ok" : "fail"}`).join(", ")}]`,
-              },
-            ];
-
-            try {
-              const continuation = await api.oracle.agent({
-                messages: continuationHistory,
-                page: pathname,
-                sessionId: sessionIdRef.current ?? undefined,
-                actionResults: results.map((r) => ({
-                  actionId: r.actionId,
-                  type: r.type,
-                  success: r.success,
-                  data: r.data,
-                  error: r.error,
-                })),
-              });
-
-              if (continuation.text) {
-                setMessages((prev) => [
-                  ...prev,
-                  {
-                    id: msgId(),
-                    role: "oracle",
-                    text: continuation.text,
-                    timestamp: Date.now(),
-                  },
-                ]);
-              }
-
-              // Handle any follow-up actions from continuation
-              const followUpActions = (continuation.actions ?? []) as OracleAgentAction[];
-              const followUpConfirm = followUpActions.filter((a) => a.requiresConfirmation);
-              if (followUpConfirm.length > 0) {
-                setPendingActions((prev) => [...prev, ...followUpConfirm]);
-              }
-            } catch {
-              // Continuation failed — non-fatal, Oracle already spoke
+        for await (const delta of readSSEStream(stream)) {
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last && last.id === oracleMsgId) {
+              return [...prev.slice(0, -1), { ...last, text: last.text + delta }];
             }
-          }
+            return prev;
+          });
         }
       } catch {
         setMessages((prev) => [
@@ -343,7 +282,7 @@ export function OracleAgentProvider({
         setIsThinking(false);
       }
     },
-    [pathname, executeActions],
+    [pathname],
   );
 
   const confirmAction = useCallback(
