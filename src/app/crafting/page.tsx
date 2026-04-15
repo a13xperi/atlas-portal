@@ -39,6 +39,7 @@ import ContentInput from "@/components/ui/ContentInput";
 import { useVoiceRecorder } from "@/lib/useVoiceRecorder";
 import GradientButton from "@/components/ui/GradientButton";
 import ReplyAngleSelector from "@/components/ui/ReplyAngleSelector";
+import { getXIntentUrl } from "@/lib/public-urls";
 import RefinementChips, {
   RefinementChipOption,
 } from "@/components/ui/RefinementChips";
@@ -2114,8 +2115,12 @@ function CraftingPage() {
                         } catch (postError: unknown) {
                           console.error("Post to X failed:", postError);
                           // Fallback to intent
-                          const text = encodeURIComponent(activeDraft.content);
-                          window.open(`https://twitter.com/intent/tweet?text=${text}`, "_blank", "width=550,height=420");
+                          const intentUrl = getXIntentUrl(activeDraft.content);
+                          if (!intentUrl) {
+                            setError("X fallback URL is not configured.");
+                            return;
+                          }
+                          window.open(intentUrl, "_blank", "width=550,height=420");
                         }
                       }}
                       className="flex items-center gap-1.5 rounded-lg border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs font-medium text-atlas-text transition-colors hover:border-atlas-teal/50"

@@ -1,4 +1,5 @@
 import type { BlendVoiceInput, ReferenceAccount, ReferenceVoice } from "@/lib/api";
+import { getTwitterAvatarUrl } from "@/lib/public-urls";
 
 export type ReferenceAccountCategory =
   | "Crypto/VC"
@@ -46,70 +47,70 @@ export const REFERENCE_ACCOUNT_FALLBACK: ReferenceAccount[] = [
     handle: "hosseeb",
     displayName: "Haseeb Qureshi",
     category: "Crypto/VC",
-    profileImageUrl: "https://unavatar.io/twitter/hosseeb",
+    profileImageUrl: getTwitterAvatarUrl("hosseeb"),
   },
   {
     id: "DefiIgnas",
     handle: "DefiIgnas",
     displayName: "Ignas",
     category: "DeFi",
-    profileImageUrl: "https://unavatar.io/twitter/DefiIgnas",
+    profileImageUrl: getTwitterAvatarUrl("DefiIgnas"),
   },
   {
     id: "goodalexander",
     handle: "goodalexander",
     displayName: "Alex Good",
     category: "Macro",
-    profileImageUrl: "https://unavatar.io/twitter/goodalexander",
+    profileImageUrl: getTwitterAvatarUrl("goodalexander"),
   },
   {
     id: "thedankoe",
     handle: "thedankoe",
     displayName: "Dan Koe",
     category: "Content",
-    profileImageUrl: "https://unavatar.io/twitter/thedankoe",
+    profileImageUrl: getTwitterAvatarUrl("thedankoe"),
   },
   {
     id: "thiccyth0t",
     handle: "thiccyth0t",
     displayName: "thiccyth0t",
     category: "Culture",
-    profileImageUrl: "https://unavatar.io/twitter/thiccyth0t",
+    profileImageUrl: getTwitterAvatarUrl("thiccyth0t"),
   },
   {
     id: "ThinkingUSD",
     handle: "ThinkingUSD",
     displayName: "ThinkingUSD",
     category: "Macro",
-    profileImageUrl: "https://unavatar.io/twitter/ThinkingUSD",
+    profileImageUrl: getTwitterAvatarUrl("ThinkingUSD"),
   },
   {
     id: "JasonYanowitz",
     handle: "JasonYanowitz",
     displayName: "Jason Yanowitz",
     category: "Crypto/VC",
-    profileImageUrl: "https://unavatar.io/twitter/JasonYanowitz",
+    profileImageUrl: getTwitterAvatarUrl("JasonYanowitz"),
   },
   {
     id: "balaboris",
     handle: "balaboris",
     displayName: "Balaji",
     category: "Tech",
-    profileImageUrl: "https://unavatar.io/twitter/balaboris",
+    profileImageUrl: getTwitterAvatarUrl("balaboris"),
   },
   {
     id: "naval",
     handle: "naval",
     displayName: "Naval",
     category: "Philosophy",
-    profileImageUrl: "https://unavatar.io/twitter/naval",
+    profileImageUrl: getTwitterAvatarUrl("naval"),
   },
   {
     id: "elonmusk",
     handle: "elonmusk",
     displayName: "Elon Musk",
     category: "Culture",
-    profileImageUrl: "https://unavatar.io/twitter/elonmusk",
+    profileImageUrl: getTwitterAvatarUrl("elonmusk"),
   },
 ];
 
@@ -162,7 +163,7 @@ export function normalizeReferenceAccount(
   const profileImageUrl =
     account.profileImageUrl ??
     account.avatarUrl ??
-    (handle ? `https://unavatar.io/twitter/${handle}` : null);
+    getTwitterAvatarUrl(handle);
 
   return {
     id: resolvedId,

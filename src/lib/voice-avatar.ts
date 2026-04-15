@@ -1,4 +1,5 @@
 import type { BlendVoice } from "@/lib/api";
+import { getTwitterAvatarUrl } from "@/lib/public-urls";
 
 export interface MinimalUser {
   handle?: string | null;
@@ -37,12 +38,12 @@ export function resolveVoiceAvatar(
 ): string {
   if (isSelfVoice(voice)) {
     if (user?.avatarUrl) return user.avatarUrl;
-    if (user?.handle) return `https://unavatar.io/twitter/${user.handle.replace(/^@/, "")}`;
+    if (user?.handle) return getTwitterAvatarUrl(user.handle) ?? "";
     return "";
   }
   if (voice.referenceVoice?.avatarUrl) return voice.referenceVoice.avatarUrl;
   if (voice.referenceVoice?.handle) {
-    return `https://unavatar.io/twitter/${voice.referenceVoice.handle.replace(/^@/, "")}`;
+    return getTwitterAvatarUrl(voice.referenceVoice.handle) ?? "";
   }
   return "";
 }
