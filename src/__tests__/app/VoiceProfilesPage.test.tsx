@@ -158,7 +158,7 @@ describe("VoiceProfilesPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Review your voice, add references, and save a blend before you start drafting."
+        "Add inspirations, create a blend, and start drafting in your unique voice."
       )
     ).toBeInTheDocument();
   });

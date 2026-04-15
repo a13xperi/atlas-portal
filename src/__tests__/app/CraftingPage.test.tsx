@@ -211,18 +211,17 @@ describe("CraftingPage", () => {
       expect.objectContaining({
         sourceContent: "Fresh BTC momentum read",
         sourceType: "MANUAL",
-        blendId: undefined,
         replyAngle: undefined,
-        angleInstruction: expect.stringContaining("Increase humor"),
+        angleInstruction: expect.stringContaining("straightforward, generic tweet"),
       })
     );
 
-    expect(await screen.findByText("Current profile")).toBeInTheDocument();
-    expect(screen.getByText("Variation")).toBeInTheDocument();
+    expect(await screen.findByText("Your voice")).toBeInTheDocument();
+    expect(screen.getByText("Generic")).toBeInTheDocument();
     expect(screen.getAllByText(currentDraft.content).length).toBeGreaterThan(0);
     expect(screen.getAllByText(variantDraft.content).length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole("button", { name: "Pick funnier variation" }));
+    fireEvent.click(screen.getByRole("button", { name: "Use generic" }));
 
     await waitFor(() =>
       expect(
