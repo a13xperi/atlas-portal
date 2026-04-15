@@ -455,7 +455,7 @@ export default function OracleChat() {
           },
         });
         await refreshUser();
-        const calibratedDimensions = {
+        const profileDimensions = {
           humor: profile.humor ?? 50,
           formality: profile.formality ?? 50,
           brevity: profile.brevity ?? 50,
@@ -470,10 +470,10 @@ export default function OracleChat() {
           selfPromotionalIntensity: profile.selfPromotionalIntensity ?? 50,
         };
         // Guard: if AI returned all-zero dims, fall back to defaults so sliders are usable
-        const isAllZero = Object.values(calibratedDimensions).every((v) => v <= 4);
+        const isAllZero = Object.values(profileDimensions).every((v) => v <= 4);
         dispatch({
           type: "SET_DIMENSIONS",
-          dimensions: isAllZero ? TRACK_A_INITIAL_DIMENSIONS : calibratedDimensions,
+          dimensions: isAllZero ? TRACK_A_INITIAL_DIMENSIONS : profileDimensions,
         });
         // Auto-advance after calibration, then add personalized commentary
         dispatch({
