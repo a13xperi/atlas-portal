@@ -176,23 +176,12 @@ describe("NavBar", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("opens the avatar dropdown with profile and logout actions", () => {
+  it("shows the profile link in the navbar", () => {
     render(<NavBar variant="app" />);
 
-    expect(
-      screen.queryByRole("menu", { name: "User menu" })
-    ).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "User menu for atlas" }));
-
-    expect(screen.getByRole("menu", { name: "User menu" })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: "Profile" })).toHaveAttribute(
-      "href",
-      "/profile"
-    );
-    expect(
-      screen.getByRole("menuitem", { name: "Log out" })
-    ).toBeInTheDocument();
+    const profileLink = screen.getByRole("link", { name: "Signed in" });
+    expect(profileLink).toBeInTheDocument();
+    expect(profileLink).toHaveAttribute("href", "/profile");
   });
 
   it("hides auth-only controls when no user is authenticated", () => {

@@ -6,7 +6,7 @@ const mockUseAuth = jest.fn(() => ({
   user: { handle: "TestUser" },
 }));
 
-const mockUseParams = jest.fn(() => ({ id: "camp-1" }));
+const mockUseParams = jest.fn(() => ({ campaignId: "camp-1" }));
 
 const mockApi = {
   campaigns: {
@@ -75,13 +75,13 @@ jest.mock("@/lib/api", () => ({
   api: mockApi,
 }));
 
-const CampaignAnalyticsPage = require("@/app/campaigns/[id]/analytics/page").default;
+const CampaignAnalyticsPage = require("@/app/campaigns/[campaignId]/analytics/page").default;
 
 describe("CampaignAnalyticsPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseAuth.mockReturnValue({ user: { handle: "TestUser" } });
-    mockUseParams.mockReturnValue({ id: "camp-1" });
+    mockUseParams.mockReturnValue({ campaignId: "camp-1" });
   });
 
   it("renders loading state initially", () => {
