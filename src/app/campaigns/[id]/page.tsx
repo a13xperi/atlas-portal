@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Calendar,
+  Copy,
   FileText,
   Loader2,
   Megaphone,
@@ -106,6 +107,12 @@ function CampaignDetailPage() {
     router.push("/campaigns");
   };
 
+  const handleClone = async () => {
+    if (!campaign) return;
+    const { campaign: cloned } = await api.campaigns.clone(campaign.id);
+    router.push(`/campaigns/${cloned.id}`);
+  };
+
   return (
     <AppShell>
       <div className="mx-auto max-w-4xl px-4 py-8 font-body sm:px-6">
@@ -187,8 +194,16 @@ function CampaignDetailPage() {
                       Edit
                     </button>
                     <button
+                      onClick={handleClone}
+                      className="rounded-lg p-2 text-atlas-text-muted transition-colors hover:text-atlas-teal"
+                      title="Clone campaign"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                    <button
                       onClick={handleDelete}
                       className="rounded-lg p-2 text-atlas-text-muted transition-colors hover:text-atlas-error"
+                      title="Delete campaign"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
