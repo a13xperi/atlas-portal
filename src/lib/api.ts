@@ -864,6 +864,37 @@ export const api = {
     likes: () => request<{ likes: TwitterLike[]; cached: boolean }>("/api/twitter/likes"),
   },
 
+  voiceTinder: {
+    getSession: () =>
+      request<{
+        ownDecided: number;
+        referenceDecided: number;
+        hasArchetype: boolean;
+        ownerDone: boolean;
+        referenceDone: boolean;
+      }>("/api/voice-tinder/session"),
+    swipe: (swipes: VoiceTinderSwipe[]) =>
+      request<{ saved: number }>("/api/voice-tinder/swipe", {
+        method: "POST",
+        body: { swipes },
+      }),
+    calibrate: () =>
+      request<{ archetype: VoiceArchetype }>("/api/voice-tinder/calibrate", {
+        method: "POST",
+      }),
+    getReferenceSession: (handle: string) =>
+      request<{
+        tweets: TweetExemplarItem[];
+        handle: string;
+        total: number;
+        decided: number;
+      }>(`/api/voice-tinder/reference/${handle}`),
+    validateReference: (handle: string) =>
+      request<{ status: string }>(
+        `/api/voice-tinder/reference/${handle}/validate`,
+        { method: "POST" },
+      ),
+  },
 
   featureFlags: {
     list: () => request<{ flags: FeatureFlagRecord[] }>("/api/admin/feature-flags"),
@@ -945,6 +976,42 @@ export const api = {
 };
 
 // Types
+export interface VoiceTinderSwipe {
+  tweetId: string;
+  text: string;
+  authorHandle: string;
+  source: "OWN" | "REFERENCE";
+  referenceHandle?: string;
+  decision: "KEEP" | "SKIP";
+  durationMs?: number;
+  metrics?: Record<string, number>;
+  postedAt?: string;
+}
+
+export interface TweetExemplarItem {
+  id: string;
+  tweetId: string;
+  text: string;
+  authorHandle: string;
+  source: "OWN" | "REFERENCE";
+  referenceHandle?: string | null;
+  decision: "PENDING" | "KEEP" | "SKIP";
+  metrics?: Record<string, number> | null;
+  postedAt?: string | null;
+}
+
+export interface VoiceArchetype {
+  id: string;
+  label: string;
+  oneLiner: string;
+  description: string;
+  themes: string[];
+  signatures: string[];
+  avoids: string[];
+  derivedFrom: number;
+  derivedAt: string;
+}
+
 export interface User {
   id: string;
   handle: string;
