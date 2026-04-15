@@ -68,6 +68,7 @@ import {
 } from "@/lib/useVoiceGate";
 import { MultiAnglePanel } from "@/components/crafting/MultiAnglePanel";
 import { SchedulePopover } from "@/components/ui/SchedulePopover";
+import VoicePillBar from "@/components/ui/VoicePillBar";
 
 const CRAFTING_MODES = [
   { id: "new_post", label: "New Post" },
@@ -1844,6 +1845,23 @@ function CraftingPage() {
                 );
               })}
             </div>
+            {selectedBlendId && (
+              <div className="w-full">
+                {(() => {
+                  const activeBlend = blends.find((b) => b.id === selectedBlendId);
+                  if (!activeBlend) return null;
+                  return (
+                    <VoicePillBar
+                      voices={activeBlend.voices.map((voice) => ({
+                        handle: voice.label,
+                        avatarUrl: voice.referenceVoice?.avatarUrl || undefined,
+                        pct: voice.percentage,
+                      }))}
+                    />
+                  );
+                })()}
+              </div>
+            )}
             <div className="flex w-full flex-col gap-2 sm:min-w-[200px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
               <span
                 id={blendIntensityLabelId}

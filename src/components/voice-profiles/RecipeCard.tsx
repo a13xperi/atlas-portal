@@ -10,6 +10,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import DimensionBar from "@/components/ui/DimensionBar";
+import VoicePillBar from "@/components/ui/VoicePillBar";
 import VoicePreviewPlayer from "./VoicePreviewPlayer";
 import type { BlendVoice, SavedBlend } from "@/lib/api";
 import type { VoiceDimensionSnapshot } from "@/lib/voice-recipes";
@@ -195,39 +196,14 @@ export default function RecipeCard({
         </div>
       </div>
 
-      <div className="mt-6">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-text-muted">
-            Composition
-          </p>
-          <p className="text-xs text-atlas-text-secondary">
-            {blend.voices.map((voice) => `${Math.round((voice.percentage / totalWeight) * 100)}% ${voice.label}`).join(" + ")}
-          </p>
-        </div>
-        <div className="mt-3 overflow-hidden rounded-full border border-glass-border bg-atlas-bg/70">
-          <div className="flex h-4">
-            {blend.voices.map((voice, index) => (
-              <div
-                key={`${blend.id}-${voice.label}`}
-                aria-hidden="true"
-                className={SEGMENT_STYLES[index % SEGMENT_STYLES.length].bar}
-                style={{ width: `${(voice.percentage / totalWeight) * 100}%` }}
-              />
-            ))}
-          </div>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {blend.voices.map((voice, index) => (
-            <span
-              key={`${blend.id}-${voice.label}-pill`}
-              className={`inline-flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-3 text-xs font-medium ${SEGMENT_STYLES[index % SEGMENT_STYLES.length].pill}`}
-            >
-              <VoiceAvatar voice={voice} user={user} size={20} />
-              {Math.round((voice.percentage / totalWeight) * 100)}% {voice.label}
-            </span>
-          ))}
-        </div>
-      </div>
+      <VoicePillBar
+        className="mt-6"
+        voices={blend.voices.map((voice) => ({
+          handle: voice.label,
+          avatarUrl: resolveVoiceAvatar(voice, user),
+          pct: voice.percentage,
+        }))}
+      />
 
       <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface/40 p-4">
         <div className="flex items-start justify-between gap-4">
