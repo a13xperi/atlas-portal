@@ -244,7 +244,7 @@ describe("RecipeCard", () => {
         },
       ],
     });
-    renderCard({ blend, userHandle: "@myhandle" });
+    renderCard({ blend, user: { handle: "@myhandle" } });
     const imgs = screen.getAllByRole("img") as HTMLImageElement[];
     const unavatarImg = imgs.find((img) => img.src.includes("unavatar.io/twitter/myhandle"));
     expect(unavatarImg).toBeDefined();
