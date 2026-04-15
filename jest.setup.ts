@@ -10,6 +10,12 @@ process.env.NEXT_PUBLIC_GOOGLE_FONTS_ASSETS_ORIGIN = "https://fonts.gstatic.com"
 process.env.NEXT_PUBLIC_DEMO_SOURCE_URL = "https://example.com/sol-ath";
 process.env.NEXT_PUBLIC_ALERTS_ADVANCED = "true";
 
+// Polyfill ReadableStream for jsdom (Node 18+)
+if (typeof ReadableStream === "undefined") {
+  const { ReadableStream } = require("node:stream/web");
+  global.ReadableStream = ReadableStream;
+}
+
 // Polyfill HTMLDialogElement methods for jsdom
 if (typeof HTMLDialogElement !== "undefined") {
   if (!HTMLDialogElement.prototype.showModal) {

@@ -270,3 +270,54 @@ export function oracleReducer(
       return state;
   }
 }
+
+export function createTextStream(
+  text: string,
+  wordDelayMs = 30,
+  signal?: AbortSignal
+): ReadableStream<string> {
+  const tokens = text.split(/(\s+)/);
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let cancelled = false;
+
+  const cleanup = () => {
+    cancelled = true;
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+
+  return new ReadableStream<string>({
+    start(controller) {
+      if (signal?.aborted) {
+        try { controller.close(); } catch {}
+        cleanup();
+        return;
+      }
+
+      signal?.addEventListener("abort", () => {
+        cleanup();
+        try { controller.error(signal.reason); } catch {}
+      }, { once: true });
+
+      let i = 0;
+      function push() {
+        timer = null;
+        if (cancelled) return;
+        if (i >= tokens.length) {
+          try { controller.close(); } catch {}
+          return;
+        }
+        if (controller.desiredSize === null) return;
+        try { controller.enqueue(tokens[i]); } catch { return; }
+        i++;
+        timer = setTimeout(push, wordDelayMs);
+      }
+      push();
+    },
+    cancel() {
+      cleanup();
+    },
+  });
+}
