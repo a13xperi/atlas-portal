@@ -116,14 +116,13 @@ export default function OracleChat() {
   // Default blend name when entering the name step
   useEffect(() => {
     if (state.currentStep === "NAME_VOICE" && !state.blendName) {
-      const defaultName = `My voice - ${new Date().toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })}`;
+      const handles = state.selectedRefs
+        .map((id) => referenceAccountLookup.get(id)?.handle)
+        .filter(Boolean) as string[];
+      const defaultName = generateVoiceProfileName(state.dimensions, handles);
       dispatch({ type: "SET_BLEND_NAME", name: defaultName });
     }
-  }, [state.currentStep, state.blendName]);
+  }, [state.currentStep, state.blendName, state.dimensions, state.selectedRefs]);
 
   // Deep-link pre-select: /onboarding/track-a|track-b stores the chosen
   // track in sessionStorage before redirecting here. Pick it up on mount
