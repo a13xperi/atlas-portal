@@ -4,6 +4,12 @@ import { colors } from "@/lib/tokens";
 import RouteProgress from "@/components/ui/RouteProgress";
 import Providers from "./providers";
 import "./globals.css";
+import dynamic from "next/dynamic";
+
+const FloatingOracle = dynamic(
+  () => import("@/components/oracle/FloatingOracle"),
+  { ssr: false },
+);
 
 export const metadata: Metadata = {
   title: {
@@ -56,7 +62,10 @@ export default function RootLayout({
       </head>
       <body className="font-body bg-atlas-bg text-atlas-text min-h-screen">
         <RouteProgress />
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <FloatingOracle />
+        </Providers>
       </body>
     </html>
   );

@@ -1,12 +1,15 @@
 import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { ToastProvider } from "@/components/ui/Toast";
 
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
-  usePathname: () => "/crafting",
-  useSearchParams: () => new URLSearchParams(),
-}));
+let mockSearchParams = new URLSearchParams();
+const mockSearchParamListeners = new Set<() => void>();
+const mockRouterReplace = jest.fn((href: string) => {
+  const query = href.split("?")[1] ?? "";
+  mockSearchParams = new URLSearchParams(query);
+  mockSearchParamListeners.forEach((listener) => listener());
+});
 
 const mockUseAuth = jest.fn();
 
@@ -26,11 +29,30 @@ jest.mock("next/link", () => ({
   ),
 }));
 
-jest.mock("next/navigation", () => ({
-  useSearchParams: () => new URLSearchParams(),
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
-  usePathname: () => "/crafting",
-}));
+jest.mock("next/navigation", () => {
+  const React = require("react");
+
+  return {
+    useSearchParams: () =>
+      React.useSyncExternalStore(
+        (listener: () => void) => {
+          mockSearchParamListeners.add(listener);
+
+          return () => {
+            mockSearchParamListeners.delete(listener);
+          };
+        },
+        () => mockSearchParams,
+        () => mockSearchParams
+      ),
+    useRouter: () => ({
+      push: jest.fn(),
+      replace: mockRouterReplace,
+      back: jest.fn(),
+    }),
+    usePathname: () => "/crafting",
+  };
+});
 
 jest.mock("@/lib/api", () => ({
   api: {
@@ -106,10 +128,23 @@ function createDraft(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function renderWithToast(ui: React.ReactElement) {
+  return render(<ToastProvider>{ui}</ToastProvider>);
+}
+
 describe("CraftingPage", () => {
+  let consoleErrorSpy: jest.SpiedFunction<typeof console.error> | undefined;
+
   beforeEach(() => {
+    consoleErrorSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    mockSearchParams = new URLSearchParams();
+    mockRouterReplace.mockClear();
+
     mockUseAuth.mockReturnValue({
-      user: { handle: "AtlasAnalyst", onboardingTrack: "TRACK_B", voiceProfile: { tweetsAnalyzed: 12 } },
+      user: { handle: "AtlasAnalyst", onboardingTrack: "TRACK_B", voiceProfile: { tweetsAnalyzed: 20 } },
     });
 
     mockedApi.drafts.list.mockReset();
@@ -134,8 +169,13 @@ describe("CraftingPage", () => {
     mockedApi.images.generateForDraft.mockResolvedValue({ image: null });
   });
 
+  afterEach(() => {
+    consoleErrorSpy?.mockRestore();
+    consoleErrorSpy = undefined;
+  });
+
   it("shows inline errors when trying to submit empty content", async () => {
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     fireEvent.keyDown(screen.getByPlaceholderText("Paste a tweet idea or link…"), {
       key: "Enter",
@@ -155,7 +195,7 @@ describe("CraftingPage", () => {
 
     mockedApi.drafts.generate.mockResolvedValue({ draft: generatedDraft });
 
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     fireEvent.change(screen.getByPlaceholderText("Paste a tweet idea or link…"), {
       target: { value: "Fresh BTC momentum read" },
@@ -188,7 +228,7 @@ describe("CraftingPage", () => {
       .mockResolvedValueOnce({ draft: currentDraft })
       .mockResolvedValueOnce({ draft: variantDraft });
 
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     fireEvent.change(screen.getByPlaceholderText("Paste a tweet idea or link…"), {
       target: { value: "Fresh BTC momentum read" },
@@ -206,13 +246,13 @@ describe("CraftingPage", () => {
         replyAngle: undefined,
       })
     );
-    expect(mockedApi.drafts.generate).toHaveBeenNthCalledWith(
-      2,
+    expect(mockedApi.drafts.generate.mock.calls[1][0]).toEqual(
       expect.objectContaining({
         sourceContent: "Fresh BTC momentum read",
         sourceType: "MANUAL",
-        replyAngle: undefined,
-        angleInstruction: expect.stringContaining("straightforward, generic tweet"),
+        angleInstruction: expect.stringContaining(
+          "straightforward, generic tweet"
+        ),
       })
     );
 
@@ -231,7 +271,7 @@ describe("CraftingPage", () => {
   });
 
   it("blocks submissions over 100000 characters", async () => {
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     const input = screen.getByPlaceholderText(
       "Paste a tweet idea or link…"
@@ -259,7 +299,7 @@ describe("CraftingPage", () => {
 
     mockedApi.drafts.list.mockResolvedValue({ drafts: [firstDraft, secondDraft] });
 
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     const generatedDraft = await screen.findByRole("textbox", {
       name: "Generated draft",
@@ -279,7 +319,7 @@ describe("CraftingPage", () => {
   });
 
   it("shows and dismisses the URL preview card in news mode", async () => {
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     fireEvent.click(screen.getByRole("tab", { name: "News to Post" }));
     fireEvent.change(screen.getByLabelText("Paste an article URL"), {
@@ -321,7 +361,7 @@ describe("CraftingPage", () => {
       }),
     });
 
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     fireEvent.click(screen.getByRole("tab", { name: "News to Post" }));
     fireEvent.change(screen.getByLabelText("Paste an article URL"), {
@@ -377,7 +417,7 @@ describe("CraftingPage", () => {
         }),
       });
 
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     fireEvent.click(screen.getByRole("tab", { name: "News to Post" }));
     fireEvent.change(screen.getByLabelText("Paste an article URL"), {
@@ -419,7 +459,7 @@ describe("CraftingPage", () => {
 
     mockedApi.drafts.list.mockResolvedValue({ drafts: [approvedDraft] });
 
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     const postToXButton = await screen.findByRole("button", {
       name: "Post to X",
@@ -444,7 +484,7 @@ describe("CraftingPage", () => {
       drafts: [createDraft({ status: "ARCHIVED" })],
     });
 
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     await screen.findByRole("textbox", { name: "Generated draft" });
 

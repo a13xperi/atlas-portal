@@ -66,7 +66,9 @@ describe("AnalyticsPage", () => {
       await screen.findByRole("heading", { name: "Your analytics will appear here" })
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Craft your first draft and the numbers will start rolling in/i)
+      screen.getByText(
+        "Craft your first draft and the numbers will start rolling in. Every draft, refinement, and piece of feedback lights up a new metric."
+      )
     ).toBeInTheDocument();
   });
 

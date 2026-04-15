@@ -223,6 +223,40 @@ export class ApiError extends Error {
   }
 }
 
+export async function* readSSEStream(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split("\n\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data: ")) continue;
+        const data = trimmed.slice(6);
+        if (data === "[DONE]") return;
+        try {
+          const parsed = JSON.parse(data);
+          if (typeof parsed.delta === "string") {
+            yield parsed.delta;
+          }
+        } catch {
+          // ignore malformed JSON
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 interface RawTwitterFollow {
   id: string;
   handle?: string | null;
@@ -255,15 +289,15 @@ export function setDemoMode(on: boolean) {
 }
 
 // Token store — fallback when HttpOnly cookies don't reach cross-origin
-// Uses sessionStorage for persistence across client-side navigations
+// Uses localStorage so the token persists across tabs and page refreshes
 const TOKEN_KEY = "atlas_access_token";
-let _accessToken: string | null = typeof window !== "undefined" ? sessionStorage.getItem(TOKEN_KEY) : null;
+let _accessToken: string | null = typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
 
 export function setAccessToken(token: string | null) {
   _accessToken = token;
   if (typeof window !== "undefined") {
-    if (token) sessionStorage.setItem(TOKEN_KEY, token);
-    else sessionStorage.removeItem(TOKEN_KEY);
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
   }
 }
 export function getAccessToken() { return _accessToken; }
@@ -478,6 +512,7 @@ export const api = {
         status?: string;
         feedback?: string;
         actualEngagement?: number;
+        scheduledAt?: string | null;
       }
     ) =>
       request<{ draft: TweetDraft }>(`/api/drafts/${id}`, { method: "PATCH", body: data }),
@@ -545,6 +580,11 @@ export const api = {
     publish: (id: string) =>
       request<{ item: QueueItem } | QueueItem>(`/api/queue/${id}/publish`, {
         method: "POST",
+      }),
+    smartRank: (drafts: TweetDraft[]) =>
+      request<{ drafts: Array<TweetDraft & { optimalTime: string; optimalTimeBadge?: string; topicScore: number; timeScore: number; historyScore: number }> }>("/api/queue/smart-rank", {
+        method: "POST",
+        body: { drafts },
       }),
   },
 
@@ -691,6 +731,37 @@ export const api = {
       request<{ text: string }>("/api/oracle/chat", { method: "POST", body }),
 
     /**
+     * Streaming variant of `chat`. Returns the raw fetch Response body
+     * (a ReadableStream) for SSE consumption. Use with `readSSEStream`.
+     */
+    chatStream: async (body: {
+      messages: Array<{ role: "user" | "oracle"; content: string }>;
+      page?: string;
+    }) => {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      };
+      if (_accessToken) {
+        headers["Authorization"] = `Bearer ${_accessToken}`;
+      }
+      const res = await fetch(`${API_URL}/api/oracle/chat/stream`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new ApiError(err.error || "Stream request failed", res.status);
+      }
+      if (!res.body) {
+        throw new ApiError("Response body is null", 500);
+      }
+      return res.body;
+    },
+
+    /**
      * OpenClaw-routed Oracle chat — returns the raw LLM reply with model
      * and token metadata. Profiles (smart/fast) are picked server-side from
      * the optional `phase` hint.
@@ -808,6 +879,8 @@ export const api = {
       request<{ campaign: Campaign }>("/api/campaigns", { method: "POST", body: { name, description } }),
     get: (id: string) =>
       request<{ campaign: Campaign }>(`/api/campaigns/${id}`),
+    analytics: (id: string) =>
+      request<CampaignAnalytics>(`/api/campaigns/${id}/analytics`),
     update: (id: string, data: { name?: string; description?: string | null; status?: Campaign["status"] }) =>
       request<{ campaign: Campaign }>(`/api/campaigns/${id}`, { method: "PATCH", body: data }),
     delete: (id: string) =>
@@ -848,6 +921,21 @@ export const api = {
       const json = await res.json();
       return json && typeof json === "object" && "data" in json ? (json as { data: typeof json }).data as any : json;
     },
+    postAll: (id: string) =>
+      request<{ posted: number }>(`/api/campaigns/${id}/post-all`, { method: "POST" }),
+  },
+
+  bugs: {
+    list: (status?: string) =>
+      request<{ bugs: BugRecord[] }>(`/api/bugs${status ? `?status=${status}` : ""}`),
+    get: (id: string) =>
+      request<{ bug: BugRecord }>(`/api/bugs/${id}`),
+    create: (data: BugCreateInput) =>
+      request<{ bug: BugRecord }>("/api/bugs", { method: "POST", body: data }),
+    update: (id: string, data: BugUpdateInput) =>
+      request<{ bug: BugRecord }>(`/api/bugs/${id}`, { method: "PATCH", body: data }),
+    delete: (id: string) =>
+      request<{ bug: BugRecord }>(`/api/bugs/${id}`, { method: "DELETE" }),
   },
 };
 
@@ -897,6 +985,7 @@ export interface ReferenceVoice {
   handle?: string;
   avatarUrl?: string;
   isActive: boolean;
+  voiceProfile?: VoiceProfile;
 }
 
 export interface ReferenceAccount {
@@ -1028,6 +1117,31 @@ export interface Campaign {
   draftCount: number;
   drafts?: TweetDraft[];
   createdAt: string;
+}
+
+export interface CampaignTweetAnalytics {
+  draftId: string;
+  content: string;
+  postedAt: string | null;
+  impressions: number;
+  likes: number;
+  retweets: number;
+  replies: number;
+}
+
+export interface CampaignAnalytics {
+  tweets: CampaignTweetAnalytics[];
+  totals: {
+    impressions: number;
+    likes: number;
+    retweets: number;
+    replies: number;
+  };
+  daily: {
+    date: string;
+    dayLabel: string;
+    engagement: number;
+  }[];
 }
 
 export interface QueuedDraft extends TweetDraft {
@@ -1212,6 +1326,50 @@ export interface LoopIteration {
   score: number;
   branch: string;
   timestamp: string;
+}
+
+export interface BugRecord {
+  id: string;
+  bug_number: number;
+  title: string;
+  description: string;
+  page_route: string | null;
+  page_url: string | null;
+  severity: string;
+  status: string;
+  source: string | null;
+  project: string | null;
+  found_by: string | null;
+  fixed_by: string | null;
+  tags: string[];
+  notes: string | null;
+  fingerprint: string | null;
+  occurrence_count: number;
+  user_agent: string | null;
+  created_at: string;
+  updated_at: string;
+  last_seen_at: string | null;
+  fixed_at: string | null;
+}
+
+export interface BugCreateInput {
+  title: string;
+  description: string;
+  severity?: "critical" | "high" | "medium" | "low" | "cosmetic";
+  page_route?: string | null;
+  page_url?: string | null;
+  source?: "manual" | "console" | "session";
+  tags?: string[];
+}
+
+export interface BugUpdateInput {
+  status?: "open" | "fixed" | "in-progress" | "closed" | "wontfix" | "archived";
+  notes?: string | null;
+  severity?: "critical" | "high" | "medium" | "low" | "cosmetic";
+  title?: string;
+  description?: string;
+  fixed_by?: string | null;
+  tags?: string[];
 }
 
 export interface LoopState {

@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import {
   canAdvance,
+  createTextStream,
   getContinueLabel,
   getOnboardingCompletionHref,
   getTrackMeta,
@@ -20,6 +21,7 @@ import {
   buildReferenceBlendVoices,
   REFERENCE_ACCOUNT_FALLBACK,
 } from "@/lib/reference-accounts";
+import { generateVoiceProfileName } from "@/lib/voice-naming";
 
 import OracleAvatar from "./OracleAvatar";
 import OracleMessage from "./OracleMessage";
@@ -49,11 +51,12 @@ const styleOptions = [
 
 export default function OracleChat() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [state, dispatch] = useReducer(oracleReducer, null, initialOracleState);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const calibratingRef = useRef(false);
   const drainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const streamCleanupRef = useRef<(() => void) | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [resumeTrackAAfterOAuth, setResumeTrackAAfterOAuth] = useState(false);
   const [tweetRatings, setTweetRatings] = useState<
@@ -159,20 +162,15 @@ export default function OracleChat() {
     }
   }, [state.currentStep, state.xConnected, state.xHandle]);
 
-  // ── Typing animation: drain pending messages with delay ──────────
-  // NOTE: We deliberately do NOT depend on `state.isTyping` here. Doing so
-  // creates a race where dispatching SET_TYPING(true) inside the effect
-  // triggers a re-run, whose cleanup clears the pending dequeue timer
-  // before it can fire — leaving the chat stuck on the typing indicator
-  // forever (the original "blank /onboarding screen" bug).
+  // ── Streaming animation: drain pending messages via ReadableStream ─
+  // Messages stream in word-by-word using a client-side ReadableStream,
+  // giving the Oracle a natural typing effect instead of appearing all at once.
   useEffect(() => {
     if (state.pendingMessages.length === 0) {
-      // Nothing to drain — make sure the typing indicator clears.
       if (state.isTyping) dispatch({ type: "SET_TYPING", isTyping: false });
       return;
     }
 
-    // A drain is already scheduled — let it complete.
     if (drainTimerRef.current) return;
 
     if (!state.isTyping) {
@@ -181,26 +179,56 @@ export default function OracleChat() {
 
     const msg = state.pendingMessages[0];
     const wordCount = msg.content.split(/\s+/).length;
-    const delay = Math.min(1200, Math.max(300, wordCount * 40));
+    const initialDelay = Math.min(800, Math.max(200, wordCount * 30));
 
     drainTimerRef.current = setTimeout(() => {
       drainTimerRef.current = null;
-      dispatch({ type: "DEQUEUE_MESSAGE" });
-    }, delay);
+      dispatch({ type: "START_STREAM_MESSAGE" });
+
+      // System messages appear instantly; Oracle messages stream word-by-word.
+      if (msg.role === "system") {
+        dispatch({ type: "APPEND_TO_LAST_MESSAGE", text: msg.content });
+        dispatch({ type: "SET_TYPING", isTyping: false });
+        return;
+      }
+
+      const stream = createTextStream(msg.content, 25);
+      const reader = stream.getReader();
+
+      async function pump() {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            dispatch({ type: "APPEND_TO_LAST_MESSAGE", text: value });
+          }
+        } catch {
+          // Ignore cancellation errors
+        } finally {
+          reader.releaseLock();
+          dispatch({ type: "SET_TYPING", isTyping: false });
+        }
+      }
+
+      pump();
+      streamCleanupRef.current = () => reader.cancel().catch(() => {});
+    }, initialDelay);
 
     return () => {
       if (drainTimerRef.current) {
         clearTimeout(drainTimerRef.current);
         drainTimerRef.current = null;
       }
+      streamCleanupRef.current?.();
+      streamCleanupRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.pendingMessages]);
 
-  // ── Auto-scroll on new messages ──────────────────────────────────
+  // ── Auto-scroll on new messages or streaming content ─────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [state.messages.length, state.isTyping]);
+  }, [state.messages.length, state.isTyping, state.messages.at(-1)?.content]);
 
   // ── API persistence side effects ─────────────────────────────────
   const persistAfterStep = useCallback(
@@ -230,13 +258,32 @@ export default function OracleChat() {
         if (step === "BLEND") {
           setBlendSaveStatus("saving");
           try {
+            const blendVoices = buildReferenceBlendVoices(
+              state.selectedRefs,
+              state.selfPercentage,
+              REFERENCE_ACCOUNT_FALLBACK
+            );
+            const blendName = generateVoiceProfileName(state.dimensions, [
+              {
+                isPersonal: true,
+                label: "My voice",
+                percentage: state.selfPercentage,
+              },
+              ...state.selectedRefs.map((refId, index) => {
+                const account = referenceAccountLookup.get(refId);
+                const blendVoice = blendVoices[index + 1];
+
+                return {
+                  category: account?.category,
+                  handle: account?.handle ?? blendVoice?.label ?? refId,
+                  label: blendVoice?.label ?? account?.displayName ?? refId,
+                  percentage: blendVoice?.percentage ?? 0,
+                };
+              }),
+            ]);
             const result = await api.voice.createBlend(
-              state.track === "a" ? "Onboarding blend" : "My starting blend",
-              buildReferenceBlendVoices(
-                state.selectedRefs,
-                state.selfPercentage,
-                REFERENCE_ACCOUNT_FALLBACK
-              )
+              blendName,
+              blendVoices
             );
             setSavedBlendId(result.blend.id);
             setBlendSaveStatus("saved");
@@ -281,7 +328,7 @@ export default function OracleChat() {
         return;
       }
       if (value === "skip-x") {
-        dispatch({ type: "SET_TRACK", track: "b" });
+        dispatch({ type: "ADVANCE", payload: "Continue without X (limited features)" });
         return;
       }
       if (value === "track-a" || value === "track-b") {
@@ -319,7 +366,15 @@ export default function OracleChat() {
     if (step === "TOPICS") {
       // Finish the wizard on the final preferences step and land users in the
       // next surface they should act in, rather than the legacy handoff screen.
-      router.replace(getOnboardingCompletionHref(state.track));
+      router.replace(
+        getOnboardingCompletionHref({
+          track: state.track,
+          voiceCalibrated:
+            state.calibrationResult !== null &&
+            (state.calibrationResult?.tweetsAnalyzed ?? 0) >= 3,
+          onboardingComplete: !!user?.onboardingTrack,
+        })
+      );
       return;
     }
 
@@ -348,6 +403,7 @@ export default function OracleChat() {
             tweetsAnalyzed: calibration.tweetsAnalyzed,
           },
         });
+        await refreshUser();
         dispatch({
           type: "SET_DIMENSIONS",
           dimensions: {
@@ -590,7 +646,15 @@ export default function OracleChat() {
                         })
                         .catch(() => {});
                     }
-                    router.push(getOnboardingCompletionHref(state.track));
+                    router.push(
+                      getOnboardingCompletionHref({
+                        track: state.track,
+                        voiceCalibrated:
+                          state.calibrationResult !== null &&
+                          (state.calibrationResult?.tweetsAnalyzed ?? 0) >= 3,
+                        onboardingComplete: true, // updateProfile just set it above
+                      })
+                    );
                   }}
                 >
                   Go to Dashboard

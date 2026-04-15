@@ -60,6 +60,7 @@ import OracleCraftingHints from "@/components/oracle/OracleCraftingHints";
 import OracleInspector from "@/components/oracle/OracleInspector";
 import CharacterCounter from "@/components/crafting/CharacterCounter";
 import type { InspectableEntity } from "@/lib/oracle-agent-types";
+import { useToast } from "@/components/ui/Toast";
 
 const CRAFTING_MODES = [
   { id: "new_post", label: "New Post" },
@@ -77,6 +78,7 @@ const TWEET_TEMPLATES = [
 
 const NEWS_SOURCE_PREFIX = "source:";
 const MIN_TWEETS_FOR_CRAFTING = MIN_TWEETS_FOR_VOICE_CALIBRATION;
+const VOICE_COMPARISON_DELTA = { humor: 20 } as const;
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
 type DraftSourceType = "REPORT" | "ARTICLE" | "MANUAL";
@@ -229,12 +231,27 @@ function getWordCount(content: string) {
   return content.split(/\s+/).filter(Boolean).length;
 }
 
+function buildVoiceVariationInstruction(
+  currentHumor: number,
+  variantHumor: number,
+  formality: number,
+  brevity: number,
+  contrarianTone: number
+) {
+  return [
+    "Keep the user's calibrated voice profile intact, but create a subtle A/B variation.",
+    `Increase humor from ${formatVoiceScore(currentHumor)} to ${formatVoiceScore(variantHumor)} while keeping the writing credible for crypto analysis.`,
+    `Hold formality near ${formatVoiceScore(formality)}, brevity near ${formatVoiceScore(brevity)}, and contrarian tone near ${formatVoiceScore(contrarianTone)}.`,
+    "The result should feel slightly more playful and witty without changing the core thesis or facts.",
+  ].join(" ");
+}
 
 function CraftingPage() {
   useTour("crafting");
 
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   const voiceModeLabelId = useId();
   const savedBlendLabelId = useId();
   const blendIntensityLabelId = useId();
@@ -245,7 +262,8 @@ function CraftingPage() {
   const [draftHistory, setDraftHistory] = useState<DraftHistoryItem[]>([]);
   const [draftVersions, setDraftVersions] = useState<TweetDraft[]>([]);
   const [activeDraft, setActiveDraft] = useState<TweetDraft | null>(null);
-  const [activeMode, setActiveMode] = useState<CraftingMode>("new_post");
+  const activeMode =
+    (searchParams.get("mode") as CraftingMode) || "new_post";
   const [replyAngle, setReplyAngle] = useState<string | null>(null);
   const [voiceMode, setVoiceMode] = useState<"my_voice" | "blended" | "specific">(
     "my_voice"
@@ -341,8 +359,19 @@ function CraftingPage() {
   const currentFormality = clampVoiceValue(user?.voiceProfile?.formality);
   const currentBrevity = clampVoiceValue(user?.voiceProfile?.brevity);
   const currentContrarianTone = clampVoiceValue(user?.voiceProfile?.contrarianTone);
+  const variantHumor = clampVoiceValue(currentHumor + VOICE_COMPARISON_DELTA.humor);
   const currentVoiceSummary = `Humor ${formatVoiceScore(currentHumor)}`;
-  const voiceGate = useVoiceGate();
+  const variantVoiceSummary = `Humor ${formatVoiceScore(
+    variantHumor
+  )} (+${VOICE_COMPARISON_DELTA.humor})`;
+  const voiceVariationInstruction = buildVoiceVariationInstruction(
+    currentHumor,
+    variantHumor,
+    currentFormality,
+    currentBrevity,
+    currentContrarianTone
+  );
+  const voiceGate = useVoiceGate({ existingDraftCount: drafts.length });
   const isVoiceCalibrationBlocked = voiceGate.isBlocked;
   const voiceTweetsAnalyzed = voiceGate.tweetsAnalyzed;
   const calibrationTweetsRemaining = voiceGate.tweetsRemaining;
@@ -435,6 +464,58 @@ function CraftingPage() {
     };
   }, []);
 
+  // Oracle-Crafting Bridge: listen for events from Oracle actions
+  useEffect(() => {
+    const handlePopulateDraft = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { content: string };
+      if (detail?.content) {
+        setDraftInputText(detail.content);
+        draftInputValueRef.current = detail.content;
+      }
+    };
+
+    const handleApplyFeedback = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { feedback: string };
+      if (detail?.feedback) {
+        setFeedback(detail.feedback);
+        // Auto-focus the feedback input so the user can hit Enter
+        setTimeout(() => {
+          document.getElementById("feedback-input")?.focus();
+        }, 100);
+      }
+    };
+
+    const handleSetDraft = (e: Event) => {
+      const detail = (e as CustomEvent).detail as {
+        draft: { id: string; content: string; [key: string]: unknown };
+      };
+      if (detail?.draft) {
+        // Refresh drafts list so the new/updated draft shows up
+        loadDrafts();
+        // Set as active draft if it has the expected shape
+        const incoming = detail.draft as unknown as TweetDraft;
+        if (incoming.id && incoming.content) {
+          setActiveDraft(incoming);
+          setDraftVersions((prev) => {
+            const exists = prev.some((d) => d.id === incoming.id);
+            return exists
+              ? prev.map((d) => (d.id === incoming.id ? incoming : d))
+              : [incoming, ...prev];
+          });
+        }
+      }
+    };
+
+    window.addEventListener("oracle:populate-draft", handlePopulateDraft);
+    window.addEventListener("oracle:apply-feedback", handleApplyFeedback);
+    window.addEventListener("oracle:set-draft", handleSetDraft);
+    return () => {
+      window.removeEventListener("oracle:populate-draft", handlePopulateDraft);
+      window.removeEventListener("oracle:apply-feedback", handleApplyFeedback);
+      window.removeEventListener("oracle:set-draft", handleSetDraft);
+    };
+  }, [loadDrafts]);
+
   useEffect(() => {
     if (!compareMode) {
       return;
@@ -462,7 +543,10 @@ function CraftingPage() {
   }, [activeDraft, compareMode, compareVersion, draftVersions]);
 
   const handleModeChange = (mode: CraftingMode) => {
-    setActiveMode(mode);
+    setReplyAngle(null); // prevent stale reply angle leaking into other modes
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("mode", mode);
+    router.replace(`/crafting?${params.toString()}`, { scroll: false });
     setIsContentDragActive(false);
     setError(null);
     setContentError("");
@@ -667,7 +751,12 @@ function CraftingPage() {
     hasSource: boolean,
     angle?: string | null
   ) => {
-    if (!user || isVoiceCalibrationBlocked) return false;
+    if (!user || isVoiceCalibrationBlocked) {
+      if (isVoiceCalibrationBlocked) {
+        toast("Complete voice calibration before generating drafts.", "warning");
+      }
+      return false;
+    }
 
     setError(null);
     const { isValid, trimmedContent } = validateDraftSubmission(content, hasSource);
@@ -705,6 +794,7 @@ function CraftingPage() {
     commitDraft,
     isVoiceCalibrationBlocked,
     selectedBlendId,
+    toast,
     user,
     validateDraftSubmission,
   ]);
@@ -1131,6 +1221,9 @@ function CraftingPage() {
 
   const handleCompareVoices = async (text = draftInputValueRef.current) => {
     if (!user || isVoiceCalibrationBlocked) {
+      if (isVoiceCalibrationBlocked) {
+        toast("Complete voice calibration before comparing voices.", "warning");
+      }
       return false;
     }
 
@@ -1266,7 +1359,15 @@ function CraftingPage() {
           context="crafting"
         />
         {activeDraft && (
-          <OracleCraftingHints draftContent={activeDraft.content} />
+          <OracleCraftingHints
+            draftContent={activeDraft.content}
+            onApplyHint={(hint) => {
+              setFeedback(hint);
+              setTimeout(() => {
+                document.getElementById("feedback-input")?.focus();
+              }, 100);
+            }}
+          />
         )}
       </div>
 
@@ -1324,16 +1425,16 @@ function CraftingPage() {
           <div>
             <p className="font-semibold text-atlas-text">
               {voiceGate.reason === "no_profile"
-                ? "Connect X and calibrate your voice to unlock tweet generation."
-                : "Voice calibration is not ready for drafting yet."}
+                ? "Connect your X account to unlock tweet generation."
+                : "Analyze at least 20 tweets to unlock drafting."}
             </p>
             <p className="mt-1 text-atlas-text-secondary">
               {voiceGate.reason === "no_profile"
-                ? "Atlas writes in your voice — we need your X handle and a few sample tweets first."
+                ? "Atlas writes in your voice — connect X so we can analyze your writing style."
                 : <>
-                    Atlas needs at least {MIN_TWEETS_FOR_CRAFTING} analyzed tweets
-                    before it unlocks generation here. You have {voiceTweetsAnalyzed},
-                    so add {calibrationTweetsRemaining} more.
+                    We need more writing samples to learn your style.
+                    Analyze {voiceGate.tweetsRemaining} more tweets in the
+                    Voice Lab to get started.
                   </>}
             </p>
           </div>
@@ -1490,6 +1591,7 @@ function CraftingPage() {
                         : "Paste a tweet idea or link…"
                     }
                     value={draftInputText}
+                    disabled={creating || isVoiceCalibrationBlocked}
                     contentDropActive={isContentDragActive}
                     onContentDragOver={handleContentDragOver}
                     onContentDragLeave={handleContentDragLeave}

@@ -28,8 +28,15 @@ import {
 import { REFERENCE_ACCOUNT_FALLBACK } from "@/lib/reference-accounts";
 import {
   buildBlendFingerprint,
+  buildReferenceAccountLookup,
   getNotableVoiceDimensions,
+  isPersonalVoiceLabel,
+  resolveReferenceAccountForVoice,
 } from "@/lib/voice-recipes";
+import {
+  generateVoiceProfileName,
+  shouldGenerateVoiceProfileName,
+} from "@/lib/voice-naming";
 
 const PERSONAL_VOICE_ID = "__personal__";
 const DEFAULT_SELF_PERCENTAGE = 40;
@@ -92,6 +99,47 @@ function buildBlendPreviewPrompt(blend: SavedBlend, dimensions: VoiceDimensions)
 
 function sanitizeBlendPreview(text: string) {
   return text.trim().replace(/^"+|"+$/g, "");
+}
+
+function applyGeneratedBlendNames(
+  blends: SavedBlend[],
+  personalDimensions: VoiceDimensions,
+  referenceAccounts: ReferenceAccount[]
+) {
+  const referenceLookup = buildReferenceAccountLookup(referenceAccounts);
+
+  return blends.map((blend) => {
+    if (!shouldGenerateVoiceProfileName(blend.name)) {
+      return blend;
+    }
+
+    const dimensions = buildBlendFingerprint(
+      blend,
+      personalDimensions,
+      referenceAccounts
+    );
+
+    return {
+      ...blend,
+      name: generateVoiceProfileName(
+        dimensions,
+        blend.voices.map((voice) => {
+          const referenceAccount = resolveReferenceAccountForVoice(
+            voice,
+            referenceLookup
+          );
+
+          return {
+            category: referenceAccount?.category,
+            handle: referenceAccount?.handle ?? voice.referenceVoice?.handle,
+            isPersonal: isPersonalVoiceLabel(voice.label),
+            label: voice.label,
+            percentage: voice.percentage,
+          };
+        })
+      ),
+    };
+  });
 }
 
 export default function VoiceProfilesPage() {
@@ -175,14 +223,22 @@ export default function VoiceProfilesPage() {
             .catch(() => ({ accounts: REFERENCE_ACCOUNT_FALLBACK })),
         ]);
 
-      setProfile(profileResponse.profile);
-      setReferences(referencesResponse.voices);
-      setBlends(blendsResponse.blends);
-      setReferenceAccounts(
+      const nextReferenceAccounts =
         accountsResponse.accounts.length > 0
           ? accountsResponse.accounts
-          : REFERENCE_ACCOUNT_FALLBACK
+          : REFERENCE_ACCOUNT_FALLBACK;
+      const nextPersonalDimensions = pickVoiceDimensions(profileResponse.profile);
+
+      setProfile(profileResponse.profile);
+      setReferences(referencesResponse.voices);
+      setBlends(
+        applyGeneratedBlendNames(
+          blendsResponse.blends,
+          nextPersonalDimensions,
+          nextReferenceAccounts
+        )
       );
+      setReferenceAccounts(nextReferenceAccounts);
     } catch (loadError: unknown) {
       setError(
         loadError instanceof Error
@@ -689,6 +745,14 @@ export default function VoiceProfilesPage() {
           <ReferenceVoicesSection
             references={references}
             onReferencesChange={setReferences}
+            onBlendCreated={async () => {
+              try {
+                const response = await api.voice.getBlends();
+                setBlends(response.blends);
+              } catch {
+                // ignore
+              }
+            }}
           />
         </div>
 

@@ -21,6 +21,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (handle: string, email: string, password: string, onboardingTrack?: OnboardingTrack) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState>({
@@ -29,6 +30,7 @@ const AuthContext = createContext<AuthState>({
   login: async () => {},
   register: async () => {},
   logout: () => {},
+  refreshUser: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -45,7 +47,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const refreshRes = await api.auth.refresh();
           if (refreshRes.token) {
             setAccessToken(refreshRes.token);
-            document.cookie = "atlas_access_token=1; path=/; max-age=86400; SameSite=Lax; Secure";
           }
           const me = await api.auth.me();
           setUser(me.user);
@@ -79,10 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api.auth.login(email, password);
     if (res.token) {
       setAccessToken(res.token);
-      document.cookie = "atlas_access_token=1; path=/; max-age=86400; SameSite=Lax; Secure";
     }
+    // Optimistic: set user immediately from login response so role-gated
+    // UI (admin dashboard, etc.) renders correctly before /me resolves
+    if (res.user) setUser(res.user as any);
     const me = await api.auth.me();
-    setUser(me.user);
+    setUser(me.user); // authoritative — includes voiceProfile
     setSessionCookie(true);
   }, []);
 
@@ -90,7 +93,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api.auth.register(handle, email, password, onboardingTrack);
     if (res.token) {
       setAccessToken(res.token);
-      document.cookie = "atlas_access_token=1; path=/; max-age=86400; SameSite=Lax; Secure";
       const me = await api.auth.me();
       setUser(me.user);
       setSessionCookie(true);
@@ -104,15 +106,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Best-effort — clear local state regardless
     }
     setAccessToken(null);
-    document.cookie = "atlas_access_token=; path=/; max-age=0";
     setUser(null);
     setSessionCookie(false);
     // Hard redirect — prevents bfcache restoring stale protected pages after logout
     window.location.replace("/");
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const me = await api.auth.me();
+    setUser(me.user);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -60,7 +60,7 @@ export default function DimensionBar({
               [&::-webkit-slider-thumb]:border-atlas-bg
               [&::-webkit-slider-thumb]:bg-atlas-teal
               [&::-webkit-slider-thumb]:shadow-md
-              [&::-webkit-slider-thumb]:transition-all
+              [&::-webkit-slider-thumb]:transition-shadow
               [&::-webkit-slider-thumb]:duration-200
               [&::-moz-range-thumb]:h-4
               [&::-moz-range-thumb]:w-4
@@ -70,14 +70,9 @@ export default function DimensionBar({
               [&::-moz-range-thumb]:border-atlas-bg
               [&::-moz-range-thumb]:bg-atlas-teal
               [&::-moz-range-thumb]:shadow-md
-              [&::-moz-range-thumb]:transition-all
+              [&::-moz-range-thumb]:transition-shadow
               [&::-moz-range-thumb]:duration-200
-              hover:[&::-webkit-slider-thumb]:mt-[-8px]
-              hover:[&::-webkit-slider-thumb]:h-5
-              hover:[&::-webkit-slider-thumb]:w-5
               hover:[&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(78,205,196,0.5)]
-              hover:[&::-moz-range-thumb]:h-5
-              hover:[&::-moz-range-thumb]:w-5
               hover:[&::-moz-range-thumb]:shadow-[0_0_8px_rgba(78,205,196,0.5)]"
           />
         ) : (

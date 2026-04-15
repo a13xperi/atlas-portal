@@ -96,5 +96,7 @@ export type OracleAction =
   | { type: "SET_TOPICS"; topics: string[] }
   | { type: "ENQUEUE_MESSAGES"; messages: ChatMessage[] }
   | { type: "DEQUEUE_MESSAGE" }
+  | { type: "START_STREAM_MESSAGE" }
+  | { type: "APPEND_TO_LAST_MESSAGE"; text: string }
   | { type: "SET_TYPING"; isTyping: boolean }
   | { type: "GO_BACK" };
