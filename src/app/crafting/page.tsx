@@ -259,8 +259,6 @@ function CraftingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const voiceModeLabelId = useId();
-  const savedBlendLabelId = useId();
   const blendIntensityLabelId = useId();
   const regenerationGuidanceId = useId();
   const draftFeedbackHintId = useId();
@@ -272,9 +270,6 @@ function CraftingPage() {
   const activeMode =
     (searchParams.get("mode") as CraftingMode) || "new_post";
   const [replyAngle, setReplyAngle] = useState<string | null>(null);
-  const [voiceMode, setVoiceMode] = useState<"my_voice" | "blended" | "specific">(
-    "my_voice"
-  );
   const [blends, setBlends] = useState<SavedBlend[]>([]);
   const [selectedBlendId, setSelectedBlendId] = useState<string | null>(null);
   const [blendValue, setBlendValue] = useState(30);
@@ -438,7 +433,6 @@ function CraftingPage() {
       (b) => b.name.toLowerCase() === voiceName.toLowerCase()
     );
     if (match) {
-      setVoiceMode("blended");
       setSelectedBlendId(match.id);
       setVoiceBanner(voiceName);
       setTimeout(() => setVoiceBanner(null), 6000);
@@ -1408,8 +1402,8 @@ function CraftingPage() {
   return (
     <AppShell>
       <div className="mb-6">
-        <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Crafting Station</h1>
-        <p className="mt-2 text-atlas-text-secondary max-w-2xl">Drop in a report, signal, or idea — Atlas drafts it in your voice. Refine it, and the model gets sharper every time.</p>
+        <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">Crafting Station</h1>
+        <p className="mt-2 text-atlas-text-secondary max-w-2xl">Draft in your voice.</p>
       </div>
 
       <div className="mb-6" data-tour="oracle-banner">
@@ -1821,59 +1815,35 @@ function CraftingPage() {
             className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6"
             data-tour="voice-selector"
           >
-            <label
-              id={voiceModeLabelId}
-              htmlFor="voice-mode"
-              className="shrink-0 text-sm text-atlas-text-secondary"
-            >
-              Voice mode
-            </label>
-            <select
-              id="voice-mode"
-              aria-labelledby={voiceModeLabelId}
-              value={voiceMode}
-              onChange={(event) => {
-                const nextMode = event.target.value as
-                  | "my_voice"
-                  | "blended"
-                  | "specific";
-                setVoiceMode(nextMode);
-
-                if (nextMode === "my_voice") {
-                  setSelectedBlendId(null);
-                }
-              }}
-              className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
-            >
-              <option value="my_voice">My voice</option>
-              <option value="blended">Blended</option>
-              <option value="specific">Specific person</option>
-            </select>
-            {voiceMode === "blended" && blends.length > 0 ? (
-              <>
-                <label
-                  id={savedBlendLabelId}
-                  htmlFor="saved-blend"
-                  className="shrink-0 text-sm text-atlas-text-secondary"
-                >
-                  Saved blend
-                </label>
-                <select
-                  id="saved-blend"
-                  aria-labelledby={savedBlendLabelId}
-                  value={selectedBlendId || ""}
-                  onChange={(event) => setSelectedBlendId(event.target.value || null)}
-                  className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
-                >
-                  <option value="">Pick a blend…</option>
-                  {blends.map((blend) => (
-                    <option key={blend.id} value={blend.id}>
-                      {blend.name}
-                    </option>
-                  ))}
-                </select>
-              </>
-            ) : null}
+            <div className="flex flex-wrap gap-2 py-2">
+              {blends.map((blend) => {
+                const voice = blend.voices?.[0]?.referenceVoice;
+                const isActive = selectedBlendId === blend.id;
+                return (
+                  <button
+                    key={blend.id}
+                    type="button"
+                    onClick={() => setSelectedBlendId(isActive ? null : blend.id)}
+                    className={`flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${
+                      isActive
+                        ? "border-atlas-teal bg-atlas-teal/10 text-atlas-teal"
+                        : "border-glass-border text-atlas-text-muted hover:border-atlas-text-muted"
+                    }`}
+                  >
+                    {voice?.avatarUrl ? (
+                      <img
+                        src={voice.avatarUrl}
+                        alt=""
+                        className="h-5 w-5 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-5 w-5 rounded-full bg-atlas-nav" />
+                    )}
+                    <span className="text-sm">{blend.name ?? "Untitled blend"}</span>
+                  </button>
+                );
+              })}
+            </div>
             <div className="flex w-full flex-col gap-2 sm:min-w-[200px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
               <span
                 id={blendIntensityLabelId}
@@ -1885,17 +1855,45 @@ function CraftingPage() {
                     }`
                   : "Blend:"}
               </span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={blendValue}
-                onChange={(event) => setBlendValue(Number(event.target.value))}
-                aria-labelledby={blendIntensityLabelId}
-                aria-valuetext={`${blendValue} percent`}
-                className="flex-1"
-                style={{ "--range-progress": `${blendValue}%` } as React.CSSProperties}
-              />
+              <div className="flex flex-1 items-center gap-2">
+                {(() => {
+                  const blend = blends.find((b) => b.id === selectedBlendId);
+                  const leftVoice = blend?.voices?.[0]?.referenceVoice;
+                  return leftVoice?.avatarUrl ? (
+                    <img
+                      src={leftVoice.avatarUrl}
+                      alt=""
+                      className="h-5 w-5 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-5 w-5 rounded-full bg-atlas-nav" />
+                  );
+                })()}
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={blendValue}
+                  onChange={(event) => setBlendValue(Number(event.target.value))}
+                  aria-labelledby={blendIntensityLabelId}
+                  aria-valuetext={`${blendValue} percent`}
+                  className="flex-1"
+                  style={{ "--range-progress": `${blendValue}%` } as React.CSSProperties}
+                />
+                {(() => {
+                  const blend = blends.find((b) => b.id === selectedBlendId);
+                  const rightVoice = blend?.voices?.[blend.voices.length - 1]?.referenceVoice;
+                  return rightVoice?.avatarUrl ? (
+                    <img
+                      src={rightVoice.avatarUrl}
+                      alt=""
+                      className="h-5 w-5 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-5 w-5 rounded-full bg-atlas-nav" />
+                  );
+                })()}
+              </div>
               <span className="w-10 text-right text-sm text-atlas-text">{blendValue}%</span>
             </div>
           </div>
