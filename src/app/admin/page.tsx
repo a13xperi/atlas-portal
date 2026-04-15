@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Palette, ClipboardCheck, Bug, Map, BarChart3, Shield, Terminal } from "lucide-react";
+import ResetMeButton from "@/components/admin/ResetMeButton";
 import AppShell from "@/components/layout/AppShell";
 import FeatureGate from "@/components/ui/FeatureGate";
 
@@ -85,6 +86,7 @@ export default function AdminPage() {
               );
             })}
           </div>
+          <ResetMeButton />
         </div>
       </AppShell>
     </FeatureGate>
