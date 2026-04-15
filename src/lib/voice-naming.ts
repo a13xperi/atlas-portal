@@ -1,4 +1,11 @@
 import type { VoiceDimensions } from "@/lib/voice-profile-dimensions";
+import type { ReferenceAccount, SavedBlend } from "@/lib/api";
+import {
+  buildBlendFingerprint,
+  buildReferenceAccountLookup,
+  isPersonalVoiceLabel,
+  resolveReferenceAccountForVoice,
+} from "@/lib/voice-recipes";
 
 type ArchetypeField =
   | "humor"
@@ -386,4 +393,45 @@ export function generateVoiceProfileName(
   const suffix = getHandleSuffix(dominantHandle);
 
   return `${modifier} ${archetype}${suffix}`;
+}
+
+export function applyGeneratedBlendNames(
+  blends: SavedBlend[],
+  personalDimensions: VoiceDimensions,
+  referenceAccounts: ReferenceAccount[]
+) {
+  const referenceLookup = buildReferenceAccountLookup(referenceAccounts);
+
+  return blends.map((blend) => {
+    if (!shouldGenerateVoiceProfileName(blend.name)) {
+      return blend;
+    }
+
+    const dimensions = buildBlendFingerprint(
+      blend,
+      personalDimensions,
+      referenceAccounts
+    );
+
+    return {
+      ...blend,
+      name: generateVoiceProfileName(
+        dimensions,
+        blend.voices.map((voice) => {
+          const referenceAccount = resolveReferenceAccountForVoice(
+            voice,
+            referenceLookup
+          );
+
+          return {
+            category: referenceAccount?.category,
+            handle: referenceAccount?.handle ?? voice.referenceVoice?.handle,
+            isPersonal: isPersonalVoiceLabel(voice.label),
+            label: voice.label,
+            percentage: voice.percentage,
+          };
+        })
+      ),
+    };
+  });
 }
