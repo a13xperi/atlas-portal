@@ -46,8 +46,8 @@ export const publicUrls = {
   apiUrl: stripTrailingSlash(process.env.NEXT_PUBLIC_API_URL ?? ""),
   appUrl: stripTrailingSlash(process.env.NEXT_PUBLIC_APP_URL ?? ""),
   supabaseUrl: stripTrailingSlash(process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""),
-  xBaseUrl: stripTrailingSlash(process.env.NEXT_PUBLIC_X_BASE_URL ?? ""),
-  unavatarOrigin: stripTrailingSlash(process.env.NEXT_PUBLIC_UNAVATAR_ORIGIN ?? ""),
+  xBaseUrl: stripTrailingSlash(process.env.NEXT_PUBLIC_X_BASE_URL ?? "https://twitter.com"),
+  unavatarOrigin: stripTrailingSlash(process.env.NEXT_PUBLIC_UNAVATAR_ORIGIN ?? "https://unavatar.io"),
   telegramBotUrl: stripTrailingSlash(process.env.NEXT_PUBLIC_TELEGRAM_BOT_URL ?? ""),
   xImageCdnOrigin: stripTrailingSlash(
     process.env.NEXT_PUBLIC_X_IMAGE_CDN_ORIGIN ?? ""
@@ -109,7 +109,5 @@ export function getXIntentUrl(text: string) {
     return null;
   }
 
-  const url = new URL("/intent/tweet", `${publicUrls.xBaseUrl}/`);
-  url.searchParams.set("text", text);
-  return url.toString();
+  return `${publicUrls.xBaseUrl}/intent/tweet?text=${encodeURIComponent(text)}`;
 }
