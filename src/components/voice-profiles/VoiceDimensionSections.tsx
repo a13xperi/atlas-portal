@@ -50,7 +50,7 @@ export default function VoiceDimensionSections({
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             {section.dimensions.map((dimension) =>
               loading ? (
                 <div key={dimension.field} className="flex items-center gap-4">
