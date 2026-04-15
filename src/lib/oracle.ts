@@ -271,12 +271,36 @@ export function oracleReducer(
   }
 }
 
-export function createTextStream(text: string, wordDelayMs = 30): ReadableStream<string> {
+export function createTextStream(
+  text: string,
+  wordDelayMs = 30,
+  signal?: AbortSignal
+): ReadableStream<string> {
   const tokens = text.split(/(\s+)/);
   let timer: ReturnType<typeof setTimeout> | null = null;
   let cancelled = false;
+
+  const cleanup = () => {
+    cancelled = true;
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+
   return new ReadableStream<string>({
     start(controller) {
+      if (signal?.aborted) {
+        try { controller.close(); } catch {}
+        cleanup();
+        return;
+      }
+
+      signal?.addEventListener("abort", () => {
+        cleanup();
+        try { controller.error(signal.reason); } catch {}
+      }, { once: true });
+
       let i = 0;
       function push() {
         timer = null;
@@ -293,8 +317,7 @@ export function createTextStream(text: string, wordDelayMs = 30): ReadableStream
       push();
     },
     cancel() {
-      cancelled = true;
-      if (timer) { clearTimeout(timer); timer = null; }
+      cleanup();
     },
   });
 }
