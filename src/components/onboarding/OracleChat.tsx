@@ -432,22 +432,25 @@ export default function OracleChat() {
           },
         });
         await refreshUser();
+        const calibratedDimensions = {
+          humor: profile.humor ?? 50,
+          formality: profile.formality ?? 50,
+          brevity: profile.brevity ?? 50,
+          contrarianTone: profile.contrarianTone ?? 50,
+          directness: profile.directness ?? 50,
+          warmth: profile.warmth ?? 50,
+          technicalDepth: profile.technicalDepth ?? 50,
+          confidence: profile.confidence ?? 50,
+          evidenceOrientation: profile.evidenceOrientation ?? 50,
+          solutionOrientation: profile.solutionOrientation ?? 50,
+          socialPosture: profile.socialPosture ?? 50,
+          selfPromotionalIntensity: profile.selfPromotionalIntensity ?? 50,
+        };
+        // Guard: if AI returned all-zero dims, fall back to defaults so sliders are usable
+        const isAllZero = Object.values(calibratedDimensions).every((v) => v <= 4);
         dispatch({
           type: "SET_DIMENSIONS",
-          dimensions: {
-            humor: profile.humor ?? 50,
-            formality: profile.formality ?? 50,
-            brevity: profile.brevity ?? 50,
-            contrarianTone: profile.contrarianTone ?? 50,
-            directness: profile.directness ?? 50,
-            warmth: profile.warmth ?? 50,
-            technicalDepth: profile.technicalDepth ?? 50,
-            confidence: profile.confidence ?? 50,
-            evidenceOrientation: profile.evidenceOrientation ?? 50,
-            solutionOrientation: profile.solutionOrientation ?? 50,
-            socialPosture: profile.socialPosture ?? 50,
-            selfPromotionalIntensity: profile.selfPromotionalIntensity ?? 50,
-          },
+          dimensions: isAllZero ? TRACK_A_INITIAL_DIMENSIONS : calibratedDimensions,
         });
         // Auto-advance after calibration, then add personalized commentary
         dispatch({
