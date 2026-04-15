@@ -1317,31 +1317,16 @@ function CraftingPage() {
 
   return (
     <AppShell>
-      <div className="mb-6">
-        <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">Crafting Station</h1>
-        <p className="mt-2 text-atlas-text-secondary max-w-2xl">Drop in a report, signal, or idea — Atlas drafts it in your voice. Refine it, and the model gets sharper every time.</p>
-      </div>
-
-      <div className="mb-6" data-tour="oracle-banner">
-        <OracleWidget
-          message={
-            activeDraft
-              ? "Draft in progress — refine it, rate it, or ship it. Every piece of feedback sharpens your model."
-              : "Drop a report, article, or idea below. I'll help you craft it into a tweet that sounds like you."
-          }
-          context="crafting"
-        />
-        {activeDraft && (
-          <OracleCraftingHints draftContent={activeDraft.content} />
-        )}
-      </div>
-
-      <div className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:gap-0 sm:rounded-3xl sm:px-6">
-        <div className="flex items-center gap-4 sm:gap-6">
+      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-start sm:gap-6">
+        <div className="min-w-0 flex-1">
+          <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Crafting Station</h1>
+          <p className="mt-2 text-atlas-text-secondary max-w-2xl">Drop in a report, signal, or idea — Atlas drafts it in your voice. Refine it, and the model gets sharper every time.</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-3 sm:items-start">
           <svg
             aria-hidden="true"
             focusable="false"
-            className="h-10 w-10 shrink-0"
+            className="h-8 w-8 shrink-0"
             viewBox="0 0 40 40"
           >
             <circle
@@ -1370,15 +1355,15 @@ function CraftingPage() {
             role="status"
             aria-live="polite"
             aria-label={usageSummary}
-            className="flex flex-wrap gap-3 text-sm text-atlas-text-secondary sm:gap-6"
+            className="flex flex-col text-sm text-atlas-text-secondary"
           >
-            <span>Feedback given: {feedbackCount} this week</span>
+            <span>Feedback: {feedbackCount} this week</span>
             <span>Drafts refined: {draftsRefined}</span>
+            <Link href="/analytics" className="mt-1 text-sm text-atlas-teal hover:underline">
+              View full analytics →
+            </Link>
           </div>
         </div>
-        <Link href="/analytics" className="shrink-0 text-sm text-atlas-teal hover:underline">
-          View full analytics →
-        </Link>
       </div>
 
       {isVoiceCalibrationBlocked ? (
@@ -2576,6 +2561,42 @@ function CraftingPage() {
           />
         </div>
       </div>
+      <details className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface" data-tour="oracle-banner">
+        <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm text-atlas-text-secondary sm:px-6">
+          <span className="flex min-w-0 items-center gap-3">
+            <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-atlas-teal/20 text-atlas-teal">◎</span>
+            <span className="truncate">
+              {activeDraft
+                ? "Draft in progress — refine it, rate it, or ship it."
+                : "Drop a report, article, or idea below. I'll help you craft it."}
+            </span>
+          </span>
+          <span className="shrink-0 text-atlas-teal">Oracle Suggestions ▸</span>
+        </summary>
+        <div className="border-t border-glass-border px-4 py-3 sm:px-6">
+          <OracleWidget
+            message={
+              activeDraft
+                ? "Draft in progress — refine it, rate it, or ship it. Every piece of feedback sharpens your model."
+                : "Drop a report, article, or idea below. I'll help you craft it into a tweet that sounds like you."
+            }
+            context="crafting"
+          />
+          {activeDraft && (
+            <OracleCraftingHints
+              {...({
+                draftContent: activeDraft.content,
+                onApplyHint: (hint: string) => {
+                  setFeedback(hint);
+                  setTimeout(() => {
+                    document.getElementById("feedback-input")?.focus();
+                  }, 100);
+                },
+              } as any)}
+            />
+          )}
+        </div>
+      </details>
     </AppShell>
   );
 }
