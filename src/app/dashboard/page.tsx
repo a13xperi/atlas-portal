@@ -11,6 +11,7 @@ import { api, TweetDraft, QueuedDraft, TrendingTopic } from "@/lib/api";
 import { PenTool, Bell, BarChart3, Mic2, BookOpen, Users, TrendingUp, X, Clock, Zap, Calendar, Sparkles, ArrowRight, Trophy, Megaphone } from "lucide-react";
 import DashboardSkeleton from "@/components/skeletons/DashboardSkeleton";
 import OracleWidget from "@/components/oracle/OracleWidget";
+import KeyboardShortcutsModal from "@/components/ui/KeyboardShortcutsModal";
 import { useRouteEnabled, useFeatureFlags } from "@/lib/feature-flags";
 
 const navCards = [
@@ -54,7 +55,9 @@ const searchParams = useSearchParams();
     useState(false);
   const [briefingText, setBriefingText] = useState<string | null>(null);
   const [briefingLoading, setBriefingLoading] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const briefingFiredRef = useRef(false);
+  const quickDraftInputRef = useRef<HTMLInputElement>(null);
   const completionBanner = searchParams.get("banner");
   const showVoiceCalibratedBanner =
     completionBanner === "voice-calibrated" && !dismissedCompletionBanner;
@@ -222,6 +225,67 @@ const searchParams = useSearchParams();
     router.push(`/crafting?draft=${encodeURIComponent(trimmedDraft)}`);
   };
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      const isTyping =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable;
+
+      // Escape: close expanded drafts, engagement form, or shortcuts modal
+      if (event.key === "Escape") {
+        if (isShortcutsOpen) {
+          event.preventDefault();
+          setIsShortcutsOpen(false);
+          return;
+        }
+        if (engagementDraftId) {
+          event.preventDefault();
+          setEngagementDraftId(null);
+          return;
+        }
+        if (expandedDraftId) {
+          event.preventDefault();
+          setExpandedDraftId(null);
+          return;
+        }
+        return;
+      }
+
+      // Don't intercept when typing in inputs (except Enter which is handled locally)
+      if (isTyping) return;
+
+      // ?: Show keyboard shortcuts
+      if (event.key === "?") {
+        event.preventDefault();
+        setIsShortcutsOpen(true);
+        return;
+      }
+
+      // Q: Focus quick draft
+      if (event.key === "q" || event.key === "Q") {
+        event.preventDefault();
+        quickDraftInputRef.current?.focus();
+        return;
+      }
+
+      // 1-8: Navigate to visible nav cards
+      const num = parseInt(event.key, 10);
+      if (!Number.isNaN(num) && num >= 1 && num <= 8) {
+        const card = visibleNavCards[num - 1];
+        if (card) {
+          event.preventDefault();
+          router.push(card.href);
+        }
+        return;
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [visibleNavCards, router, isShortcutsOpen, engagementDraftId, expandedDraftId]);
+
   if (loading) {
     return (
       <AppShell>
@@ -307,6 +371,7 @@ const searchParams = useSearchParams();
           <input
             id="quick-draft-input"
             name="quickDraft"
+            ref={quickDraftInputRef}
             type="text"
             value={quickDraft}
             onChange={(event) => setQuickDraft(event.target.value)}
@@ -483,8 +548,18 @@ const searchParams = useSearchParams();
         </div>
       )}
 
-      <div className="mt-8">
+      <div className="mt-8 flex items-center justify-between">
         <p className="text-atlas-text-secondary text-sm mb-4">Recent activity</p>
+        <button
+          type="button"
+          onClick={() => setIsShortcutsOpen(true)}
+          aria-label="Open keyboard shortcuts"
+          className="mb-4 rounded-lg border border-glass-border bg-atlas-surface px-2.5 py-1.5 text-xs font-medium text-atlas-text-secondary transition-colors hover:border-atlas-teal hover:text-atlas-teal"
+        >
+          Shortcuts <kbd className="ml-1 rounded border border-glass-border bg-atlas-bg px-1 text-[10px]">?</kbd>
+        </button>
+      </div>
+      <div>
         {drafts.length > 0 ? (
           <div className="bg-atlas-surface border border-glass-border rounded-2xl divide-y divide-glass-border">
             {drafts.map((draft) => (
@@ -572,6 +647,15 @@ const searchParams = useSearchParams();
           </div>
         )}
       </div>
+
+      <KeyboardShortcutsModal
+        isOpen={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
+        navShortcuts={visibleNavCards.slice(0, 8).map((card, i) => ({
+          key: String(i + 1),
+          label: card.label,
+        }))}
+      />
     </AppShell>
   );
 }
