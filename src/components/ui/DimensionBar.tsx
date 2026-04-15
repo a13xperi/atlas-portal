@@ -48,7 +48,7 @@ export default function DimensionBar({
             value={clampedPercentage}
             onChange={(event) => onChange?.(Number(event.target.value))}
             aria-label={label}
-            className="relative z-10 h-6 w-full appearance-none bg-transparent focus:outline-none
+            className="relative z-10 h-6 w-full touch-none appearance-none bg-transparent focus:outline-none
               [&::-webkit-slider-runnable-track]:h-1
               [&::-webkit-slider-runnable-track]:rounded-full
               [&::-webkit-slider-runnable-track]:bg-transparent
