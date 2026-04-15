@@ -836,6 +836,8 @@ export const api = {
       request<{ entries: AdminLeaderboardEntry[] }>("/api/analytics/leaderboard"),
     getPrompts: () =>
       request<{ prompts: PromptConfig[] }>("/api/admin/prompts"),
+    resetUser: () =>
+      request<{ success: boolean }>("/api/admin/reset-user", { method: "POST" }),
     testPrompt: (promptId: string, variables: Record<string, string>) =>
       request<PromptTestResult>("/api/admin/prompts/test", {
         method: "POST",

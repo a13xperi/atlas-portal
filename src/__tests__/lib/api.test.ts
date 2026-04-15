@@ -1,9 +1,10 @@
-import { api } from "@/lib/api";
+import { api, setAccessToken } from "@/lib/api";
 
 const API_URL = "http://localhost:3001";
 
 beforeEach(() => {
   jest.resetAllMocks();
+  setAccessToken(null);
 });
 
 function mockFetch(body: unknown, ok = true, status = 200) {
@@ -49,6 +50,27 @@ describe("api.auth.me", () => {
       expect.objectContaining({
         method: "GET",
         credentials: "include",
+      })
+    );
+  });
+});
+
+describe("api.admin.resetUser", () => {
+  it("sends POST with the bearer token when present", async () => {
+    setAccessToken("tok_admin");
+    mockFetch({ success: true });
+
+    await api.admin.resetUser();
+
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_URL}/api/admin/reset-user`,
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        headers: expect.objectContaining({
+          "Content-Type": "application/json",
+          Authorization: "Bearer tok_admin",
+        }),
       })
     );
   });
