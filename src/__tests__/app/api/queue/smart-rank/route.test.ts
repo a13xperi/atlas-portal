@@ -12,9 +12,15 @@ jest.mock("next/server", () => ({
 const { POST } = require("@/app/api/queue/smart-rank/route");
 
 describe("POST /api/queue/smart-rank", () => {
-  function makeReq(body: unknown) {
+  function makeReq(body: unknown, opts?: { cookies?: Record<string, string>; authHeader?: string }) {
     return {
       json: async () => body,
+      cookies: {
+        has: (name: string) => Boolean(opts?.cookies?.[name]),
+      },
+      headers: {
+        get: (name: string) => (name.toLowerCase() === "authorization" ? opts?.authHeader ?? null : null),
+      },
     } as unknown as import("next/server").NextRequest;
   }
 
@@ -23,11 +29,25 @@ describe("POST /api/queue/smart-rank", () => {
       json: async () => {
         throw new Error("Invalid JSON");
       },
+      cookies: { has: () => true },
+      headers: { get: () => null },
     } as unknown as import("next/server").NextRequest;
   }
 
-  it("returns empty array when no drafts provided", async () => {
+  it("returns 401 when no session", async () => {
     const req = makeReq({ drafts: [] });
+    const res = await POST(req);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 when text exceeds 500 chars", async () => {
+    const req = makeReq({ text: "a".repeat(501) }, { cookies: { atlas_session: "1" } });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+  });
+
+  it("returns empty array when no drafts provided", async () => {
+    const req = makeReq({ drafts: [] }, { cookies: { atlas_session: "1" } });
     const res = await POST(req);
     const json = await res.json();
     expect(json).toEqual({ drafts: [] });
@@ -49,7 +69,7 @@ describe("POST /api/queue/smart-rank", () => {
       },
     ];
 
-    const req = makeReq({ drafts });
+    const req = makeReq({ drafts }, { cookies: { atlas_session: "1" } });
     const res = await POST(req);
     const json = await res.json();
 

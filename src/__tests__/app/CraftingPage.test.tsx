@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom";
 import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { ToastProvider } from "@/components/ui/Toast";
 
 let mockSearchParams = new URLSearchParams();
 const mockSearchParamListeners = new Set<() => void>();
@@ -127,6 +128,10 @@ function createDraft(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function renderWithToast(ui: React.ReactElement) {
+  return render(<ToastProvider>{ui}</ToastProvider>);
+}
+
 describe("CraftingPage", () => {
   let consoleErrorSpy: jest.SpiedFunction<typeof console.error> | undefined;
 
@@ -170,7 +175,7 @@ describe("CraftingPage", () => {
   });
 
   it("shows inline errors when trying to submit empty content", async () => {
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     fireEvent.keyDown(screen.getByPlaceholderText("Paste a tweet idea or link…"), {
       key: "Enter",
@@ -190,7 +195,7 @@ describe("CraftingPage", () => {
 
     mockedApi.drafts.generate.mockResolvedValue({ draft: generatedDraft });
 
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     fireEvent.change(screen.getByPlaceholderText("Paste a tweet idea or link…"), {
       target: { value: "Fresh BTC momentum read" },
@@ -223,7 +228,7 @@ describe("CraftingPage", () => {
       .mockResolvedValueOnce({ draft: currentDraft })
       .mockResolvedValueOnce({ draft: variantDraft });
 
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     fireEvent.change(screen.getByPlaceholderText("Paste a tweet idea or link…"), {
       target: { value: "Fresh BTC momentum read" },
@@ -266,7 +271,7 @@ describe("CraftingPage", () => {
   });
 
   it("blocks submissions over 100000 characters", async () => {
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     const input = screen.getByPlaceholderText(
       "Paste a tweet idea or link…"
@@ -294,7 +299,7 @@ describe("CraftingPage", () => {
 
     mockedApi.drafts.list.mockResolvedValue({ drafts: [firstDraft, secondDraft] });
 
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     const generatedDraft = await screen.findByRole("textbox", {
       name: "Generated draft",
@@ -314,7 +319,7 @@ describe("CraftingPage", () => {
   });
 
   it("shows and dismisses the URL preview card in news mode", async () => {
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     fireEvent.click(screen.getByRole("tab", { name: "News to Post" }));
     fireEvent.change(screen.getByLabelText("Paste an article URL"), {
@@ -356,7 +361,7 @@ describe("CraftingPage", () => {
       }),
     });
 
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     fireEvent.click(screen.getByRole("tab", { name: "News to Post" }));
     fireEvent.change(screen.getByLabelText("Paste an article URL"), {
@@ -412,7 +417,7 @@ describe("CraftingPage", () => {
         }),
       });
 
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     fireEvent.click(screen.getByRole("tab", { name: "News to Post" }));
     fireEvent.change(screen.getByLabelText("Paste an article URL"), {
@@ -454,7 +459,7 @@ describe("CraftingPage", () => {
 
     mockedApi.drafts.list.mockResolvedValue({ drafts: [approvedDraft] });
 
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     const postToXButton = await screen.findByRole("button", {
       name: "Post to X",
@@ -479,7 +484,7 @@ describe("CraftingPage", () => {
       drafts: [createDraft({ status: "ARCHIVED" })],
     });
 
-    render(<CraftingPage />);
+    renderWithToast(<CraftingPage />);
 
     await screen.findByRole("textbox", { name: "Generated draft" });
 

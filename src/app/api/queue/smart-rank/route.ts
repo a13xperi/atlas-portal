@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
+function hasSession(request: NextRequest): boolean {
+  return request.cookies.has("atlas_session") || Boolean(request.headers.get("authorization"));
+}
+
 interface TweetDraft {
   id: string;
   content: string;
@@ -160,7 +164,16 @@ function formatBadgeTime(iso: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as { drafts?: TweetDraft[] };
+    if (!hasSession(request)) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
+
+    const body = (await request.json()) as { drafts?: TweetDraft[]; text?: string };
+
+    if (body.text && body.text.length > 500) {
+      return NextResponse.json({ error: "text too long" }, { status: 400 });
+    }
+
     const drafts = body.drafts ?? [];
 
     if (drafts.length === 0) {
