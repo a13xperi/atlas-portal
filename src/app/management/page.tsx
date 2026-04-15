@@ -29,23 +29,24 @@ function ManagementPage() {
     isLoading("push-style");
 
   useEffect(() => {
-    if (!user || (user.role !== "MANAGER" && user.role !== "ADMIN")) return;
+    if (!user) return;
 
     setLoadError(null);
+    setLoading(true);
     Promise.all([api.users.team(), api.analytics.team()])
       .then(([teamRes, analyticsRes]) => {
         setTeam(teamRes.team);
         setAnalysts(analyticsRes.analysts);
       })
-      .catch((err: Error) => {
-        setLoadError(err.message || 'Failed to load team data. Please refresh.');
+      .catch((err: any) => {
+        if (err?.statusCode === 403) {
+          setLoadError("You don't have Manager access. Contact your admin to upgrade your role.");
+        } else {
+          setLoadError(err.message || 'Failed to load team data. Please refresh.');
+        }
       })
       .finally(() => setLoading(false));
   }, [user]);
-
-  if (user && user.role !== "MANAGER" && user.role !== "ADMIN") {
-    return null;
-  }
 
   const getAnalystStats = (memberId: string) =>
     analysts.find((a) => a.id === memberId);

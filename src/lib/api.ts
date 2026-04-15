@@ -332,7 +332,10 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: res.statusText }));
-        const message = err.error || err.message || "Request failed";
+        let message = err.error || err.message || "Request failed";
+        if (res.status === 429) {
+          message = "Rate limited — please wait a moment and try again.";
+        }
         const apiErr = new ApiError(message, res.status);
 
         if (!RETRYABLE_STATUSES.has(res.status) || attempt === MAX_RETRIES - 1) {
