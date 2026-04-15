@@ -554,7 +554,7 @@ export default function OracleChat() {
                       {scanError}
                     </span>
                   </>
-) : scanLoading ? (
+                ) : scanLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
                     <span className="text-sm text-atlas-text-secondary">
