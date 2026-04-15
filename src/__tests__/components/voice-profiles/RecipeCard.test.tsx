@@ -214,12 +214,12 @@ describe("RecipeCard", () => {
     expect(unavatarImg).toBeDefined();
   });
 
-  it("renders initials fallback when voice has no URL and no user handle", () => {
+  it("renders initials fallback when self voice has no URL and no user handle", () => {
     const blend = makeBlend({
       voices: [
         {
           id: "v1",
-          label: "Zeta",
+          label: "My voice",
           percentage: 100,
           referenceVoice: null,
           referenceVoiceId: null,
@@ -227,17 +227,17 @@ describe("RecipeCard", () => {
       ],
     });
     renderCard({ blend, userHandle: undefined });
-    // Initials span with "Z" should appear (aria-hidden, but still in DOM)
-    const initialSpans = screen.getAllByText("Z");
+    // Initials span with "M" should appear (aria-hidden, but still in DOM)
+    const initialSpans = screen.getAllByText("M");
     expect(initialSpans.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("uses userHandle for unavatar when voice has no referenceVoice", () => {
+  it("uses userHandle for unavatar when self voice has no referenceVoice", () => {
     const blend = makeBlend({
       voices: [
         {
           id: "v1",
-          label: "Own Voice",
+          label: "My voice",
           percentage: 100,
           referenceVoice: null,
           referenceVoiceId: null,

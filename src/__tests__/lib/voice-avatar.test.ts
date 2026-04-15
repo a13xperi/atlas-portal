@@ -13,8 +13,11 @@ describe("isSelfVoice", () => {
   it("true when explicit isSelf flag", () => {
     expect(isSelfVoice(makeVoice({ isSelf: true, referenceVoiceId: "x" }))).toBe(true);
   });
-  it("true when no referenceVoice and no referenceVoiceId", () => {
-    expect(isSelfVoice(makeVoice({ label: "whatever" }))).toBe(true);
+  it("true when no referenceVoice and no referenceVoiceId with self-like label", () => {
+    expect(isSelfVoice(makeVoice({ label: "My voice" }))).toBe(true);
+  });
+  it("false when no referenceVoice and no referenceVoiceId but non-self label (missing-link inspiration)", () => {
+    expect(isSelfVoice(makeVoice({ label: "cobie" }))).toBe(false);
   });
   it("true when label is 'My voice' even with referenceVoice attached (defensive)", () => {
     expect(
@@ -27,6 +30,13 @@ describe("isSelfVoice", () => {
     expect(
       isSelfVoice(
         makeVoice({ label: "Hosseeb", referenceVoiceId: "r1", referenceVoice: { id: "r1", name: "Hosseeb", handle: "hosseeb", avatarUrl: "http://a" } })
+      )
+    ).toBe(false);
+  });
+  it("false for inspiration with synthetic self fallback (backend fallback bug)", () => {
+    expect(
+      isSelfVoice(
+        makeVoice({ label: "cobie", referenceVoiceId: null, referenceVoice: { id: "self:user-123", name: "cobie", handle: "alex", avatarUrl: "http://me" } })
       )
     ).toBe(false);
   });
@@ -73,6 +83,26 @@ describe("resolveVoiceAvatar", () => {
       referenceVoice: { id: "r2", name: "Naval", handle: "naval" },
     });
     expect(resolveVoiceAvatar(v, { handle: "alex" })).toBe("https://unavatar.io/twitter/naval");
+  });
+  it("inspiration with synthetic self fallback → ignores user avatar and uses label handle for unavatar", () => {
+    const v = makeVoice({
+      label: "cobie",
+      referenceVoiceId: null,
+      referenceVoice: { id: "self:user-123", name: "cobie", handle: "alex", avatarUrl: "https://cdn/me.png" },
+    });
+    expect(resolveVoiceAvatar(v, { avatarUrl: "https://cdn/me.png", handle: "alex" })).toBe(
+      "https://unavatar.io/twitter/cobie"
+    );
+  });
+  it("inspiration with synthetic self fallback and @-prefixed label → strips @ for unavatar", () => {
+    const v = makeVoice({
+      label: "@blknoiz06",
+      referenceVoiceId: null,
+      referenceVoice: { id: "self:user-123", name: "@blknoiz06", handle: "alex", avatarUrl: "https://cdn/me.png" },
+    });
+    expect(resolveVoiceAvatar(v, { avatarUrl: "https://cdn/me.png", handle: "alex" })).toBe(
+      "https://unavatar.io/twitter/blknoiz06"
+    );
   });
 });
 
