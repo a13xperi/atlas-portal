@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 export default function AuthCallbackError({
   error,
   reset,
@@ -26,12 +28,12 @@ export default function AuthCallbackError({
           >
             Try again
           </button>
-          <a
+          <Link
             href="/"
             className="px-6 py-2 text-sm font-bold text-atlas-text-secondary border border-glass-border rounded-lg hover:bg-glass transition-colors"
           >
             Back to Login
-          </a>
+          </Link>
         </div>
       </div>
     </div>

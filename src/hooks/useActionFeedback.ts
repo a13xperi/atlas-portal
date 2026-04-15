@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { useToast } from "@/components/ui/Toast";
+import { useToast } from "@/hooks/useToast";
 
 interface ActionFeedbackOptions<T> {
   successMessage?: string;
@@ -18,7 +18,7 @@ export function getActionErrorMessage(
 }
 
 export function useActionFeedback() {
-  const { toast } = useToast();
+  const { push } = useToast();
   const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>(
     {}
   );
@@ -62,19 +62,19 @@ export function useActionFeedback() {
           options.successMessage ??
           "Action completed";
 
-        toast(message, "success");
+        push({ title: message, kind: "success" });
         options.onResult?.(message, "success");
         return result;
       } catch (error) {
         const errMsg = getActionErrorMessage(error, options.errorMessage ?? "Action failed");
-        toast(errMsg, "error");
+        push({ title: errMsg, kind: "error" });
         options.onResult?.(errMsg, "error");
         return undefined;
       } finally {
         setActionLoading(key, false);
       }
     },
-    [setActionLoading, toast]
+    [push, setActionLoading]
   );
 
   const isLoading = useCallback(
