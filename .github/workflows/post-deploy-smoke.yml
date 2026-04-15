@@ -1,0 +1,13 @@
+name: Post-Deploy Smoke
+
+on:
+  deployment_status:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    if: github.event.deployment_status.state == 'success' && github.event.deployment_status.environment == 'Production'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run post-deploy smoke tests
+        run: bash scripts/smoke.sh "${{ github.event.deployment_status.target_url }}"

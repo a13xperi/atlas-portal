@@ -19,6 +19,7 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm test
+      - run: npm run env:check
       - run: npm run build
 
   resolve-preview:
