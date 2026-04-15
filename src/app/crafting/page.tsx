@@ -370,8 +370,12 @@ function CraftingPage() {
     setFeedback((prev) => prev ? `${prev} ${text}` : text);
   }, []));
   const draftInputValueRef = useRef("");
+  const contentInputRef = useRef<HTMLTextAreaElement>(null);
   const handleCreateDraftRef = useRef<
     ((text?: string) => Promise<boolean | void>) | null
+  >(null);
+  const handleTryAgainRef = useRef<
+    ((nextFeedback?: string) => Promise<void>) | null
   >(null);
   const canReviseActiveDraft = activeDraft?.status === "DRAFT";
   const activeDraftWordCount = activeDraft?.content
@@ -1048,13 +1052,30 @@ function CraftingPage() {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
         void handleCreateDraftRef.current?.();
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "r") {
+        e.preventDefault();
+        if (activeDraft) {
+          void handleTryAgainRef.current?.();
+        }
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        contentInputRef.current?.focus();
+        return;
+      }
+      if (e.key === "Escape") {
+        setError(null);
+        return;
       }
     };
 
     document.addEventListener("keydown", handler);
 
     return () => document.removeEventListener("keydown", handler);
-  }, []);
+  }, [activeDraft]);
 
   const handleGenerateNews = async (articleUrl: string, fallbackText = "") => {
     if (!user || isVoiceCalibrationBlocked) {
@@ -1235,6 +1256,8 @@ function CraftingPage() {
       setCreating(false);
     }
   };
+
+  handleTryAgainRef.current = handleTryAgain;
 
   const handleRefine = async ({ label, instruction }: RefinementChipOption) => {
     if (!activeDraft) return;
@@ -1718,6 +1741,7 @@ function CraftingPage() {
                 ) : null}
                 <div className="mt-3" data-tour="content-input">
                   <ContentInput
+                    ref={contentInputRef}
                     placeholder={
                       activeMode === "reply_to_tweet"
                         ? "Paste the tweet or quote you want to reply to…"

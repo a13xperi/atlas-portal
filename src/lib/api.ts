@@ -873,6 +873,13 @@ export const api = {
         ownerDone: boolean;
         referenceDone: boolean;
       }>("/api/voice-tinder/session"),
+    getOwnSession: () =>
+      request<{
+        tweets: TweetExemplarItem[];
+        handle: string;
+        total: number;
+        decided: number;
+      }>("/api/voice-tinder/own"),
     swipe: (swipes: VoiceTinderSwipe[]) =>
       request<{ saved: number }>("/api/voice-tinder/swipe", {
         method: "POST",

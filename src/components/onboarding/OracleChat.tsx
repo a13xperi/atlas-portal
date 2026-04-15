@@ -17,7 +17,6 @@ import {
 } from "@/lib/oracle";
 import {
   styleToDimensions,
-  TRACK_A_INITIAL_DIMENSIONS,
 } from "@/lib/voice-profile-dimensions";
 import {
   getReferenceAccountLookup,
@@ -37,11 +36,12 @@ import NavBar from "@/components/ui/NavBar";
 // Inline components
 import TopicPicker from "./TopicPicker";
 import ReferenceVoiceSelector from "./ReferenceVoiceSelector";
-import ContentSignalsPreview from "./ContentSignalsPreview";
-import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import GradientButton from "@/components/ui/GradientButton";
-import ContentInput from "@/components/ui/ContentInput";
 import { CheckCircle, Loader2 } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
+import VoiceTinderCard from "@/components/voice-tinder/VoiceTinderCard";
+import ArchetypeReveal from "./ArchetypeReveal";
+import type { TweetExemplarItem, VoiceTinderSwipe, VoiceArchetype } from "@/lib/api";
 
 const referenceAccountLookup = getReferenceAccountLookup(
   REFERENCE_ACCOUNT_FALLBACK
@@ -58,21 +58,36 @@ export default function OracleChat() {
   const { user, refreshUser } = useAuth();
   const [state, dispatch] = useReducer(oracleReducer, null, initialOracleState);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const calibratingRef = useRef(false);
   const drainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const streamCleanupRef = useRef<(() => void) | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [resumeTrackAAfterOAuth, setResumeTrackAAfterOAuth] = useState(false);
-  const [tweetRatings, setTweetRatings] = useState<
-    Record<number, "up" | "down" | null>
-  >({});
   const [blendSaveStatus, setBlendSaveStatus] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
-  const [scanError, setScanError] = useState<string | null>(null);
-  const [scanLoading, setScanLoading] = useState(false);
   // Tracks the persisted blend so future PATCH operations can target it.
   const [, setSavedBlendId] = useState<string | null>(null);
+
+  // Voice Tinder state
+  const [ownTweets, setOwnTweets] = useState<TweetExemplarItem[]>([]);
+  const [ownSwipes, setOwnSwipes] = useState<VoiceTinderSwipe[]>([]);
+  const [ownTinderLoading, setOwnTinderLoading] = useState(false);
+  const [ownTinderError, setOwnTinderError] = useState<string | null>(null);
+  const [ownTinderIndex, setOwnTinderIndex] = useState(0);
+  const [ownTinderAnimating, setOwnTinderAnimating] = useState(false);
+  const [ownTinderExit, setOwnTinderExit] = useState<"KEEP" | "SKIP">("KEEP");
+  const [calibrating, setCalibrating] = useState(false);
+  const [localArchetype, setLocalArchetype] = useState<VoiceArchetype | null>(null);
+
+  const [referenceHandle, setReferenceHandle] = useState("");
+  const [referenceTweets, setReferenceTweets] = useState<TweetExemplarItem[]>([]);
+  const [referenceSwipes, setReferenceSwipes] = useState<VoiceTinderSwipe[]>([]);
+  const [referenceLoading, setReferenceLoading] = useState(false);
+  const [referenceError, setReferenceError] = useState<string | null>(null);
+  const [referenceValidating, setReferenceValidating] = useState(false);
+  const [referenceTinderIndex, setReferenceTinderIndex] = useState(0);
+  const [referenceTinderAnimating, setReferenceTinderAnimating] = useState(false);
+  const [referenceTinderExit, setReferenceTinderExit] = useState<"KEEP" | "SKIP">("KEEP");
 
   // Pre-fill handle from linked X profile
   useEffect(() => {
@@ -244,16 +259,24 @@ export default function OracleChat() {
   }, [state.pendingMessages]);
 
   // ── Auto-scroll on new messages or streaming content ─────────────
+  const lastMessageContent = state.messages.at(-1)?.content;
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [state.messages.length, state.isTyping, state.messages.at(-1)?.content]);
+  }, [state.messages.length, state.isTyping, lastMessageContent]);
 
   // ── API persistence side effects ─────────────────────────────────
   const persistAfterStep = useCallback(
     async (step: string) => {
       try {
-        if (step === "TRACK_A_RESULT" || step === "TRACK_B_DIMENSIONS") {
+        if (step === "TRACK_B_STYLE") {
           await api.voice.updateProfile(state.dimensions);
+        }
+        if (step === "REFERENCE_TINDER" && referenceSwipes.length > 0) {
+          try {
+            await api.voiceTinder.swipe(referenceSwipes);
+          } catch {
+            /* optional */
+          }
         }
         if (step === "REFERENCES") {
           await persistReferenceSelections({
@@ -335,7 +358,7 @@ export default function OracleChat() {
         console.error("Persist failed:", e);
       }
     },
-    [state, user?.id]
+    [state, user?.id, referenceSwipes]
   );
 
   // ── Handle action from Oracle message buttons ────────────────────
@@ -376,21 +399,19 @@ export default function OracleChat() {
     // Build user echo message
     let echo: string | undefined;
     if (step === "TRACK_B_STYLE") echo = state.selectedStyle || undefined;
+    if (step === "OWN_TWEET_TINDER") echo = localArchetype ? `Archetype: ${localArchetype.label}` : "Skipped archetype";
+    if (step === "REFERENCE_TINDER") echo = referenceSwipes.length > 0 ? `Swiped ${referenceSwipes.length} reference tweets` : "Skipped reference tinder";
     if (step === "REFERENCES")
       echo = `Selected ${state.selectedRefs.length} references`;
     if (step === "BLEND") echo = `${state.selfPercentage}% my voice`;
     if (step === "NAME_VOICE") echo = state.blendName;
-    if (step === "TOPICS") echo = state.selectedTopics.join(", ");
 
-    if (step === "TOPICS") {
-      // Finish the wizard on the final preferences step and land users in the
-      // next surface they should act in, rather than the legacy handoff screen.
+    if (step === "NAME_VOICE") {
+      // Finish the wizard and route to the next surface.
       router.replace(
         getOnboardingCompletionHref({
           track: state.track,
-          voiceCalibrated:
-            state.calibrationResult !== null &&
-            (state.calibrationResult?.tweetsAnalyzed ?? 0) >= 3,
+          voiceCalibrated: state.archetype !== null || state.calibrationResult !== null,
           onboardingComplete: !!user?.onboardingTrack,
         })
       );
@@ -398,251 +419,278 @@ export default function OracleChat() {
     }
 
     dispatch({ type: "ADVANCE", payload: echo });
-  }, [state, persistAfterStep, router]);
+  }, [state, persistAfterStep, router, localArchetype, referenceSwipes.length, user?.onboardingTrack]);
 
-  // ── Reset calibration lock on scanning re-entry ──────────────────
+  // ── Fetch own tweets when entering OWN_TWEET_TINDER ──────────────
   useEffect(() => {
-    if (state.currentStep === "TRACK_A_SCANNING" && state.calibrationResult === null) {
-      calibratingRef.current = false;
-    }
-  }, [state.currentStep, state.calibrationResult]);
+    if (state.currentStep !== "OWN_TWEET_TINDER" || ownTweets.length > 0) return;
 
-  // ── Auto-trigger calibration for Track A scanning step ───────────
+    setOwnTinderLoading(true);
+    setOwnTinderError(null);
+    api.voiceTinder
+      .getOwnSession()
+      .then((res) => {
+        setOwnTweets(res.tweets.filter((t) => t.decision === "PENDING"));
+        setOwnTinderIndex(0);
+      })
+      .catch((err: Error) => {
+        setOwnTinderError(err.message || "Failed to load your tweets");
+      })
+      .finally(() => setOwnTinderLoading(false));
+  }, [state.currentStep, ownTweets.length]);
+
+  // ── Auto-calibrate after 15 own swipes or deck exhaustion ─────────
   useEffect(() => {
     if (
-      state.currentStep !== "TRACK_A_SCANNING" ||
-      calibratingRef.current ||
-      state.calibrationResult
-    )
+      state.currentStep !== "OWN_TWEET_TINDER" ||
+      calibrating ||
+      localArchetype ||
+      ownSwipes.length < Math.min(15, Math.max(1, ownTweets.length))
+    ) {
       return;
+    }
 
-    calibratingRef.current = true;
-    setScanError(null);
-    setScanLoading(true);
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30_000);
-
-    (async () => {
-      try {
-        console.log("[OracleChat] calibrate dispatch xHandle:", state.xHandle);
-        const { profile, calibration } = await api.voice.calibrate(state.xHandle, {
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
-        setScanError(null);
-
-        // Align schema: backend may return calibrated dimensions inside
-        // calibration.dimensions; fall back to profile for compatibility.
-        const calibratedDimensions = {
-          humor: (calibration as any).dimensions?.humor ?? profile.humor ?? 50,
-          formality: (calibration as any).dimensions?.formality ?? profile.formality ?? 50,
-          brevity: (calibration as any).dimensions?.brevity ?? profile.brevity ?? 50,
-          contrarianTone: (calibration as any).dimensions?.contrarianTone ?? profile.contrarianTone ?? 50,
-          directness: (calibration as any).dimensions?.directness ?? profile.directness ?? 50,
-          warmth: (calibration as any).dimensions?.warmth ?? profile.warmth ?? 50,
-          technicalDepth: (calibration as any).dimensions?.technicalDepth ?? profile.technicalDepth ?? 50,
-          confidence: (calibration as any).dimensions?.confidence ?? profile.confidence ?? 50,
-          evidenceOrientation: (calibration as any).dimensions?.evidenceOrientation ?? profile.evidenceOrientation ?? 50,
-          solutionOrientation: (calibration as any).dimensions?.solutionOrientation ?? profile.solutionOrientation ?? 50,
-          socialPosture: (calibration as any).dimensions?.socialPosture ?? profile.socialPosture ?? 50,
-          selfPromotionalIntensity: (calibration as any).dimensions?.selfPromotionalIntensity ?? profile.selfPromotionalIntensity ?? 50,
-        };
-
+    setCalibrating(true);
+    api.voiceTinder
+      .calibrate()
+      .then((res) => {
+        setLocalArchetype(res.archetype);
+        dispatch({ type: "SET_ARCHETYPE", archetype: res.archetype });
         dispatch({
-          type: "SET_CALIBRATION",
-          result: {
-            analysis: calibration.analysis,
-            tweetsAnalyzed: calibration.tweetsAnalyzed,
-            dimensions: calibratedDimensions,
-          },
+          type: "ENQUEUE_MESSAGES",
+          messages: [
+            {
+              id: `archetype-reveal-${Date.now()}`,
+              role: "oracle",
+              content: `Your archetype is ready — say hello to the **${res.archetype.label}**.`,
+              component: { type: "archetype-reveal" },
+              timestamp: Date.now(),
+            },
+          ],
         });
-        await refreshUser();
-        const profileDimensions = {
-          humor: profile.humor ?? 50,
-          formality: profile.formality ?? 50,
-          brevity: profile.brevity ?? 50,
-          contrarianTone: profile.contrarianTone ?? 50,
-          directness: profile.directness ?? 50,
-          warmth: profile.warmth ?? 50,
-          technicalDepth: profile.technicalDepth ?? 50,
-          confidence: profile.confidence ?? 50,
-          evidenceOrientation: profile.evidenceOrientation ?? 50,
-          solutionOrientation: profile.solutionOrientation ?? 50,
-          socialPosture: profile.socialPosture ?? 50,
-          selfPromotionalIntensity: profile.selfPromotionalIntensity ?? 50,
-        };
-        // Guard: if AI returned all-zero dims, fall back to defaults so sliders are usable
-        const isAllZero = Object.values(profileDimensions).every((v) => v <= 4);
-        dispatch({
-          type: "SET_DIMENSIONS",
-          dimensions: isAllZero ? TRACK_A_INITIAL_DIMENSIONS : profileDimensions,
-        });
-        // Auto-advance after calibration, then add personalized commentary
-        dispatch({
-          type: "ADVANCE",
-          payload: `Calibrated from ${calibration.tweetsAnalyzed} tweets`,
-        });
-        if (calibration.analysis) {
-          dispatch({
-            type: "ENQUEUE_MESSAGES",
-            messages: [
-              {
-                id: `calibration-commentary-${Date.now()}`,
-                role: "oracle",
-                content: `I analyzed your top-engaged and most-recent tweets (${calibration.tweetsAnalyzed} total) — here's what I picked up: ${calibration.analysis}`,
-                timestamp: Date.now(),
-              },
-            ],
-          });
-        }
-        // NOTE: Supplementary LLM oracle.message() call intentionally removed.
-        // Anil feedback (Apr 10): don't generate tweet content until after
-        // HANDOFF is complete and a voice blend is configured. The calibration
-        // analysis above is sufficient commentary during onboarding.
-      } catch (err: any) {
-        clearTimeout(timeoutId);
-        if (err.name === "AbortError") {
-          console.warn("Calibration timed out (30s limit hit)");
-        } else {
-          console.error("Calibration failed:", err);
-        }
-
-        // Fallback to Track-A-like dimensions so the user sees non-default
-        // values and the crafting gate becomes passable.
-        dispatch({
-          type: "SET_DIMENSIONS",
-          dimensions: TRACK_A_INITIAL_DIMENSIONS,
-        });
-        const reason = err instanceof Error ? err.message : "something went wrong";
-        setScanError(reason);
-        dispatch({ type: "ADVANCE", payload: undefined });
+      })
+      .catch((err: Error) => {
+        console.error("Calibration failed:", err);
+        // Allow the user to continue even if calibration fails
+        dispatch({ type: "SET_ARCHETYPE", archetype: null });
         dispatch({
           type: "ENQUEUE_MESSAGES",
           messages: [
             {
               id: `calibration-skip-${Date.now()}`,
-              role: "oracle" as const,
-              content: `I couldn't scan your tweets right now — ${reason}. No worries, we can calibrate later. Let's keep going.`,
+              role: "oracle",
+              content: "I couldn't build your archetype right now — no worries, we can try again later. Let's keep going.",
               timestamp: Date.now(),
             },
           ],
         });
-      } finally {
-        setScanLoading(false);
-        calibratingRef.current = false;
-      }
-    })();
-
-    return () => {
-      clearTimeout(timeoutId);
-      controller.abort();
-    };
-  }, [state.currentStep, state.xHandle, state.calibrationResult]);
+      })
+      .finally(() => setCalibrating(false));
+  }, [state.currentStep, calibrating, localArchetype, ownSwipes.length, ownTweets.length]);
 
   // ── Render inline components ─────────────────────────────────────
   const renderComponent = useCallback(
     (type: string, props?: Record<string, unknown>): ReactNode => {
       switch (type) {
-        case "scan-progress":
+        case "own-tweet-tinder": {
+          if (ownTinderLoading) {
+            return (
+              <div className="flex h-64 items-center justify-center rounded-2xl bg-atlas-surface">
+                <Loader2 className="h-6 w-6 animate-spin text-atlas-teal" />
+              </div>
+            );
+          }
+          if (ownTinderError) {
+            return (
+              <div className="rounded-2xl bg-atlas-surface p-4 text-sm text-atlas-error">
+                {ownTinderError}
+              </div>
+            );
+          }
+          if (ownTweets.length === 0) {
+            return (
+              <div className="rounded-2xl bg-atlas-surface p-4 text-sm text-atlas-text-secondary">
+                No tweets found to swipe. You can skip this step.
+              </div>
+            );
+          }
+          const visibleOwn = ownTweets.slice(ownTinderIndex, ownTinderIndex + 3);
+          const ownDone = ownTinderIndex >= ownTweets.length;
+
+          if (ownDone || localArchetype) {
+            return calibrating ? (
+              <div className="flex h-64 items-center justify-center rounded-2xl bg-atlas-surface">
+                <Loader2 className="h-6 w-6 animate-spin text-atlas-teal" />
+                <span className="ml-2 text-sm text-atlas-text-secondary">Building your archetype...</span>
+              </div>
+            ) : localArchetype ? (
+              <ArchetypeReveal archetype={localArchetype} onContinue={handleContinue} />
+            ) : (
+              <div className="rounded-2xl bg-atlas-surface p-4 text-sm text-atlas-text-secondary">
+                All done! Finishing up...
+              </div>
+            );
+          }
+
           return (
-            <div className="bg-atlas-surface rounded-2xl p-4 space-y-2">
-              <div className="flex items-center gap-2">
-                {scanError ? (
-                  <>
-                    <span className="text-red-400" aria-hidden="true">⚠</span>
-                    <span className="text-sm text-red-400">
-                      {scanError}
-                    </span>
-                  </>
-) : scanLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
-                    <span className="text-sm text-atlas-text-secondary">
-                      {`Scanning @${state.xHandle}...`}
-                    </span>
-                  </>
-                ) : state.calibrationResult ? (
-                  <>
-                    <CheckCircle className="h-4 w-4 text-atlas-teal" />
-                    <span className="text-sm text-atlas-text-secondary">
-                      {`Calibrated from ${state.calibrationResult.tweetsAnalyzed} tweets`}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 text-atlas-teal" />
-                    <span className="text-sm text-atlas-text-secondary">
-                      Scan complete
-                    </span>
-                  </>
-                )}
+            <div className="space-y-4">
+              <div className="relative mx-auto h-80 w-full max-w-md">
+                <AnimatePresence onExitComplete={() => setOwnTinderAnimating(false)}>
+                  {visibleOwn
+                    .map((tweet, i) => (
+                      <VoiceTinderCard
+                        key={tweet.id}
+                        tweet={tweet}
+                        onSwipe={(decision, durationMs) => {
+                          setOwnTinderAnimating(true);
+                          setOwnTinderExit(decision);
+                          const swipe: VoiceTinderSwipe = {
+                            tweetId: tweet.tweetId,
+                            text: tweet.text,
+                            authorHandle: tweet.authorHandle,
+                            source: "OWN",
+                            decision,
+                            durationMs,
+                            metrics: tweet.metrics ?? undefined,
+                            postedAt: tweet.postedAt ?? undefined,
+                          };
+                          setOwnSwipes((prev) => [...prev, swipe]);
+                          api.voiceTinder.swipe([swipe]).catch(() => {});
+                          setOwnTinderIndex((idx) => idx + 1);
+                        }}
+                        isTop={i === 0}
+                        stackIndex={i}
+                        exitDecision={ownTinderExit}
+                      />
+                    ))
+                    .reverse()}
+                </AnimatePresence>
+              </div>
+              <div className="mx-auto max-w-md text-center">
+                <p className="text-xs text-atlas-text-muted">
+                  {ownTinderIndex + 1} of {ownTweets.length}
+                </p>
+                <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-atlas-bg">
+                  <div
+                    className="h-1 rounded-full bg-atlas-teal transition-all duration-300"
+                    style={{
+                      width: `${((ownTinderIndex + 1) / ownTweets.length) * 100}%`,
+                    }}
+                  />
+                </div>
               </div>
             </div>
           );
-
-        case "dimensions": {
-          // Prop-driven from calibrationResult for Track A so sliders always
-          // show the calibrated values even if state.dimensions is stale.
-          const dimensionValues =
-            (props?.values as typeof state.dimensions) ??
-            state.calibrationResult?.dimensions ??
-            state.dimensions;
-          return (
-            <div className="bg-atlas-surface/50 rounded-2xl p-4">
-              <VoiceDimensionSections
-                values={dimensionValues}
-                interactive
-                onChange={(field, value) =>
-                  dispatch({
-                    type: "SET_DIMENSIONS",
-                    dimensions: { ...state.dimensions, [field]: value },
-                  })
-                }
-              />
-            </div>
-          );
         }
 
-        case "tweet-ratings": {
-          const sampleTweets = [
-            "ETH staking yields are compressing fast. The easy alpha is gone — now it's about execution risk and DVT adoption.",
-            "Everyone's talking about L2 fees but nobody's asking why L1 gas is still this high during a bear market.",
-            "Hot take: most DeFi governance is theater. Token holders vote, whales decide.",
-            "The merge was 18 months ago and we're still arguing about MEV. Builders are the new miners.",
-          ];
+        case "reference-tinder": {
+          const refVisible = referenceTweets.slice(referenceTinderIndex, referenceTinderIndex + 3);
+          const refDone = referenceTinderIndex >= referenceTweets.length;
+
           return (
-            <div className="space-y-3">
-              {sampleTweets.map((tweet, i) => (
-                <div
-                  key={i}
-                  className="flex items-start justify-between gap-4 rounded-2xl bg-atlas-surface p-4"
-                >
-                  <p className="flex-1 text-sm text-atlas-text">{tweet}</p>
-                  <div className="flex shrink-0 gap-2">
+            <div className="space-y-4">
+              {referenceTweets.length === 0 && (
+                <div className="space-y-3 rounded-2xl bg-atlas-surface p-4">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={referenceHandle}
+                      onChange={(e) => setReferenceHandle(e.target.value.replace(/^@/, ""))}
+                      placeholder="Enter X handle (e.g. vitalikbuterin)"
+                      className="flex-1 rounded-xl bg-atlas-bg border border-glass-border px-4 py-3 text-sm text-atlas-text placeholder:text-atlas-text-muted focus:outline-none focus:border-atlas-teal"
+                    />
                     <button
                       type="button"
-                      onClick={() => setTweetRatings(prev => ({ ...prev, [i]: prev[i] === 'up' ? null : 'up' }))}
-                      className={tweetRatings[i] === 'up' ? 'text-atlas-teal transition-colors' : 'text-atlas-text-secondary hover:text-atlas-teal transition-colors'}
-                      aria-label="Rate as more like me"
-                      aria-pressed={tweetRatings[i] === 'up'}
+                      disabled={referenceValidating || !referenceHandle.trim()}
+                      onClick={async () => {
+                        setReferenceValidating(true);
+                        setReferenceError(null);
+                        try {
+                          await api.voiceTinder.validateReference(referenceHandle.trim());
+                          const res = await api.voiceTinder.getReferenceSession(referenceHandle.trim());
+                          setReferenceTweets(res.tweets.filter((t) => t.decision === "PENDING"));
+                          setReferenceTinderIndex(0);
+                        } catch (err: any) {
+                          setReferenceError(err.message || "Could not load that handle.");
+                        } finally {
+                          setReferenceValidating(false);
+                        }
+                      }}
+                      className="rounded-xl bg-atlas-teal px-4 py-2 text-sm font-semibold text-atlas-bg transition-opacity hover:opacity-90 disabled:opacity-50"
                     >
-                      <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z" /></svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTweetRatings(prev => ({ ...prev, [i]: prev[i] === 'down' ? null : 'down' }))}
-                      className={tweetRatings[i] === 'down' ? 'text-red-400 transition-colors' : 'text-atlas-text-secondary hover:text-red-400 transition-colors'}
-                      aria-label="Rate as less like me"
-                      aria-pressed={tweetRatings[i] === 'down'}
-                    >
-                      <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z" /></svg>
+                      {referenceValidating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Load"}
                     </button>
                   </div>
+                  {referenceError && (
+                    <p className="text-sm text-atlas-error">{referenceError}</p>
+                  )}
                 </div>
-              ))}
+              )}
+
+              {referenceTweets.length > 0 && !refDone && (
+                <>
+                  <div className="relative mx-auto h-80 w-full max-w-md">
+                    <AnimatePresence onExitComplete={() => setReferenceTinderAnimating(false)}>
+                      {refVisible
+                        .map((tweet, i) => (
+                          <VoiceTinderCard
+                            key={tweet.id}
+                            tweet={tweet}
+                            onSwipe={(decision, durationMs) => {
+                              setReferenceTinderAnimating(true);
+                              setReferenceTinderExit(decision);
+                              const swipe: VoiceTinderSwipe = {
+                                tweetId: tweet.tweetId,
+                                text: tweet.text,
+                                authorHandle: tweet.authorHandle,
+                                source: "REFERENCE",
+                                referenceHandle: referenceHandle.trim(),
+                                decision,
+                                durationMs,
+                                metrics: tweet.metrics ?? undefined,
+                                postedAt: tweet.postedAt ?? undefined,
+                              };
+                              setReferenceSwipes((prev) => [...prev, swipe]);
+                              api.voiceTinder.swipe([swipe]).catch(() => {});
+                              setReferenceTinderIndex((idx) => idx + 1);
+                            }}
+                            isTop={i === 0}
+                            stackIndex={i}
+                            exitDecision={referenceTinderExit}
+                          />
+                        ))
+                        .reverse()}
+                    </AnimatePresence>
+                  </div>
+                  <div className="mx-auto max-w-md text-center">
+                    <p className="text-xs text-atlas-text-muted">
+                      {referenceTinderIndex + 1} of {referenceTweets.length}
+                    </p>
+                    <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-atlas-bg">
+                      <div
+                        className="h-1 rounded-full bg-atlas-teal transition-all duration-300"
+                        style={{
+                          width: `${((referenceTinderIndex + 1) / referenceTweets.length) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {referenceTweets.length > 0 && refDone && (
+                <div className="rounded-2xl bg-atlas-surface p-4 text-center text-sm text-atlas-text-secondary">
+                  All done swiping reference tweets.
+                </div>
+              )}
             </div>
           );
         }
+
+        case "archetype-reveal":
+          return localArchetype ? (
+            <ArchetypeReveal archetype={localArchetype} onContinue={handleContinue} />
+          ) : null;
 
         case "style-picker":
           return (
@@ -715,21 +763,6 @@ export default function OracleChat() {
             />
           );
 
-        case "content-signals":
-          return (
-            <div className="space-y-3">
-              <ContentInput
-                placeholder="Paste tweet URLs or drop a report/article..."
-                showMic={false}
-                onTextChange={() => {}}
-                onTextSubmit={() => true}
-              />
-              <ContentSignalsPreview />
-              <p className="text-xs text-atlas-text-muted">
-                You can also send these via Telegram later.
-              </p>
-            </div>
-          );
 
         case "handoff-telegram":
           return (
@@ -764,8 +797,7 @@ export default function OracleChat() {
                       getOnboardingCompletionHref({
                         track: state.track,
                         voiceCalibrated:
-                          state.calibrationResult !== null &&
-                          (state.calibrationResult?.tweetsAnalyzed ?? 0) >= 3,
+                          state.archetype !== null || state.calibrationResult !== null,
                         onboardingComplete: true, // updateProfile just set it above
                       })
                     );
@@ -817,7 +849,7 @@ export default function OracleChat() {
           return null;
       }
     },
-    [oauthLoading, router, state, blendSaveStatus, scanError, scanLoading]
+    [oauthLoading, router, state, ownTweets, ownTinderIndex, ownTinderExit, ownTinderLoading, ownTinderError, localArchetype, calibrating, referenceHandle, referenceTweets, referenceTinderIndex, referenceTinderExit, referenceValidating, referenceError, handleContinue]
   );
 
   // ── Determine ActionZone config per step ─────────────────────────
@@ -833,9 +865,9 @@ export default function OracleChat() {
 
     // Steps that need a Continue button
     const continueSteps = [
-      "TRACK_A_RESULT",
+      "OWN_TWEET_TINDER",
+      "REFERENCE_TINDER",
       "TRACK_B_STYLE",
-      "TRACK_B_DIMENSIONS",
       "REFERENCES",
       "NAME_VOICE",
     ];

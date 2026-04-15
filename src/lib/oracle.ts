@@ -61,20 +61,9 @@ export function getContinueLabel(
   track: OracleState["track"],
 ): string {
   switch (step) {
-    case "SWIPE_OWN":
-      return "Lock these swipes in";
-    case "SWIPE_OWN_REASONS":
-      return "These reasons fit";
-    case "REFERENCE_HANDLES":
-      return "Use these handles";
-    case "SWIPE_REFS":
-      return "See what the swipes say";
-    case "TRACK_A_RESULT":
-      return "Looks right — continue";
+
     case "TRACK_B_STYLE":
       return "Use this as my starting point";
-    case "TRACK_B_DIMENSIONS":
-      return "Lock in these dimensions";
     case "REFERENCES":
       return track === "a"
         ? "These are my people"
@@ -86,18 +75,12 @@ export function getContinueLabel(
 
 // ── Step transition map ────────────────────────────────────────────
 const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
-  WELCOME: "CONNECT_X",
-  CONNECT_X: "TRACK_A_SCANNING",
-  TRACK_A_SCANNING: "SWIPE_OWN",
-  SWIPE_OWN: "SWIPE_OWN_REASONS",
-  SWIPE_OWN_REASONS: "REFERENCE_HANDLES",
-  REFERENCE_HANDLES: "SWIPE_REFS",
-  SWIPE_REFS: "TRACK_A_RESULT",
-  TRACK_A_RESULT: "REFERENCES",
+  WELCOME: "OWN_TWEET_TINDER",
+  CONNECT_X: "WELCOME",
+  OWN_TWEET_TINDER: "REFERENCE_TINDER",
+  REFERENCE_TINDER: "REFERENCES",
+  TRACK_B_STYLE: "REFERENCES",
   REFERENCES: "NAME_VOICE",
-  TRACK_B_STYLE: "TRACK_B_CONTENT",
-  TRACK_B_CONTENT: "TRACK_B_DIMENSIONS",
-  TRACK_B_DIMENSIONS: "REFERENCES",
   BLEND: "HANDOFF",
   NAME_VOICE: "HANDOFF",
   TOPICS: "HANDOFF", // legacy fallback, step skipped in flow
@@ -138,24 +121,12 @@ export function canAdvance(state: OracleState): boolean {
       return true;
     case "CONNECT_X":
       return true; // allow skip
-    case "TRACK_A_SCANNING":
-      return true;
-    case "SWIPE_OWN":
-      return state.swipeResults.own.length >= 5;
-    case "SWIPE_OWN_REASONS":
-      return true;
-    case "REFERENCE_HANDLES":
-      return state.referenceHandles.length >= 1;
-    case "SWIPE_REFS":
-      return true;
-    case "TRACK_A_RESULT":
-      return true;
+    case "OWN_TWEET_TINDER":
+      return state.archetype !== null || state.calibrationResult !== null;
+    case "REFERENCE_TINDER":
+      return true; // optional skip
     case "TRACK_B_STYLE":
       return state.selectedStyle !== null;
-    case "TRACK_B_CONTENT":
-      return true; // content signals are optional
-    case "TRACK_B_DIMENSIONS":
-      return true;
     case "REFERENCES":
       return state.selectedRefs.length >= 1;
     case "BLEND":
@@ -180,6 +151,7 @@ export function initialOracleState(): OracleState {
     xHandle: "",
     xConnected: false,
     calibrationResult: null,
+    archetype: null,
     dimensions: DEFAULT_VOICE_DIMENSIONS,
     selectedStyle: null,
     swipeResults: { own: [], ref: [] },
@@ -200,8 +172,13 @@ export function oracleReducer(
   switch (action.type) {
     case "SET_TRACK": {
       const track = action.track;
-      const nextStep: OracleStep =
-        track === "a" ? "TRACK_A_SCANNING" : "TRACK_B_STYLE";
+      // If X is connected, both tracks go through tweet tinder calibration.
+      // If X is skipped, Track B gets the style picker; Track A falls through.
+      const nextStep: OracleStep = state.xConnected
+        ? "OWN_TWEET_TINDER"
+        : track === "b"
+          ? "TRACK_B_STYLE"
+          : "REFERENCES";
       const userMsg = {
         id: `user-track-${Date.now()}`,
         role: "user" as const,
@@ -235,20 +212,15 @@ export function oracleReducer(
             timestamp: Date.now(),
           }
         : null;
-      // When leaving the scanning step, remove the transient scan-progress
-      // component so the spinner/checkmark doesn't persist alongside results.
-      const filteredMessages = state.currentStep === "TRACK_A_SCANNING"
-        ? state.messages.filter((m) => m.component?.type !== "scan-progress")
-        : state.messages;
       // Save snapshot for back-navigation (cap at 10)
       const { stepHistory: _h, ...snapshot } = state;
-      const newHistory = [...state.stepHistory, { step: state.currentStep, messageCount: filteredMessages.length, snapshot: snapshot as Omit<typeof state, 'stepHistory'> }].slice(-10);
+      const newHistory = [...state.stepHistory, { step: state.currentStep, messageCount: state.messages.length, snapshot: snapshot as Omit<typeof state, 'stepHistory'> }].slice(-10);
       return {
         ...state,
         currentStep: next,
         messages: userMsg
-          ? [...filteredMessages, userMsg]
-          : filteredMessages,
+          ? [...state.messages, userMsg]
+          : state.messages,
         pendingMessages: prepareMessages(next, state.track),
         stepHistory: newHistory,
       };
@@ -277,6 +249,9 @@ export function oracleReducer(
     case "SET_CALIBRATION":
       console.log("[oracleReducer] SET_CALIBRATION", action.result);
       return { ...state, calibrationResult: action.result };
+
+    case "SET_ARCHETYPE":
+      return { ...state, archetype: action.archetype };
 
     case "SET_DIMENSIONS":
       console.log("[oracleReducer] SET_DIMENSIONS", action.dimensions);
