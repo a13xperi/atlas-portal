@@ -19,8 +19,7 @@ import {
   CalendarClock,
   Rss,
   ListOrdered,
-  User,
-  LogOut,
+
   MessageSquare,
   Shield,
   Bug,
@@ -28,7 +27,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import NotificationDropdown from "@/components/ui/NotificationDropdown";
-import UserMenu from "@/components/ui/UserMenu";
+
 import DemoModeToggle from "@/components/ui/DemoModeToggle";
 import TourToggle from "@/components/tour/TourToggle";
 import { useAuth } from "@/lib/auth";
@@ -66,10 +65,16 @@ export const coreNavLinks = navLinks.filter((link) => CORE_NAV_HREFS.has(link.hr
 
 /** Returns the visible nav links for a given user role. Managers/admins see Analytics + Signals in addition to core tabs. */
 export function getVisibleNavLinks(role?: string): typeof navLinks {
-  const isManager = role === "MANAGER" || role === "ADMIN";
-  return navLinks.filter(
+  const isAdmin = role === "ADMIN";
+  const isManager = role === "MANAGER" || isAdmin;
+  const links = navLinks.filter(
     (link) => CORE_NAV_HREFS.has(link.href) || (isManager && MANAGER_NAV_HREFS.has(link.href))
   );
+  if (isAdmin) {
+    links.unshift({ label: "Report Bug", href: "/admin/bugs?action=report", icon: Bug });
+    links.unshift({ label: "Admin", href: "/admin", icon: Settings });
+  }
+  return links;
 }
 
 function DelphiLogo() {
@@ -121,7 +126,6 @@ export default function NavBar({ variant }: NavBarProps) {
   const initial = user?.displayName?.[0]?.toUpperCase() || user?.handle?.[0]?.toUpperCase() || "A";
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const isRouteEnabled = useRouteEnabled();
   const cachedTier = typeof window !== "undefined" ? getCachedTier() : null;
   const { shouldShowDot } = useNavDiscovery();
@@ -130,14 +134,12 @@ export default function NavBar({ variant }: NavBarProps) {
   useEffect(() => {
     setMobileOpen(false);
     setNotifOpen(false);
-    setUserMenuOpen(false);
   }, [pathname]);
 
   useEffect(() => {
     if (!hasUser) {
       setMobileOpen(false);
       setNotifOpen(false);
-      setUserMenuOpen(false);
     }
   }, [hasUser]);
 
@@ -202,22 +204,24 @@ export default function NavBar({ variant }: NavBarProps) {
           )}
           {variant === "app" && user && (
             <>
-              <Link
-                href="/admin/bugs?action=report"
-                className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-atlas-text-secondary hover:text-atlas-teal hover:bg-atlas-surface transition-colors border border-glass-border"
-              >
-                <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
-                Feedback
-              </Link>
-              {(user.role === "ADMIN" || user.role === "MANAGER") && (
-                <Link
-                  href="/admin/bugs"
-                  className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-atlas-text-secondary hover:text-amber-400 hover:bg-atlas-surface transition-colors border border-glass-border"
-                >
-                  <Shield className="w-3.5 h-3.5" aria-hidden="true" />
-                  Admin
-                </Link>
-              )}
+              {user.role === "ADMIN" ? (
+                <>
+                  <Link
+                    href="/admin/bugs"
+                    className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-atlas-text-secondary hover:text-amber-400 hover:bg-atlas-surface transition-colors border border-glass-border"
+                  >
+                    <Shield className="w-3.5 h-3.5" aria-hidden="true" />
+                    Admin
+                  </Link>
+                  <Link
+                    href="/admin/bugs?action=report"
+                    className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-atlas-text-secondary hover:text-atlas-teal hover:bg-atlas-surface transition-colors border border-glass-border"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
+                    Feedback
+                  </Link>
+                </>
+              ) : null}
               <TourToggle />
               <DemoModeToggle />
             </>
@@ -252,24 +256,16 @@ export default function NavBar({ variant }: NavBarProps) {
                 </button>
                 <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
               </div>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setUserMenuOpen((o) => !o)}
-                  aria-haspopup="menu"
-                  aria-expanded={userMenuOpen}
-                  aria-controls="user-menu-dropdown"
-                  aria-label={
-                    user.displayName || user.handle
-                      ? `User menu for ${user.displayName || user.handle}`
-                      : "User menu"
-                  }
-                  title={cachedTier ? `${cachedTier.tier.name} · #${cachedTier.rank} · ${cachedTier.score} pts` : undefined}
-                  className={`w-8 h-8 rounded-full bg-atlas-surface border-2 flex items-center justify-center text-xs font-medium transition-colors hover:border-atlas-teal focus:outline-none focus:ring-2 focus:ring-atlas-teal ${
+              <div className="relative z-10">
+                <Link
+                  href="/settings"
+                  aria-label={cachedTier ? `${cachedTier.tier.name} (#${cachedTier.rank})` : "Signed in"}
+                  className={`w-8 h-8 rounded-full bg-atlas-surface border-2 flex items-center justify-center text-xs font-medium cursor-pointer hover:ring-2 hover:ring-delphi-teal/40 transition-all ${
                     cachedTier
                       ? `${cachedTier.tier.borderColor} ${cachedTier.tier.color}`
                       : "border-glass-border text-atlas-text-secondary"
                   }`}
+                  title={cachedTier ? `${cachedTier.tier.name} · #${cachedTier.rank} · ${cachedTier.score} pts` : undefined}
                 >
                   {user.avatarUrl ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
@@ -283,8 +279,7 @@ export default function NavBar({ variant }: NavBarProps) {
                   ) : (
                     initial
                   )}
-                </button>
-                <UserMenu isOpen={userMenuOpen} onClose={() => setUserMenuOpen(false)} />
+                </Link>
               </div>
             </>
           )}

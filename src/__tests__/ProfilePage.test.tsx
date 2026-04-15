@@ -8,9 +8,6 @@ const mockApi = {
   users: {
     updateProfile: jest.fn(),
   },
-  voice: {
-    getProfile: jest.fn(),
-  },
 };
 
 jest.mock("@/lib/auth", () => ({
@@ -45,102 +42,81 @@ describe("ProfilePage", () => {
         handle: "alice",
         displayName: "Alice Ledger",
         role: "ANALYST",
-        twitterId: "tw-1",
-        telegramChatId: null,
-        xAvatarUrl: "https://example.com/avatar.png",
+        avatarUrl: "https://example.com/avatar.png",
       },
       logout: jest.fn(),
+      refreshUser: jest.fn(),
     });
 
     mockApi.users.updateProfile.mockResolvedValue({
       user: {
         id: "user-1",
         handle: "alice",
-        displayName: "Alice Ledger",
-        role: "ANALYST",
-      },
-    });
-    mockApi.voice.getProfile.mockResolvedValue({
-      profile: {
-        id: "voice-1",
-        userId: "user-1",
-        humor: 50,
-        formality: 60,
-        brevity: 70,
-        contrarianTone: 40,
-        maturity: "ADVANCED",
-        tweetsAnalyzed: 88,
-      },
-    });
-  });
-
-  it("renders zeroed profile stats when the typed stats API is unavailable", async () => {
-    render(<ProfilePage />);
-
-    expect(await screen.findByText("Drafts Created")).toBeInTheDocument();
-    expect(screen.getByText("Tweets Published")).toBeInTheDocument();
-    expect(screen.getByText("Voices Saved")).toBeInTheDocument();
-    expect(screen.getByText("Campaigns Active")).toBeInTheDocument();
-    expect(screen.getAllByText("0")).toHaveLength(4);
-
-    expect(screen.getByText("Connected")).toBeInTheDocument();
-    expect(screen.getByText("Not Connected")).toBeInTheDocument();
-  });
-
-  it("falls back to initials when the avatar image errors", async () => {
-    render(<ProfilePage />);
-
-    const avatar = screen.getByRole("img", { name: "Alice Ledger avatar" });
-    fireEvent.error(avatar);
-
-    await waitFor(() => {
-      expect(
-        screen.getByLabelText("Profile initials"),
-      ).toHaveTextContent("AL");
-    });
-
-    expect(
-      screen.queryByRole("img", { name: "Alice Ledger avatar" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("shows the onboarding CTA when no voice profile exists", async () => {
-    mockApi.voice.getProfile.mockRejectedValueOnce(new Error("missing"));
-
-    render(<ProfilePage />);
-
-    expect(
-      await screen.findByText("You have not calibrated a voice profile yet."),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Calibrate your voice/i })).toHaveAttribute(
-      "href",
-      "/onboarding",
-    );
-  });
-
-  it("preserves the display name save flow", async () => {
-    mockApi.users.updateProfile.mockResolvedValueOnce({
-      user: {
-        id: "user-1",
-        handle: "alice",
         displayName: "Alice Alpha",
         role: "ANALYST",
       },
     });
+  });
+
+  it("renders the user profile information", async () => {
+    render(<ProfilePage />);
+
+    expect(screen.getByRole("img", { name: "Alice Ledger avatar" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Alice Ledger" })).toBeInTheDocument();
+    expect(screen.getByText("@alice")).toBeInTheDocument();
+    expect(screen.getByText("ANALYST")).toBeInTheDocument();
+  });
+
+  it("falls back to initials when no avatar URL is provided", async () => {
+    mockUseAuth.mockReturnValue({
+      user: {
+        id: "user-1",
+        handle: "alice",
+        displayName: "Alice Ledger",
+        role: "ANALYST",
+        avatarUrl: null,
+      },
+      logout: jest.fn(),
+      refreshUser: jest.fn(),
+    });
 
     render(<ProfilePage />);
 
-    const displayNameInput = screen.getByLabelText("Display Name");
+    expect(screen.queryByRole("img", { name: "Alice Ledger avatar" })).not.toBeInTheDocument();
+    expect(screen.getByText("A")).toBeInTheDocument();
+  });
+
+  it("preserves the display name save flow", async () => {
+    render(<ProfilePage />);
+
+    const displayNameInput = screen.getByLabelText("Display name");
     fireEvent.change(displayNameInput, { target: { value: "Alice Alpha" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => {
       expect(mockApi.users.updateProfile).toHaveBeenCalledWith({
         displayName: "Alice Alpha",
       });
     });
+  });
 
-    expect(await screen.findByText("Saved.")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Alice Alpha" })).toBeInTheDocument();
+  it("calls logout when the log out button is clicked", async () => {
+    const logout = jest.fn();
+    mockUseAuth.mockReturnValue({
+      user: {
+        id: "user-1",
+        handle: "alice",
+        displayName: "Alice Ledger",
+        role: "ANALYST",
+        avatarUrl: "https://example.com/avatar.png",
+      },
+      logout,
+      refreshUser: jest.fn(),
+    });
+
+    render(<ProfilePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Log out" }));
+    expect(logout).toHaveBeenCalled();
   });
 });

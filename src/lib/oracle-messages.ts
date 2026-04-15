@@ -47,66 +47,35 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
     ),
   ],
 
-  TRACK_A_SCANNING: [
+  OWN_TWEET_TINDER: [
     msg(
       "oracle",
-      "Scanning now... give me a moment.",
+      "Let\'s calibrate your voice. Swipe right on tweets that sound like you (keepers), swipe left on the ones that don\'t. I\'ll build your archetype from your choices.",
       {
-        component: { type: "scan-progress" },
+        component: { type: "own-tweet-tinder" },
       }
     ),
   ],
 
-  SWIPE_OWN: [
+  TRACK_A_EVIDENCE: [
     msg(
       "oracle",
-      "Start with your own strongest tweets. Swipe right on the posts that feel most like you on your best day, and left on the ones that miss.",
+      "Your archetype is ready. Here's what shaped it.",
       {
-        component: { type: "swipe-own" },
+        component: { type: "voice-evidence-panel" },
       }
     ),
   ],
 
-  SWIPE_OWN_REASONS: [
+  REFERENCE_TINDER: [
     msg(
       "oracle",
-      "For the tweets you liked, tell me what worked. These tags help me turn your instincts into an actual voice shape.",
+      "Now let\'s add a reference voice. Enter any X handle whose writing you admire — I'll fetch their tweets and you can swipe the ones you want to blend into your style.",
       {
-        component: { type: "swipe-reasons" },
+        component: { type: "reference-tinder" },
       }
     ),
   ],
-
-  REFERENCE_HANDLES: [
-    msg(
-      "oracle",
-      "Now give me up to three accounts you respect. I'll pull their strongest tweets so you can show me the outer edge of your taste.",
-      {
-        component: { type: "reference-handle-picker" },
-      }
-    ),
-  ],
-
-  SWIPE_REFS: [
-    msg(
-      "oracle",
-      "Swipe through those reference tweets next. Like the ones that feel directionally right, skip the ones that don't belong in your blend.",
-      {
-        component: { type: "swipe-reference-tweets" },
-      }
-    ),
-  ],
-
-  TRACK_A_RESULT: [
-    msg(
-      "oracle",
-      "Here's what your swipes told me. Slide if anything feels off — otherwise hit continue.",
-      {
-        component: { type: "dimensions" },
-      }
-    ),
-  ],
-
 
   TRACK_B_STYLE: [
     msg(
@@ -118,27 +87,6 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
       "What type of style resonates with you?",
       {
         component: { type: "style-picker" },
-      }
-    ),
-  ],
-
-  TRACK_B_CONTENT: [
-    msg(
-      "oracle",
-      "Got any tweets or articles that match the style you want? Drop them here — I'll use them as individual style signals.",
-      {
-        component: { type: "content-signals" },
-        actions: [{ label: "Skip for now", value: "skip-content", variant: "ghost" }],
-      }
-    ),
-  ],
-
-  TRACK_B_DIMENSIONS: [
-    msg(
-      "oracle",
-      "Now let's dial in each dimension. I've set defaults based on your style choice — adjust anything that feels off.",
-      {
-        component: { type: "dimensions" },
       }
     ),
   ],

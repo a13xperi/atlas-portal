@@ -33,7 +33,7 @@ export default function DimensionBar({
           {valueLabel ?? `${clampedPercentage}%`}
         </span>
       </div>
-      <div className="relative flex h-8 items-center">
+      <div className="relative flex h-10 items-center">
         <div className="pointer-events-none absolute inset-x-0 h-1 rounded-full bg-atlas-text-secondary/30" />
         <div
           className="pointer-events-none absolute left-0 h-1 rounded-full bg-gradient-to-r from-atlas-teal to-atlas-teal transition-all duration-300"
@@ -76,8 +76,8 @@ export default function DimensionBar({
               [&::-moz-range-thumb]:shadow-md
               [&::-moz-range-thumb]:transition-shadow
               [&::-moz-range-thumb]:duration-200
-              hover:[&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(78,205,196,0.5)]
-              hover:[&::-moz-range-thumb]:shadow-[0_0_8px_rgba(78,205,196,0.5)]"
+              hover:[&::-webkit-slider-thumb]:shadow-[0_0_0_2px_rgba(78,205,196,0.4)]
+              hover:[&::-moz-range-thumb]:shadow-[0_0_0_2px_rgba(78,205,196,0.4)]"
           />
         ) : (
           <div

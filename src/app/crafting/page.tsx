@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useId,
@@ -30,6 +31,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import { useTour } from "@/components/tour/TourProvider";
 import FeatureGate from "@/components/ui/FeatureGate";
+import ShadowGate from "@/components/ui/ShadowGate";
 import DraftHistorySidebar, {
   DraftHistoryItem,
 } from "@/components/crafting/DraftHistorySidebar";
@@ -37,7 +39,6 @@ import NewsMode from "@/components/crafting/NewsMode";
 import { CraftingAdvisor } from "@/components/crafting/CraftingAdvisor";
 import ContentInput from "@/components/ui/ContentInput";
 import { useVoiceRecorder } from "@/lib/useVoiceRecorder";
-import { useVoiceGate } from "@/lib/useVoiceGate";
 import GradientButton from "@/components/ui/GradientButton";
 import ReplyAngleSelector from "@/components/ui/ReplyAngleSelector";
 import { getXIntentUrl } from "@/lib/public-urls";
@@ -48,21 +49,32 @@ import {
   api,
   AnalyticsSummary,
   DraftPerformance,
+  ReferenceAccount,
   SavedBlend,
   TrendingTopic,
   TweetDraft,
+  User,
 } from "@/lib/api";
 import PerformanceCard from "@/components/analytics/PerformanceCard";
 import { useAuth } from "@/lib/auth";
-import { hasCalibratedVoiceDimensions } from "@/lib/voice-profile-dimensions";
+import {
+  hasCalibratedVoiceDimensions,
+  pickVoiceDimensions,
+} from "@/lib/voice-profile-dimensions";
+import { applyGeneratedBlendNames } from "@/lib/voice-naming";
 import OracleWidget from "@/components/oracle/OracleWidget";
 import OracleCraftingHints from "@/components/oracle/OracleCraftingHints";
 import OracleInspector from "@/components/oracle/OracleInspector";
-import { MultiAnglePanel } from "@/components/crafting/MultiAnglePanel";
 import CharacterCounter from "@/components/crafting/CharacterCounter";
 import type { InspectableEntity } from "@/lib/oracle-agent-types";
 import { useToast } from "@/components/ui/Toast";
+import {
+  useVoiceGate,
+  MIN_TWEETS_FOR_VOICE_CALIBRATION,
+} from "@/lib/useVoiceGate";
+import { MultiAnglePanel } from "@/components/crafting/MultiAnglePanel";
 import { SchedulePopover } from "@/components/ui/SchedulePopover";
+import CraftingVoiceSelector from "@/components/crafting/CraftingVoiceSelector";
 
 const CRAFTING_MODES = [
   { id: "new_post", label: "New Post" },
@@ -79,6 +91,7 @@ const TWEET_TEMPLATES = [
 ] as const;
 
 const NEWS_SOURCE_PREFIX = "source:";
+const MIN_TWEETS_FOR_CRAFTING = MIN_TWEETS_FOR_VOICE_CALIBRATION;
 const VOICE_COMPARISON_DELTA = { humor: 20 } as const;
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
@@ -253,9 +266,6 @@ function CraftingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const voiceModeLabelId = useId();
-  const savedBlendLabelId = useId();
-  const blendIntensityLabelId = useId();
   const regenerationGuidanceId = useId();
   const draftFeedbackHintId = useId();
   const { user } = useAuth();
@@ -266,12 +276,10 @@ function CraftingPage() {
   const activeMode =
     (searchParams.get("mode") as CraftingMode) || "new_post";
   const [replyAngle, setReplyAngle] = useState<string | null>(null);
-  const [voiceMode, setVoiceMode] = useState<"my_voice" | "blended" | "specific">(
-    "my_voice"
-  );
   const [blends, setBlends] = useState<SavedBlend[]>([]);
+  const [referenceAccounts, setReferenceAccounts] = useState<ReferenceAccount[]>([]);
   const [selectedBlendId, setSelectedBlendId] = useState<string | null>(null);
-  const [blendValue, setBlendValue] = useState(30);
+  const [selectedReferenceId, setSelectedReferenceId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState("");
   const [feedbackText, setFeedbackText] = useState("");
   const [showFeedback, setShowFeedback] = useState(false);
@@ -328,8 +336,12 @@ function CraftingPage() {
     setFeedback((prev) => prev ? `${prev} ${text}` : text);
   }, []));
   const draftInputValueRef = useRef("");
+  const contentInputRef = useRef<HTMLTextAreaElement>(null);
   const handleCreateDraftRef = useRef<
     ((text?: string) => Promise<boolean | void>) | null
+  >(null);
+  const handleTryAgainRef = useRef<
+    ((nextFeedback?: string) => Promise<void>) | null
   >(null);
   const canReviseActiveDraft = activeDraft?.status === "DRAFT";
   const activeDraftWordCount = activeDraft?.content
@@ -432,7 +444,6 @@ function CraftingPage() {
       (b) => b.name.toLowerCase() === voiceName.toLowerCase()
     );
     if (match) {
-      setVoiceMode("blended");
       setSelectedBlendId(match.id);
       setVoiceBanner(voiceName);
       setTimeout(() => setVoiceBanner(null), 6000);
@@ -448,6 +459,25 @@ function CraftingPage() {
     }
   }, []);
 
+  const loadReferenceAccounts = useCallback(async () => {
+    try {
+      const { accounts } = await api.voice.getReferenceAccounts();
+      setReferenceAccounts(accounts ?? []);
+    } catch {
+      // Reference accounts are optional — avatar fallbacks will still work.
+    }
+  }, []);
+
+  const personalDimensions = useMemo(
+    () => pickVoiceDimensions(user?.voiceProfile ?? null),
+    [user?.voiceProfile]
+  );
+
+  const namedBlends = useMemo(
+    () => applyGeneratedBlendNames(blends, personalDimensions, referenceAccounts),
+    [blends, personalDimensions, referenceAccounts]
+  );
+
   const loadTrending = useCallback(async () => {
     try {
       const { topics } = await api.trending.topics();
@@ -462,7 +492,14 @@ function CraftingPage() {
     loadSummary();
     loadTrending();
     loadBlends();
-  }, [loadBlends, loadDrafts, loadSummary, loadTrending]);
+    loadReferenceAccounts();
+  }, [
+    loadBlends,
+    loadDrafts,
+    loadReferenceAccounts,
+    loadSummary,
+    loadTrending,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -782,7 +819,7 @@ function CraftingPage() {
       const { draft, blendWarning: warn } = await api.drafts.generate({
         sourceContent: trimmedContent,
         sourceType,
-        blendId: selectedBlendId || undefined,
+        blendWith: selectedReferenceId || undefined,
         replyAngle: angle || undefined,
       });
       if (warn === "blend_not_found") {
@@ -807,7 +844,7 @@ function CraftingPage() {
   }, [
     commitDraft,
     isVoiceCalibrationBlocked,
-    selectedBlendId,
+    selectedReferenceId,
     toast,
     user,
     validateDraftSubmission,
@@ -981,13 +1018,30 @@ function CraftingPage() {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
         void handleCreateDraftRef.current?.();
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "r") {
+        e.preventDefault();
+        if (activeDraft) {
+          void handleTryAgainRef.current?.();
+        }
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        contentInputRef.current?.focus();
+        return;
+      }
+      if (e.key === "Escape") {
+        setError(null);
+        return;
       }
     };
 
     document.addEventListener("keydown", handler);
 
     return () => document.removeEventListener("keydown", handler);
-  }, []);
+  }, [activeDraft]);
 
   const handleGenerateNews = async (articleUrl: string, fallbackText = "") => {
     if (!user || isVoiceCalibrationBlocked) {
@@ -1004,7 +1058,7 @@ function CraftingPage() {
       const { draft } = await api.drafts.generate({
         sourceContent: trimmedFallbackText || trimmedArticleUrl,
         sourceType: trimmedFallbackText ? "MANUAL" : "ARTICLE",
-        blendId: selectedBlendId || undefined,
+        blendWith: selectedReferenceId || undefined,
       });
       setVoiceComparison(null);
       setCompareMode(false);
@@ -1056,6 +1110,15 @@ function CraftingPage() {
       const sourceUrl = extractSourceUrl(activeDraft);
       const { draft } = await api.drafts.update(activeDraft.id, { status });
       syncDraftReferences(draft, sourceUrl ?? undefined);
+      if (status === "APPROVED") {
+        try {
+          await api.drafts.enqueue(activeDraft.id);
+          toast("Draft approved and added to queue", "success");
+        } catch (enqueueError: unknown) {
+          console.warn("Failed to enqueue approved draft:", enqueueError);
+          toast("Draft approved, but failed to add to queue", "warning");
+        }
+      }
     } catch (statusError: unknown) {
       console.error(`Failed to update draft status to ${status}:`, statusError);
       setError(
@@ -1159,6 +1222,8 @@ function CraftingPage() {
       setCreating(false);
     }
   };
+
+  handleTryAgainRef.current = handleTryAgain;
 
   const handleRefine = async ({ label, instruction }: RefinementChipOption) => {
     if (!activeDraft) return;
@@ -1309,7 +1374,7 @@ function CraftingPage() {
         api.drafts.generate({
           sourceContent: trimmedContent,
           sourceType,
-          blendId: selectedBlendId || undefined,
+          blendWith: selectedReferenceId || undefined,
           replyAngle: replyAngleParam,
         }),
         api.drafts.generate({
@@ -1401,12 +1466,35 @@ function CraftingPage() {
 
   return (
     <AppShell>
-      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-start sm:gap-6">
-        <div className="min-w-0 flex-1">
-          <h1 className="font-heading font-bold tracking-tight text-2xl text-atlas-text">Crafting Station</h1>
-          <p className="mt-2 text-atlas-text-secondary max-w-2xl">Drop in a report, signal, or idea — Atlas drafts it in your voice. Refine it, and the model gets sharper every time.</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-3 sm:items-start">
+      <div className="mb-6">
+        <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">Crafting Station</h1>
+        <p className="mt-2 text-atlas-text-secondary max-w-2xl">Draft in your voice.</p>
+      </div>
+
+      <div className="mb-6" data-tour="oracle-banner">
+        <OracleWidget
+          message={
+            activeDraft
+              ? "Draft in progress — refine it, rate it, or ship it. Every piece of feedback sharpens your model."
+              : "Drop a report, article, or idea below. I'll help you craft it into a tweet that sounds like you."
+          }
+          context="crafting"
+        />
+        {activeDraft && (
+          <OracleCraftingHints
+            draftContent={activeDraft.content}
+            onApplyHint={(hint) => {
+              setFeedback(hint);
+              setTimeout(() => {
+                document.getElementById("feedback-input")?.focus();
+              }, 100);
+            }}
+          />
+        )}
+      </div>
+
+      <div className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:gap-0 sm:rounded-3xl sm:px-6">
+        <div className="flex items-center gap-4 sm:gap-6">
           <svg
             aria-hidden="true"
             focusable="false"
@@ -1619,6 +1707,7 @@ function CraftingPage() {
                 ) : null}
                 <div className="mt-3" data-tour="content-input">
                   <ContentInput
+                    ref={contentInputRef}
                     placeholder={
                       activeMode === "reply_to_tweet"
                         ? "Paste the tweet or quote you want to reply to…"
@@ -1788,88 +1877,20 @@ function CraftingPage() {
             )}
           </div>
 
-          <div
-            className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6"
-            data-tour="voice-selector"
-          >
-            <label
-              id={voiceModeLabelId}
-              htmlFor="voice-mode"
-              className="shrink-0 text-sm text-atlas-text-secondary"
+          <ShadowGate sectionKey="crafting-selector">
+            <div
+              className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6"
+              data-tour="voice-selector"
             >
-              Voice mode
-            </label>
-            <select
-              id="voice-mode"
-              aria-labelledby={voiceModeLabelId}
-              value={voiceMode}
-              onChange={(event) => {
-                const nextMode = event.target.value as
-                  | "my_voice"
-                  | "blended"
-                  | "specific";
-                setVoiceMode(nextMode);
-
-                if (nextMode === "my_voice") {
-                  setSelectedBlendId(null);
-                }
-              }}
-              className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
-            >
-              <option value="my_voice">My voice</option>
-              <option value="blended">Blended</option>
-              <option value="specific">Specific person</option>
-            </select>
-            {voiceMode === "blended" && blends.length > 0 ? (
-              <>
-                <label
-                  id={savedBlendLabelId}
-                  htmlFor="saved-blend"
-                  className="shrink-0 text-sm text-atlas-text-secondary"
-                >
-                  Saved blend
-                </label>
-                <select
-                  id="saved-blend"
-                  aria-labelledby={savedBlendLabelId}
-                  value={selectedBlendId || ""}
-                  onChange={(event) => setSelectedBlendId(event.target.value || null)}
-                  className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
-                >
-                  <option value="">Pick a blend…</option>
-                  {blends.map((blend) => (
-                    <option key={blend.id} value={blend.id}>
-                      {blend.name}
-                    </option>
-                  ))}
-                </select>
-              </>
-            ) : null}
-            <div className="flex w-full flex-col gap-2 sm:min-w-[200px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span
-                id={blendIntensityLabelId}
-                className="shrink-0 text-sm text-atlas-text-secondary"
-              >
-                {selectedBlendId
-                  ? `My Voice ↔ ${
-                      blends.find((blend) => blend.id === selectedBlendId)?.name || "Blend"
-                    }`
-                  : "Blend:"}
-              </span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={blendValue}
-                onChange={(event) => setBlendValue(Number(event.target.value))}
-                aria-labelledby={blendIntensityLabelId}
-                aria-valuetext={`${blendValue} percent`}
-                className="flex-1"
-                style={{ "--range-progress": `${blendValue}%` } as React.CSSProperties}
-              />
-              <span className="w-10 text-right text-sm text-atlas-text">{blendValue}%</span>
+              <div className="flex flex-col gap-3 w-full">
+                <span className="text-sm text-atlas-text-secondary">Inspired by</span>
+                <CraftingVoiceSelector
+                  selectedId={selectedReferenceId}
+                  onSelect={setSelectedReferenceId}
+                />
+              </div>
             </div>
-          </div>
+          </ShadowGate>
 
           {voiceComparison ? (
             <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6">
@@ -1942,186 +1963,597 @@ function CraftingPage() {
                   </div>
                   <div className="mt-1 flex items-center gap-3 text-[10px] text-atlas-text-muted">
                     <span>{activeDraftWordCount} words</span>
-                    <span>{activeDraftReadingTime} min read</span>
-                    {activeDraft.predictedEngagement !== undefined && (
-                      <span className="flex items-center gap-1 text-atlas-teal">
-                        <TrendingUp className="h-3 w-3" />
-                        {(activeDraft.predictedEngagement * 100).toFixed(0)}% score
-                      </span>
-                    )}
+                    <span>&middot;</span>
+                    <span>~{activeDraftReadingTime} min read</span>
                   </div>
+                  {activeDraft.confidence != null ||
+                  activeDraft.predictedEngagement != null ? (
+                    <div className="mt-3 flex items-center gap-4 border-t border-glass-border/50 pt-3">
+                      {activeDraft.confidence != null ? (
+                        <div className="flex items-center gap-1.5">
+                          <div className="relative h-4 w-4">
+                            <svg
+                              aria-hidden="true"
+                              focusable="false"
+                              className="h-4 w-4 -rotate-90"
+                              viewBox="0 0 16 16"
+                            >
+                              <circle
+                                cx="8"
+                                cy="8"
+                                r="6"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                className="text-atlas-surface"
+                              />
+                              <circle
+                                cx="8"
+                                cy="8"
+                                r="6"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeDasharray={`${
+                                  activeDraft.confidence * 37.7
+                                } 37.7`}
+                                className={
+                                  activeDraft.confidence > 0.8
+                                    ? "text-atlas-teal"
+                                    : activeDraft.confidence > 0.5
+                                      ? "text-atlas-warning"
+                                      : "text-atlas-error"
+                                }
+                              />
+                            </svg>
+                          </div>
+                          <span className="text-[10px] text-atlas-text-muted">
+                            {Math.round(activeDraft.confidence * 100)}% match
+                          </span>
+                        </div>
+                      ) : null}
+                      {activeDraft.predictedEngagement != null ? (
+                        <div className="flex items-center gap-1.5">
+                          <TrendingUp className="h-3.5 w-3.5 text-atlas-text-muted" aria-hidden="true" />
+                          <span className="text-[10px] text-atlas-text-muted">
+                            ~{activeDraft.predictedEngagement.toLocaleString()} predicted
+                            reach
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </>
               ) : null}
+              <div className="mt-4 border-t border-glass-border pt-4">
+                <div className="flex items-center gap-1.5">
+                  {DRAFT_WORKFLOW_STEPS.map((step, index) => {
+                    const stepIndex = DRAFT_WORKFLOW_STEPS.findIndex(
+                      (s) => s.status === activeDraft.status,
+                    );
+                    const isCompleted = index < stepIndex;
+                    const isCurrent = step.status === activeDraft.status;
 
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <GradientButton
-                  variant="outline"
-                  onClick={handleCopyDraft}
-                  disabled={!activeDraft.content}
-                >
-                  {copiedDraftId === activeDraft.id ? (
-                    <span className="flex items-center gap-2">
-                      <Check className="h-4 w-4" />
-                      Copied!
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <Clipboard className="h-4 w-4" />
-                      Copy to X
-                    </span>
-                  )}
-                </GradientButton>
-
-                {activeDraft.status === "DRAFT" ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateDraftStatus("APPROVED")}
-                      disabled={statusUpdating}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-glass-border bg-glass px-4 py-3 text-sm font-medium text-atlas-text transition-colors hover:border-atlas-teal/50 hover:text-atlas-teal disabled:opacity-50"
+                    return (
+                      <div key={step.status} className="flex items-center gap-1.5">
+                        {index > 0 ? (
+                          <ChevronRight
+                            aria-hidden="true"
+                            className={`h-3 w-3 ${
+                              isCompleted
+                                ? "text-atlas-success"
+                                : "text-atlas-text-muted"
+                            }`}
+                          />
+                        ) : null}
+                        <span
+                          className={`text-xs font-medium ${
+                            isCurrent
+                              ? "text-atlas-text"
+                              : isCompleted
+                                ? "text-atlas-success"
+                                : "text-atlas-text-muted"
+                          }`}
+                        >
+                          {isCompleted ? (
+                            <span className="inline-flex items-center gap-1">
+                              <Check className="h-3 w-3" aria-hidden="true" />
+                              {step.label}
+                            </span>
+                          ) : (
+                            step.label
+                          )}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${DRAFT_STATUS_PILL_STYLES[activeDraft.status]}`}
                     >
-                      {statusUpdating ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <CheckCircle className="h-4 w-4" />
-                      )}
-                      Approve
-                    </button>
-                    <SchedulePopover
-                      isOpen={schedulePopoverOpen}
-                      onOpenChange={setSchedulePopoverOpen}
-                      onSchedule={handleScheduleDraft}
-                      loading={scheduleLoading}
-                    />
-                  </>
-                ) : (
-                  <div
-                    className={`inline-flex items-center gap-2 rounded-full border border-glass-border px-3 py-1.5 text-xs font-medium ${
-                      DRAFT_STATUS_PILL_STYLES[activeDraft.status]
-                    }`}
-                  >
-                    <div
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        activeDraft.status === "POSTED"
-                          ? "bg-atlas-success"
-                          : activeDraft.status === "SCHEDULED"
-                            ? "bg-delphi-blue-400"
-                            : "bg-atlas-text-secondary"
-                      }`}
-                    />
-                    {DRAFT_STATUS_LABELS[activeDraft.status]}
+                      {DRAFT_STATUS_LABELS[activeDraft.status]}
+                    </span>
+                    <span className="text-xs text-atlas-text-muted">
+                      {DRAFT_STATUS_HINTS[activeDraft.status]}
+                    </span>
                   </div>
-                )}
-
-                <div className="flex-1" />
-
+                  <div className="flex-1" />
+                  <div className="flex flex-wrap items-center gap-2">
+                    {activeDraft.status === "DRAFT" ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => void handleUpdateDraftStatus("APPROVED")}
+                          disabled={statusUpdating}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-atlas-teal/20 px-3 py-1.5 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/30 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {statusUpdating ? (
+                            <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <CheckCircle className="h-3 w-3" aria-hidden="true" />
+                          )}
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleUpdateDraftStatus("ARCHIVED")}
+                          disabled={statusUpdating}
+                          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-atlas-text-muted transition-colors hover:text-atlas-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <Archive className="h-3 w-3" aria-hidden="true" />
+                          Archive
+                        </button>
+                      </>
+                    ) : null}
+                    {activeDraft.status === "APPROVED" ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleUpdateDraftStatus("POSTED")}
+                        disabled={statusUpdating}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {statusUpdating ? (
+                          <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                        ) : (
+                          <Check className="h-3 w-3" aria-hidden="true" />
+                        )}
+                        Mark as Posted
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                 <button
                   type="button"
-                  onClick={() => handleDelete(activeDraft.id)}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-glass-border bg-glass text-atlas-text-secondary transition-colors hover:border-red-500/50 hover:text-red-400"
-                  aria-label="Delete draft"
+                  onClick={() => void handleDelete(activeDraft.id)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-atlas-error/30 bg-atlas-error/10 px-3 py-1.5 text-sm text-atlas-error transition-colors hover:border-atlas-error hover:bg-atlas-error/15 focus:outline-none focus:border-atlas-error"
                 >
-                  <Archive className="h-4 w-4" />
+                  <span className="text-xs">Delete draft</span>
                 </button>
-              </div>
-
-              {activeDraft.status === "POSTED" && draftPerformance && (
-                <div className="mt-6 border-t border-glass-border pt-6">
-                  <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-atlas-text-muted">
-                    Post Performance
-                  </p>
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    <PerformanceCard
-                      label="Impressions"
-                      value={draftPerformance.impressions}
-                      trend={draftPerformance.impressionsTrend}
-                    />
-                    <PerformanceCard
-                      label="Engagement"
-                      value={`${(draftPerformance.engagementRate * 100).toFixed(1)}%`}
-                      trend={draftPerformance.engagementTrend}
-                    />
-                    <PerformanceCard
-                      label="Sentiment"
-                      value={draftPerformance.sentiment}
-                      variant="sentiment"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {canReviseActiveDraft && (
-                <div className="mt-6 border-t border-glass-border pt-6">
-                  <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-atlas-text-muted">
-                    Refine with one click
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <RefinementChips
-                      onRefine={handleRefine}
-                      disabled={creating || Boolean(refiningChip)}
-                      loadingLabel={refiningChip ?? undefined}
-                    />
+                <div className="flex items-center gap-3">
+                  {activeDraft.status === "APPROVED" || activeDraft.status === "DRAFT" ? (
                     <button
                       type="button"
-                      onClick={() => void handleTryAgain()}
-                      disabled={creating}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs font-medium text-atlas-text-secondary transition-colors hover:border-atlas-teal/50 hover:text-atlas-text disabled:opacity-50"
+                      onClick={async () => {
+                        try {
+                          setError(null);
+                          // Check if X account is linked
+                          const xStatus = await api.auth.x.status();
+                          if (!xStatus.linked) {
+                            // X not linked — start OAuth link flow
+                            const { url } = await api.auth.x.authorize();
+                            window.location.href = url;
+                            return;
+                          }
+                          // Backend auto-refreshes expired tokens — just try to post
+                          const result = await api.drafts.postToX(activeDraft.id);
+                          setActiveDraft(result.draft);
+                          syncDraftReferences(result.draft);
+                        } catch (postError: unknown) {
+                          console.error("Post to X failed:", postError);
+                          // Fallback to intent
+                          const intentUrl = getXIntentUrl(activeDraft.content);
+                          if (!intentUrl) {
+                            setError("X fallback URL is not configured.");
+                            return;
+                          }
+                          window.open(intentUrl, "_blank", "width=550,height=420");
+                        }
+                      }}
+                      className="flex items-center gap-1.5 rounded-lg border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs font-medium text-atlas-text transition-colors hover:border-atlas-teal/50"
                     >
-                      {creating && !refiningChip ? (
-                        <RefreshCw className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-3 w-3" />
+                      <svg
+                        className="h-3.5 w-3.5"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                      </svg>
+                      Post to X
+                    </button>
+                  ) : null}
+                  {activeDraft.status === "APPROVED" || activeDraft.status === "DRAFT" ? (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setSchedulePopoverOpen(true)}
+                        title="Schedule this draft"
+                        className="flex items-center gap-1.5 rounded-lg border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs font-medium text-atlas-text transition-colors hover:border-atlas-teal/50 hover:text-atlas-teal"
+                      >
+                        <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
+                        Schedule
+                      </button>
+                      {schedulePopoverOpen && (
+                        <SchedulePopover
+                          initialAt={activeDraft.scheduledAt || new Date(Date.now() + 3600000).toISOString()}
+                          onCancel={() => setSchedulePopoverOpen(false)}
+                          onConfirm={(iso) => void handleScheduleDraft(iso)}
+                          busy={scheduleLoading}
+                        />
                       )}
-                      Surprise me
+                    </div>
+                  ) : null}
+                  {activeDraft.status === "APPROVED" || activeDraft.status === "DRAFT" ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        router.push(`/campaigns?newCampaign=true&draftId=${activeDraft.id}`)
+                      }
+                      title="Add this draft to a new campaign"
+                      className="flex items-center gap-1.5 rounded-lg border border-glass-border bg-atlas-surface px-3 py-1.5 text-xs font-medium text-atlas-text transition-colors hover:border-atlas-teal/50 hover:text-atlas-teal"
+                    >
+                      <Megaphone className="h-3.5 w-3.5" aria-hidden="true" />
+                      Add to Campaign
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={handleCopyDraft}
+                    aria-label={
+                      copiedDraftId === activeDraft.id
+                        ? "Draft copied to clipboard"
+                        : "Copy draft to clipboard"
+                    }
+                    title={
+                      copiedDraftId === activeDraft.id
+                        ? "Copied!"
+                        : "Copy to clipboard"
+                    }
+                    className={`inline-flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-1.5 text-sm transition-colors hover:border-atlas-teal focus:outline-none focus:border-atlas-teal ${
+                      copiedDraftId === activeDraft.id
+                        ? "text-atlas-success"
+                        : "text-atlas-text-secondary hover:text-atlas-teal"
+                    }`}
+                  >
+                    {copiedDraftId === activeDraft.id ? (
+                      <>
+                        <Check className="h-4 w-4" aria-hidden="true" />
+                        <span className="text-xs" aria-live="polite">
+                          Copied!
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Clipboard className="h-4 w-4" aria-hidden="true" />
+                        <span className="text-xs" aria-live="polite">
+                          Copy
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Try in another voice — quick side-by-side comparison */}
+              {blends.length > 0 && activeDraft.sourceContent ? (
+                <div className="mt-4 rounded-xl border border-glass-border bg-atlas-surface/40 p-4">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-atlas-text-muted">
+                    Try in another voice
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label htmlFor="compare-blend-select" className="sr-only">
+                      Choose a blend to compare
+                    </label>
+                    <select
+                      id="compare-blend-select"
+                      value={compareBlendId || ""}
+                      onChange={(event) =>
+                        setCompareBlendId(event.target.value || null)
+                      }
+                      className="flex-1 min-w-[180px] rounded-lg border border-glass-border bg-atlas-surface px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none"
+                    >
+                      <option value="">Select a blend...</option>
+                      {namedBlends
+                        .filter((blend) => blend.id !== selectedBlendId)
+                        .map((blend) => (
+                          <option key={blend.id} value={blend.id}>
+                            {blend.name}
+                          </option>
+                        ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => void handleCompareInAnotherVoice()}
+                      disabled={
+                        !compareBlendId ||
+                        compareBlendId === selectedBlendId ||
+                        compareBlendLoading
+                      }
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-atlas-teal/30 px-3 py-2 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {compareBlendLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                      ) : null}
+                      Compare
                     </button>
                   </div>
+                  {compareBlendDraft && compareBlendName ? (
+                    <div className="mt-3 rounded-lg border border-atlas-teal/20 bg-atlas-bg/60 p-3">
+                      <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-atlas-teal">
+                        {compareBlendName}
+                      </p>
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-atlas-text">
+                        {compareBlendDraft}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleUseComparisonDraft}
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-atlas-teal/30 px-3 py-1.5 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/10"
+                      >
+                        Use this instead
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
-              )}
+              ) : null}
+
+              {/* Performance Card — shown for POSTED drafts */}
+              {activeDraft.status === "POSTED" ? (
+                <div className="mt-4">
+                  {draftPerformance ? (
+                    <PerformanceCard
+                      performance={draftPerformance}
+                      onRefresh={async () => {
+                        setPerformanceLoading(true);
+                        try {
+                          const [metricsResult, perfResult] = await Promise.all([
+                            api.drafts.fetchMetrics(activeDraft.id),
+                            api.drafts.performance(activeDraft.id),
+                          ]);
+                          setActiveDraft(metricsResult.draft);
+                          syncDraftReferences(metricsResult.draft);
+                          setDraftPerformance(perfResult.performance);
+                        } catch { /* silently fail */ }
+                        setPerformanceLoading(false);
+                      }}
+                      refreshing={performanceLoading}
+                    />
+                  ) : (
+                    <div className="rounded-xl border border-glass-border bg-atlas-surface/60 p-4">
+                      <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-atlas-text-muted mb-3">
+                        <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
+                        Performance
+                      </p>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setPerformanceLoading(true);
+                          try {
+                            const [metricsResult, perfResult] = await Promise.all([
+                              api.drafts.fetchMetrics(activeDraft.id),
+                              api.drafts.performance(activeDraft.id),
+                            ]);
+                            setActiveDraft(metricsResult.draft);
+                            syncDraftReferences(metricsResult.draft);
+                            setDraftPerformance(perfResult.performance);
+                          } catch {
+                            setError("Could not fetch performance data");
+                          }
+                          setPerformanceLoading(false);
+                        }}
+                        disabled={performanceLoading}
+                        className="rounded-lg bg-atlas-teal/20 px-4 py-2 text-xs font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/30 disabled:opacity-50"
+                      >
+                        {performanceLoading ? "Loading..." : "Load Performance"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : null}
             </div>
           ) : (
-            <div className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-dashed border-glass-border bg-glass/20 py-20 text-center backdrop-blur-xl">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-atlas-surface text-atlas-text-muted">
-                <Sparkles className="h-6 w-6" />
-              </div>
-              <h3 className="mt-4 text-sm font-medium text-atlas-text">No active draft</h3>
-              <p className="mt-1 text-xs text-atlas-text-secondary">
-                Select a draft from the history or feed Atlas to generate a new one.
-              </p>
+            <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6 text-center text-atlas-text-secondary">
+              <p>No drafts yet. Feed some content above to get started.</p>
             </div>
           )}
 
-          {activeDraft && activeDraft.status === "DRAFT" ? (
-            <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface p-6">
-              <label
-                htmlFor="feedback-input"
-                className="mb-3 block text-xs font-semibold uppercase tracking-wider text-atlas-text-muted"
-              >
-                Personalize further
-              </label>
-              <div className="flex gap-3">
-                <div className="relative flex-1">
-                  <textarea
-                    id="feedback-input"
-                    rows={2}
-                    placeholder="e.g. 'Make it more bullish', 'Add a thread starter', 'Use more emoji'"
-                    value={feedback}
-                    onChange={(e) => setFeedback(e.target.value)}
-                    onKeyDown={(e) => {
-                      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                        e.preventDefault();
-                        if (feedback.trim()) void handleFeedback();
-                      }
-                    }}
-                    className="w-full resize-none rounded-xl border border-glass-border bg-atlas-bg/40 px-4 py-3 text-sm text-atlas-text placeholder:text-atlas-text-muted focus:border-atlas-teal/50 focus:outline-none"
-                  />
+          {/* Oracle inline narration — "demo money shot" (v2 Step 8).
+              Oracle whispers what it sees the moment the user lands on a
+              draft: real size + status + confidence → concrete nudge. */}
+          {inspectorEntity && !voiceComparison ? (
+            <div className="mt-3">
+              <OracleInspector entity={inspectorEntity} />
+            </div>
+          ) : null}
+
+          {!voiceComparison && canReviseActiveDraft ? (
+            <div className="mt-4">
+              <RefinementChips
+                onRefine={handleRefine}
+                disabled={creating}
+                loading={refiningChip}
+              />
+            </div>
+          ) : null}
+
+          {!voiceComparison && versionDrafts.length > 0 ? (
+            <div className="mt-6 space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                {versionDrafts.map((draft, index) => (
+                  <button
+                    key={draft.version}
+                    type="button"
+                    onClick={() => handleSelectDraft(draft)}
+                    className={`rounded-lg px-4 py-2 text-sm transition-colors ${
+                      activeVersion === index
+                        ? "border-b-2 border-atlas-teal text-atlas-teal"
+                        : "text-atlas-text-secondary hover:text-atlas-text"
+                    }`}
+                  >
+                    Version {draft.version}
+                  </button>
+                ))}
+
+                {versionDrafts.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={handleToggleCompareMode}
+                    className={`rounded px-2 py-1 text-xs ${
+                      compareMode
+                        ? "bg-atlas-teal text-atlas-bg"
+                        : "text-atlas-text-secondary hover:text-atlas-text"
+                    }`}
+                  >
+                    Compare
+                  </button>
+                ) : null}
+              </div>
+
+              {compareMode && versionDrafts.length > 1 ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <label
+                    htmlFor="compare-version"
+                    className="text-xs uppercase tracking-wide text-atlas-text-secondary"
+                  >
+                    Compare against
+                  </label>
+                  <select
+                    id="compare-version"
+                    value={compareVersion ?? ""}
+                    onChange={(event) =>
+                      setCompareVersion(
+                        event.target.value ? Number(event.target.value) : null
+                      )
+                    }
+                    className="rounded-lg border border-glass-border bg-atlas-surface px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none"
+                  >
+                    <option value="">Select a version</option>
+                    {versionDrafts
+                      .filter((draft) => draft.version !== activeDraft?.version)
+                      .map((draft) => (
+                        <option key={draft.version} value={draft.version}>
+                          Version {draft.version}
+                        </option>
+                      ))}
+                  </select>
                 </div>
+              ) : null}
+
+              {compareMode && activeDraft && compareDraft ? (
+                <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="rounded-xl border border-glass-border bg-atlas-surface p-4">
+                    <p className="mb-2 text-xs text-atlas-text-muted">
+                      Version {compareDraft.version}
+                    </p>
+                    <p className="whitespace-pre-wrap text-sm text-atlas-text">
+                      {compareDraft.content}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-atlas-teal/30 bg-atlas-surface p-4">
+                    <p className="mb-2 text-xs text-atlas-teal">
+                      Current (v{activeDraft.version})
+                    </p>
+                    <p className="whitespace-pre-wrap text-sm text-atlas-text">
+                      {activeDraft.content}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {!voiceComparison && canReviseActiveDraft ? (
+            <div className="mt-6 flex flex-wrap gap-3">
+              <GradientButton
+                variant="outline-warning"
+                onClick={() => document.getElementById("feedback-input")?.focus()}
+              >
+                Not quite — tell me what&apos;s off
+              </GradientButton>
+              {!showFeedback ? (
                 <button
                   type="button"
-                  aria-label={
-                    feedbackRecorder.state === "recording"
-                      ? "Stop recording"
-                      : "Record feedback"
-                  }
+                  onClick={() => setShowFeedback(true)}
+                  className="flex items-center gap-1.5 rounded-lg border border-glass-border px-3 py-1.5 text-xs font-medium text-atlas-text-secondary transition-colors hover:border-atlas-teal/50 hover:text-atlas-text"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                  Regenerate
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <label htmlFor={regenerationGuidanceId} className="sr-only">
+                    Describe how Atlas should regenerate the draft
+                  </label>
+                  <input
+                    id={regenerationGuidanceId}
+                    type="text"
+                    value={feedbackText}
+                    onChange={(event) => setFeedbackText(event.target.value)}
+                    placeholder="Make it shorter, more data-driven..."
+                    className="flex-1 rounded-lg border border-glass-border bg-atlas-bg px-3 py-1.5 text-xs text-atlas-text placeholder-atlas-text-muted focus:border-atlas-teal focus:outline-none"
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        void handleTryAgain(feedbackText || undefined);
+                        setFeedbackText("");
+                        setShowFeedback(false);
+                      }
+                      if (event.key === "Escape") setShowFeedback(false);
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleTryAgain(feedbackText || undefined);
+                      setFeedbackText("");
+                      setShowFeedback(false);
+                    }}
+                    className="rounded-lg bg-atlas-teal px-3 py-1.5 text-xs font-medium text-atlas-bg"
+                  >
+                    Go
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {!voiceComparison && canReviseActiveDraft ? (
+            <div className="mt-6">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <label htmlFor="feedback-input" className="sr-only">
+                  Feedback for the current draft
+                </label>
+                <input
+                  id="feedback-input"
+                  aria-describedby={draftFeedbackHintId}
+                  type="text"
+                  value={feedback}
+                  onChange={(event) => setFeedback(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      void handleFeedback();
+                    }
+                  }}
+                  placeholder="Tell me what's off — type or drop a voice note."
+                  className="flex-1 rounded-lg border border-glass-border bg-atlas-surface px-4 py-3 text-sm text-atlas-text placeholder-atlas-text-secondary focus:border-atlas-teal focus:outline-none"
+                />
+                <button
+                  type="button"
+                  aria-label={feedbackRecorder.state === "recording" ? "Stop recording" : "Record voice feedback"}
                   onClick={() => {
                     if (feedbackRecorder.state === "recording") {
                       feedbackRecorder.stopRecording();
@@ -2129,7 +2561,7 @@ function CraftingPage() {
                       feedbackRecorder.startRecording();
                     }
                   }}
-                  className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-all ${
+                  className={`flex items-center justify-center rounded-lg border p-3 text-sm transition-colors ${
                     feedbackRecorder.state === "recording"
                       ? "border-red-500 bg-red-500/10 text-red-400"
                       : feedbackRecorder.state === "transcribing"

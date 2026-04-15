@@ -2,12 +2,14 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { GitMerge, Loader2, Sparkles } from "lucide-react";
-import { api } from "@/lib/api";
+import VoicePreviewPlayer from "./VoicePreviewPlayer";
+import { api, type BlendVoice } from "@/lib/api";
 import {
   getNotableVoiceDimensions,
   type VoiceDimensionSnapshot,
 } from "@/lib/voice-recipes";
 import type { VoiceDimensions } from "@/lib/voice-profile-dimensions";
+import { resolveVoiceAvatar, voiceInitials, type MinimalUser } from "@/lib/voice-avatar";
 
 interface VoiceCardProps {
   name: string;
@@ -18,6 +20,8 @@ interface VoiceCardProps {
   /** @deprecated Prefer notableDimensions. Kept for backwards compat. */
   dimensions?: VoiceDimensions;
   userHandle?: string;
+  voices?: BlendVoice[];
+  user?: MinimalUser | null;
   onSelect: () => void;
   onUse: () => void;
   onBlend?: () => void;
@@ -53,6 +57,87 @@ function toRecipePills(snapshots: VoiceDimensionSnapshot[] | undefined): RecipeP
   });
 }
 
+function AvatarChip({
+  voice,
+  user,
+  className = "",
+  style,
+}: {
+  voice: BlendVoice;
+  user?: MinimalUser | null;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const url = resolveVoiceAvatar(voice, user);
+  const initials = voiceInitials(voice, user);
+
+  if (!url) {
+    return (
+      <span
+        className={`flex shrink-0 items-center justify-center rounded-full border border-glass-border bg-atlas-surface text-[10px] font-bold text-atlas-text-muted ${className}`}
+        style={style}
+        aria-hidden="true"
+      >
+        {initials}
+      </span>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt={voice.label}
+      className={`shrink-0 rounded-full object-cover ${className}`}
+      style={style}
+      onError={(event) => {
+        event.currentTarget.style.display = "none";
+      }}
+    />
+  );
+}
+
+function AvatarStack({
+  voices,
+  user,
+  size = 20,
+}: {
+  voices: BlendVoice[];
+  user?: MinimalUser | null;
+  size?: number;
+}) {
+  const maxVisible = 3;
+  const visible = voices.slice(0, maxVisible);
+  const remaining = voices.length - maxVisible;
+
+  return (
+    <div className="flex flex-row-reverse items-center">
+      {remaining > 0 && (
+        <span
+          className="flex shrink-0 items-center justify-center rounded-full border border-glass-border bg-atlas-surface text-[10px] font-medium text-atlas-text-secondary"
+          style={{ width: size, height: size, marginLeft: -size / 3 }}
+          aria-hidden="true"
+        >
+          +{remaining}
+        </span>
+      )}
+      {[...visible].reverse().map((voice, index) => (
+        <AvatarChip
+          key={`${voice.id ?? voice.label}-chip`}
+          voice={voice}
+          user={user}
+          className="border-2 border-atlas-bg ring-0"
+          style={{
+            width: size,
+            height: size,
+            marginLeft: index === 0 ? 0 : -size / 3,
+          } as React.CSSProperties}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function VoiceCard({
   name,
   isActive,
@@ -61,6 +146,8 @@ export default function VoiceCard({
   notableDimensions,
   dimensions,
   userHandle: _userHandle,
+  voices,
+  user,
   onSelect,
   onUse,
   onBlend,
@@ -177,6 +264,12 @@ export default function VoiceCard({
         className="absolute inset-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-atlas-teal focus:ring-inset"
       />
 
+      {isActive && (
+        <span className="absolute right-3 top-3 z-10 rounded-full border border-atlas-teal/30 bg-atlas-teal/10 px-2 py-0.5 text-[10px] font-semibold text-atlas-teal">
+          My Voice
+        </span>
+      )}
+
       <div className="relative z-10 flex items-start justify-between gap-2">
         <span
           className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
@@ -202,6 +295,15 @@ export default function VoiceCard({
       </div>
 
       <p className="relative z-10 mt-2 truncate font-heading text-sm font-semibold text-atlas-text">{name}</p>
+
+      {voices && voices.length > 0 && (
+        <div className="relative z-10 mt-2 flex items-center gap-2">
+          <AvatarStack voices={voices} user={user} size={20} />
+          <span className="text-[10px] text-atlas-text-muted">
+            {voices.length} voice{voices.length === 1 ? "" : "s"}
+          </span>
+        </div>
+      )}
 
       <div className="relative z-10 mt-3">
         <button
@@ -258,9 +360,14 @@ export default function VoiceCard({
         )}
 
         {previewText && !previewError && (
-          <p className="mt-2 rounded-lg border border-glass-border bg-atlas-bg/40 px-2 py-1.5 text-[11px] italic text-atlas-text-secondary">
-            {previewText}
-          </p>
+          <div className="mt-2 rounded-lg border border-glass-border bg-atlas-bg/40 px-2 py-1.5">
+            <p className="text-[11px] italic text-atlas-text-secondary">
+              {previewText}
+            </p>
+            <div className="mt-2">
+              <VoicePreviewPlayer text={previewText} />
+            </div>
+          </div>
         )}
       </div>
 

@@ -459,7 +459,7 @@ function BugDetail({
 // Main component
 // ---------------------------------------------------------------------------
 
-export default function AdminBugsPage() {
+function AdminBugsContent() {
   const [bugs, setBugs] = useState<BugRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -601,235 +601,237 @@ export default function AdminBugsPage() {
   // ---- Render ----
   if (loading) {
     return (
-      <FeatureGate flagKey="super_admin">
-        <AppShell>
-          <div className="flex items-center justify-center py-32">
-            <div className="animate-pulse text-sm text-atlas-text-secondary">Loading bug tracker...</div>
-          </div>
-        </AppShell>
-      </FeatureGate>
+      <AppShell>
+        <div className="flex items-center justify-center py-32">
+          <div className="animate-pulse text-sm text-atlas-text-secondary">Loading bug tracker...</div>
+        </div>
+      </AppShell>
     );
   }
 
   if (error) {
     return (
-      <FeatureGate flagKey="super_admin">
-        <AppShell>
-          <div className="flex flex-col items-center justify-center gap-4 py-32">
-            <p className="text-sm text-red-400">{error}</p>
-            <button
-              onClick={fetchBugs}
-              className="rounded-lg bg-atlas-teal/15 px-4 py-2 text-sm text-atlas-teal hover:bg-atlas-teal/25"
-            >
-              Retry
-            </button>
-          </div>
-        </AppShell>
-      </FeatureGate>
+      <AppShell>
+        <div className="flex flex-col items-center justify-center gap-4 py-32">
+          <p className="text-sm text-red-400">{error}</p>
+          <button
+            onClick={fetchBugs}
+            className="rounded-lg bg-atlas-teal/15 px-4 py-2 text-sm text-atlas-teal hover:bg-atlas-teal/25"
+          >
+            Retry
+          </button>
+        </div>
+      </AppShell>
     );
   }
 
   return (
-    <FeatureGate flagKey="super_admin">
-      <AppShell>
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 py-2">
-          {/* Header */}
-          <header className="flex items-start justify-between">
-            <div className="space-y-3">
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-atlas-teal">Admin</p>
-              <h1 className="font-heading text-3xl font-extrabold tracking-tight text-atlas-text sm:text-4xl">
-                Bug Tracker
-              </h1>
-              <p className="max-w-3xl text-sm leading-7 text-atlas-text-secondary">
-                {stats.total} bugs tracked with {stats.totalOccurrences} total occurrences.
-                {stats.consoleErrors > 0 && ` ${stats.consoleErrors} auto-captured from console errors.`}
-              </p>
-            </div>
-            <button
-              onClick={() => setShowReportModal(true)}
-              className="flex items-center gap-2 rounded-xl bg-atlas-teal/15 px-4 py-2.5 text-sm font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/25"
-            >
-              <Plus className="h-4 w-4" />
-              Report Bug
-            </button>
-          </header>
-
-          {/* Stats bar */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <StatCard label="Total Bugs" value={stats.total} icon={<Bug className="h-4 w-4" />} color="text-atlas-text" />
-            <StatCard label="Open" value={stats.open} icon={<XCircle className="h-4 w-4" />} color="text-red-400" />
-            <StatCard label="Fixed / Closed" value={stats.fixed} icon={<CheckCircle2 className="h-4 w-4" />} color="text-emerald-400" />
-            <StatCard label="In Progress" value={stats.inProgress} icon={<Clock className="h-4 w-4" />} color="text-yellow-400" />
-            <StatCard label="Console Errors" value={stats.consoleErrors} icon={<Monitor className="h-4 w-4" />} color="text-amber-400" />
-            <StatCard label="Occurrences" value={stats.totalOccurrences} icon={<AlertTriangle className="h-4 w-4" />} color="text-atlas-teal" />
+    <AppShell>
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 py-2">
+        {/* Header */}
+        <header className="flex items-start justify-between">
+          <div className="space-y-3">
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-atlas-teal">Admin</p>
+            <h1 className="font-heading text-3xl font-extrabold tracking-tight text-atlas-text sm:text-4xl">
+              Bug Tracker
+            </h1>
+            <p className="max-w-3xl text-sm leading-7 text-atlas-text-secondary">
+              {stats.total} bugs tracked with {stats.totalOccurrences} total occurrences.
+              {stats.consoleErrors > 0 && ` ${stats.consoleErrors} auto-captured from console errors.`}
+            </p>
           </div>
+          <button
+            onClick={() => setShowReportModal(true)}
+            className="flex items-center gap-2 rounded-xl bg-atlas-teal/15 px-4 py-2.5 text-sm font-medium text-atlas-teal transition-colors hover:bg-atlas-teal/25"
+          >
+            <Plus className="h-4 w-4" />
+            Report Bug
+          </button>
+        </header>
 
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-glass-border bg-glass px-4 py-3 backdrop-blur-xl">
-            <Filter className="h-4 w-4 text-atlas-text-muted" />
-
-            {/* Status filter pills */}
-            <div className="flex gap-1.5">
-              {(["all", "open", "closed", "wontfix", "in-progress"] as StatusFilter[]).map((st) => (
-                <button
-                  key={st}
-                  onClick={() => setStatusFilter(st)}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                    statusFilter === st
-                      ? "border-atlas-teal bg-atlas-teal/15 text-atlas-teal"
-                      : "border-glass-border bg-white/5 text-atlas-text-muted hover:bg-white/10"
-                  }`}
-                >
-                  {st === "all" ? "All" : st === "wontfix" ? "Won't Fix" : st === "in-progress" ? "In Progress" : st.charAt(0).toUpperCase() + st.slice(1)}
-                </button>
-              ))}
-            </div>
-
-            <input
-              type="text"
-              placeholder="Search bugs..."
-              className="flex-1 rounded-md border border-glass-border bg-[#1a2235] px-3 py-1.5 text-xs text-atlas-text placeholder:text-atlas-text-muted focus:border-atlas-teal focus:outline-none"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-
-            <span className="text-xs text-atlas-text-muted">
-              {filteredBugs.length} of {bugs.length}
-            </span>
-
-            <button
-              onClick={fetchBugs}
-              className="rounded-md border border-atlas-teal bg-atlas-teal/15 p-1.5 text-atlas-teal transition-colors hover:bg-atlas-teal/25"
-              title="Refresh"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-            </button>
-          </div>
-
-          {/* Bug table */}
-          <div className="overflow-hidden rounded-xl border border-glass-border">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-glass-border bg-[#111827] text-xs uppercase tracking-wider text-atlas-text-muted">
-                    <th className="w-8 px-4 py-3">
-                      {/* Status dot column */}
-                    </th>
-                    <th className="px-4 py-3">Title</th>
-                    <th className="px-4 py-3">Source</th>
-                    <th className="px-4 py-3">Route</th>
-                    <th
-                      className="cursor-pointer px-4 py-3 hover:text-atlas-teal"
-                      onClick={() => toggleSort("occurrence_count")}
-                    >
-                      Hits <SortIcon field="occurrence_count" />
-                    </th>
-                    <th
-                      className="cursor-pointer px-4 py-3 hover:text-atlas-teal"
-                      onClick={() => toggleSort("last_seen_at")}
-                    >
-                      Last Seen <SortIcon field="last_seen_at" />
-                    </th>
-                    <th
-                      className="cursor-pointer px-4 py-3 hover:text-atlas-teal"
-                      onClick={() => toggleSort("created_at")}
-                    >
-                      Created <SortIcon field="created_at" />
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 bg-glass backdrop-blur-xl">
-                  {filteredBugs.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="px-4 py-12 text-center text-atlas-text-secondary">
-                        No bugs match the current filters.
-                      </td>
-                    </tr>
-                  )}
-                  {filteredBugs.map((bug) => (
-                    <Fragment key={bug.id}>
-                      <tr
-                        className={`cursor-pointer transition-colors hover:bg-white/[0.03] ${
-                          expandedId === bug.id ? "bg-white/[0.02]" : ""
-                        }`}
-                        onClick={() => setExpandedId(expandedId === bug.id ? null : bug.id)}
-                      >
-                        {/* Status dot */}
-                        <td className="px-4 py-3">
-                          <div className={`h-2.5 w-2.5 rounded-full ${statusDot(bug.status)}`} />
-                        </td>
-                        {/* Title */}
-                        <td className="max-w-xs px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-[11px] text-atlas-text-muted">#{bug.bug_number}</span>
-                            <span className="truncate font-medium text-atlas-text">{bug.title}</span>
-                          </div>
-                          <div className="mt-0.5 flex items-center gap-2">
-                            <span className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-medium ${severityColor(bug.severity)}`}>
-                              {bug.severity}
-                            </span>
-                            <span className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-medium ${statusColor(bug.status)}`}>
-                              {bug.status}
-                            </span>
-                          </div>
-                        </td>
-                        {/* Source */}
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5">
-                            {sourceIcon(bug.source)}
-                            <span className="text-xs text-atlas-text-secondary">{bug.source || "unknown"}</span>
-                          </div>
-                        </td>
-                        {/* Route */}
-                        <td className="px-4 py-3">
-                          {bug.page_route ? (
-                            <code className="rounded bg-atlas-teal/10 px-1.5 py-0.5 text-[11px] text-atlas-teal">
-                              {bug.page_route}
-                            </code>
-                          ) : (
-                            <span className="text-xs text-atlas-text-muted">--</span>
-                          )}
-                        </td>
-                        {/* Occurrences */}
-                        <td className="px-4 py-3">
-                          <span className={`font-mono text-sm font-bold ${bug.occurrence_count > 10 ? "text-amber-400" : bug.occurrence_count > 1 ? "text-atlas-text" : "text-atlas-text-muted"}`}>
-                            {bug.occurrence_count || 1}
-                          </span>
-                        </td>
-                        {/* Last Seen */}
-                        <td className="whitespace-nowrap px-4 py-3 text-xs text-atlas-text-muted">
-                          {relativeTime(bug.last_seen_at)}
-                        </td>
-                        {/* Created */}
-                        <td className="whitespace-nowrap px-4 py-3 text-xs text-atlas-text-muted">
-                          {relativeTime(bug.created_at)}
-                        </td>
-                      </tr>
-                      {expandedId === bug.id && (
-                        <BugDetail
-                          key={`detail-${bug.id}`}
-                          bug={bug}
-                          onUpdate={handleUpdate}
-                          updating={updating}
-                        />
-                      )}
-                    </Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+        {/* Stats bar */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <StatCard label="Total Bugs" value={stats.total} icon={<Bug className="h-4 w-4" />} color="text-atlas-text" />
+          <StatCard label="Open" value={stats.open} icon={<XCircle className="h-4 w-4" />} color="text-red-400" />
+          <StatCard label="Fixed / Closed" value={stats.fixed} icon={<CheckCircle2 className="h-4 w-4" />} color="text-emerald-400" />
+          <StatCard label="In Progress" value={stats.inProgress} icon={<Clock className="h-4 w-4" />} color="text-yellow-400" />
+          <StatCard label="Console Errors" value={stats.consoleErrors} icon={<Monitor className="h-4 w-4" />} color="text-amber-400" />
+          <StatCard label="Occurrences" value={stats.totalOccurrences} icon={<AlertTriangle className="h-4 w-4" />} color="text-atlas-teal" />
         </div>
 
-        {/* Report Bug Modal */}
-        {showReportModal && (
-          <ReportBugModal
-            onClose={() => setShowReportModal(false)}
-            onSubmit={handleCreate}
-            submitting={submitting}
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-glass-border bg-glass px-4 py-3 backdrop-blur-xl">
+          <Filter className="h-4 w-4 text-atlas-text-muted" />
+
+          {/* Status filter pills */}
+          <div className="flex gap-1.5">
+            {(["all", "open", "closed", "wontfix", "in-progress"] as StatusFilter[]).map((st) => (
+              <button
+                key={st}
+                onClick={() => setStatusFilter(st)}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  statusFilter === st
+                    ? "border-atlas-teal bg-atlas-teal/15 text-atlas-teal"
+                    : "border-glass-border bg-white/5 text-atlas-text-muted hover:bg-white/10"
+                }`}
+              >
+                {st === "all" ? "All" : st === "wontfix" ? "Won't Fix" : st === "in-progress" ? "In Progress" : st.charAt(0).toUpperCase() + st.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          <input
+            type="text"
+            placeholder="Search bugs..."
+            className="flex-1 rounded-md border border-glass-border bg-[#1a2235] px-3 py-1.5 text-xs text-atlas-text placeholder:text-atlas-text-muted focus:border-atlas-teal focus:outline-none"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
-        )}
-      </AppShell>
+
+          <span className="text-xs text-atlas-text-muted">
+            {filteredBugs.length} of {bugs.length}
+          </span>
+
+          <button
+            onClick={fetchBugs}
+            className="rounded-md border border-atlas-teal bg-atlas-teal/15 p-1.5 text-atlas-teal transition-colors hover:bg-atlas-teal/25"
+            title="Refresh"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* Bug table */}
+        <div className="overflow-hidden rounded-xl border border-glass-border">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-glass-border bg-[#111827] text-xs uppercase tracking-wider text-atlas-text-muted">
+                  <th className="w-8 px-4 py-3">
+                    {/* Status dot column */}
+                  </th>
+                  <th className="px-4 py-3">Title</th>
+                  <th className="px-4 py-3">Source</th>
+                  <th className="px-4 py-3">Route</th>
+                  <th
+                    className="cursor-pointer px-4 py-3 hover:text-atlas-teal"
+                    onClick={() => toggleSort("occurrence_count")}
+                  >
+                    Hits <SortIcon field="occurrence_count" />
+                  </th>
+                  <th
+                    className="cursor-pointer px-4 py-3 hover:text-atlas-teal"
+                    onClick={() => toggleSort("last_seen_at")}
+                  >
+                    Last Seen <SortIcon field="last_seen_at" />
+                  </th>
+                  <th
+                    className="cursor-pointer px-4 py-3 hover:text-atlas-teal"
+                    onClick={() => toggleSort("created_at")}
+                  >
+                    Created <SortIcon field="created_at" />
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 bg-glass backdrop-blur-xl">
+                {filteredBugs.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-12 text-center text-atlas-text-secondary">
+                      No bugs match the current filters.
+                    </td>
+                  </tr>
+                )}
+                {filteredBugs.map((bug) => (
+                  <Fragment key={bug.id}>
+                    <tr
+                      className={`cursor-pointer transition-colors hover:bg-white/[0.03] ${
+                        expandedId === bug.id ? "bg-white/[0.02]" : ""
+                      }`}
+                      onClick={() => setExpandedId(expandedId === bug.id ? null : bug.id)}
+                    >
+                      {/* Status dot */}
+                      <td className="px-4 py-3">
+                        <div className={`h-2.5 w-2.5 rounded-full ${statusDot(bug.status)}`} />
+                      </td>
+                      {/* Title */}
+                      <td className="max-w-xs px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-[11px] text-atlas-text-muted">#{bug.bug_number}</span>
+                          <span className="truncate font-medium text-atlas-text">{bug.title}</span>
+                        </div>
+                        <div className="mt-0.5 flex items-center gap-2">
+                          <span className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-medium ${severityColor(bug.severity)}`}>
+                            {bug.severity}
+                          </span>
+                          <span className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-medium ${statusColor(bug.status)}`}>
+                            {bug.status}
+                          </span>
+                        </div>
+                      </td>
+                      {/* Source */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          {sourceIcon(bug.source)}
+                          <span className="text-xs text-atlas-text-secondary">{bug.source || "unknown"}</span>
+                        </div>
+                      </td>
+                      {/* Route */}
+                      <td className="px-4 py-3">
+                        {bug.page_route ? (
+                          <code className="rounded bg-atlas-teal/10 px-1.5 py-0.5 text-[11px] text-atlas-teal">
+                            {bug.page_route}
+                          </code>
+                        ) : (
+                          <span className="text-xs text-atlas-text-muted">--</span>
+                        )}
+                      </td>
+                      {/* Occurrences */}
+                      <td className="px-4 py-3">
+                        <span className={`font-mono text-sm font-bold ${bug.occurrence_count > 10 ? "text-amber-400" : bug.occurrence_count > 1 ? "text-atlas-text" : "text-atlas-text-muted"}`}>
+                          {bug.occurrence_count || 1}
+                        </span>
+                      </td>
+                      {/* Last Seen */}
+                      <td className="whitespace-nowrap px-4 py-3 text-xs text-atlas-text-muted">
+                        {relativeTime(bug.last_seen_at)}
+                      </td>
+                      {/* Created */}
+                      <td className="whitespace-nowrap px-4 py-3 text-xs text-atlas-text-muted">
+                        {relativeTime(bug.created_at)}
+                      </td>
+                    </tr>
+                    {expandedId === bug.id && (
+                      <BugDetail
+                        key={`detail-${bug.id}`}
+                        bug={bug}
+                        onUpdate={handleUpdate}
+                        updating={updating}
+                      />
+                    )}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Report Bug Modal */}
+      {showReportModal && (
+        <ReportBugModal
+          onClose={() => setShowReportModal(false)}
+          onSubmit={handleCreate}
+          submitting={submitting}
+        />
+      )}
+    </AppShell>
+  );
+}
+
+export default function AdminBugsPage() {
+  return (
+    <FeatureGate flagKey="super_admin">
+      <AdminBugsContent />
     </FeatureGate>
   );
 }

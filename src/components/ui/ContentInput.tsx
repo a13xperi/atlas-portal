@@ -1,6 +1,12 @@
 "use client";
 
-import { useId, useRef, useState, type DragEventHandler } from "react";
+import {
+  forwardRef,
+  useId,
+  useRef,
+  useState,
+  type DragEventHandler,
+} from "react";
 import { Mic, MicOff, Loader2, FileText, MessageSquare, TrendingUp, ArrowUp } from "lucide-react";
 import type { RecordingState } from "@/lib/useVoiceRecorder";
 
@@ -28,34 +34,47 @@ export interface ContentInputProps {
   recordingError?: string | null;
 }
 
-export default function ContentInput({
-  placeholder = "Paste a tweet idea or link…",
-  value,
-  disabled = false,
-  onDrop,
-  onTextChange,
-  onTextSubmit,
-  onTrendingClick,
-  showMic = true,
-  acceptFileTypes = ".pdf,.doc,.docx,.txt,.md",
-  sourceError,
-  contentError,
-  contentDropActive = false,
-  onContentDragOver,
-  onContentDragLeave,
-  onContentDrop,
-  recordingState = "idle",
-  recordingDuration = 0,
-  onMicClick,
-  recordingError,
-}: ContentInputProps) {
-  const contentInputId = useId();
-  const contentErrorId = useId();
-  const sourceErrorId = useId();
-  const contentHintId = useId();
-  const dropZoneHintId = useId();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const textInputRef = useRef<HTMLTextAreaElement>(null);
+const ContentInput = forwardRef<HTMLTextAreaElement, ContentInputProps>(
+  function ContentInput(
+    {
+      placeholder = "Paste a tweet idea or link…",
+      value,
+      disabled = false,
+      onDrop,
+      onTextChange,
+      onTextSubmit,
+      onTrendingClick,
+      showMic = true,
+      acceptFileTypes = ".pdf,.doc,.docx,.txt,.md",
+      sourceError,
+      contentError,
+      contentDropActive = false,
+      onContentDragOver,
+      onContentDragLeave,
+      onContentDrop,
+      recordingState = "idle",
+      recordingDuration = 0,
+      onMicClick,
+      recordingError,
+    },
+    forwardedRef
+  ) {
+    const contentInputId = useId();
+    const contentErrorId = useId();
+    const sourceErrorId = useId();
+    const contentHintId = useId();
+    const dropZoneHintId = useId();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const textInputRef = useRef<HTMLTextAreaElement | null>(null);
+
+    const setTextInputRef = (node: HTMLTextAreaElement | null) => {
+      textInputRef.current = node;
+      if (typeof forwardedRef === "function") {
+        forwardedRef(node);
+      } else if (forwardedRef) {
+        (forwardedRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
+      }
+    };
   const [internalText, setInternalText] = useState("");
   const text = value ?? internalText;
   const contentDescriptionIds = [
@@ -186,7 +205,7 @@ export default function ContentInput({
           <textarea
             id={contentInputId}
             name="content"
-            ref={textInputRef}
+            ref={setTextInputRef}
             aria-describedby={contentDescriptionIds || undefined}
             aria-invalid={Boolean(contentError)}
             aria-errormessage={contentError ? contentErrorId : undefined}
@@ -274,5 +293,8 @@ export default function ContentInput({
         </p>
       ) : null}
     </div>
-  );
-}
+    );
+  }
+);
+
+export default ContentInput;

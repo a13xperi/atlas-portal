@@ -10,6 +10,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import DimensionBar from "@/components/ui/DimensionBar";
+import VoicePillBar from "@/components/ui/VoicePillBar";
+import VoicePreviewPlayer from "./VoicePreviewPlayer";
 import type { BlendVoice, SavedBlend } from "@/lib/api";
 import type { VoiceDimensionSnapshot } from "@/lib/voice-recipes";
 import {
@@ -17,6 +19,10 @@ import {
   type VoiceDimensions,
   VOICE_DIMENSION_SECTIONS,
 } from "@/lib/voice-profile-dimensions";
+import {
+  shouldGenerateVoiceProfileName,
+  generateVoiceProfileName,
+} from "@/lib/voice-naming";
 import { resolveVoiceAvatar, voiceInitials, type MinimalUser } from "@/lib/voice-avatar";
 
 interface RecipeCardProps {
@@ -150,18 +156,36 @@ export default function RecipeCard({
             )}
           </div>
           <h3 className="mt-4 font-heading text-2xl font-semibold tracking-tight text-atlas-text">
-            {blend.name}
+            {shouldGenerateVoiceProfileName(blend.name)
+              ? generateVoiceProfileName(
+                  dimensions,
+                  blend.voices.map((voice) => ({
+                    handle: voice.referenceVoice?.handle,
+                    percentage: voice.percentage,
+                    label: voice.label,
+                  }))
+                )
+              : blend.name}
           </h3>
           <div className="mt-3 flex items-center gap-3">
             <div className="flex flex-row-reverse items-center">
-              {[...blend.voices].reverse().map((voice, reverseIndex) => (
+              {blend.voices.length > 3 && (
+                <span
+                  className="flex shrink-0 items-center justify-center rounded-full border-2 border-atlas-bg bg-atlas-surface text-[10px] font-medium text-atlas-text-secondary -ml-2"
+                  style={{ width: 28, height: 28 }}
+                  aria-hidden="true"
+                >
+                  +{blend.voices.length - 3}
+                </span>
+              )}
+              {[...blend.voices].slice(0, 3).reverse().map((voice, reverseIndex) => (
                 <VoiceAvatar
                   key={`${blend.id}-${voice.id ?? voice.label}-cluster`}
                   voice={voice}
                   user={user}
                   size={28}
                   className={`border-2 border-atlas-bg ring-0 ${
-                    reverseIndex === blend.voices.length - 1 ? "" : "-ml-2"
+                    reverseIndex === 0 ? "" : "-ml-2"
                   }`}
                 />
               ))}
@@ -187,39 +211,14 @@ export default function RecipeCard({
         </div>
       </div>
 
-      <div className="mt-6">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-text-muted">
-            Composition
-          </p>
-          <p className="text-xs text-atlas-text-secondary">
-            {blend.voices.map((voice) => `${Math.round((voice.percentage / totalWeight) * 100)}% ${voice.label}`).join(" + ")}
-          </p>
-        </div>
-        <div className="mt-3 overflow-hidden rounded-full border border-glass-border bg-atlas-bg/70">
-          <div className="flex h-4">
-            {blend.voices.map((voice, index) => (
-              <div
-                key={`${blend.id}-${voice.label}`}
-                aria-hidden="true"
-                className={SEGMENT_STYLES[index % SEGMENT_STYLES.length].bar}
-                style={{ width: `${(voice.percentage / totalWeight) * 100}%` }}
-              />
-            ))}
-          </div>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {blend.voices.map((voice, index) => (
-            <span
-              key={`${blend.id}-${voice.label}-pill`}
-              className={`inline-flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-3 text-xs font-medium ${SEGMENT_STYLES[index % SEGMENT_STYLES.length].pill}`}
-            >
-              <VoiceAvatar voice={voice} user={user} size={20} />
-              {Math.round((voice.percentage / totalWeight) * 100)}% {voice.label}
-            </span>
-          ))}
-        </div>
-      </div>
+      <VoicePillBar
+        className="mt-6"
+        voices={blend.voices.map((voice) => ({
+          handle: voice.label,
+          avatarUrl: resolveVoiceAvatar(voice, user),
+          pct: voice.percentage,
+        }))}
+      />
 
       <div className="mt-6 rounded-2xl border border-glass-border bg-atlas-surface/40 p-4">
         <div className="flex items-start justify-between gap-4">
@@ -342,9 +341,14 @@ export default function RecipeCard({
 
       {previewText || previewError ? (
         <div className="mt-4 rounded-2xl border border-glass-border bg-atlas-surface/40 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-text-muted">
-            Sample tweet
-          </p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-atlas-text-muted">
+              Sample tweet
+            </p>
+            {previewText && !previewError && (
+              <VoicePreviewPlayer text={previewText} />
+            )}
+          </div>
           {previewError ? (
             <p role="alert" className="mt-2 text-sm text-atlas-error">
               {previewError}

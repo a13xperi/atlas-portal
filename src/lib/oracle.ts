@@ -61,20 +61,9 @@ export function getContinueLabel(
   track: OracleState["track"],
 ): string {
   switch (step) {
-    case "SWIPE_OWN":
-      return "Lock these swipes in";
-    case "SWIPE_OWN_REASONS":
-      return "These reasons fit";
-    case "REFERENCE_HANDLES":
-      return "Use these handles";
-    case "SWIPE_REFS":
-      return "See what the swipes say";
-    case "TRACK_A_RESULT":
-      return "Looks right — continue";
+
     case "TRACK_B_STYLE":
       return "Use this as my starting point";
-    case "TRACK_B_DIMENSIONS":
-      return "Lock in these dimensions";
     case "REFERENCES":
       return track === "a"
         ? "These are my people"
@@ -86,31 +75,43 @@ export function getContinueLabel(
 
 // ── Step transition map ────────────────────────────────────────────
 const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
-  WELCOME: "CONNECT_X",
-  CONNECT_X: "TRACK_A_SCANNING",
-  TRACK_A_SCANNING: "SWIPE_OWN",
-  SWIPE_OWN: "SWIPE_OWN_REASONS",
-  SWIPE_OWN_REASONS: "REFERENCE_HANDLES",
-  REFERENCE_HANDLES: "SWIPE_REFS",
-  SWIPE_REFS: "TRACK_A_RESULT",
-  TRACK_A_RESULT: "REFERENCES",
-  REFERENCES: "HANDOFF",
-  TRACK_B_STYLE: "TRACK_B_CONTENT",
-  TRACK_B_CONTENT: "TRACK_B_DIMENSIONS",
-  TRACK_B_DIMENSIONS: "REFERENCES",
+  WELCOME: "OWN_TWEET_TINDER",
+  CONNECT_X: "WELCOME",
+  OWN_TWEET_TINDER: "TRACK_A_EVIDENCE",
+  TRACK_A_EVIDENCE: "REFERENCE_TINDER",
+  REFERENCE_TINDER: "REFERENCES",
+  TRACK_B_STYLE: "REFERENCES",
+  REFERENCES: "NAME_VOICE",
   BLEND: "HANDOFF",
   NAME_VOICE: "HANDOFF",
   TOPICS: "HANDOFF", // legacy fallback, step skipped in flow
   HANDOFF: null, // terminal
 };
 
+export interface OnboardingRoutingState {
+  track: OracleState["track"];
+  voiceCalibrated: boolean; // tweetsAnalyzed >= MIN_TWEETS_FOR_VOICE_CALIBRATION
+  onboardingComplete: boolean; // user.onboardingTrack !== null
+}
+
 export function getOnboardingCompletionHref(
-  track: OracleState["track"]
+  state: OnboardingRoutingState
 ): string {
-  if (track === "b") {
-    return "/voice-lab?prompt=complete-voice-setup";
+  const { track, voiceCalibrated, onboardingComplete } = state;
+
+  // Stage 1: voice not calibrated → steer to calibration
+  if (!voiceCalibrated) {
+    return track === "b"
+      ? "/voice-lab?prompt=complete-voice-setup"
+      : "/voice-profiles?prompt=calibrate";
   }
 
+  // Stage 2: calibrated but onboarding not persisted → finish onboarding
+  if (!onboardingComplete) {
+    return "/onboarding?resume=handoff";
+  }
+
+  // Stage 3: fully done
   return "/dashboard?banner=voice-calibrated";
 }
 
@@ -120,25 +121,15 @@ export function canAdvance(state: OracleState): boolean {
     case "WELCOME":
       return true;
     case "CONNECT_X":
-      return state.xConnected && state.xHandle.trim().length > 0;
-    case "TRACK_A_SCANNING":
+      return true; // allow skip
+    case "OWN_TWEET_TINDER":
+      return state.archetype !== null || state.calibrationResult !== null;
+    case "TRACK_A_EVIDENCE":
       return true;
-    case "SWIPE_OWN":
-      return state.swipeResults.own.length >= 5;
-    case "SWIPE_OWN_REASONS":
-      return true;
-    case "REFERENCE_HANDLES":
-      return state.referenceHandles.length >= 1;
-    case "SWIPE_REFS":
-      return true;
-    case "TRACK_A_RESULT":
-      return true;
+    case "REFERENCE_TINDER":
+      return true; // optional skip
     case "TRACK_B_STYLE":
       return state.selectedStyle !== null;
-    case "TRACK_B_CONTENT":
-      return true; // content signals are optional
-    case "TRACK_B_DIMENSIONS":
-      return true;
     case "REFERENCES":
       return state.selectedRefs.length >= 1;
     case "BLEND":
@@ -155,14 +146,16 @@ export function canAdvance(state: OracleState): boolean {
 // ── Initial state ──────────────────────────────────────────────────
 export function initialOracleState(): OracleState {
   return {
-    currentStep: "WELCOME",
+    currentStep: "CONNECT_X",
     track: null,
     messages: [],
-    pendingMessages: prepareMessages("WELCOME", null),
+    pendingMessages: prepareMessages("CONNECT_X", null),
     isTyping: false,
     xHandle: "",
     xConnected: false,
     calibrationResult: null,
+    evidenceData: null,
+    archetype: null,
     dimensions: DEFAULT_VOICE_DIMENSIONS,
     selectedStyle: null,
     swipeResults: { own: [], ref: [] },
@@ -183,12 +176,17 @@ export function oracleReducer(
   switch (action.type) {
     case "SET_TRACK": {
       const track = action.track;
-      const nextStep: OracleStep =
-        track === "a" ? "CONNECT_X" : "TRACK_B_STYLE";
+      // If X is connected, both tracks go through tweet tinder calibration.
+      // If X is skipped, Track B gets the style picker; Track A falls through.
+      const nextStep: OracleStep = state.xConnected
+        ? "OWN_TWEET_TINDER"
+        : track === "b"
+          ? "TRACK_B_STYLE"
+          : "REFERENCES";
       const userMsg = {
         id: `user-track-${Date.now()}`,
         role: "user" as const,
-        content: track === "a" ? "Connect X" : "Set up manually",
+        content: track === "a" ? "X-Powered" : "Hand-Crafted",
         timestamp: Date.now(),
       };
       return {
@@ -253,10 +251,24 @@ export function oracleReducer(
       return { ...state, xConnected: action.connected };
 
     case "SET_CALIBRATION":
+      console.log("[oracleReducer] SET_CALIBRATION", action.result);
       return { ...state, calibrationResult: action.result };
 
+    case "SET_EVIDENCE_DATA":
+      return { ...state, evidenceData: action.data };
+
+    case "SET_ARCHETYPE":
+      return { ...state, archetype: action.archetype };
+
     case "SET_DIMENSIONS":
-      return { ...state, dimensions: action.dimensions };
+      console.log("[oracleReducer] SET_DIMENSIONS", action.dimensions);
+      return {
+        ...state,
+        dimensions: action.dimensions,
+        calibrationResult: state.calibrationResult
+          ? { ...state.calibrationResult, dimensions: action.dimensions }
+          : null,
+      };
 
     case "SET_STYLE":
       return { ...state, selectedStyle: action.style };
@@ -338,6 +350,30 @@ export function oracleReducer(
       };
     }
 
+    case "START_STREAM_MESSAGE": {
+      const [next, ...rest] = state.pendingMessages;
+      if (!next) return { ...state, isTyping: false };
+      return {
+        ...state,
+        messages: [...state.messages, { ...next, content: "" }],
+        pendingMessages: rest,
+        isTyping: true,
+      };
+    }
+
+    case "APPEND_TO_LAST_MESSAGE": {
+      if (state.messages.length === 0) return state;
+      const lastIndex = state.messages.length - 1;
+      const last = state.messages[lastIndex];
+      return {
+        ...state,
+        messages: [
+          ...state.messages.slice(0, lastIndex),
+          { ...last, content: last.content + action.text },
+        ],
+      };
+    }
+
     case "SET_TYPING":
       return { ...state, isTyping: action.isTyping };
 
@@ -346,53 +382,90 @@ export function oracleReducer(
   }
 }
 
+/** Create a ReadableStream that yields words from `text` one at a time. */
 export function createTextStream(
   text: string,
   wordDelayMs = 30,
   signal?: AbortSignal
 ): ReadableStream<string> {
   const tokens = text.split(/(\s+)/);
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  let cancelled = false;
-
-  const cleanup = () => {
-    cancelled = true;
-    if (timer) {
-      clearTimeout(timer);
-      timer = null;
-    }
-  };
-
   return new ReadableStream<string>({
     start(controller) {
       if (signal?.aborted) {
-        try { controller.close(); } catch {}
-        cleanup();
+        controller.close();
         return;
       }
-
-      signal?.addEventListener("abort", () => {
-        cleanup();
-        try { controller.error(signal.reason); } catch {}
-      }, { once: true });
-
       let i = 0;
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      let closed = false;
+      const close = () => {
+        if (closed) return;
+        closed = true;
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        try {
+          controller.error(new Error("Aborted"));
+        } catch {
+          // already closed
+        }
+      };
+      if (signal) {
+        signal.addEventListener("abort", close, { once: true });
+      }
       function push() {
-        timer = null;
-        if (cancelled) return;
+        if (closed) return;
         if (i >= tokens.length) {
-          try { controller.close(); } catch {}
+          closed = true;
+          try {
+            controller.close();
+          } catch {
+            // already closed
+          }
           return;
         }
-        if (controller.desiredSize === null) return;
-        try { controller.enqueue(tokens[i]); } catch { return; }
+        try {
+          controller.enqueue(tokens[i]);
+        } catch {
+          closed = true;
+          return;
+        }
         i++;
         timer = setTimeout(push, wordDelayMs);
       }
       push();
     },
     cancel() {
-      cleanup();
+      // Cleanup handled implicitly; closed flag prevents further enqueue.
     },
   });
+}
+
+/** Parse a server-sent events (SSE) stream into yielded JSON objects. */
+export async function* readSSEStream<T = unknown>(stream: ReadableStream<Uint8Array>): AsyncGenerator<T, void, unknown> {
+  const reader = stream.pipeThrough(new TextDecoderStream() as unknown as ReadableWritablePair<string, Uint8Array>).getReader();
+  let buffer = "";
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += value;
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data: ")) continue;
+        const data = trimmed.slice(6);
+        if (data === "[DONE]") return;
+        try {
+          yield JSON.parse(data) as T;
+        } catch {
+          yield data as unknown as T;
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
 }

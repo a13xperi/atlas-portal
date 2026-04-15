@@ -45,7 +45,7 @@ function getHost(value: string) {
 export const publicUrls = {
   apiUrl: stripTrailingSlash(process.env.NEXT_PUBLIC_API_URL ?? ""),
   appUrl: stripTrailingSlash(process.env.NEXT_PUBLIC_APP_URL ?? ""),
-  supabaseUrl: stripTrailingSlash(process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""),
+  supabaseUrl: stripTrailingSlash(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://zoirudjyqfqvpxsrxepr.supabase.co"),
   xBaseUrl: stripTrailingSlash(process.env.NEXT_PUBLIC_X_BASE_URL ?? ""),
   unavatarOrigin: stripTrailingSlash(
     process.env.NEXT_PUBLIC_UNAVATAR_ORIGIN ?? "https://unavatar.io"

@@ -1,4 +1,5 @@
 import type { VoiceDimensions } from "./voice-profile-dimensions";
+import type { VoiceArchetype } from "./api";
 
 // ── Content signals (Track B) ──────────────────────────────────────
 export type ContentSignalSource = "article" | "report" | "tweet" | "link";
@@ -26,15 +27,10 @@ export interface SwipeSignal {
 export type OracleStep =
   | "WELCOME"
   | "CONNECT_X"
-  | "TRACK_A_SCANNING"
-  | "SWIPE_OWN"
-  | "SWIPE_OWN_REASONS"
-  | "REFERENCE_HANDLES"
-  | "SWIPE_REFS"
-  | "TRACK_A_RESULT"
+  | "OWN_TWEET_TINDER"
+  | "TRACK_A_EVIDENCE"
+  | "REFERENCE_TINDER"
   | "TRACK_B_STYLE"
-  | "TRACK_B_CONTENT"
-  | "TRACK_B_DIMENSIONS"
   | "REFERENCES"
   | "BLEND"
   | "NAME_VOICE"
@@ -44,18 +40,15 @@ export type OracleStep =
 // ── Inline component types ─────────────────────────────────────────
 export type InlineComponentType =
   | "x-oauth"
-  | "scan-progress"
-  | "swipe-own"
-  | "swipe-reasons"
-  | "reference-handle-picker"
-  | "swipe-reference-tweets"
-  | "dimensions"
+  | "own-tweet-tinder"
+  | "reference-tinder"
+  | "archetype-reveal"
+  | "voice-evidence-panel"
   | "style-picker"
   | "references"
   | "blend"
   | "voice-name-input"
   | "topics"
-  | "content-signals"
   | "handoff-telegram";
 
 // ── Messages ───────────────────────────────────────────────────────
@@ -93,7 +86,9 @@ export interface OracleState {
   // Accumulated onboarding data
   xHandle: string;
   xConnected: boolean;
-  calibrationResult: { analysis: string; tweetsAnalyzed: number } | null;
+  calibrationResult: { analysis: string; tweetsAnalyzed: number; dimensions?: VoiceDimensions } | null;
+  evidenceData: { topTweets: { text: string; likeCount: number; retweetCount: number; replyCount: number }[]; dimensionExamples: { dimension: string; score: number; tweetExcerpt: string }[] } | null;
+  archetype: VoiceArchetype | null;
   dimensions: VoiceDimensions;
   selectedStyle: string | null;
   swipeResults: {
@@ -117,6 +112,8 @@ export type OracleAction =
   | { type: "SET_HANDLE"; handle: string }
   | { type: "SET_X_CONNECTED"; connected: boolean }
   | { type: "SET_CALIBRATION"; result: OracleState["calibrationResult"] }
+  | { type: "SET_EVIDENCE_DATA"; data: OracleState["evidenceData"] }
+  | { type: "SET_ARCHETYPE"; archetype: VoiceArchetype | null }
   | { type: "SET_DIMENSIONS"; dimensions: VoiceDimensions }
   | { type: "SET_STYLE"; style: string }
   | { type: "RECORD_SWIPE"; signals: SwipeSignal[] }

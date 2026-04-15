@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import { getDemoResponse } from "./demo-data";
-import { getDemoTopTweets, getDemoTopTweetsByHandle } from "./demo-tweets";
+import type { VoiceDimensions } from "./voice-profile-dimensions";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -18,6 +18,7 @@ interface GenerateDraftInput {
   sourceContent: string;
   sourceType: string;
   blendId?: string;
+  blendWith?: string;
   replyAngle?: string;
   angleInstruction?: string;
 }
@@ -332,7 +333,10 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: res.statusText }));
-        const message = err.error || err.message || "Request failed";
+        let message = err.error || err.message || "Request failed";
+        if (res.status === 429) {
+          message = "Rate limited — please wait a moment and try again.";
+        }
         const apiErr = new ApiError(message, res.status);
 
         if (!RETRYABLE_STATUSES.has(res.status) || attempt === MAX_RETRIES - 1) {
@@ -446,15 +450,9 @@ export const api = {
         `/api/voice/blends/${blendId}/voices/${voiceId}`,
         { method: "DELETE" }
       ),
-    calibrate: (handle: string) =>
+    calibrate: (handle: string, options?: { signal?: AbortSignal }) =>
       request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/calibrate", {
-        method: "POST", body: { handle }, signal: AbortSignal.timeout(45_000),
-      }),
-    swipeSignals: (payload: SwipeSignalsPayload) =>
-      request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/swipe-signals", {
-        method: "POST",
-        body: payload,
-        signal: AbortSignal.timeout(45_000),
+        method: "POST", body: { handle }, signal: options?.signal ?? AbortSignal.timeout(45_000),
       }),
     getGlobalReferenceAccounts: () =>
       request<{ accounts: (ReferenceVoice & { avatarUrl?: string })[] }>("/api/voice/reference-accounts"),
@@ -843,6 +841,8 @@ export const api = {
       request<{ entries: AdminLeaderboardEntry[] }>("/api/analytics/leaderboard"),
     getPrompts: () =>
       request<{ prompts: PromptConfig[] }>("/api/admin/prompts"),
+    resetUser: () =>
+      request<{ success: boolean }>("/api/admin/reset-user", { method: "POST" }),
     testPrompt: (promptId: string, variables: Record<string, string>) =>
       request<PromptTestResult>("/api/admin/prompts/test", {
         method: "POST",
@@ -863,34 +863,63 @@ export const api = {
       };
     },
     likes: () => request<{ likes: TwitterLike[]; cached: boolean }>("/api/twitter/likes"),
-    topTweets: async (limit = 10) => {
-      try {
-        return await request<{ tweets: TwitterLike[]; cached: boolean; fallback?: "demo" }>(
-          `/api/twitter/me/top-tweets?limit=${limit}`
-        );
-      } catch {
-        return {
-          tweets: getDemoTopTweets(limit),
-          cached: false,
-          fallback: "demo" as const,
-        };
-      }
-    },
-    topTweetsByHandle: async (handle: string, limit = 10) => {
-      try {
-        return await request<{ tweets: TwitterLike[]; cached: boolean; fallback?: "demo" }>(
-          `/api/twitter/handle/${encodeURIComponent(handle)}/top-tweets?limit=${limit}`
-        );
-      } catch {
-        return {
-          tweets: getDemoTopTweetsByHandle(handle, limit),
-          cached: false,
-          fallback: "demo" as const,
-        };
-      }
-    },
+    topTweets: (limit = 10) =>
+      request<{ tweets: TwitterLike[]; cached: boolean; fallback?: "demo" }>(
+        `/api/twitter/me/top-tweets?limit=${limit}`
+      ),
+    topTweetsByHandle: (handle: string, limit = 10) =>
+      request<{ tweets: TwitterLike[]; cached: boolean; fallback?: "demo" }>(
+        `/api/twitter/handle/${encodeURIComponent(handle)}/top-tweets?limit=${limit}`
+      ),
   },
 
+  voiceTinder: {
+    getSession: () =>
+      request<{
+        ownDecided: number;
+        referenceDecided: number;
+        hasArchetype: boolean;
+        ownerDone: boolean;
+        referenceDone: boolean;
+        references?: Array<{ handle: string; status: "ACTIVE" | "PENDING" }>;
+      }>("/api/voice-tinder/session"),
+    getArchetype: () =>
+      request<{ archetype: VoiceArchetype }>("/api/voice-tinder/archetype"),
+    getReference: (handle: string) =>
+      request<{
+        handle: string;
+        archetype?: VoiceArchetype;
+        status: "ACTIVE" | "PENDING";
+      }>(`/api/voice-tinder/reference/${handle}`),
+    getOwnSession: () =>
+      request<{
+        tweets: TweetExemplarItem[];
+        handle: string;
+        total: number;
+        decided: number;
+      }>("/api/voice-tinder/own"),
+    swipe: (swipes: VoiceTinderSwipe[]) =>
+      request<{ saved: number }>("/api/voice-tinder/swipe", {
+        method: "POST",
+        body: { swipes },
+      }),
+    calibrate: () =>
+      request<{ archetype: VoiceArchetype; topTweets?: CalibrationResult["topTweets"]; dimensionExamples?: CalibrationResult["dimensionExamples"] }>("/api/voice-tinder/calibrate", {
+        method: "POST",
+      }),
+    getReferenceSession: (handle: string) =>
+      request<{
+        tweets: TweetExemplarItem[];
+        handle: string;
+        total: number;
+        decided: number;
+      }>(`/api/voice-tinder/reference/${handle}`),
+    validateReference: (handle: string) =>
+      request<{ status: string }>(
+        `/api/voice-tinder/reference/${handle}/validate`,
+        { method: "POST" },
+      ),
+  },
 
   featureFlags: {
     list: () => request<{ flags: FeatureFlagRecord[] }>("/api/admin/feature-flags"),
@@ -969,22 +998,45 @@ export const api = {
     delete: (id: string) =>
       request<{ bug: BugRecord }>(`/api/bugs/${id}`, { method: "DELETE" }),
   },
-
-  bugs: {
-    list: (status?: string) =>
-      request<{ bugs: BugRecord[] }>(`/api/bugs${status ? `?status=${status}` : ""}`),
-    get: (id: string) =>
-      request<{ bug: BugRecord }>(`/api/bugs/${id}`),
-    create: (data: BugCreateInput) =>
-      request<{ bug: BugRecord }>("/api/bugs", { method: "POST", body: data }),
-    update: (id: string, data: BugUpdateInput) =>
-      request<{ bug: BugRecord }>(`/api/bugs/${id}`, { method: "PATCH", body: data }),
-    delete: (id: string) =>
-      request<{ bug: BugRecord }>(`/api/bugs/${id}`, { method: "DELETE" }),
-  },
 };
 
 // Types
+export interface VoiceTinderSwipe {
+  tweetId: string;
+  text: string;
+  authorHandle: string;
+  source: "OWN" | "REFERENCE";
+  referenceHandle?: string;
+  decision: "KEEP" | "SKIP";
+  durationMs?: number;
+  metrics?: Record<string, number>;
+  postedAt?: string;
+}
+
+export interface TweetExemplarItem {
+  id: string;
+  tweetId: string;
+  text: string;
+  authorHandle: string;
+  source: "OWN" | "REFERENCE";
+  referenceHandle?: string | null;
+  decision: "PENDING" | "KEEP" | "SKIP";
+  metrics?: Record<string, number> | null;
+  postedAt?: string | null;
+}
+
+export interface VoiceArchetype {
+  id: string;
+  label: string;
+  oneLiner: string;
+  description: string;
+  themes: string[];
+  signatures: string[];
+  avoids: string[];
+  derivedFrom: number;
+  derivedAt: string;
+}
+
 export interface User {
   id: string;
   handle: string;
@@ -1021,21 +1073,11 @@ export interface CalibrationResult {
   confidence: number;
   analysis: string;
   tweetsAnalyzed: number;
+  source?: { mode: string; pool: number; topN: number; recentN: number };
   twitterUser: { username: string; name: string };
-}
-
-export interface SwipeSignalRequestItem {
-  tweetId: string;
-  text: string;
-  reasons: string[];
-  handle?: string | null;
-}
-
-export interface SwipeSignalsPayload {
-  ownLikes: SwipeSignalRequestItem[];
-  ownDislikes: SwipeSignalRequestItem[];
-  refLikes: SwipeSignalRequestItem[];
-  refDislikes: SwipeSignalRequestItem[];
+  dimensions?: VoiceDimensions;
+  topTweets?: { text: string; likeCount: number; retweetCount: number; replyCount: number }[];
+  dimensionExamples?: { dimension: string; score: number; tweetExcerpt: string }[];
 }
 
 export interface ReferenceVoice {

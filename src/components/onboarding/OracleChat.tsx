@@ -8,19 +8,15 @@ import { api } from "@/lib/api";
 import { publicUrls } from "@/lib/public-urls";
 import {
   canAdvance,
+  createTextStream,
   getContinueLabel,
   getOnboardingCompletionHref,
   getTrackMeta,
   initialOracleState,
   oracleReducer,
 } from "@/lib/oracle";
-import type { SwipeSignal } from "@/lib/oracle-types";
-import type { SwipeSignalsPayload } from "@/lib/api";
 import {
-  applyVoiceDimensionDelta,
-  pickVoiceDimensions,
   styleToDimensions,
-  TRACK_A_INITIAL_DIMENSIONS,
 } from "@/lib/voice-profile-dimensions";
 import {
   getReferenceAccountLookup,
@@ -28,7 +24,7 @@ import {
   buildReferenceBlendVoices,
   REFERENCE_ACCOUNT_FALLBACK,
 } from "@/lib/reference-accounts";
-import { aggregateSwipeSignals } from "@/lib/swipe-signals";
+import { generateVoiceProfileName } from "@/lib/voice-naming";
 
 import OracleAvatar from "./OracleAvatar";
 import OracleMessage from "./OracleMessage";
@@ -40,15 +36,13 @@ import NavBar from "@/components/ui/NavBar";
 // Inline components
 import TopicPicker from "./TopicPicker";
 import ReferenceVoiceSelector from "./ReferenceVoiceSelector";
-import ContentSignalsPreview from "./ContentSignalsPreview";
-import ReferenceHandlePicker from "./ReferenceHandlePicker";
-import SwipeOwnTweetsStep from "./SwipeOwnTweetsStep";
-import SwipeReasonsStep from "./SwipeReasonsStep";
-import SwipeReferenceTweetsStep from "./SwipeReferenceTweetsStep";
-import VoiceDimensionSections from "@/components/voice-profiles/VoiceDimensionSections";
 import GradientButton from "@/components/ui/GradientButton";
-import ContentInput from "@/components/ui/ContentInput";
-import { Loader2 } from "lucide-react";
+import { CheckCircle, Loader2 } from "lucide-react";
+import { AnimatePresence } from "framer-motion";
+import VoiceTinderCard from "@/components/voice-tinder/VoiceTinderCard";
+import ArchetypeReveal from "./ArchetypeReveal";
+import VoiceEvidencePanel from "./VoiceEvidencePanel";
+import type { TweetExemplarItem, VoiceTinderSwipe, VoiceArchetype } from "@/lib/api";
 
 const referenceAccountLookup = getReferenceAccountLookup(
   REFERENCE_ACCOUNT_FALLBACK
@@ -60,41 +54,13 @@ const styleOptions = [
   { label: "Custom mix", description: "Blend it your way" },
 ];
 
-function toSwipeSignalPayloadItem(signal: SwipeSignal) {
-  return {
-    tweetId: signal.tweetId,
-    text: signal.text,
-    reasons: signal.reasons,
-    handle: signal.handle ?? undefined,
-  };
-}
-
-function buildSwipeSignalsPayload(
-  ownSignals: SwipeSignal[],
-  refSignals: SwipeSignal[]
-): SwipeSignalsPayload {
-  return {
-    ownLikes: ownSignals
-      .filter((signal) => signal.direction === "like")
-      .map(toSwipeSignalPayloadItem),
-    ownDislikes: ownSignals
-      .filter((signal) => signal.direction === "dislike")
-      .map(toSwipeSignalPayloadItem),
-    refLikes: refSignals
-      .filter((signal) => signal.direction === "like")
-      .map(toSwipeSignalPayloadItem),
-    refDislikes: refSignals
-      .filter((signal) => signal.direction === "dislike")
-      .map(toSwipeSignalPayloadItem),
-  };
-}
-
 export default function OracleChat() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [state, dispatch] = useReducer(oracleReducer, null, initialOracleState);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const drainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const streamCleanupRef = useRef<(() => void) | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [resumeTrackAAfterOAuth, setResumeTrackAAfterOAuth] = useState(false);
   const [blendSaveStatus, setBlendSaveStatus] = useState<
@@ -102,6 +68,28 @@ export default function OracleChat() {
   >("idle");
   // Tracks the persisted blend so future PATCH operations can target it.
   const [, setSavedBlendId] = useState<string | null>(null);
+
+  // Voice Tinder state
+  const [ownTweets, setOwnTweets] = useState<TweetExemplarItem[]>([]);
+  const [ownSwipes, setOwnSwipes] = useState<VoiceTinderSwipe[]>([]);
+  const [ownTinderLoading, setOwnTinderLoading] = useState(false);
+  const [ownTinderError, setOwnTinderError] = useState<string | null>(null);
+  const [ownTinderIndex, setOwnTinderIndex] = useState(0);
+  const [ownTinderAnimating, setOwnTinderAnimating] = useState(false);
+  const [ownTinderExit, setOwnTinderExit] = useState<"KEEP" | "SKIP">("KEEP");
+  const [calibrating, setCalibrating] = useState(false);
+  const [localArchetype, setLocalArchetype] = useState<VoiceArchetype | null>(null);
+  const [evidenceData, setEvidenceData] = useState<{ topTweets: { text: string; likeCount: number; retweetCount: number; replyCount: number }[]; dimensionExamples: { dimension: string; score: number; tweetExcerpt: string }[] } | null>(null);
+
+  const [referenceHandle, setReferenceHandle] = useState("");
+  const [referenceTweets, setReferenceTweets] = useState<TweetExemplarItem[]>([]);
+  const [referenceSwipes, setReferenceSwipes] = useState<VoiceTinderSwipe[]>([]);
+  const [referenceLoading, setReferenceLoading] = useState(false);
+  const [referenceError, setReferenceError] = useState<string | null>(null);
+  const [referenceValidating, setReferenceValidating] = useState(false);
+  const [referenceTinderIndex, setReferenceTinderIndex] = useState(0);
+  const [referenceTinderAnimating, setReferenceTinderAnimating] = useState(false);
+  const [referenceTinderExit, setReferenceTinderExit] = useState<"KEEP" | "SKIP">("KEEP");
 
   // Pre-fill handle from linked X profile
   useEffect(() => {
@@ -113,14 +101,13 @@ export default function OracleChat() {
   // Default blend name when entering the name step
   useEffect(() => {
     if (state.currentStep === "NAME_VOICE" && !state.blendName) {
-      const defaultName = `My voice - ${new Date().toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })}`;
+      const handles = state.selectedRefs
+        .map((id) => referenceAccountLookup.get(id)?.handle)
+        .filter(Boolean) as string[];
+      const defaultName = generateVoiceProfileName(state.dimensions, handles);
       dispatch({ type: "SET_BLEND_NAME", name: defaultName });
     }
-  }, [state.currentStep, state.blendName]);
+  }, [state.currentStep, state.blendName, state.dimensions, state.selectedRefs]);
 
   // Deep-link pre-select: /onboarding/track-a|track-b stores the chosen
   // track in sessionStorage before redirecting here. Pick it up on mount
@@ -187,19 +174,20 @@ export default function OracleChat() {
       return;
     }
 
+    let cancelled = false;
     api.auth.x
       .status()
       .then((res) => {
-        if (!res.linked) {
-          return;
-        }
-
+        if (cancelled || !res.linked) return;
         if (res.xHandle) {
           dispatch({ type: "SET_HANDLE", handle: res.xHandle.replace(/^@/, "") });
         }
         dispatch({ type: "SET_X_CONNECTED", connected: true });
       })
       .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [state.currentStep, state.xConnected, state.xHandle]);
 
   // Auto-advance from CONNECT_X when connected
@@ -209,20 +197,15 @@ export default function OracleChat() {
     }
   }, [state.currentStep, state.xConnected, state.xHandle]);
 
-  // ── Typing animation: drain pending messages with delay ──────────
-  // NOTE: We deliberately do NOT depend on `state.isTyping` here. Doing so
-  // creates a race where dispatching SET_TYPING(true) inside the effect
-  // triggers a re-run, whose cleanup clears the pending dequeue timer
-  // before it can fire — leaving the chat stuck on the typing indicator
-  // forever (the original "blank /onboarding screen" bug).
+  // ── Streaming animation: drain pending messages via ReadableStream ─
+  // Messages stream in word-by-word using a client-side ReadableStream,
+  // giving the Oracle a natural typing effect instead of appearing all at once.
   useEffect(() => {
     if (state.pendingMessages.length === 0) {
-      // Nothing to drain — make sure the typing indicator clears.
       if (state.isTyping) dispatch({ type: "SET_TYPING", isTyping: false });
       return;
     }
 
-    // A drain is already scheduled — let it complete.
     if (drainTimerRef.current) return;
 
     if (!state.isTyping) {
@@ -231,33 +214,71 @@ export default function OracleChat() {
 
     const msg = state.pendingMessages[0];
     const wordCount = msg.content.split(/\s+/).length;
-    const delay = Math.min(1200, Math.max(300, wordCount * 40));
+    const initialDelay = Math.min(800, Math.max(200, wordCount * 30));
 
     drainTimerRef.current = setTimeout(() => {
       drainTimerRef.current = null;
-      dispatch({ type: "DEQUEUE_MESSAGE" });
-    }, delay);
+      dispatch({ type: "START_STREAM_MESSAGE" });
+
+      // System messages appear instantly; Oracle messages stream word-by-word.
+      if (msg.role === "system") {
+        dispatch({ type: "APPEND_TO_LAST_MESSAGE", text: msg.content });
+        dispatch({ type: "SET_TYPING", isTyping: false });
+        return;
+      }
+
+      const stream = createTextStream(msg.content, 25);
+      const reader = stream.getReader();
+
+      async function pump() {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            dispatch({ type: "APPEND_TO_LAST_MESSAGE", text: value });
+          }
+        } catch {
+          // Ignore cancellation errors
+        } finally {
+          reader.releaseLock();
+          dispatch({ type: "SET_TYPING", isTyping: false });
+        }
+      }
+
+      pump();
+      streamCleanupRef.current = () => reader.cancel().catch(() => {});
+    }, initialDelay);
 
     return () => {
       if (drainTimerRef.current) {
         clearTimeout(drainTimerRef.current);
         drainTimerRef.current = null;
       }
+      streamCleanupRef.current?.();
+      streamCleanupRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.pendingMessages]);
 
-  // ── Auto-scroll on new messages ──────────────────────────────────
+  // ── Auto-scroll on new messages or streaming content ─────────────
+  const lastMessageContent = state.messages.at(-1)?.content;
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [state.messages.length, state.isTyping]);
+  }, [state.messages.length, state.isTyping, lastMessageContent]);
 
   // ── API persistence side effects ─────────────────────────────────
   const persistAfterStep = useCallback(
     async (step: string) => {
       try {
-        if (step === "TRACK_A_RESULT" || step === "TRACK_B_DIMENSIONS") {
+        if (step === "TRACK_B_STYLE") {
           await api.voice.updateProfile(state.dimensions);
+        }
+        if (step === "REFERENCE_TINDER" && referenceSwipes.length > 0) {
+          try {
+            await api.voiceTinder.swipe(referenceSwipes);
+          } catch {
+            /* optional */
+          }
         }
         if (step === "REFERENCES") {
           await persistReferenceSelections({
@@ -280,13 +301,32 @@ export default function OracleChat() {
         if (step === "NAME_VOICE") {
           setBlendSaveStatus("saving");
           try {
+            const blendVoices = buildReferenceBlendVoices(
+              state.selectedRefs,
+              state.selfPercentage,
+              REFERENCE_ACCOUNT_FALLBACK
+            );
+            const blendName = generateVoiceProfileName(state.dimensions, [
+              {
+                isPersonal: true,
+                label: "My voice",
+                percentage: state.selfPercentage,
+              },
+              ...state.selectedRefs.map((refId, index) => {
+                const account = referenceAccountLookup.get(refId);
+                const blendVoice = blendVoices[index + 1];
+
+                return {
+                  category: account?.category,
+                  handle: account?.handle ?? blendVoice?.label ?? refId,
+                  label: blendVoice?.label ?? account?.displayName ?? refId,
+                  percentage: blendVoice?.percentage ?? 0,
+                };
+              }),
+            ]);
             const result = await api.voice.createBlend(
-              state.blendName.trim() || "My voice",
-              buildReferenceBlendVoices(
-                state.selectedRefs,
-                state.selfPercentage,
-                REFERENCE_ACCOUNT_FALLBACK
-              )
+              blendName,
+              blendVoices
             );
             setSavedBlendId(result.blend.id);
             setBlendSaveStatus("saved");
@@ -320,7 +360,7 @@ export default function OracleChat() {
         console.error("Persist failed:", e);
       }
     },
-    [state, user?.id]
+    [state, user?.id, referenceSwipes]
   );
 
   // ── Handle action from Oracle message buttons ────────────────────
@@ -331,7 +371,7 @@ export default function OracleChat() {
         return;
       }
       if (value === "skip-x") {
-        dispatch({ type: "SET_TRACK", track: "b" });
+        dispatch({ type: "ADVANCE", payload: "Continue without X (limited features)" });
         return;
       }
       if (value === "track-a" || value === "track-b") {
@@ -349,275 +389,322 @@ export default function OracleChat() {
     [router]
   );
 
-  const applyCalibrationResponse = useCallback(
-    (
-      profile: Awaited<ReturnType<typeof api.voice.calibrate>>["profile"],
-      calibration: Awaited<ReturnType<typeof api.voice.calibrate>>["calibration"]
-    ) => {
-      dispatch({
-        type: "SET_CALIBRATION",
-        result: {
-          analysis: calibration.analysis,
-          tweetsAnalyzed: calibration.tweetsAnalyzed,
-        },
-      });
-      dispatch({
-        type: "SET_DIMENSIONS",
-        dimensions: pickVoiceDimensions(profile),
-      });
-    },
-    []
-  );
-
-  const syncSwipeCalibration = useCallback(async () => {
-    const ownSignals = state.swipeResults.own;
-    const refSignals = state.swipeResults.ref;
-    const payload = buildSwipeSignalsPayload(ownSignals, refSignals);
-    const allSignals = [...ownSignals, ...refSignals];
-    const totalPayloadCount =
-      payload.ownLikes.length +
-      payload.ownDislikes.length +
-      payload.refLikes.length +
-      payload.refDislikes.length;
-    const optimisticDelta = aggregateSwipeSignals(allSignals);
-
-    if (Object.keys(optimisticDelta).length > 0) {
-      dispatch({
-        type: "SET_DIMENSIONS",
-        dimensions: applyVoiceDimensionDelta(
-          TRACK_A_INITIAL_DIMENSIONS,
-          optimisticDelta
-        ),
-      });
-    }
-
-    if (totalPayloadCount === 0 && state.xHandle) {
-      const result = await api.voice.calibrate(state.xHandle);
-      applyCalibrationResponse(result.profile, result.calibration);
-      return result.calibration.analysis;
-    }
-
-    if (totalPayloadCount === 0) {
-      return null;
-    }
-
-    try {
-      const result = await api.voice.swipeSignals(payload);
-      applyCalibrationResponse(result.profile, result.calibration);
-      return result.calibration.analysis;
-    } catch (error) {
-      console.error("Swipe calibration failed:", error);
-
-      if (state.xHandle) {
-        try {
-          const fallback = await api.voice.calibrate(state.xHandle);
-          applyCalibrationResponse(fallback.profile, fallback.calibration);
-          return fallback.calibration.analysis;
-        } catch (fallbackError) {
-          console.error("Calibration fallback failed:", fallbackError);
-        }
-      }
-
-      if (Object.keys(optimisticDelta).length > 0) {
-        dispatch({
-          type: "SET_CALIBRATION",
-          result: {
-            analysis:
-              "I mapped an initial voice profile from your swipe pass. Fine-tune the sliders if anything feels off.",
-            tweetsAnalyzed: totalPayloadCount,
-          },
-        });
-        return "I mapped an initial voice profile from your swipe pass. Fine-tune the sliders if anything feels off.";
-      }
-
-      dispatch({
-        type: "SET_DIMENSIONS",
-        dimensions: TRACK_A_INITIAL_DIMENSIONS,
-      });
-      return null;
-    }
-  }, [
-    applyCalibrationResponse,
-    state.swipeResults.own,
-    state.swipeResults.ref,
-    state.xHandle,
-  ]);
-
   // ── Handle "Continue" from ActionZone ────────────────────────────
   const handleContinue = useCallback(async () => {
     if (!canAdvance(state)) return;
 
     const step = state.currentStep;
-    let followupCommentary: string | null = null;
 
     // Persist data from the step we're leaving
-    if (step === "SWIPE_REFS") {
-      followupCommentary = await syncSwipeCalibration();
-    } else {
-      await persistAfterStep(step);
-    }
+    await persistAfterStep(step);
 
     // Build user echo message
     let echo: string | undefined;
-    if (step === "SWIPE_OWN") {
-      echo = `Saved ${state.swipeResults.own.length} swipe signals`;
-    }
-    if (step === "SWIPE_OWN_REASONS") {
-      echo = `Tagged ${state.swipeResults.own.filter((signal) => signal.direction === "like").length} liked tweets`;
-    }
-    if (step === "REFERENCE_HANDLES") {
-      echo = state.referenceHandles.map((handle) => `@${handle}`).join(", ");
-    }
-    if (step === "SWIPE_REFS") {
-      echo = `Swiped ${state.swipeResults.ref.length} reference tweets`;
-    }
     if (step === "TRACK_B_STYLE") echo = state.selectedStyle || undefined;
+    if (step === "OWN_TWEET_TINDER") echo = localArchetype ? `Archetype: ${localArchetype.label}` : "Skipped archetype";
+    if (step === "REFERENCE_TINDER") echo = referenceSwipes.length > 0 ? `Swiped ${referenceSwipes.length} reference tweets` : "Skipped reference tinder";
     if (step === "REFERENCES")
       echo = `Selected ${state.selectedRefs.length} references`;
     if (step === "BLEND") echo = `${state.selfPercentage}% my voice`;
     if (step === "NAME_VOICE") echo = state.blendName;
-    if (step === "TOPICS") echo = state.selectedTopics.join(", ");
 
-    if (step === "TOPICS") {
-      // Finish the wizard on the final preferences step and land users in the
-      // next surface they should act in, rather than the legacy handoff screen.
-      router.replace(getOnboardingCompletionHref(state.track));
+    if (step === "NAME_VOICE") {
+      // Finish the wizard and route to the next surface.
+      router.replace(
+        getOnboardingCompletionHref({
+          track: state.track,
+          voiceCalibrated: state.archetype !== null || state.calibrationResult !== null,
+          onboardingComplete: !!user?.onboardingTrack,
+        })
+      );
       return;
     }
 
     dispatch({ type: "ADVANCE", payload: echo });
-    if (step === "SWIPE_REFS" && followupCommentary) {
-      dispatch({
-        type: "ENQUEUE_MESSAGES",
-        messages: [
-          {
-            id: `swipe-commentary-${Date.now()}`,
-            role: "oracle",
-            content: followupCommentary,
-            timestamp: Date.now(),
-          },
-        ],
-      });
-    }
-  }, [state, persistAfterStep, router, syncSwipeCalibration]);
+  }, [state, persistAfterStep, router, localArchetype, referenceSwipes.length, user?.onboardingTrack]);
 
-  // ── Auto-advance from the scan interstitial into the swipe step ──
+  // ── Fetch own tweets when entering OWN_TWEET_TINDER ──────────────
+  useEffect(() => {
+    if (state.currentStep !== "OWN_TWEET_TINDER" || ownTweets.length > 0) return;
+
+    setOwnTinderLoading(true);
+    setOwnTinderError(null);
+    api.voiceTinder
+      .getOwnSession()
+      .then((res) => {
+        setOwnTweets(res.tweets.filter((t) => t.decision === "PENDING"));
+        setOwnTinderIndex(0);
+      })
+      .catch((err: Error) => {
+        setOwnTinderError(err.message || "Failed to load your tweets");
+      })
+      .finally(() => setOwnTinderLoading(false));
+  }, [state.currentStep, ownTweets.length]);
+
+  // ── Auto-calibrate after 15 own swipes or deck exhaustion ─────────
   useEffect(() => {
     if (
-      state.currentStep !== "TRACK_A_SCANNING" ||
-      state.pendingMessages.length > 0 ||
-      state.isTyping
+      state.currentStep !== "OWN_TWEET_TINDER" ||
+      calibrating ||
+      localArchetype ||
+      ownSwipes.length < Math.min(15, Math.max(1, ownTweets.length))
     ) {
       return;
     }
 
-    const timer = setTimeout(() => {
-      dispatch({
-        type: "ADVANCE",
-        payload: state.xHandle ? `Loaded @${state.xHandle}` : "Loaded top tweets",
-      });
-    }, 500);
+    setCalibrating(true);
+    api.voiceTinder
+      .calibrate()
+      .then((res) => {
+        setLocalArchetype(res.archetype);
+        dispatch({ type: "SET_ARCHETYPE", archetype: res.archetype });
+        const evidence = {
+          topTweets: res.topTweets ?? [],
+          dimensionExamples: res.dimensionExamples ?? [],
+        };
+        setEvidenceData(evidence);
+        dispatch({ type: "SET_EVIDENCE_DATA", data: evidence });
+        dispatch({ type: "ADVANCE", payload: `Archetype: ${res.archetype.label}` });
+      })
+      .catch((err: Error) => {
+        console.error("Calibration failed:", err);
+        // Allow the user to continue even if calibration fails
+        dispatch({ type: "SET_ARCHETYPE", archetype: null });
+        dispatch({
+          type: "ENQUEUE_MESSAGES",
+          messages: [
+            {
+              id: `calibration-skip-${Date.now()}`,
+              role: "oracle",
+              content: "I couldn't build your archetype right now — no worries, we can try again later. Let's keep going.",
+              timestamp: Date.now(),
+            },
+          ],
+        });
+      })
+      .finally(() => setCalibrating(false));
+  }, [state.currentStep, calibrating, localArchetype, ownSwipes.length, ownTweets.length]);
 
-    return () => clearTimeout(timer);
-  }, [
-    state.currentStep,
-    state.isTyping,
-    state.pendingMessages.length,
-    state.xHandle,
-  ]);
+  // ── Auto-skip evidence panel if no data returned ─────────────────
+  useEffect(() => {
+    if (state.currentStep === "TRACK_A_EVIDENCE" && !evidenceData?.topTweets?.length) {
+      dispatch({ type: "ADVANCE", payload: "Archetype ready" });
+    }
+  }, [state.currentStep, evidenceData]);
 
   // ── Render inline components ─────────────────────────────────────
   const renderComponent = useCallback(
-    (type: string): ReactNode => {
+    (type: string, props?: Record<string, unknown>): ReactNode => {
       switch (type) {
-        case "scan-progress":
+        case "own-tweet-tinder": {
+          if (ownTinderLoading) {
+            return (
+              <div className="flex h-64 items-center justify-center rounded-2xl bg-atlas-surface">
+                <Loader2 className="h-6 w-6 animate-spin text-atlas-teal" />
+              </div>
+            );
+          }
+          if (ownTinderError) {
+            return (
+              <div className="rounded-2xl bg-atlas-surface p-4 text-sm text-atlas-error">
+                {ownTinderError}
+              </div>
+            );
+          }
+          if (ownTweets.length === 0) {
+            return (
+              <div className="rounded-2xl bg-atlas-surface p-4 text-sm text-atlas-text-secondary">
+                No tweets found to swipe. You can skip this step.
+              </div>
+            );
+          }
+          const visibleOwn = ownTweets.slice(ownTinderIndex, ownTinderIndex + 3);
+          const ownDone = ownTinderIndex >= ownTweets.length;
+
+          if (ownDone || localArchetype) {
+            return calibrating ? (
+              <div className="flex h-64 items-center justify-center rounded-2xl bg-atlas-surface">
+                <Loader2 className="h-6 w-6 animate-spin text-atlas-teal" />
+                <span className="ml-2 text-sm text-atlas-text-secondary">Building your archetype...</span>
+              </div>
+            ) : localArchetype ? (
+              <ArchetypeReveal archetype={localArchetype} onContinue={handleContinue} />
+            ) : (
+              <div className="rounded-2xl bg-atlas-surface p-4 text-sm text-atlas-text-secondary">
+                All done! Finishing up...
+              </div>
+            );
+          }
+
           return (
-            <div className="bg-atlas-surface rounded-2xl p-4 space-y-2">
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
-                <span className="text-sm text-atlas-text-secondary">
-                  {state.xHandle
-                    ? `Pulling top tweets for @${state.xHandle}...`
-                    : "Pulling your top tweets..."}
-                </span>
+            <div className="space-y-4">
+              <div className="relative mx-auto h-80 w-full max-w-md">
+                <AnimatePresence onExitComplete={() => setOwnTinderAnimating(false)}>
+                  {visibleOwn
+                    .map((tweet, i) => (
+                      <VoiceTinderCard
+                        key={tweet.id}
+                        tweet={tweet}
+                        onSwipe={(decision, durationMs) => {
+                          setOwnTinderAnimating(true);
+                          setOwnTinderExit(decision);
+                          const swipe: VoiceTinderSwipe = {
+                            tweetId: tweet.tweetId,
+                            text: tweet.text,
+                            authorHandle: tweet.authorHandle,
+                            source: "OWN",
+                            decision,
+                            durationMs,
+                            metrics: tweet.metrics ?? undefined,
+                            postedAt: tweet.postedAt ?? undefined,
+                          };
+                          setOwnSwipes((prev) => [...prev, swipe]);
+                          api.voiceTinder.swipe([swipe]).catch(() => {});
+                          setOwnTinderIndex((idx) => idx + 1);
+                        }}
+                        isTop={i === 0}
+                        stackIndex={i}
+                        exitDecision={ownTinderExit}
+                      />
+                    ))
+                    .reverse()}
+                </AnimatePresence>
+              </div>
+              <div className="mx-auto max-w-md text-center">
+                <p className="text-xs text-atlas-text-muted">
+                  {ownTinderIndex + 1} of {ownTweets.length}
+                </p>
+                <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-atlas-bg">
+                  <div
+                    className="h-1 rounded-full bg-atlas-teal transition-all duration-300"
+                    style={{
+                      width: `${((ownTinderIndex + 1) / ownTweets.length) * 100}%`,
+                    }}
+                  />
+                </div>
               </div>
             </div>
           );
+        }
 
-        case "swipe-own":
-          return (
-            <SwipeOwnTweetsStep
-              signals={state.swipeResults.own}
-              onCompleteSwipes={(signals) => {
-                dispatch({ type: "RESET_SWIPES", scope: "own" });
-                dispatch({ type: "RECORD_SWIPE", signals });
-              }}
-              onResetSwipes={() => dispatch({ type: "RESET_SWIPES", scope: "own" })}
-            />
-          );
+        case "reference-tinder": {
+          const refVisible = referenceTweets.slice(referenceTinderIndex, referenceTinderIndex + 3);
+          const refDone = referenceTinderIndex >= referenceTweets.length;
 
-        case "swipe-reasons":
           return (
-            <SwipeReasonsStep
-              signals={state.swipeResults.own}
-              onUpdateSignal={(signal) =>
-                dispatch({ type: "RECORD_SWIPE", signals: [signal] })
-              }
-            />
-          );
-
-        case "reference-handle-picker":
-          return (
-            <ReferenceHandlePicker
-              handles={state.referenceHandles}
-              onChange={(handles) => {
-                const normalizedHandles = handles
-                  .map((handle) => handle.replace(/^@/, "").trim().toLowerCase())
-                  .filter(Boolean);
-                const changed =
-                  normalizedHandles.join("|") !==
-                  state.referenceHandles.join("|");
-                dispatch({ type: "SET_REF_HANDLES", handles });
-                if (changed) {
-                  dispatch({ type: "RESET_SWIPES", scope: "ref" });
-                }
-              }}
-            />
-          );
-
-        case "swipe-reference-tweets":
-          return (
-            <SwipeReferenceTweetsStep
-              handles={state.referenceHandles}
-              signals={state.swipeResults.ref}
-              onRecordSignals={(signals) =>
-                dispatch({ type: "RECORD_SWIPE", signals })
-              }
-              onResetSignals={() => dispatch({ type: "RESET_SWIPES", scope: "ref" })}
-            />
-          );
-
-        case "dimensions":
-          return (
-            <div className="bg-atlas-surface/50 rounded-2xl p-4">
-              {state.swipeResults.own.length > 0 && (
-                <p className="mb-4 text-xs font-medium uppercase tracking-[0.14em] text-atlas-text-muted">
-                  Based on {state.swipeResults.own.length} swipes + {state.swipeResults.ref.length} reference tweets
-                </p>
+            <div className="space-y-4">
+              {referenceTweets.length === 0 && (
+                <div className="space-y-3 rounded-2xl bg-atlas-surface p-4">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={referenceHandle}
+                      onChange={(e) => setReferenceHandle(e.target.value.replace(/^@/, ""))}
+                      placeholder="Enter X handle (e.g. vitalikbuterin)"
+                      className="flex-1 rounded-xl bg-atlas-bg border border-glass-border px-4 py-3 text-sm text-atlas-text placeholder:text-atlas-text-muted focus:outline-none focus:border-atlas-teal"
+                    />
+                    <button
+                      type="button"
+                      disabled={referenceValidating || !referenceHandle.trim()}
+                      onClick={async () => {
+                        setReferenceValidating(true);
+                        setReferenceError(null);
+                        try {
+                          await api.voiceTinder.validateReference(referenceHandle.trim());
+                          const res = await api.voiceTinder.getReferenceSession(referenceHandle.trim());
+                          setReferenceTweets(res.tweets.filter((t) => t.decision === "PENDING"));
+                          setReferenceTinderIndex(0);
+                        } catch (err: any) {
+                          setReferenceError(err.message || "Could not load that handle.");
+                        } finally {
+                          setReferenceValidating(false);
+                        }
+                      }}
+                      className="rounded-xl bg-atlas-teal px-4 py-2 text-sm font-semibold text-atlas-bg transition-opacity hover:opacity-90 disabled:opacity-50"
+                    >
+                      {referenceValidating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Load"}
+                    </button>
+                  </div>
+                  {referenceError && (
+                    <p className="text-sm text-atlas-error">{referenceError}</p>
+                  )}
+                </div>
               )}
-              <VoiceDimensionSections
-                values={state.dimensions}
-                interactive
-                onChange={(field, value) =>
-                  dispatch({
-                    type: "SET_DIMENSIONS",
-                    dimensions: { ...state.dimensions, [field]: value },
-                  })
-                }
-              />
+
+              {referenceTweets.length > 0 && !refDone && (
+                <>
+                  <div className="relative mx-auto h-80 w-full max-w-md">
+                    <AnimatePresence onExitComplete={() => setReferenceTinderAnimating(false)}>
+                      {refVisible
+                        .map((tweet, i) => (
+                          <VoiceTinderCard
+                            key={tweet.id}
+                            tweet={tweet}
+                            onSwipe={(decision, durationMs) => {
+                              setReferenceTinderAnimating(true);
+                              setReferenceTinderExit(decision);
+                              const swipe: VoiceTinderSwipe = {
+                                tweetId: tweet.tweetId,
+                                text: tweet.text,
+                                authorHandle: tweet.authorHandle,
+                                source: "REFERENCE",
+                                referenceHandle: referenceHandle.trim(),
+                                decision,
+                                durationMs,
+                                metrics: tweet.metrics ?? undefined,
+                                postedAt: tweet.postedAt ?? undefined,
+                              };
+                              setReferenceSwipes((prev) => [...prev, swipe]);
+                              api.voiceTinder.swipe([swipe]).catch(() => {});
+                              setReferenceTinderIndex((idx) => idx + 1);
+                            }}
+                            isTop={i === 0}
+                            stackIndex={i}
+                            exitDecision={referenceTinderExit}
+                          />
+                        ))
+                        .reverse()}
+                    </AnimatePresence>
+                  </div>
+                  <div className="mx-auto max-w-md text-center">
+                    <p className="text-xs text-atlas-text-muted">
+                      {referenceTinderIndex + 1} of {referenceTweets.length}
+                    </p>
+                    <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-atlas-bg">
+                      <div
+                        className="h-1 rounded-full bg-atlas-teal transition-all duration-300"
+                        style={{
+                          width: `${((referenceTinderIndex + 1) / referenceTweets.length) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {referenceTweets.length > 0 && refDone && (
+                <div className="rounded-2xl bg-atlas-surface p-4 text-center text-sm text-atlas-text-secondary">
+                  All done swiping reference tweets.
+                </div>
+              )}
             </div>
           );
+        }
 
+        case "archetype-reveal":
+          return localArchetype ? (
+            <ArchetypeReveal archetype={localArchetype} onContinue={handleContinue} />
+          ) : null;
+
+        case "voice-evidence-panel":
+          return evidenceData ? (
+            <VoiceEvidencePanel
+              topTweets={evidenceData.topTweets}
+              dimensionExamples={evidenceData.dimensionExamples}
+              tweetsAnalyzed={state.calibrationResult?.tweetsAnalyzed ?? 0}
+              onConfirm={handleContinue}
+            />
+          ) : null;
 
         case "style-picker":
           return (
@@ -626,6 +713,7 @@ export default function OracleChat() {
                 <button
                   key={label}
                   type="button"
+                  aria-pressed={state.selectedStyle === label}
                   onClick={() => {
                     dispatch({ type: "SET_STYLE", style: label });
                     dispatch({
@@ -689,21 +777,6 @@ export default function OracleChat() {
             />
           );
 
-        case "content-signals":
-          return (
-            <div className="space-y-3">
-              <ContentInput
-                placeholder="Paste tweet URLs or drop a report/article..."
-                showMic={false}
-                onTextChange={() => {}}
-                onTextSubmit={() => true}
-              />
-              <ContentSignalsPreview />
-              <p className="text-xs text-atlas-text-muted">
-                You can also send these via Telegram later.
-              </p>
-            </div>
-          );
 
         case "handoff-telegram":
           return (
@@ -734,7 +807,14 @@ export default function OracleChat() {
                         })
                         .catch(() => {});
                     }
-                    router.push(getOnboardingCompletionHref(state.track));
+                    router.push(
+                      getOnboardingCompletionHref({
+                        track: state.track,
+                        voiceCalibrated:
+                          state.archetype !== null || state.calibrationResult !== null,
+                        onboardingComplete: true, // updateProfile just set it above
+                      })
+                    );
                   }}
                 >
                   Go to Dashboard
@@ -762,11 +842,11 @@ export default function OracleChat() {
                     setOauthLoading(false);
                   }
                 }}
-                className="w-full rounded-xl bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full rounded-xl bg-gradient-to-r from-delphi-teal to-delphi-teal/60 px-6 py-3 text-sm font-semibold text-atlas-bg transition-opacity hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {oauthLoading ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                     Connecting...
                   </>
                 ) : (
@@ -783,7 +863,7 @@ export default function OracleChat() {
           return null;
       }
     },
-    [oauthLoading, router, state, blendSaveStatus]
+    [oauthLoading, router, state, ownTweets, ownTinderIndex, ownTinderExit, ownTinderLoading, ownTinderError, localArchetype, calibrating, evidenceData, referenceHandle, referenceTweets, referenceTinderIndex, referenceTinderExit, referenceValidating, referenceError, handleContinue]
   );
 
   // ── Determine ActionZone config per step ─────────────────────────
@@ -799,13 +879,10 @@ export default function OracleChat() {
 
     // Steps that need a Continue button
     const continueSteps = [
-      "SWIPE_OWN",
-      "SWIPE_OWN_REASONS",
-      "REFERENCE_HANDLES",
-      "SWIPE_REFS",
-      "TRACK_A_RESULT",
+      "OWN_TWEET_TINDER",
+      "TRACK_A_EVIDENCE",
+      "REFERENCE_TINDER",
       "TRACK_B_STYLE",
-      "TRACK_B_DIMENSIONS",
       "REFERENCES",
       "NAME_VOICE",
     ];

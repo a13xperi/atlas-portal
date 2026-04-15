@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 
 const mockUseAuth = jest.fn();
-const mockTeam = jest.fn();
-const mockList = jest.fn();
+const mockUsersTeam = jest.fn();
+const mockRecipeCard = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
@@ -20,11 +20,18 @@ jest.mock("@/components/layout/AppShell", () => ({
   default: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
+jest.mock("@/components/voice-profiles/RecipeCard", () => ({
+  __esModule: true,
+  default: (props: unknown) => {
+    mockRecipeCard(props);
+    return <div data-testid="recipe-card" />;
+  },
+}));
+
 jest.mock("@/lib/api", () => ({
   api: {
-    drafts: {
-      team: (...args: unknown[]) => mockTeam(...args),
-      list: (...args: unknown[]) => mockList(...args),
+    users: {
+      team: (...args: unknown[]) => mockUsersTeam(...args),
     },
   },
 }));
@@ -44,55 +51,79 @@ describe("TeamLibraryPage", () => {
       loading: false,
     });
 
-    mockTeam.mockResolvedValue({
-      drafts: [
+    mockUsersTeam.mockResolvedValue({
+      team: [
         {
-          id: "d1",
-          content: "Bitcoin is showing strong support at 65k",
-          version: 1,
-          status: "APPROVED",
-          confidence: 0.85,
-          actualEngagement: 120,
-          createdAt: "2026-04-01T12:00:00Z",
-          blendName: "Research Mode",
-          user: { handle: "alice", displayName: "Alice", avatarUrl: null },
+          id: "u2",
+          handle: "alice",
+          displayName: "Alice",
+          role: "ANALYST",
+          voiceProfile: {
+            humor: 60,
+            formality: 40,
+            brevity: 70,
+            contrarianTone: 50,
+            directness: 55,
+            warmth: 45,
+            technicalDepth: 65,
+            confidence: 50,
+            evidenceOrientation: 55,
+            solutionOrientation: 50,
+            socialPosture: 45,
+            selfPromotionalIntensity: 40,
+            maturity: "INTERMEDIATE",
+            tweetsAnalyzed: 42,
+          },
+          _count: { tweetDrafts: 10, sessions: 5 },
         },
-      ],
-      total: 1,
-    });
-
-    mockList.mockResolvedValue({
-      drafts: [
         {
-          id: "d1",
-          content: "Bitcoin is showing strong support at 65k",
-          version: 1,
-          status: "APPROVED",
-          confidence: 0.85,
-          actualEngagement: 120,
-          createdAt: "2026-04-01T12:00:00Z",
+          id: "u3",
+          handle: "bob",
+          displayName: "Bob",
+          role: "ANALYST",
+          voiceProfile: null,
+          _count: { tweetDrafts: 0, sessions: 0 },
         },
       ],
     });
   });
 
-  it("renders library items", async () => {
+  it("renders team voice recipes", async () => {
     render(<TeamLibraryPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/bitcoin/i)).toBeInTheDocument();
+      expect(screen.getAllByTestId("recipe-card").length).toBeGreaterThan(0);
     });
+
+    expect(mockRecipeCard).toHaveBeenCalledTimes(1);
+    const call = mockRecipeCard.mock.calls[0][0];
+    expect(call.blend.id).toBe("u2");
+    expect(call.blend.voices[0].label).toBe("Alice");
+    expect(call.isActive).toBe(false);
   });
 
-  it("shows author info", async () => {
+  it("shows empty state when no team members have voice profiles", async () => {
+    mockUsersTeam.mockResolvedValue({
+      team: [
+        {
+          id: "u3",
+          handle: "bob",
+          displayName: "Bob",
+          role: "ANALYST",
+          voiceProfile: null,
+          _count: { tweetDrafts: 0, sessions: 0 },
+        },
+      ],
+    });
+
     render(<TeamLibraryPage />);
 
-    const authorName = await screen.findByText("Alice");
-    const avatar = authorName.previousElementSibling;
-
-    expect(authorName).toBeInTheDocument();
-    expect(avatar).toHaveTextContent("A");
-    expect(avatar).toHaveClass("rounded-full");
-    expect(screen.getByText("via Research Mode")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          /No team voice recipes yet\. Team members need to calibrate their voice profiles before they appear here\./i
+        )
+      ).toBeInTheDocument();
+    });
   });
 });

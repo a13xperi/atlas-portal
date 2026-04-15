@@ -1,0 +1,160 @@
+# Trimmed Memory Content
+
+Memory Index
+**User**
+*  Alex's role (user_role_and_mission.md) — Alex is director, not operator. System runs itself; surface only judgment calls.
+*  NotebookLM (user_notebooklm.md) — Alex uses it for learning; suggest for dense docs, session logs, PRDs.
+
+**Feedback**
+*  forge-prime role (feedback_prime_inherits_advisor.md) — role=forge-prime is the ONLY orchestrator role. advisor retired.
+*  Wire Prime (feedback_wire_prime_on_completion.md) — Must wire Prime after EVERY task + confirm comms to Alex.
+*  Session ID (feedback_check_own_session_id.md) — Run echo cc-$PPID before fleet diagnosis to avoid treating self as dead.
+*  wire_send env (feedback_wire_send_supabase_env.md) — CRITICAL: export SUPABASE_URL/KEY before wire calls. 000=fail.
+*  MM vs CC (feedback_heavy_on_mm_light_on_cc.md) — Route heavy execution to MiniMax/Kimi; CC stays thin to save tokens.
+*  Execution heuristic (feedback_forge_execution_heuristic.md) — Kimi=executor, Codex=fallback, MM=advisor (text-only).
+*  Forge SLA (feedback_forge_dead_bypass_fast.md) — Zero wires in 15 min = dead. Bypass immediately with Opus subagents.
+*  CC Thinking (feedback_claude_code_is_thinking_tier.md) — PROTOCOL. Prime/Forges stay light on CC. MM/Kimi/Codex for grunt.
+*  Opus Sandwich (feedback_three_sandwich_stacks.md) — Coding: Opus→Kimi→MM→Kimi→Opus. Thinking: Opus→Gemini→Opus.
+*  Engine routing (feedback_engine_routing_final_apr14.md) — MM first, Kimi next, Codex=bugs, Gemini=thinking, Opus=outer.
+*  Dispatcher model (feedback_forge_dispatcher_model.md) — Forges orchestrate parallel subagents; never type code.
+*  Role directives (feedback_engine_role_directives_apr14.md) — MM=DUMPS, Codex=ERRORS, Kimi=BIG ISSUES, Opus=ORCHESTRATOR.
+*  Primary engines (feedback_primary_engines_apr14.md) — "MAX" = MiniMax M2.7, NOT Opus. Gemini for deep analysis.
+*  Continuous build (feedback_forges_never_stop.md) — Workers must stay in a continuous build loop. Idle = failure.
+*  Kimi headless (feedback_kimi_yolo_required.md) — kimi -p without -y hangs on permission prompt. Required protocol.
+*  tmux paste (feedback_tmux_paste_enter_gotcha.md) — send-keys traps Enter. Use -l + separate Enter; verify with capture.
+*  Diagrams first (feedback_diagrams_first.md) — Always lead with ASCII diagram for bugs/fixes. Prose only if asked.
+*  Artifacts visuals (feedback_artifacts_diagram_first.md) — All artifacts must lead with ASCII/visual diagram.
+*  Opus debugging (feedback_opus_for_analysis.md) — Dispatch Opus subagents for complex debugging; Sonnet misses edges.
+*  Opus writes (feedback_opus_for_file_writes.md) — Always dispatch Write/Edit to Opus subagents; Sonnet stays read-only.
+*  Opus task select (feedback_opus_task_selection.md) — Task selection must go through Opus subagent, never Sonnet.
+*  Computer use (feedback_computer_use.md) — Use Chrome control for Railway/X/Vercel checks instead of asking Alex.
+*  Do the work (feedback_do_the_work.md) — Never pause to ask "want me to do X?" — just execute the obvious next step.
+*  Codex batching (feedback_codex_batching.md) — Batch-run Codex from CC; store prompts in /tmp, not repo.
+*  Style (feedback_response_style.md) — Concise, action-first, no summaries, parallel execution mindset.
+*  Codex model (feedback_codex_model.md) — Always use gpt-5.4, never o4-mini.
+*  Codex sandbox (feedback_codex_cli_sandbox.md) — Use --dangerously-bypass-approvals-and-sandbox for worktree dispatch.
+*  Save creds (feedback_save_credentials.md) — Always save API keys to memory + env files immediately when shared.
+*  MiniMax patterns (feedback_minimax_key_recurring.md) — sk-cp- key + MiniMax-M2.7. Run minimax-preflight.sh before batch.
+*  MiniMax pool (feedback_minimax_dashboard_misleading.md) — 3 cards = 1 pool. Poll /v1/api/... remains not UI.
+*  Linter (feedback_atlas_portal_linter.md) — Aggressive linter rewrites mid-session; write + commit in one shot.
+*  Worktrees (feedback_atlas_portal_worktrees.md) — Each session needs its own git worktree add to avoid stomps.
+*  Statusline (feedback_statusline.md) — Bars aligned, 4 lines max; no Unicode printf padding.
+*  URL format (feedback_url_formatting.md) — Use owner/repo#123 for GitHub; never inline long URLs.
+*  Model tiers (feedback_model_tiers.md) — Haiku for chat, Sonnet for routing, Opus for tweet gen.
+*  Engine matrix (feedback_model_matrix_kimi_vs_minimax.md) — Kimi=repo/visual/bugs, MM=pipelines/boilerplate.
+*  QA push (feedback_qa_auto_push.md) — Sessions should auto-create QA test cases at /admin/qa when shipping.
+*  UI proof (feedback_screenshot_after_build.md) — Take Playwright screenshots after UI changes for fast review.
+*  Burn mode (feedback_burn_mode.md) — burn on [min] lifts limits; spawn parallel agents, auto-expires.
+*  No idling (feedback_never_let_workers_idle.md) — Advisor must monitor fleet every 5 min and wire idle workers immediately.
+*  No killing (feedback_never_kill_sessions.md) — Never kill other CC processes or mark session_locks done.
+*  Explicit PIDs (feedback_explicit_pid_kills.md) — When authorized, name PIDs explicitly; never sweep with pgrep.
+*  Account swap (feedback_account_switching.md) — Switch must swap real creds with capacity gates.
+*  Switch fix (feedback_account_switching_fix.md) — provision-vaults.sh is only way to write vaults; no auto-save.
+*  Verify build (feedback_verify_proof.md) — Screenshots, smoke tests, clickable links after every build.
+*  Session wrap (feedback_wrap_vs_close_session.md) — /wrap doesn't cleanly start next session; prefer /close-session.
+*  OAuth debug (feedback_oauth_debug_order.md) — If provider rejects, check credentials first (typos in client_id).
+*  Dispatch only (feedback_advisor_dispatch_only.md) — NEVER Edit/Write/Agent inline; bash+disown only.
+*  Background (feedback_background_agents.md) — Long calls MUST run_in_background:true; communicate every 90s.
+*  Dispatch method (feedback_background_dispatch_method.md) — Use Bash+disown; tool takes 3+ min even if background.
+*  Lane continuity (feedback_lane_continuity.md) — Pick tasks in same domain to keep worker context.
+*  Cold start (feedback_advisor_cold_start.md) — Build /cycle-warmup to auto-claim at 5h boundaries; 60s SLA.
+*  Dispatch first (feedback_dispatch_before_brief.md) — /advisor-on: Step 1 dispatch, 2 brief. 90s SLA claim→first wire.
+*  Security handoffs (feedback_directed_handoffs_security.md) — Use directed task_handoffs for security work.
+*  Handoff demote (feedback_advisor_handoff_demote.md) — /advisor-on demotes prior row + cleans /tmp + broadcasts.
+*  Fleet state (feedback_session_continuity.md) — Write fleet state to memory before session ends for next advisor.
+*  Terminal windows (feedback_never_touch_other_terminals.md) — NEVER AXRaise Warp tabs; destroyed 3 sessions.
+*  tmux protocol (feedback_tmux_fleet_protocol.md) — Advisor standalone, 10 workers in fleet-a/b grid; no Warp tabs.
+*  Afterburner (feedback_afterburner_protocol.md) — staggered tmux, 2-min cron, background subagents, zero idle.
+*  Burn collab (feedback_afterburner_active_collab.md) — Last 30 min advisor + Alex burn; subagents research, advisor stays responsive.
+*  Token pacing (feedback_token_pacing_protocol.md) — Cruise→ramp→afterburner→exhaust at T-5min; advisor owns pacing.
+*  End protocol (feedback_session_end_protocol.md) — Gates: T-15 last Opus, T-10 dump, T-7 no agents, T-5 hard stop.
+*  Spillover (feedback_agent_spillover.md) — Never fire large agents in last 5 min to avoid next session spillover.
+*  Token waste (feedback_burn_token_waste.md) — Fire MAX agents immediately in burn; execute fixes immediately.
+*  tmux re-task (feedback_tmux_retask_not_breakpane.md) — Never restructure tmux layout mid-session; send-keys only.
+*  Stagger launch (feedback_stagger_fleet_launch.md) — Launch panes one at a time with delays to avoid throttling.
+*  Launch process (feedback_fleet_launch_process.md) — Plain claude + /dispatch; no bypass flags; permanent protocol.
+*  Weekly reserve (feedback_weekly_cap_reserve.md) — Keep 2% reserve; hard stop at 98% drain.
+*  State capture (feedback_document_before_killing.md) — Capture fleet state BEFORE shutting down.
+*  Wind-down (feedback_wind_down_protocol.md) — 5-step sequence: document→save→stop→cleanup→report.
+*  Forge terminal (feedback_forge_terminal_only.md) — All 5 Forges must be visible terminal sessions, not background.
+*  Saturation (feedback_context_saturation_audit_apr14.md) — Trip-wires at 170k context: syntax errors, hallucinations.
+*  Forge launch (feedback_forge_launch_process.md) — Advisor runs launch-all.sh when Forges offline. Touching OK.
+*  Forge tmux (feedback_forge_launch_tmux.md) — Consolidated tmux grid > scattered Warp; 4 panes per session.
+
+**Project**
+*  Forge identity (project_forge_sage_identity.md) — Agents Forge/Hermes/Claw, SAGE orchestration.
+*  Engine fleet (project_engine_fleet_routing.md) — 6-engine routing matrix + MiniMax Max tier.
+*  Opus Sandwich (project_three_opus_moments.md) — Plan (Opus) → Build (M2.7/Kimi) → Validate (Opus).
+*  Ops matrix (project_ops_routing_matrix.md) — Gut-check tree: no-model vs M2.7 vs Sonnet vs Opus.
+*  Scope (project_scope_atlas_only.md) — KAA out of scope; focus only on Atlas.
+*  token-watch (project_token_watch.md) — Token dashboard v0.16+; 18 tabs incl Dispatch and Ops Manual.
+*  refresh-tick (project_token_watch_refresh_rule.md) — TUI calls must be non-blocking; use async-wrapper.
+*  Heartbeats (project_paperclip_heartbeats.md) — All 23 agents OFF as of 2026-04-08; re-enable via token-watch.
+*  Token infra (project_token_infra.md) — token-watch + claude-tokens system; root causes fixed.
+*  Rotation (project_dual_accounts.md) — 3 accounts with capacity guardian, auto-switching, credential swap.
+*  Atlas Production (project_atlas_codex_branches.md) — 160 Codex tasks; merged to main 2026-04-03.
+*  Atlas Priorities (project_atlas_next_session.md) — PRs #74, #59, Railway token, Anil seed, Codex dispatch.
+*  Coordination (project_coordination_system.md) — session_locks + git bridge for concurrent CC/Codex.
+*  Account B (project_account_b_routing.md) — KAA use ~/.claude-b; clear OAUTH_TOKEN for agents.
+*  Session UID (project_working_sessions.md) — WS-YYMMDD-seq groups 5h sessions; Supabase table integration.
+*  QA System (project_qa_testing_system.md) — Admin QA panel with 79 tests; needs Oracle tests.
+*  Figma (project_figma_status.md) — Figma outdated; build surpassed designs. Use live app for QA.
+*  Unmerged (project_atlas_unmerged_branches.md) — 48 branches pending; priority merge order; 5 prod bugs.
+*  Checklist (project_atlas_test_checklist.md) — 39-item manual checklist + Hermes/Claw task routing.
+*  Bug fixes (project_atlas_bug_fixes_ready.md) — Fixes for 6 prod bugs; blend + voice designs complete.
+*  Atlas Audit (project_atlas_complete_audit_apr13.md) — 13-agent audit: 14 bugs, 48 branches, merge plan.
+*  Full Audit (project_atlas_full_system_audit.md) — Audited: onboarding, voice, campaigns, queue, alerts.
+*  Hermes plan (project_hermes_integration_plan.md) — Telegram Mini App, self-evolution cron. Fix model error first.
+*  Hermes error (project_hermes_model_error.md) — 400 error: anthropic/claude-opus-4.6 not supported; fix config.
+*  Hermes tasks (project_atlas_hermes_tasks.md) — 6 autonomous tasks ready once model fixed.
+*  Oracle Widget (project_oracle_widget.md) — persistent copilot on all pages; demo data everywhere.
+*  Draft Queue (project_draft_queue.md) — content deployment focus; intelligent queue is v1.1 flagship.
+*  To-Do (project_personal_todo_system.md) — /todo + /q -p, 7 life domains, Paperclip bridge cron.
+*  Human-First (project_atlas_human_first.md) — Faces not handles, concrete not abstract, accessible not technical.
+*  Decision Matrix (project_anil_decision_matrix.md) — 8 decisions locked; 10 tasks in 3 lanes; Wednesday deadline.
+*  Onboarding (project_anil_feedback.md) — X-first onboarding; connect X before voice calibration.
+*  Custom DNS (project_dns_atlas.md) — Branded domain needed; Vercel A record when ready.
+*  Voice Redesign (project_voice_library_redesign.md) — Cards show voice recipes; preview features.
+*  Multi-tweet (project_multi_tweet_from_reports.md) — PDF drop → multiple tweet angles; campaign queue.
+*  Test Arch (project_testing_architecture.md) — 3 tiers: demo mode (fast), localhost, production smoke.
+*  Campaigns (project_campaigns_core_value.md) — Reports → tweet campaigns; key workflow for team.
+*  Monitors (project_session_project_monitors.md) — Supabase task tracking; /task, /backlog, TUI.
+*  Pomodoro (project_pomodoro_cycles.md) — 30-min plan→execute→close blocks to fix incompletes.
+*  Pomodoro Design (project_pomodoro_system.md) — 10x 30-min blocks; template for build, assign, close.
+*  Messaging (project_session_messaging.md) — Sessions talk via Supabase; auto file_release/crash monitor.
+*  Auto-dispatch (project_advisor_architecture.md) — /dispatch→/done chain; advisor marker file.
+*  Sync (project_adviser_sync.md) — TW agent syncs Notion DBs into project_tasks every 5 min.
+*  Sync Fence (project_notion_sync_fence.md) — Filter claimed/active/done before upsert; fails-closed.
+*  Capacity (project_capacity_history.md) — Time-series audit log for 3-account capacity.
+*  Vision (project_token_watch_vision.md) — Self-managing infra; advisor does ops, Alex does direction.
+*  Recovery (project_session_recovery.md) — CLI processes dead sessions; 312 sessions fully processed.
+*  Recap (project_session_recap.md) — /recap skill surfaces directives met and what shipped.
+*  Two-UIs (project_two_uis_vision.md) — Delphi+Atlas UIs Alex remembers; must reconstruct from scratch.
+*  Offload (project_mac_ssd_offload.md) — User folders symlinked to /Volumes/SSD; laptop caveat.
+*  Rotation (project_account_rotation.md) — Schedule: B=Fri-Mon, C=Mon-Wed, A=Wed-Fri.
+*  Advisor Directive (project_advisor_prime_directive.md) — Identity, protocols, fleet mgmt, wire.
+*  Improvement (project_self_improvement_loop.md) — 8-step Sense→Learn loop + KPIs.
+*  Harness (project_the_harness_vision.md) — Routing layer stages; Stage 2/3 build order.
+*  Sync spec (project_phase2_sync_spec.md) — 13 vault sync hooks; Notion↔Obsidian bridge.
+*  Research (project_adopt_research_skill.md) — Autonomous white paper adoption; 7-step flow.
+*  MCP (project_cross_engine_mcp.md) — shared-servers.json + installer.
+*  Firehose (project_firehose_convention.md) — 6-column format (TIME/STATUS/ENGINE/Project/TASK).
+*  MiniMax Upgrade (project_minimax_token_plan_upgrade.md) — sk-cp- key + MiniMax-M2.7. Run preflight.
+*  Next Queue (project_next_session_queue.md) — 9 Atlas PRs, admin role, Hermes fix, Stage 2 skills.
+*  Build Loop (project_autonomous_build_loop.md) — Fleet builds autonomously; 10 terminals self-manage.
+*  Self-Build (project_self_build_loop.md) — CC=CTO, MM/Kimi/Codex build, Wire closes loop.
+*  OpenClaw (project_openclaw_advisor_bridge.md) — Remote fleet control via Telegram bot.
+*  Snapshots (project_session_snapshots.md) — Workers checkpoint every 5 min for crash recovery.
+*  Forge Identity (project_five_forge_architecture.md) — SOUL.md identity files written to /tmp.
+
+**Reference**
+*  TM (reference_tm_abbreviation.md) — Shorthand: CC=thinking, Kimi=file, MM=boilerplate, Gemini=analysis.
+*  Meter (reference_claude_context_meter_signal.md) — Derive context from usage payload + cache token fields.
+*  X API (reference_x_api_credentials.md) — OAuth 2.0 client ID/secret in .env.local + Railway.
+*  Asana (reference_asana_credentials.md) — PAT for Paperclip Agent; KAA agents use via MCP.
+*  Workspace (reference_google_workspace_mcp.md) — Gmail + Calendar MCP on localhost:8000.
+*  Telegram (reference_telegram_bot.md) — Atlas bot token on Railway; BotFather for api service.
+*  Grok (reference_xai_billing.md) — Grok API needs credits for trending scan.
+*  HCI (reference_hci_credentials.md) — Hermes Control Interface at localhost:10272; user a13x.
+*  Hermes (reference_hermes_credentials.md) — Hermes v0.8.0 + Telegram bot + HCI.
+*  Bus (project_tri_channel_comms_protocol.md) — Future: interchangeable commands on shared bus.
