@@ -28,8 +28,11 @@ function ManagementPage() {
     isLoading("send-nudge") ||
     isLoading("push-style");
 
+  const userId = user?.id;
+  const userRole = user?.role;
+
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     setLoadError(null);
     setLoading(true);
@@ -46,7 +49,8 @@ function ManagementPage() {
         }
       })
       .finally(() => setLoading(false));
-  }, [user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, userRole]);
 
   const getAnalystStats = (memberId: string) =>
     analysts.find((a) => a.id === memberId);
