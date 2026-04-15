@@ -446,9 +446,9 @@ export const api = {
         `/api/voice/blends/${blendId}/voices/${voiceId}`,
         { method: "DELETE" }
       ),
-    calibrate: (handle: string) =>
+    calibrate: (handle: string, options?: { signal?: AbortSignal }) =>
       request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/calibrate", {
-        method: "POST", body: { handle }, signal: AbortSignal.timeout(45_000),
+        method: "POST", body: { handle }, signal: options?.signal ?? AbortSignal.timeout(45_000),
       }),
     swipeSignals: (payload: SwipeSignalsPayload) =>
       request<{ profile: VoiceProfile; calibration: CalibrationResult }>("/api/voice/swipe-signals", {
