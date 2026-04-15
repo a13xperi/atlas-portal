@@ -215,7 +215,7 @@ describe("CraftingPage", () => {
       expect(mockedApi.drafts.generate).toHaveBeenCalledWith({
         sourceContent: "Fresh BTC momentum read",
         sourceType: "MANUAL",
-        blendId: undefined,
+        blendWith: undefined,
         replyAngle: undefined,
       })
     );
@@ -251,7 +251,7 @@ describe("CraftingPage", () => {
       expect.objectContaining({
         sourceContent: "Fresh BTC momentum read",
         sourceType: "MANUAL",
-        blendId: undefined,
+        blendWith: undefined,
         replyAngle: undefined,
       })
     );
@@ -382,7 +382,7 @@ describe("CraftingPage", () => {
       expect(mockedApi.drafts.generate).toHaveBeenCalledWith({
         sourceContent: articleUrl,
         sourceType: "ARTICLE",
-        blendId: undefined,
+        blendWith: undefined,
       })
     );
 
@@ -446,7 +446,7 @@ describe("CraftingPage", () => {
       expect(mockedApi.drafts.generate).toHaveBeenLastCalledWith({
         sourceContent: fallbackText,
         sourceType: "MANUAL",
-        blendId: undefined,
+        blendWith: undefined,
       })
     );
 
