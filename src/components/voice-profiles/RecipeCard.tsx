@@ -14,6 +14,7 @@ import type { BlendVoice, SavedBlend } from "@/lib/api";
 import type { VoiceDimensionSnapshot } from "@/lib/voice-recipes";
 import {
   formatVoiceDimensionValue,
+  generateVoiceProfileName,
   type VoiceDimensions,
   VOICE_DIMENSION_SECTIONS,
 } from "@/lib/voice-profile-dimensions";
@@ -150,7 +151,13 @@ export default function RecipeCard({
             )}
           </div>
           <h3 className="mt-4 font-heading text-2xl font-semibold tracking-tight text-atlas-text">
-            {blend.name}
+            {blend.name ||
+              generateVoiceProfileName(
+                dimensions,
+                blend.voices
+                  .map((v) => v.referenceVoice?.handle)
+                  .filter(Boolean) as string[]
+              )}
           </h3>
           <div className="mt-3 flex items-center gap-3">
             <div className="flex flex-row-reverse items-center">
