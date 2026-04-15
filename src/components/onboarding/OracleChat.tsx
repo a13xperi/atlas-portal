@@ -70,6 +70,7 @@ export default function OracleChat() {
     "idle" | "saving" | "saved" | "error"
   >("idle");
   const [scanError, setScanError] = useState<string | null>(null);
+  const [scanLoading, setScanLoading] = useState(false);
   // Tracks the persisted blend so future PATCH operations can target it.
   const [, setSavedBlendId] = useState<string | null>(null);
 
@@ -417,6 +418,7 @@ export default function OracleChat() {
 
     calibratingRef.current = true;
     setScanError(null);
+    setScanLoading(true);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30_000);
 
@@ -526,6 +528,7 @@ export default function OracleChat() {
           ],
         });
       } finally {
+        setScanLoading(false);
         calibratingRef.current = false;
       }
     })();
@@ -551,6 +554,13 @@ export default function OracleChat() {
                       {scanError}
                     </span>
                   </>
+) : scanLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
+                    <span className="text-sm text-atlas-text-secondary">
+                      {`Scanning @${state.xHandle}...`}
+                    </span>
+                  </>
                 ) : state.calibrationResult ? (
                   <>
                     <CheckCircle className="h-4 w-4 text-atlas-teal" />
@@ -560,9 +570,9 @@ export default function OracleChat() {
                   </>
                 ) : (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
+                    <CheckCircle className="h-4 w-4 text-atlas-teal" />
                     <span className="text-sm text-atlas-text-secondary">
-                      {`Scanning @${state.xHandle}...`}
+                      Scan complete
                     </span>
                   </>
                 )}
@@ -807,7 +817,7 @@ export default function OracleChat() {
           return null;
       }
     },
-    [oauthLoading, router, state, blendSaveStatus, scanError]
+    [oauthLoading, router, state, blendSaveStatus, scanError, scanLoading]
   );
 
   // ── Determine ActionZone config per step ─────────────────────────

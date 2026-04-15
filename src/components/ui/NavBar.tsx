@@ -254,7 +254,7 @@ export default function NavBar({ variant }: NavBarProps) {
               </div>
               <div className="relative z-10">
                 <Link
-                  href="/profile"
+                  href="/settings"
                   aria-label={cachedTier ? `${cachedTier.tier.name} (#${cachedTier.rank})` : "Signed in"}
                   className={`w-8 h-8 rounded-full bg-atlas-surface border-2 flex items-center justify-center text-xs font-medium cursor-pointer hover:ring-2 hover:ring-delphi-teal/40 transition-all ${
                     cachedTier
