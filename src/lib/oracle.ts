@@ -208,15 +208,20 @@ export function oracleReducer(
             timestamp: Date.now(),
           }
         : null;
+      // When leaving the scanning step, remove the transient scan-progress
+      // component so the spinner/checkmark doesn't persist alongside results.
+      const filteredMessages = state.currentStep === "TRACK_A_SCANNING"
+        ? state.messages.filter((m) => m.component?.type !== "scan-progress")
+        : state.messages;
       // Save snapshot for back-navigation (cap at 10)
       const { stepHistory: _h, ...snapshot } = state;
-      const newHistory = [...state.stepHistory, { step: state.currentStep, messageCount: state.messages.length, snapshot: snapshot as Omit<typeof state, 'stepHistory'> }].slice(-10);
+      const newHistory = [...state.stepHistory, { step: state.currentStep, messageCount: filteredMessages.length, snapshot: snapshot as Omit<typeof state, 'stepHistory'> }].slice(-10);
       return {
         ...state,
         currentStep: next,
         messages: userMsg
-          ? [...state.messages, userMsg]
-          : state.messages,
+          ? [...filteredMessages, userMsg]
+          : filteredMessages,
         pendingMessages: prepareMessages(next, state.track),
         stepHistory: newHistory,
       };
