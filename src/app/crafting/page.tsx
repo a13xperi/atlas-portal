@@ -1124,6 +1124,15 @@ function CraftingPage() {
       const sourceUrl = extractSourceUrl(activeDraft);
       const { draft } = await api.drafts.update(activeDraft.id, { status });
       syncDraftReferences(draft, sourceUrl ?? undefined);
+      if (status === "APPROVED") {
+        try {
+          await api.drafts.enqueue(activeDraft.id);
+          toast("Draft approved and added to queue", "success");
+        } catch (enqueueError: unknown) {
+          console.warn("Failed to enqueue approved draft:", enqueueError);
+          toast("Draft approved, but failed to add to queue", "warning");
+        }
+      }
     } catch (statusError: unknown) {
       console.error(`Failed to update draft status to ${status}:`, statusError);
       setError(
@@ -1931,13 +1940,23 @@ function CraftingPage() {
                   const activeBlend = blends.find((b) => b.id === selectedBlendId);
                   if (!activeBlend) return null;
                   return (
-                    <VoicePillBar
-                      voices={activeBlend.voices.map((voice) => ({
-                        handle: voice.label,
-                        avatarUrl: voice.referenceVoice?.avatarUrl || undefined,
-                        pct: voice.percentage,
-                      }))}
-                    />
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-atlas-text-secondary">
+                          Active voice
+                        </span>
+                        <span className="text-sm font-semibold text-atlas-teal">
+                          {activeBlend.name ?? "Untitled blend"}
+                        </span>
+                      </div>
+                      <VoicePillBar
+                        voices={activeBlend.voices.map((voice) => ({
+                          handle: voice.label,
+                          avatarUrl: voice.referenceVoice?.avatarUrl || undefined,
+                          pct: voice.percentage,
+                        }))}
+                      />
+                    </div>
                   );
                 })()}
               </div>
