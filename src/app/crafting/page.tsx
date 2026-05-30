@@ -93,6 +93,11 @@ const DRAFT_STATUS_LABELS: Record<TweetDraft["status"], string> = {
   ARCHIVED: "Archived",
 };
 
+function draftStatusLabel(draft: TweetDraft): string {
+  if (draft.failed) return "Failed";
+  return DRAFT_STATUS_LABELS[draft.status];
+}
+
 const DRAFT_STATUS_PILL_STYLES: Record<TweetDraft["status"], string> = {
   DRAFT: "bg-atlas-surface text-atlas-text-secondary",
   APPROVED: "bg-atlas-teal/20 text-atlas-teal",
@@ -101,6 +106,11 @@ const DRAFT_STATUS_PILL_STYLES: Record<TweetDraft["status"], string> = {
   ARCHIVED: "bg-atlas-text-muted/20 text-atlas-text-muted",
 };
 
+function draftStatusPillStyle(draft: TweetDraft): string {
+  if (draft.failed) return "bg-red-500/20 text-red-400";
+  return DRAFT_STATUS_PILL_STYLES[draft.status];
+}
+
 const DRAFT_STATUS_HINTS: Record<TweetDraft["status"], string> = {
   DRAFT: "Review and approve when ready",
   APPROVED: "Ready to post",
@@ -108,6 +118,11 @@ const DRAFT_STATUS_HINTS: Record<TweetDraft["status"], string> = {
   POSTED: "Published",
   ARCHIVED: "Archived",
 };
+
+function draftStatusHint(draft: TweetDraft): string {
+  if (draft.failed) return draft.failureReason || "Scheduling failed";
+  return DRAFT_STATUS_HINTS[draft.status];
+}
 
 const DRAFT_WORKFLOW_STEPS: { status: TweetDraft["status"]; label: string }[] = [
   { status: "DRAFT", label: "Draft" },
@@ -1954,12 +1969,12 @@ function CraftingPage() {
                 <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${DRAFT_STATUS_PILL_STYLES[activeDraft.status]}`}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${draftStatusPillStyle(activeDraft)}`}
                     >
-                      {DRAFT_STATUS_LABELS[activeDraft.status]}
+                      {draftStatusLabel(activeDraft)}
                     </span>
                     <span className="text-xs text-atlas-text-muted">
-                      {DRAFT_STATUS_HINTS[activeDraft.status]}
+                      {draftStatusHint(activeDraft)}
                     </span>
                   </div>
                   <div className="flex-1" />
@@ -2169,8 +2184,8 @@ function CraftingPage() {
                 </div>
               ) : null}
 
-              {/* Engagement Metrics — shown for POSTED drafts */}
-              {activeDraft.status === "POSTED" ? (
+              {/* Engagement Metrics — shown for successfully POSTED drafts */}
+              {activeDraft.status === "POSTED" && !activeDraft.failed ? (
                 <div className="mt-4 rounded-xl border border-glass-border bg-atlas-surface/60 p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-atlas-text-muted">

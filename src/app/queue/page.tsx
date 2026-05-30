@@ -38,20 +38,30 @@ import OracleInspector from "@/components/oracle/OracleInspector";
 import type { InspectableEntity } from "@/lib/oracle-agent-types";
 import { api, QueuedDraft } from "@/lib/api";
 
-type FilterKey = "all" | "draft" | "scheduled" | "posted" | "archived";
+type FilterKey = "all" | "draft" | "scheduled" | "posted" | "failed" | "archived";
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All" },
   { key: "draft", label: "Drafts" },
   { key: "scheduled", label: "Scheduled" },
   { key: "posted", label: "Posted" },
+  { key: "failed", label: "Failed" },
   { key: "archived", label: "Archived" },
 ];
 
-function statusVariant(status: QueuedDraft["status"]): {
+function statusVariant(
+  status: QueuedDraft["status"],
+  failed?: boolean
+): {
   label: string;
   className: string;
 } {
+  if (failed) {
+    return {
+      label: "Failed",
+      className: "bg-red-500/15 text-red-400",
+    };
+  }
   switch (status) {
     case "POSTED":
       return {
@@ -182,10 +192,10 @@ function SortableQueueItem({
   };
 
   const timeLabel = formatTime(item);
-  const status = statusVariant(item.status);
+  const status = statusVariant(item.status, item.failed);
   const isFirst = index === 0 && draggable;
-  const isPostedOrArchived =
-    item.status === "POSTED" || item.status === "ARCHIVED";
+  const isTerminal =
+    item.status === "ARCHIVED" || item.failed || item.status === "POSTED";
 
   return (
     <div
@@ -259,7 +269,7 @@ function SortableQueueItem({
             <Clock className="h-3 w-3" />
             <span>{timeLabel}</span>
           </div>
-          {!isPostedOrArchived && (
+          {!isTerminal && (
             <div className="relative flex items-center gap-1.5">
               <button
                 onClick={() => setPickerOpen((v) => !v)}
@@ -301,7 +311,7 @@ function SortableQueueItem({
               )}
             </div>
           )}
-          {isPostedOrArchived && (
+          {isTerminal && (
             <span className="text-[10px] text-atlas-text-muted">
               No actions
             </span>
@@ -495,7 +505,9 @@ function QueuePage() {
         (d) => d.status === "DRAFT" || d.status === "APPROVED"
       );
     if (filter === "posted")
-      return allDrafts.filter((d) => d.status === "POSTED");
+      return allDrafts.filter((d) => d.status === "POSTED" && !d.failed);
+    if (filter === "failed")
+      return allDrafts.filter((d) => d.failed);
     if (filter === "archived")
       return allDrafts.filter((d) => d.status === "ARCHIVED");
     return queue;
