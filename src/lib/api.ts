@@ -274,7 +274,11 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     if (demoResponse !== null) return demoResponse as T;
   }
 
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+  const headers: Record<string, string> = {};
+  if (!isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
   if (_accessToken) {
     headers["Authorization"] = `Bearer ${_accessToken}`;
   }
@@ -287,7 +291,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
       const res = await fetch(`${API_URL}${path}`, {
         method,
         headers,
-        body: body ? JSON.stringify(body) : undefined,
+        body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
         signal: controller.signal,
         credentials: "include",
       });
@@ -504,11 +508,34 @@ export const api = {
       request<{ reordered: number }>("/api/drafts/queue/reorder", { method: "PATCH", body: { orderedIds } }),
     resetQueueOrder: () =>
       request<{ reset: boolean }>("/api/drafts/queue/reset-order", { method: "POST" }),
-    batchFromContent: (content: string, sourceType: string, options?: { sourceUrl?: string; createCampaign?: boolean; campaignTitle?: string }) =>
+    batchFromContent: (content: string, sourceType: string, options?: { sourceUrl?: string; createCampaign?: boolean; campaignTitle?: string; blendId?: string }) =>
       request<{ insights: any[]; drafts: any[]; campaign?: { id: string; title: string } }>("/api/drafts/batch-from-content", {
         method: "POST",
         body: { content, sourceType, ...options },
       }),
+    // TODO(gap-1): Backend endpoint for one-step PDF-to-campaign generation.
+    // Expected curl shape:
+    // curl -X POST $API_URL/api/drafts/generate-from-pdf \
+    //   -H "Authorization: Bearer <token>" \
+    //   -F "file=@report.pdf" \
+    //   -F "sourceType=REPORT" \
+    //   -F "sourceUrl=https://..." \
+    //   -F "createCampaign=true" \
+    //   -F "campaignTitle=..." \
+    //   -F "blendId=..."
+    generateFromPdf: (file: File, sourceType: string, options?: { sourceUrl?: string; createCampaign?: boolean; campaignTitle?: string; blendId?: string }) => {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("sourceType", sourceType);
+      if (options?.sourceUrl) form.append("sourceUrl", options.sourceUrl);
+      if (options?.createCampaign) form.append("createCampaign", "true");
+      if (options?.campaignTitle) form.append("campaignTitle", options.campaignTitle);
+      if (options?.blendId) form.append("blendId", options.blendId);
+      return request<{ insights: any[]; drafts: any[]; campaign?: { id: string; title: string } }>("/api/drafts/generate-from-pdf", {
+        method: "POST",
+        body: form,
+      });
+    },
   },
 
   arena: {

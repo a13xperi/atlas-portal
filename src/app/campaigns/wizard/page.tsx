@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Upload,
@@ -11,6 +11,8 @@ import {
   Sparkles,
   ArrowLeft,
   ArrowRight,
+  RefreshCcw,
+  Mic,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import GlassCard from "@/components/ui/GlassCard";
@@ -36,6 +38,12 @@ interface InsightData {
   angle: string;
 }
 
+interface SaveResult {
+  draftId: string;
+  success: boolean;
+  error?: string;
+}
+
 const ANGLE_COLORS: Record<string, string> = {
   "contrarian take": "bg-orange-500/20 text-orange-400 border-orange-500/30",
   "data highlight": "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -46,7 +54,21 @@ const ANGLE_COLORS: Record<string, string> = {
   explainer: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://api-production-9bef.up.railway.app";
+// TODO(gap-3): POST /api/campaigns/generate has no frontend caller. Wire it here
+// or in the crafting page if the backend intends campaigns to be generated from
+// a single draft rather than from bulk content.
+
+// TODO(gap-5): Add "add existing drafts" UI on campaign detail page. Backend
+// already supports POST /api/campaigns/{id}/drafts with { draftId, sortOrder }.
+
+// TODO(gap-6): Campaign progress shows 0/0 engagement for new campaigns.
+// Hide engagement stats when totalEngagement === 0 && predictedEngagement === 0
+// in src/app/campaigns/[id]/page.tsx.
+
+// TODO(gap-10): Campaign-level scheduling is not yet supported by the backend.
+// The UI currently only schedules per-draft. A backend endpoint such as
+// PATCH /api/campaigns/{id}/schedule with { publishAt, intervalHours } is
+// needed before a campaign-level scheduler can be built.
 
 export default function CampaignWizardPage() {
   const { user } = useAuth();
@@ -65,10 +87,25 @@ export default function CampaignWizardPage() {
   const [scheduleMode, setScheduleMode] = useState<"none" | "spread">("none");
   const [scheduleDays, setScheduleDays] = useState(7);
   const [saving, setSaving] = useState(false);
+  const [saveResults, setSaveResults] = useState<SaveResult[] | null>(null);
   const [savedCampaign, setSavedCampaign] = useState<{
     id: string;
     title: string;
   } | null>(null);
+  const [activeVoiceLabel, setActiveVoiceLabel] = useState<string>("Personal Voice");
+
+  // Gap-11: Surface active voice in wizard
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const savedBlendId = window.localStorage.getItem("atlas_active_blend");
+    if (savedBlendId) {
+      // We don't have the blend name without fetching, so show a generic label.
+      // A future improvement could fetch /api/voice/blends and map the id.
+      setActiveVoiceLabel("Saved Blend");
+    } else {
+      setActiveVoiceLabel("Personal Voice");
+    }
+  }, []);
 
   const handleFileSelect = async (files: FileList) => {
     const file = files[0];
@@ -78,28 +115,28 @@ export default function CampaignWizardPage() {
       const text = await file.text();
       setContent(text);
     } else if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
-      // Send to backend for proper PDF text extraction
+      // Gap-1: Use single-round generate-from-pdf endpoint when available
       try {
-        setStatusText("Extracting PDF text…");
-        const form = new FormData();
-        form.append("file", file);
-        const accessToken = typeof window !== "undefined" ? sessionStorage.getItem("atlas_access_token") : null;
-        const res = await fetch(`${API_URL}/api/upload/extract-text`, {
-          method: "POST",
-          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-          credentials: "include",
-          body: form,
+        setStatusText("Analyzing PDF…");
+        const result = await api.drafts.generateFromPdf(file, sourceType, {
+          sourceUrl: sourceUrl || undefined,
+          createCampaign: campaignName.trim() ? true : undefined,
+          campaignTitle: campaignName.trim() || undefined,
         });
-        if (!res.ok) throw new Error("PDF extraction failed");
-        const { text: extracted } = (await res.json()) as { text: string };
-        if (extracted.trim().length > 50) {
-          setContent(extracted);
-        } else {
-          setError("PDF appeared empty. Try pasting the content directly.");
+        setInsights(result.insights || []);
+        setDrafts(
+          (result.drafts || []).map((d: any) => ({
+            ...d,
+            discarded: false,
+          }))
+        );
+        if (result.campaign) {
+          setSavedCampaign({ id: result.campaign.id, title: result.campaign.title });
         }
+        setStatusText("");
+        setStep("review");
       } catch {
-        setError("Could not extract text from this PDF. Try pasting the content directly.");
-      } finally {
+        setError("Could not analyze this PDF. Try pasting the content directly.");
         setStatusText("");
       }
     } else {
@@ -126,8 +163,11 @@ export default function CampaignWizardPage() {
     setStatusText("Extracting insights...");
 
     try {
+      // Gap-2: Create campaign during generation so drafts are never orphaned
       const result = await api.drafts.batchFromContent(content, sourceType, {
         sourceUrl: sourceUrl || undefined,
+        createCampaign: campaignName.trim() ? true : undefined,
+        campaignTitle: campaignName.trim() || undefined,
       });
 
       setInsights(result.insights || []);
@@ -137,6 +177,9 @@ export default function CampaignWizardPage() {
           discarded: false,
         }))
       );
+      if (result.campaign) {
+        setSavedCampaign({ id: result.campaign.id, title: result.campaign.title });
+      }
       setStatusText("");
       setStep("review");
     } catch (err: any) {
@@ -157,45 +200,73 @@ export default function CampaignWizardPage() {
     );
   };
 
-  const handleSaveAll = async (createCampaign: boolean) => {
+  const handleSaveAll = async (createCampaign: boolean, retryFailed = false) => {
     setSaving(true);
     setError("");
     try {
       const activeDrafts = drafts.filter((d) => !d.discarded);
+      const candidates = retryFailed && saveResults
+        ? activeDrafts.filter((d) => saveResults.some((r) => r.draftId === d.id && !r.success))
+        : activeDrafts;
 
       // Compute schedule slots if user opted to spread
-      const scheduleSlots: (string | null)[] = activeDrafts.map((_, i) => {
-        if (scheduleMode !== "spread" || activeDrafts.length === 0) return null;
+      const scheduleSlots: (string | null)[] = candidates.map((_, i) => {
+        if (scheduleMode !== "spread" || candidates.length === 0) return null;
         const days = Math.max(1, scheduleDays);
         const totalMs = days * 24 * 60 * 60 * 1000;
-        // Evenly spaced; first slot 1 hour out, last slot at end of window
         const offset =
-          activeDrafts.length === 1
+          candidates.length === 1
             ? totalMs / 2
-            : 60 * 60 * 1000 + (i * (totalMs - 60 * 60 * 1000)) / (activeDrafts.length - 1);
+            : 60 * 60 * 1000 + (i * (totalMs - 60 * 60 * 1000)) / (candidates.length - 1);
         return new Date(Date.now() + offset).toISOString();
       });
 
-      // Persist edits + enqueue/schedule each draft
-      for (let i = 0; i < activeDrafts.length; i++) {
-        const draft = activeDrafts[i];
-        await api.drafts.update(draft.id, { content: draft.content });
-        const slot = scheduleSlots[i];
-        if (slot) {
-          await api.drafts.schedule(draft.id, slot);
-        } else {
-          await api.drafts.enqueue(draft.id);
+      // Gap-7: Error recovery — track each draft individually so partial
+      // failures can be retried without losing already-saved work.
+      const results: SaveResult[] = [];
+      for (let i = 0; i < candidates.length; i++) {
+        const draft = candidates[i];
+        try {
+          await api.drafts.update(draft.id, { content: draft.content });
+          const slot = scheduleSlots[i];
+          if (slot) {
+            await api.drafts.schedule(draft.id, slot);
+          } else {
+            await api.drafts.enqueue(draft.id);
+          }
+          results.push({ draftId: draft.id, success: true });
+        } catch (err: any) {
+          results.push({ draftId: draft.id, success: false, error: err.message || "Failed" });
         }
       }
 
-      if (createCampaign && campaignName.trim()) {
+      const failed = results.filter((r) => !r.success);
+      if (failed.length > 0) {
+        setSaveResults(results);
+        setError(`${failed.length} draft${failed.length !== 1 ? "s" : ""} could not be saved. You can retry below.`);
+        setSaving(false);
+        return;
+      }
+
+      // If campaign wasn't created during generation, create it now
+      if (createCampaign && campaignName.trim() && !savedCampaign) {
         const { campaign } = await api.campaigns.create(campaignName.trim());
         for (let i = 0; i < activeDrafts.length; i++) {
           await api.campaigns.addDraft(campaign.id, activeDrafts[i].id, i + 1);
         }
         setSavedCampaign({ id: campaign.id, title: campaign.name });
+      } else if (savedCampaign && createCampaign && campaignName.trim()) {
+        // Ensure all drafts are linked if campaign was pre-created
+        for (let i = 0; i < activeDrafts.length; i++) {
+          try {
+            await api.campaigns.addDraft(savedCampaign.id, activeDrafts[i].id, i + 1);
+          } catch {
+            // May already be linked; ignore duplicate errors
+          }
+        }
       }
 
+      setSaveResults(null);
       setStep("done");
     } catch (err: any) {
       setError(err.message || "Failed to save drafts.");
@@ -205,6 +276,7 @@ export default function CampaignWizardPage() {
   };
 
   const activeDraftCount = drafts.filter((d) => !d.discarded).length;
+  const failedDraftIds = new Set(saveResults?.filter((r) => !r.success).map((r) => r.draftId) ?? []);
 
   return (
     <AppShell>
@@ -224,7 +296,7 @@ export default function CampaignWizardPage() {
                 Campaign Wizard
               </h1>
             </div>
-            <p className="mt-1 text-sm text-atlas-text-secondary">
+            <p className="mt-1 text-sm text-atlas-text-muted">
               Drop a report or article and get multiple tweet drafts from different angles.
             </p>
           </div>
@@ -311,6 +383,13 @@ export default function CampaignWizardPage() {
                 {content.length.toLocaleString()} characters
               </p>
             )}
+
+            {/* Gap-11: Surface active voice */}
+            <div className="flex items-center gap-2 rounded-lg border border-glass-border bg-atlas-surface px-3 py-2 text-xs text-atlas-text-muted">
+              <Mic className="h-3.5 w-3.5 text-atlas-teal" />
+              <span>Writing as:</span>
+              <span className="font-medium text-atlas-text">{activeVoiceLabel}</span>
+            </div>
 
             {error && (
               <p className="text-sm text-atlas-error">{error}</p>
@@ -421,11 +500,14 @@ export default function CampaignWizardPage() {
                 const angleClass =
                   ANGLE_COLORS[draft.angle] ||
                   "bg-atlas-text-muted/20 text-atlas-text-muted border-atlas-text-muted/30";
+                const failed = failedDraftIds.has(draft.id);
 
                 return (
                   <div
                     key={draft.id}
-                    className="rounded-2xl border border-glass-border bg-glass p-6 backdrop-blur-xl"
+                    className={`rounded-2xl border border-glass-border bg-glass p-6 backdrop-blur-xl ${
+                      failed ? "ring-1 ring-atlas-error/40" : ""
+                    }`}
                   >
                     {/* Insight header */}
                     {insight && (
@@ -479,13 +561,36 @@ export default function CampaignWizardPage() {
                       rows={4}
                       className="w-full rounded-lg border border-glass-border bg-atlas-surface px-3 py-2 text-sm text-atlas-text placeholder:text-atlas-text-muted focus:border-atlas-teal focus:outline-none"
                     />
+
+                    {failed && saveResults && (
+                      <p className="mt-2 text-xs text-atlas-error">
+                        {saveResults.find((r) => r.draftId === draft.id)?.error || "Failed to save"}
+                      </p>
+                    )}
                   </div>
                 );
               })}
             </div>
 
             {error && (
-              <p className="text-sm text-atlas-error">{error}</p>
+              <div className="rounded-xl border border-atlas-error/30 bg-atlas-error/10 p-4">
+                <p className="text-sm text-atlas-error">{error}</p>
+                {failedDraftIds.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleSaveAll(!!campaignName.trim(), true)}
+                    disabled={saving}
+                    className="mt-3 inline-flex items-center rounded-lg border border-glass-border bg-atlas-surface px-3 py-1.5 text-sm text-atlas-text hover:bg-atlas-nav disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {saving ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCcw className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    Retry {failedDraftIds.size} failed draft{failedDraftIds.size !== 1 ? "s" : ""}
+                  </button>
+                )}
+              </div>
             )}
 
             {/* Bulk actions */}

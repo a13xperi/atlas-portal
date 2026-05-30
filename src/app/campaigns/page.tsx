@@ -16,6 +16,7 @@ import AppShell from "@/components/layout/AppShell";
 import FeatureGate from "@/components/ui/FeatureGate";
 import GlassCard from "@/components/ui/GlassCard";
 import GradientButton from "@/components/ui/GradientButton";
+import Modal from "@/components/ui/Modal";
 import { useAuth } from "@/lib/auth";
 import { api, Campaign, TweetDraft } from "@/lib/api";
 
@@ -68,6 +69,7 @@ function CampaignsTab() {
   const [newThesis, setNewThesis] = useState("");
   const [prefillDraft, setPrefillDraft] = useState<TweetDraft | null>(null);
   const [prefillError, setPrefillError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const seededDraftId = useMemo(
     () => (searchParams.get("newCampaign") === "true" ? searchParams.get("draftId") : null),
@@ -130,10 +132,21 @@ function CampaignsTab() {
     } catch { /* silent */ } finally { setCreating(false); }
   };
 
-  const handleDelete = async (id: string) => {
-    await api.campaigns.delete(id);
-    setCampaigns((prev) => prev.filter((c) => c.id !== id));
+  // Gap-9: Confirmation before delete
+  const confirmDelete = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDeletingId(id);
   };
+
+  const handleDelete = async () => {
+    if (!deletingId) return;
+    await api.campaigns.delete(deletingId);
+    setCampaigns((prev) => prev.filter((c) => c.id !== deletingId));
+    setDeletingId(null);
+  };
+
+  const campaignToDelete = campaigns.find((c) => c.id === deletingId) ?? null;
 
   return (
     <div className="mt-6">
@@ -240,7 +253,7 @@ function CampaignsTab() {
                     </div>
                     <button
                       type="button"
-                      onClick={(e) => { e.preventDefault(); handleDelete(campaign.id); }}
+                      onClick={(e) => confirmDelete(campaign.id, e)}
                       className="shrink-0 rounded-lg p-2 text-atlas-text-muted transition-colors hover:text-atlas-error"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -252,7 +265,27 @@ function CampaignsTab() {
           })}
         </div>
       )}
+
+      {/* Gap-9: Delete confirmation modal */}
+      <Modal
+        isOpen={!!campaignToDelete}
+        onClose={() => setDeletingId(null)}
+        title="Delete campaign?"
+        description={campaignToDelete ? `This will remove "${campaignToDelete.name}". Your drafts will remain in the queue.` : undefined}
+      >
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setDeletingId(null)}
+            className="rounded-lg border border-glass-border px-4 py-2 text-sm text-atlas-text-muted hover:text-atlas-text"
+          >
+            Cancel
+          </button>
+          <GradientButton onClick={handleDelete}>
+            <Trash2 className="mr-1.5 h-4 w-4" />
+            Delete
+          </GradientButton>
+        </div>
+      </Modal>
     </div>
   );
 }
-

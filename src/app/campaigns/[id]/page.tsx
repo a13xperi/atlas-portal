@@ -10,11 +10,13 @@ import {
   Loader2,
   Megaphone,
   Trash2,
+  Send,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import FeatureGate from "@/components/ui/FeatureGate";
 import GlassCard from "@/components/ui/GlassCard";
 import GradientButton from "@/components/ui/GradientButton";
+import Modal from "@/components/ui/Modal";
 import { useAuth } from "@/lib/auth";
 import { api, Campaign, TweetDraft } from "@/lib/api";
 
@@ -44,6 +46,8 @@ function CampaignDetailPage() {
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const load = useCallback(async () => {
     if (!user || !id) return;
@@ -69,7 +73,16 @@ function CampaignDetailPage() {
         name: editName.trim(),
         description: editDesc.trim() || null,
       });
-      setCampaign(updated);
+      // Gap-8: Preserve drafts array if PATCH strips it
+      setCampaign((prev) =>
+        prev
+          ? {
+              ...prev,
+              ...updated,
+              drafts: updated.drafts ?? prev.drafts,
+            }
+          : updated
+      );
       setEditing(false);
     } catch { /* silent */ } finally {
       setSaving(false);
@@ -80,7 +93,16 @@ function CampaignDetailPage() {
     if (!campaign) return;
     try {
       const { campaign: updated } = await api.campaigns.update(campaign.id, { status });
-      setCampaign(updated);
+      // Gap-8: Preserve drafts array if PATCH strips it
+      setCampaign((prev) =>
+        prev
+          ? {
+              ...prev,
+              ...updated,
+              drafts: updated.drafts ?? prev.drafts,
+            }
+          : updated
+      );
     } catch { /* silent */ }
   };
 
@@ -92,7 +114,7 @@ function CampaignDetailPage() {
         prev
           ? {
               ...prev,
-              draftCount: prev.draftCount - 1,
+              draftCount: Math.max(0, prev.draftCount - 1),
               drafts: prev.drafts?.filter((d) => d.id !== draftId),
             }
           : prev
@@ -100,11 +122,46 @@ function CampaignDetailPage() {
     } catch { /* silent */ }
   };
 
+  // Gap-4: Publish now button — post all eligible drafts immediately
+  const handlePublishNow = async () => {
+    if (!campaign?.drafts || campaign.drafts.length === 0) return;
+    const eligible = campaign.drafts.filter((d) => d.status === "DRAFT" || d.status === "APPROVED");
+    if (eligible.length === 0) return;
+    setPublishing(true);
+    try {
+      const results = await Promise.allSettled(
+        eligible.map((draft) => api.drafts.postToX(draft.id))
+      );
+      const successful = results
+        .map((r, i) => ({ ...r, draft: eligible[i] }))
+        .filter((r) => r.status === "fulfilled")
+        .map((r) => (r as PromiseFulfilledResult<{ draft: TweetDraft }>).value.draft);
+      // Refresh campaign to get updated statuses
+      await load();
+      const failedCount = eligible.length - successful.length;
+      if (failedCount > 0) {
+        setError(`${failedCount} post${failedCount !== 1 ? "s" : ""} failed to publish.`);
+      }
+    } catch {
+      setError("Publish failed. Please try again.");
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const confirmDelete = () => {
+    setShowDeleteModal(true);
+  };
+
   const handleDelete = async () => {
     if (!campaign) return;
     await api.campaigns.delete(campaign.id);
+    setShowDeleteModal(false);
     router.push("/campaigns");
   };
+
+  const publishableCount =
+    campaign?.drafts?.filter((d) => d.status === "DRAFT" || d.status === "APPROVED").length ?? 0;
 
   return (
     <AppShell>
@@ -180,6 +237,20 @@ function CampaignDetailPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {publishableCount > 0 && (
+                      <GradientButton
+                        onClick={() => void handlePublishNow()}
+                        disabled={publishing}
+                        className="px-3 py-1.5 text-xs"
+                      >
+                        {publishing ? (
+                          <Loader2 className="mr-1.5 inline h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Send className="mr-1.5 inline h-3.5 w-3.5" />
+                        )}
+                        Publish Now ({publishableCount})
+                      </GradientButton>
+                    )}
                     <button
                       onClick={() => setEditing(true)}
                       className="rounded-lg border border-glass-border px-3 py-1.5 text-xs text-atlas-text-muted transition-colors hover:text-atlas-text"
@@ -187,7 +258,7 @@ function CampaignDetailPage() {
                       Edit
                     </button>
                     <button
-                      onClick={handleDelete}
+                      onClick={confirmDelete}
                       className="rounded-lg p-2 text-atlas-text-muted transition-colors hover:text-atlas-error"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -340,6 +411,27 @@ function CampaignDetailPage() {
           </>
         )}
       </div>
+
+      {/* Gap-9: Delete confirmation modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete campaign?"
+        description="This will remove the campaign. Your drafts will remain in the queue."
+      >
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setShowDeleteModal(false)}
+            className="rounded-lg border border-glass-border px-4 py-2 text-sm text-atlas-text-muted hover:text-atlas-text"
+          >
+            Cancel
+          </button>
+          <GradientButton onClick={handleDelete}>
+            <Trash2 className="mr-1.5 h-4 w-4" />
+            Delete
+          </GradientButton>
+        </div>
+      </Modal>
     </AppShell>
   );
 }
