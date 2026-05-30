@@ -157,12 +157,14 @@ export function oracleReducer(
   switch (action.type) {
     case "SET_TRACK": {
       const track = action.track;
+      // X is already connected when the user picks a track — go straight
+      // to the calibration step for the chosen path.
       const nextStep: OracleStep =
-        track === "a" ? "CONNECT_X" : "TRACK_B_STYLE";
+        track === "a" ? "TRACK_A_SCANNING" : "TRACK_B_STYLE";
       const userMsg = {
         id: `user-track-${Date.now()}`,
         role: "user" as const,
-        content: track === "a" ? "Connect X" : "Set up manually",
+        content: track === "a" ? "Scan my tweets" : "I\u2019ll set it up myself",
         timestamp: Date.now(),
       };
       return {

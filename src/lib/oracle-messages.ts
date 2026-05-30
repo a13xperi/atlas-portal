@@ -36,12 +36,9 @@ export const ORACLE_MESSAGES: Record<OracleStep, ChatMessage[]> = {
   CONNECT_X: [
     msg(
       "oracle",
-      "First things first — let\'s connect your X account. I\'ll sync your display name, bio, avatar, and handle, then scan your tweets to calibrate your voice.",
+      "First things first — let\'s connect your X account. I\'ll sync your display name, bio, avatar, and handle so I know who I\'m working with.",
       {
         component: { type: "x-oauth" },
-        actions: [
-          { label: "Skip for now", value: "skip-x", variant: "ghost" },
-        ],
       }
     ),
   ],

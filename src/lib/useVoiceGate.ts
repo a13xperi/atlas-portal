@@ -66,10 +66,14 @@ export function useVoiceGate(): VoiceGateState {
   const profile = user?.voiceProfile ?? null;
   const tweetsAnalyzed = profile?.tweetsAnalyzed ?? 0;
 
+  // Hand-Crafted track (backend "TRACK_A") calibrates voice from manual
+  // dimension sliders — a voice profile is sufficient, no tweet analysis needed.
+  const isManualTrack = user?.onboardingTrack === "TRACK_A";
+
   let reason: VoiceGateReason = null;
   if (!profile) {
     reason = "no_profile";
-  } else if (tweetsAnalyzed < MIN_TWEETS_FOR_VOICE_CALIBRATION) {
+  } else if (!isManualTrack && tweetsAnalyzed < MIN_TWEETS_FOR_VOICE_CALIBRATION) {
     reason = "insufficient_tweets";
   }
 
@@ -78,7 +82,7 @@ export function useVoiceGate(): VoiceGateState {
     ? Math.max(MIN_TWEETS_FOR_VOICE_CALIBRATION - tweetsAnalyzed, 0)
     : 0;
 
-  const ctaHref = reason === "no_profile" ? "/onboarding/track-b" : "/voice-profiles";
+  const ctaHref = reason === "no_profile" ? "/onboarding" : "/voice-profiles";
   const ctaLabel =
     reason === "no_profile" ? "Calibrate voice" : "Open Voice Lab";
 

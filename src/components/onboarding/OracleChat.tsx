@@ -53,8 +53,10 @@ export default function OracleChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const calibratingRef = useRef(false);
   const drainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const trackChoiceShownRef = useRef(false);
+  const preselectedTrackRef = useRef<"a" | "b" | null>(null);
   const [oauthLoading, setOauthLoading] = useState(false);
-  const [resumeTrackAAfterOAuth, setResumeTrackAAfterOAuth] = useState(false);
+  const [resumeAfterOAuth, setResumeAfterOAuth] = useState(false);
 
   // Pre-fill handle from linked X profile
   useEffect(() => {
@@ -64,8 +66,9 @@ export default function OracleChat() {
   }, [user?.handle, state.xHandle]);
 
   // Deep-link pre-select: /onboarding/track-a|track-b stores the chosen
-  // track in sessionStorage before redirecting here. Pick it up on mount
-  // so the chat skips the welcome prompt and enters the right path.
+  // track in sessionStorage before redirecting here. X connect is always
+  // first — store the preference and advance to CONNECT_X. After X
+  // connects, the track choice effect auto-selects the stored track.
   useEffect(() => {
     if (state.track !== null || state.currentStep !== "WELCOME") return;
     let preselected: string | null = null;
@@ -80,7 +83,8 @@ export default function OracleChat() {
       } catch {
         /* ignore */
       }
-      dispatch({ type: "SET_TRACK", track: preselected });
+      preselectedTrackRef.current = preselected;
+      dispatch({ type: "ADVANCE", payload: "Let’s go" });
     }
   }, [state.track, state.currentStep]);
 
@@ -94,15 +98,17 @@ export default function OracleChat() {
         dispatch({ type: "SET_HANDLE", handle: handle.replace(/^@/, "") });
       }
       dispatch({ type: "SET_X_CONNECTED", connected: true });
-      setResumeTrackAAfterOAuth(true);
+      setResumeAfterOAuth(true);
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
 
-  // Resume straight into Track A when returning from X OAuth.
+  // Resume into CONNECT_X when returning from X OAuth. X is already
+  // connected — the track choice effect at CONNECT_X will fire and let
+  // the user pick auto-calibrate vs manual.
   useEffect(() => {
     if (
-      !resumeTrackAAfterOAuth ||
+      !resumeAfterOAuth ||
       state.currentStep !== "WELCOME" ||
       state.track !== null ||
       !state.xConnected
@@ -110,10 +116,11 @@ export default function OracleChat() {
       return;
     }
 
-    setResumeTrackAAfterOAuth(false);
-    dispatch({ type: "SET_TRACK", track: "a" });
+    setResumeAfterOAuth(false);
+    // Advance past WELCOME to CONNECT_X where the track choice shows
+    dispatch({ type: "ADVANCE", payload: "Let’s go" });
   }, [
-    resumeTrackAAfterOAuth,
+    resumeAfterOAuth,
     state.currentStep,
     state.track,
     state.xConnected,
@@ -143,11 +150,57 @@ export default function OracleChat() {
       .catch(() => {});
   }, [state.currentStep, state.xConnected, state.xHandle]);
 
-  // Auto-advance from CONNECT_X when connected
+  // Reset track choice ref when leaving CONNECT_X (supports GO_BACK)
   useEffect(() => {
-    if (state.currentStep === "CONNECT_X" && state.xConnected && state.xHandle) {
-      dispatch({ type: "ADVANCE", payload: `Connected as @${state.xHandle}` });
+    if (state.currentStep !== "CONNECT_X") {
+      trackChoiceShownRef.current = false;
     }
+  }, [state.currentStep]);
+
+  // After X connects at CONNECT_X, show the calibration track choice.
+  // If a deep-link pre-selected the track, auto-select it instead.
+  useEffect(() => {
+    if (
+      state.currentStep !== "CONNECT_X" ||
+      !state.xConnected ||
+      !state.xHandle ||
+      trackChoiceShownRef.current
+    ) {
+      return;
+    }
+
+    trackChoiceShownRef.current = true;
+
+    // Deep-link pre-selected a track — skip the choice
+    if (preselectedTrackRef.current) {
+      const track = preselectedTrackRef.current;
+      preselectedTrackRef.current = null;
+      dispatch({ type: "SET_TRACK", track });
+      return;
+    }
+
+    // Show track choice
+    dispatch({
+      type: "ENQUEUE_MESSAGES",
+      messages: [
+        {
+          id: `user-connected-${Date.now()}`,
+          role: "user" as const,
+          content: `Connected as @${state.xHandle}`,
+          timestamp: Date.now(),
+        },
+        {
+          id: `track-choice-${Date.now()}`,
+          role: "oracle" as const,
+          content: "Great, you’re connected. Now — how do you want to calibrate your voice?",
+          actions: [
+            { label: "Scan my tweets", value: "track-a", variant: "primary" as const },
+            { label: "I’ll set it up myself", value: "track-b", variant: "secondary" as const },
+          ],
+          timestamp: Date.now() + 1,
+        },
+      ],
+    });
   }, [state.currentStep, state.xConnected, state.xHandle]);
 
   // ── Typing animation: drain pending messages with delay ──────────
@@ -251,10 +304,6 @@ export default function OracleChat() {
     (value: string) => {
       if (value === "start-onboarding") {
         dispatch({ type: "ADVANCE", payload: "Let\'s go" });
-        return;
-      }
-      if (value === "skip-x") {
-        dispatch({ type: "SET_TRACK", track: "b" });
         return;
       }
       if (value === "track-a" || value === "track-b") {
@@ -532,9 +581,9 @@ export default function OracleChat() {
           );
 
         case "x-oauth":
-          // Once we've moved past CONNECT_X, hide this widget from message history.
-          // The button must disappear after skip-x so tests and the UX are consistent.
-          if (state.currentStep !== "CONNECT_X") return null;
+          // Hide the OAuth widget once we've moved past CONNECT_X or X is
+          // already connected (track choice is showing instead).
+          if (state.currentStep !== "CONNECT_X" || state.xConnected) return null;
           return (
             <div className="bg-atlas-surface rounded-2xl p-6 space-y-4">
               <button
