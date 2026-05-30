@@ -13,7 +13,10 @@ import {
   initialOracleState,
   oracleReducer,
 } from "@/lib/oracle";
-import { styleToDimensions } from "@/lib/voice-profile-dimensions";
+import {
+  generateVoiceProfileName,
+  styleToDimensions,
+} from "@/lib/voice-profile-dimensions";
 import {
   getReferenceAccountLookup,
   persistReferenceSelections,
@@ -227,8 +230,14 @@ export default function OracleChat() {
         if (step === "BLEND") {
           setBlendSaveStatus("saving");
           try {
+            const blendName = generateVoiceProfileName(
+              state.dimensions,
+              state.selectedRefs.map(
+                (refId) => referenceAccountLookup.get(refId)?.handle
+              )
+            );
             const result = await api.voice.createBlend(
-              state.track === "a" ? "Onboarding blend" : "My starting blend",
+              blendName,
               buildReferenceBlendVoices(
                 state.selectedRefs,
                 state.selfPercentage,

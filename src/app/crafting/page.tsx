@@ -49,10 +49,7 @@ import {
   TweetDraft,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import {
-  MIN_TWEETS_FOR_VOICE_CALIBRATION,
-  useVoiceGate,
-} from "@/lib/useVoiceGate";
+import { useVoiceGate } from "@/lib/useVoiceGate";
 import OracleWidget from "@/components/oracle/OracleWidget";
 import OracleCraftingHints from "@/components/oracle/OracleCraftingHints";
 import OracleInspector from "@/components/oracle/OracleInspector";
@@ -74,7 +71,6 @@ const TWEET_TEMPLATES = [
 
 const NEWS_SOURCE_PREFIX = "source:";
 const VOICE_COMPARISON_DELTA = { humor: 20 } as const;
-const MIN_TWEETS_FOR_CRAFTING = MIN_TWEETS_FOR_VOICE_CALIBRATION;
 
 type CraftingMode = (typeof CRAFTING_MODES)[number]["id"];
 type DraftSourceType = "REPORT" | "ARTICLE" | "MANUAL";
@@ -242,13 +238,66 @@ function buildVoiceVariationInstruction(
   ].join(" ");
 }
 
+function getAvatarInitials(label?: string | null) {
+  const words = (label ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (words.length === 0) {
+    return "?";
+  }
+
+  if (words.length === 1) {
+    return words[0].slice(0, 2).toUpperCase();
+  }
+
+  return `${words[0][0] ?? ""}${words[1][0] ?? ""}`.toUpperCase();
+}
+
+function getBlendVoiceAvatarUrl(voice?: SavedBlend["voices"][number] | null) {
+  return voice?.referenceVoice?.avatarUrl?.trim() || "";
+}
+
+function getBlendMode(blend: SavedBlend): "blended" | "specific" {
+  return blend.voices.length > 1 ? "blended" : "specific";
+}
+
+function renderVoiceAvatar(
+  imageUrl: string | null | undefined,
+  fallbackLabel: string,
+  sizeClassName: string,
+  textClassName: string
+) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-glass-border bg-atlas-surface ${sizeClassName}`}
+    >
+      <span className={`text-atlas-text-secondary ${textClassName}`}>
+        {getAvatarInitials(fallbackLabel)}
+      </span>
+      {imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imageUrl}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+          }}
+        />
+      ) : null}
+    </span>
+  );
+}
+
 function CraftingPage() {
   useTour("crafting");
 
   const router = useRouter();
   const searchParams = useSearchParams();
   const voiceModeLabelId = useId();
-  const savedBlendLabelId = useId();
   const blendIntensityLabelId = useId();
   const regenerationGuidanceId = useId();
   const draftFeedbackHintId = useId();
@@ -302,6 +351,7 @@ function CraftingPage() {
     title?: string;
     url: string;
   } | null>(null);
+  const selectedBlend = blends.find((blend) => blend.id === selectedBlendId) ?? null;
   const activeDraftInitialized = useRef(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
   const handleDraftTextChangeRef = useRef<((text: string) => void) | null>(null);
@@ -369,8 +419,6 @@ function CraftingPage() {
   );
   const voiceGate = useVoiceGate();
   const isVoiceCalibrationBlocked = voiceGate.isBlocked;
-  const voiceTweetsAnalyzed = voiceGate.tweetsAnalyzed;
-  const calibrationTweetsRemaining = voiceGate.tweetsRemaining;
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -405,7 +453,7 @@ function CraftingPage() {
       (b) => b.name.toLowerCase() === voiceName.toLowerCase()
     );
     if (match) {
-      setVoiceMode("blended");
+      setVoiceMode(getBlendMode(match));
       setSelectedBlendId(match.id);
       setVoiceBanner(voiceName);
       setTimeout(() => setVoiceBanner(null), 6000);
@@ -1262,7 +1310,7 @@ function CraftingPage() {
     <AppShell>
       <div className="mb-6">
         <h1 className="font-heading font-extrabold tracking-tight text-3xl text-atlas-text">Crafting Station</h1>
-        <p className="mt-2 text-atlas-text-secondary max-w-2xl">Drop in a report, signal, or idea — Atlas drafts it in your voice. Refine it, and the model gets sharper every time.</p>
+        <p className="mt-2 max-w-2xl text-atlas-text-secondary">Draft in your voice.</p>
       </div>
 
       <div className="mb-6" data-tour="oracle-banner">
@@ -1335,15 +1383,6 @@ function CraftingPage() {
               {voiceGate.reason === "no_profile"
                 ? "Connect X and calibrate your voice to unlock tweet generation."
                 : "Voice calibration is not ready for drafting yet."}
-            </p>
-            <p className="mt-1 text-atlas-text-secondary">
-              {voiceGate.reason === "no_profile"
-                ? "Atlas writes in your voice — we need your X handle and a few sample tweets first."
-                : <>
-                    Atlas needs at least {MIN_TWEETS_FOR_CRAFTING} analyzed tweets
-                    before it unlocks generation here. You have {voiceTweetsAnalyzed},
-                    so add {calibrationTweetsRemaining} more.
-                  </>}
             </p>
           </div>
           <Link
@@ -1638,82 +1677,115 @@ function CraftingPage() {
             className="mt-6 flex flex-col flex-wrap items-stretch gap-4 rounded-2xl border border-glass-border bg-atlas-surface px-4 py-3 sm:flex-row sm:items-center sm:px-6"
             data-tour="voice-selector"
           >
-            <label
-              id={voiceModeLabelId}
-              htmlFor="voice-mode"
-              className="shrink-0 text-sm text-atlas-text-secondary"
-            >
-              Voice mode
-            </label>
-            <select
-              id="voice-mode"
-              aria-labelledby={voiceModeLabelId}
-              value={voiceMode}
-              onChange={(event) => {
-                const nextMode = event.target.value as
-                  | "my_voice"
-                  | "blended"
-                  | "specific";
-                setVoiceMode(nextMode);
+            <div className="flex min-w-0 flex-1 flex-col gap-3">
+              <span
+                id={voiceModeLabelId}
+                className="shrink-0 text-sm text-atlas-text-secondary"
+              >
+                Voice
+              </span>
+              <div
+                aria-labelledby={voiceModeLabelId}
+                className="flex flex-wrap gap-2"
+              >
+                <button
+                  type="button"
+                  aria-pressed={voiceMode === "my_voice" || !selectedBlendId}
+                  onClick={() => {
+                    setVoiceMode("my_voice");
+                    setSelectedBlendId(null);
+                  }}
+                  className={`inline-flex items-center gap-2 rounded-full border bg-atlas-nav px-3 py-2 text-sm text-atlas-text transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-atlas-teal/30 ${
+                    voiceMode === "my_voice" || !selectedBlendId
+                      ? "border-teal-500 ring-2 ring-teal-400/40"
+                      : "border-transparent hover:border-slate-300"
+                  }`}
+                >
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-glass-border bg-atlas-teal/10 text-[11px] font-semibold text-atlas-teal">
+                    ME
+                  </span>
+                  <span>My voice</span>
+                </button>
+                {blends.map((blend) => {
+                  const primaryVoice = blend.voices[0];
+                  const isActive = selectedBlendId === blend.id;
 
-                if (nextMode === "my_voice") {
-                  setSelectedBlendId(null);
-                }
-              }}
-              className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
-            >
-              <option value="my_voice">My voice</option>
-              <option value="blended">Blended</option>
-              <option value="specific">Specific person</option>
-            </select>
-            {voiceMode === "blended" && blends.length > 0 ? (
-              <>
-                <label
-                  id={savedBlendLabelId}
-                  htmlFor="saved-blend"
-                  className="shrink-0 text-sm text-atlas-text-secondary"
-                >
-                  Saved blend
-                </label>
-                <select
-                  id="saved-blend"
-                  aria-labelledby={savedBlendLabelId}
-                  value={selectedBlendId || ""}
-                  onChange={(event) => setSelectedBlendId(event.target.value || null)}
-                  className="w-full rounded-lg border border-glass-border bg-atlas-nav px-3 py-2 text-sm text-atlas-text focus:border-atlas-teal focus:outline-none sm:w-auto"
-                >
-                  <option value="">Pick a blend…</option>
-                  {blends.map((blend) => (
-                    <option key={blend.id} value={blend.id}>
-                      {blend.name}
-                    </option>
-                  ))}
-                </select>
-              </>
-            ) : null}
-            <div className="flex w-full flex-col gap-2 sm:min-w-[200px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+                  return (
+                    <button
+                      key={blend.id}
+                      type="button"
+                      aria-pressed={isActive}
+                      onClick={() => {
+                        setVoiceMode(getBlendMode(blend));
+                        setSelectedBlendId(blend.id);
+                      }}
+                      className={`inline-flex max-w-full items-center gap-2 rounded-full border bg-atlas-nav px-3 py-2 text-sm text-atlas-text transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-atlas-teal/30 ${
+                        isActive
+                          ? "border-teal-500 ring-2 ring-teal-400/40"
+                          : "border-transparent hover:border-slate-300"
+                      }`}
+                    >
+                      {renderVoiceAvatar(
+                        getBlendVoiceAvatarUrl(primaryVoice),
+                        primaryVoice?.label || blend.name,
+                        "h-8 w-8",
+                        "text-[10px] font-semibold"
+                      )}
+                      <span className="truncate">{blend.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:min-w-[260px] sm:flex-1">
               <span
                 id={blendIntensityLabelId}
                 className="shrink-0 text-sm text-atlas-text-secondary"
               >
                 {selectedBlendId
-                  ? `My Voice ↔ ${
-                      blends.find((blend) => blend.id === selectedBlendId)?.name || "Blend"
-                    }`
+                  ? `My Voice ↔ ${selectedBlend?.name || "Blend"}`
                   : "Blend:"}
               </span>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={blendValue}
-                onChange={(event) => setBlendValue(Number(event.target.value))}
-                aria-labelledby={blendIntensityLabelId}
-                aria-valuetext={`${blendValue} percent`}
-                className="flex-1"
-                style={{ "--range-progress": `${blendValue}%` } as React.CSSProperties}
-              />
-              <span className="w-10 text-right text-sm text-atlas-text">{blendValue}%</span>
+              <div className="flex items-center gap-3">
+                {selectedBlend?.voices[0] && selectedBlend?.voices[1] ? (
+                  <div className="flex shrink-0 items-center gap-2">
+                    {renderVoiceAvatar(
+                      getBlendVoiceAvatarUrl(selectedBlend.voices[0]),
+                      selectedBlend.voices[0].label,
+                      "h-8 w-8",
+                      "text-[10px] font-semibold"
+                    )}
+                    <span className="hidden max-w-[96px] truncate text-xs text-atlas-text-secondary sm:inline">
+                      {selectedBlend.voices[0].label}
+                    </span>
+                  </div>
+                ) : null}
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={blendValue}
+                  onChange={(event) => setBlendValue(Number(event.target.value))}
+                  aria-labelledby={blendIntensityLabelId}
+                  aria-valuetext={`${blendValue} percent`}
+                  className="flex-1"
+                  style={{ "--range-progress": `${blendValue}%` } as React.CSSProperties}
+                />
+                {selectedBlend?.voices[0] && selectedBlend?.voices[1] ? (
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="hidden max-w-[96px] truncate text-xs text-atlas-text-secondary sm:inline">
+                      {selectedBlend.voices[1].label}
+                    </span>
+                    {renderVoiceAvatar(
+                      getBlendVoiceAvatarUrl(selectedBlend.voices[1]),
+                      selectedBlend.voices[1].label,
+                      "h-8 w-8",
+                      "text-[10px] font-semibold"
+                    )}
+                  </div>
+                ) : null}
+                <span className="w-10 text-right text-sm text-atlas-text">{blendValue}%</span>
+              </div>
             </div>
           </div>
 

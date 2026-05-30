@@ -14,6 +14,7 @@ import type { BlendVoice, SavedBlend } from "@/lib/api";
 import type { VoiceDimensionSnapshot } from "@/lib/voice-recipes";
 import {
   formatVoiceDimensionValue,
+  generateVoiceProfileName,
   type VoiceDimensions,
   VOICE_DIMENSION_SECTIONS,
 } from "@/lib/voice-profile-dimensions";
@@ -138,6 +139,13 @@ export default function RecipeCard({
   const [isExpanded, toggleExpanded] = useCycle(false, true);
   const voices = blend.voices;
   const total = voices.reduce((sum, voice) => sum + (voice.percentage ?? 0), 0) || 1;
+  const displayName =
+    blend.name.trim().length === 0 || blend.name === "Onboarding blend"
+      ? generateVoiceProfileName(
+          dimensions,
+          blend.voices.map((voice) => voice.referenceVoice?.handle)
+        )
+      : blend.name;
   const getDisplayPercentage = (voice: BlendVoice) =>
     Math.round(((voice.percentage ?? 0) / total) * 100);
 
@@ -162,7 +170,7 @@ export default function RecipeCard({
             )}
           </div>
           <h3 className="mt-4 font-heading text-2xl font-semibold tracking-tight text-atlas-text">
-            {blend.name}
+            {displayName}
           </h3>
           <div className="mt-3 flex items-center gap-3">
             <div className="flex flex-row-reverse items-center">

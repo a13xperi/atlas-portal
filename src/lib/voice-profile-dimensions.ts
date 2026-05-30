@@ -90,8 +90,305 @@ export const VOICE_DIMENSION_SECTIONS: VoiceDimensionSection[] = [
   },
 ];
 
+type VoiceProfileNameSignal = readonly [
+  field: VoiceDimensionField,
+  target: number,
+  weight?: number,
+];
+
+interface VoiceProfileNameRule {
+  label: string;
+  signals: readonly VoiceProfileNameSignal[];
+}
+
+const VOICE_PROFILE_MODIFIER_RULES: readonly VoiceProfileNameRule[] = [
+  {
+    label: "Witty",
+    signals: [
+      ["humor", 82, 1.4],
+      ["warmth", 64, 1],
+      ["brevity", 68, 1],
+      ["formality", 28, 1.2],
+    ],
+  },
+  {
+    label: "Dry",
+    signals: [
+      ["humor", 18, 1.4],
+      ["formality", 68, 1.1],
+      ["brevity", 72, 1],
+      ["warmth", 34, 1],
+      ["technicalDepth", 66, 1],
+    ],
+  },
+  {
+    label: "Formal",
+    signals: [
+      ["formality", 86, 1.5],
+      ["humor", 22, 1.2],
+      ["evidenceOrientation", 74, 1],
+      ["technicalDepth", 68, 1],
+    ],
+  },
+  {
+    label: "Casual",
+    signals: [
+      ["formality", 18, 1.5],
+      ["humor", 70, 1.1],
+      ["warmth", 70, 1],
+      ["socialPosture", 74, 1],
+    ],
+  },
+  {
+    label: "Sharp",
+    signals: [
+      ["directness", 82, 1.4],
+      ["confidence", 74, 1],
+      ["brevity", 66, 1],
+      ["warmth", 42, 1],
+    ],
+  },
+  {
+    label: "Bold",
+    signals: [
+      ["confidence", 82, 1.3],
+      ["contrarianTone", 72, 1.2],
+      ["directness", 74, 1],
+      ["selfPromotionalIntensity", 60, 1],
+    ],
+  },
+  {
+    label: "Warm",
+    signals: [
+      ["warmth", 86, 1.5],
+      ["humor", 58, 1],
+      ["socialPosture", 64, 1],
+      ["directness", 56, 1],
+    ],
+  },
+  {
+    label: "Cold",
+    signals: [
+      ["warmth", 18, 1.5],
+      ["formality", 72, 1.1],
+      ["technicalDepth", 72, 1],
+      ["evidenceOrientation", 74, 1],
+    ],
+  },
+  {
+    label: "Concise",
+    signals: [
+      ["brevity", 88, 1.6],
+      ["directness", 72, 1.1],
+      ["technicalDepth", 46, 1],
+      ["warmth", 46, 1],
+    ],
+  },
+  {
+    label: "Deep",
+    signals: [
+      ["technicalDepth", 88, 1.5],
+      ["evidenceOrientation", 82, 1.1],
+      ["brevity", 34, 1.2],
+      ["solutionOrientation", 72, 1],
+    ],
+  },
+  {
+    label: "Blunt",
+    signals: [
+      ["directness", 92, 1.5],
+      ["contrarianTone", 72, 1.2],
+      ["warmth", 24, 1.2],
+      ["brevity", 72, 1],
+    ],
+  },
+  {
+    label: "Data-Driven",
+    signals: [
+      ["evidenceOrientation", 92, 1.5],
+      ["technicalDepth", 78, 1.2],
+      ["formality", 72, 1],
+      ["humor", 24, 1.1],
+    ],
+  },
+  {
+    label: "Balanced",
+    signals: [
+      ["humor", 50, 1.1],
+      ["formality", 50, 1.1],
+      ["brevity", 50, 1],
+      ["directness", 50, 1],
+      ["warmth", 50, 1.1],
+      ["technicalDepth", 50, 1],
+      ["confidence", 50, 1],
+    ],
+  },
+];
+
+const VOICE_PROFILE_ARCHETYPE_RULES: readonly VoiceProfileNameRule[] = [
+  {
+    label: "Analyst",
+    signals: [
+      ["evidenceOrientation", 88, 1.5],
+      ["technicalDepth", 76, 1.2],
+      ["confidence", 68, 1],
+      ["formality", 62, 1],
+      ["socialPosture", 46, 1],
+    ],
+  },
+  {
+    label: "Engineer",
+    signals: [
+      ["solutionOrientation", 84, 1.5],
+      ["technicalDepth", 82, 1.3],
+      ["directness", 72, 1.1],
+      ["formality", 56, 1],
+      ["humor", 38, 1],
+    ],
+  },
+  {
+    label: "Educator",
+    signals: [
+      ["warmth", 78, 1.4],
+      ["solutionOrientation", 72, 1.2],
+      ["evidenceOrientation", 72, 1.1],
+      ["technicalDepth", 64, 1],
+      ["directness", 56, 1],
+    ],
+  },
+  {
+    label: "Pundit",
+    signals: [
+      ["confidence", 82, 1.3],
+      ["socialPosture", 74, 1.2],
+      ["contrarianTone", 62, 1.1],
+      ["formality", 56, 1],
+      ["brevity", 60, 1],
+    ],
+  },
+  {
+    label: "Contrarian",
+    signals: [
+      ["contrarianTone", 90, 1.6],
+      ["directness", 78, 1.2],
+      ["confidence", 74, 1],
+      ["warmth", 28, 1],
+      ["formality", 46, 1],
+    ],
+  },
+  {
+    label: "Shitposter",
+    signals: [
+      ["humor", 92, 1.6],
+      ["brevity", 84, 1.2],
+      ["formality", 16, 1.4],
+      ["socialPosture", 84, 1.2],
+      ["warmth", 60, 1],
+    ],
+  },
+  {
+    label: "Researcher",
+    signals: [
+      ["evidenceOrientation", 92, 1.6],
+      ["technicalDepth", 90, 1.4],
+      ["formality", 78, 1.2],
+      ["confidence", 62, 1],
+      ["selfPromotionalIntensity", 18, 1.2],
+    ],
+  },
+  {
+    label: "Influencer",
+    signals: [
+      ["socialPosture", 90, 1.6],
+      ["selfPromotionalIntensity", 78, 1.4],
+      ["confidence", 80, 1.1],
+      ["warmth", 68, 1],
+      ["humor", 62, 1],
+    ],
+  },
+  {
+    label: "Builder",
+    signals: [
+      ["solutionOrientation", 86, 1.6],
+      ["technicalDepth", 74, 1.2],
+      ["directness", 72, 1.1],
+      ["confidence", 70, 1],
+      ["socialPosture", 44, 1],
+    ],
+  },
+  {
+    label: "Signal Caller",
+    signals: [
+      ["brevity", 88, 1.5],
+      ["confidence", 84, 1.3],
+      ["directness", 82, 1.3],
+      ["contrarianTone", 68, 1.1],
+      ["evidenceOrientation", 60, 1],
+    ],
+  },
+  {
+    label: "Commentator",
+    signals: [
+      ["socialPosture", 68, 1.2],
+      ["warmth", 56, 1.1],
+      ["confidence", 70, 1.1],
+      ["humor", 52, 1],
+      ["brevity", 58, 1],
+      ["formality", 48, 1],
+    ],
+  },
+];
+
 function clampVoiceDimension(value: number) {
   return Math.min(100, Math.max(0, Math.round(value)));
+}
+
+function scoreVoiceProfileRule(
+  dimensions: VoiceDimensions,
+  signals: readonly VoiceProfileNameSignal[]
+) {
+  let totalWeight = 0;
+  let totalScore = 0;
+
+  for (const [field, target, weight = 1] of signals) {
+    totalWeight += weight;
+    totalScore += (100 - Math.abs(dimensions[field] - target)) * weight;
+  }
+
+  return totalWeight > 0 ? totalScore / totalWeight : 0;
+}
+
+function pickVoiceProfileRule(
+  dimensions: VoiceDimensions,
+  rules: readonly VoiceProfileNameRule[]
+) {
+  let bestRule = rules[0];
+  let bestScore = scoreVoiceProfileRule(dimensions, bestRule.signals);
+
+  for (const rule of rules.slice(1)) {
+    const score = scoreVoiceProfileRule(dimensions, rule.signals);
+
+    if (score > bestScore) {
+      bestRule = rule;
+      bestScore = score;
+    }
+  }
+
+  return bestRule.label;
+}
+
+function formatVoiceProfileHandle(
+  handles: ReadonlyArray<string | null | undefined>
+) {
+  for (const handle of handles) {
+    const trimmed = handle?.trim();
+
+    if (trimmed) {
+      return trimmed.startsWith("@") ? trimmed : `@${trimmed}`;
+    }
+  }
+
+  return null;
 }
 
 export function pickVoiceDimensions(
@@ -124,6 +421,30 @@ export function hasAnyVoiceDimension(dimensions: VoiceDimensions) {
 
 export function formatVoiceDimensionValue(value: number) {
   return `${Math.round(clampVoiceDimension(value) / 10)}/10`;
+}
+
+/**
+ * Generates a deterministic two-word voice profile name from a dimension
+ * fingerprint and optional reference handles.
+ */
+export function generateVoiceProfileName(
+  dimensions: VoiceDimensions,
+  handles: ReadonlyArray<string | null | undefined> = []
+) {
+  const normalizedDimensions = pickVoiceDimensions(dimensions);
+  const modifier = pickVoiceProfileRule(
+    normalizedDimensions,
+    VOICE_PROFILE_MODIFIER_RULES
+  );
+  const archetype = pickVoiceProfileRule(
+    normalizedDimensions,
+    VOICE_PROFILE_ARCHETYPE_RULES
+  );
+  const handle = formatVoiceProfileHandle(handles);
+
+  return handle
+    ? `${modifier} ${archetype} (a la ${handle})`
+    : `${modifier} ${archetype}`;
 }
 
 export function styleToDimensions(style: string | null): VoiceDimensions {
