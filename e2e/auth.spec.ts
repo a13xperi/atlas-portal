@@ -33,7 +33,6 @@ test.describe("Authentication flows", () => {
 
     // Reload — stubbed /auth/me should restore session
     await page.reload();
-    await page.waitForLoadState("networkidle");
 
     // Should still be on dashboard, not redirected to login
     await expect(page).toHaveURL(/\/dashboard/);

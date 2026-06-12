@@ -3,7 +3,6 @@ import { test, expect, stubAuth, stubDataEndpoints } from "./fixtures";
 test.describe("Analytics page", () => {
   test("renders all sections with data", async ({ authedPage: page }) => {
     await page.goto("/analytics");
-    await page.waitForLoadState("networkidle");
 
     // Page heading
     await expect(page.getByRole("heading", { name: /analytics/i }).first()).toBeVisible();
@@ -14,7 +13,6 @@ test.describe("Analytics page", () => {
 
   test("has no error banner when all endpoints succeed", async ({ authedPage: page }) => {
     await page.goto("/analytics");
-    await page.waitForLoadState("networkidle");
     await page.waitForTimeout(1000);
 
     // Alert may be present for partial data loading — check it's not a fatal error
@@ -76,7 +74,6 @@ test.describe("Analytics page", () => {
 
     await page.waitForURL("**/dashboard");
     await page.goto("/analytics");
-    await page.waitForLoadState("networkidle");
 
     // Page should NOT crash — heading should still render
     await expect(page.getByRole("heading", { name: /your analytics/i })).toBeVisible();
@@ -90,7 +87,6 @@ test.describe("Analytics page", () => {
 
   test("renders engagement chart bars when data is present", async ({ authedPage: page }) => {
     await page.goto("/analytics");
-    await page.waitForLoadState("networkidle");
 
     // Chart should have predicted/actual legend
     await expect(page.getByText("Predicted")).toBeVisible();
@@ -122,7 +118,6 @@ test.describe("Analytics page", () => {
     });
 
     await page.goto("/analytics");
-    await page.waitForLoadState("networkidle");
 
     // Should show empty state instead of crashing
     await expect(page.getByText("Nothing here yet")).toBeVisible();

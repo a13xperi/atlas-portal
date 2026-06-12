@@ -34,16 +34,10 @@ async function assertPageRenders(
   const response = await page.goto(path, { waitUntil: "domcontentloaded" });
   expect(response?.status()).toBeLessThan(400);
 
-  await page.waitForLoadState("networkidle");
-
-  // No error boundary
-  const errorBoundary = page.locator('text="Something went wrong"');
-  await expect(errorBoundary).toHaveCount(0);
-
-  // No unhandled JS errors
-  expect(errors, `JS errors on ${path}: ${errors.join(", ")}`).toHaveLength(0);
-
-  // Page-specific content check
+  // Readiness gate is the page-specific content assertion below (auto-waits).
+  // waitForLoadState("networkidle") never settles on Vercel previews (SSE /
+  // analytics beacons keep the wire busy) and burned the whole 30s test
+  // budget — 16 of the 129 main-suite failures.
   if (opts.expectText) {
     await expect(page.getByText(opts.expectText).first()).toBeVisible({
       timeout: 10_000,
@@ -54,6 +48,11 @@ async function assertPageRenders(
       timeout: 10_000,
     });
   }
+
+  // Error checks run against the RENDERED page (content gate above).
+  const errorBoundary = page.locator('text="Something went wrong"');
+  await expect(errorBoundary).toHaveCount(0);
+  expect(errors, `JS errors on ${path}: ${errors.join(", ")}`).toHaveLength(0);
 }
 
 // ---------------------------------------------------------------------------

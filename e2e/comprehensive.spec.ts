@@ -68,8 +68,7 @@ test.describe("Comprehensive Coverage", () => {
     test("session persists across page refresh", async ({ authedPage: page }) => {
       await expect(page).toHaveURL(/\/dashboard/);
       await page.reload();
-      await page.waitForLoadState("networkidle");
-      await expect(page).toHaveURL(/\/dashboard/);
+        await expect(page).toHaveURL(/\/dashboard/);
       await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible({ timeout: 8000 });
     });
   });
