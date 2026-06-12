@@ -1,6 +1,10 @@
 import { test, expect } from "./fixtures";
 
-test.describe("User menu dropdown", () => {
+// FIXME(2123780): UserMenu is ORPHANED — nothing imports src/components/ui/
+// UserMenu.tsx since the header dropdown was removed; logout now lives on the
+// /settings and /profile pages. Rewrite this suite against those surfaces or
+// delete it with the component.
+test.describe.fixme("User menu dropdown", () => {
   test("avatar button opens menu with Profile and Log out items", async ({ authedPage: page }) => {
     const avatarButton = page.getByRole("button", { name: /User menu/i });
     await expect(avatarButton).toBeVisible();

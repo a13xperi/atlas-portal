@@ -3,6 +3,11 @@ import { resolveVercelBypassHeaders } from "./e2e/playwright-env";
 
 export default defineConfig({
   testDir: "./e2e",
+  // integration.spec is the REAL-credentials QA suite (its own header points
+  // at playwright-qa.config.ts) — it logs in through the email/password UI,
+  // which the X-OAuth-first login removed. It only ever passed here while
+  // that UI existed; keep it scoped to the QA config it was written for.
+  testIgnore: ["**/integration.spec.ts"],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
