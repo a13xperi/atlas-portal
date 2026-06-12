@@ -1,4 +1,5 @@
-import { expect, test, type Route } from "@playwright/test";
+import { type Route } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const AUTH_COOKIES = (hostname: string) => [
   { name: "atlas_session", value: "1", domain: hostname, path: "/" },
@@ -97,7 +98,7 @@ test.describe("Oracle widget + Cmd+K", () => {
     await page.route("https://pbs.twimg.com/**", (route) => route.abort());
   });
 
-  test("Oracle widget is visible on /dashboard at bottom-right", async ({ page }) => {
+  test("Oracle widget is visible on /dashboard at bottom-right", async ({ authedPage: page }) => {
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
     // The FloatingOracle renders a button at fixed bottom-right
