@@ -1,4 +1,5 @@
-import { expect, test, type Route } from "@playwright/test";
+import { type Route } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const AUTH_COOKIES = (hostname: string) => [
   { name: "atlas_session", value: "1", domain: hostname, path: "/" },

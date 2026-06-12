@@ -185,6 +185,13 @@ export default function VoiceProfilesPage() {
     blend: { text: string | null; error: string | null; label: string };
   } | null>(null);
   const [compareVsMineLoading, setCompareVsMineLoading] = useState(false);
+  const [originalVsStyledLoading, setOriginalVsStyledLoading] = useState(false);
+  const [originalVsStyledResult, setOriginalVsStyledResult] = useState<{
+    label: string;
+    original: string;
+    text: string | null;
+    error: string | null;
+  } | null>(null);
   const comparisonSectionRef = useRef<HTMLDivElement>(null);
   const [calibrateHandle, setCalibrateHandle] = useState("");
   const [blendSelectMode, setBlendSelectMode] = useState(false);
@@ -286,6 +293,14 @@ export default function VoiceProfilesPage() {
     [profile]
   );
 
+  // calibration_complete gate: no tweet generation may fire until the user's
+  // voice profile is calibrated — generating against the default 50/50
+  // dimensions produces tone-less drafts that look like a broken product.
+  const calibrationComplete = useMemo(
+    () => hasCalibratedVoiceDimensions(profile),
+    [profile]
+  );
+
   const recipeCards = useMemo(
     () =>
       blends.map((blend) => {
@@ -330,6 +345,15 @@ export default function VoiceProfilesPage() {
   const handlePreviewBlend = useCallback(
     async (blend: SavedBlend, dimensions: VoiceDimensions) => {
       if (previewingBlendId) {
+        return;
+      }
+
+      if (!calibrationComplete) {
+        setBlendPreviewErrors((current) => ({
+          ...current,
+          [blend.id]:
+            "Calibrate your voice first — sample tweets unlock after calibration.",
+        }));
         return;
       }
 
@@ -379,11 +403,11 @@ export default function VoiceProfilesPage() {
         );
       }
     },
-    [previewingBlendId]
+    [calibrationComplete, previewingBlendId]
   );
 
   const handleCompareAll = useCallback(async () => {
-    if (compareAllLoading || !compareAllTopic.trim()) return;
+    if (compareAllLoading || !calibrationComplete || !compareAllTopic.trim()) return;
     const topic = compareAllTopic.trim();
     const voiceTargets = [
       { id: PERSONAL_VOICE_ID, label: "Personal Voice", blendId: undefined as string | undefined },
@@ -413,11 +437,11 @@ export default function VoiceProfilesPage() {
       })
     );
     setCompareAllLoading(false);
-  }, [blends, compareAllLoading, compareAllTopic]);
+  }, [blends, calibrationComplete, compareAllLoading, compareAllTopic]);
 
   const handleCompareVsMine = useCallback(
     async (blendId: string) => {
-      if (compareVsMineLoading) return;
+      if (compareVsMineLoading || !calibrationComplete) return;
       const blend = blends.find((b) => b.id === blendId);
       if (!blend) return;
 
@@ -476,8 +500,43 @@ export default function VoiceProfilesPage() {
         comparisonSectionRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 100);
     },
-    [blends, compareAllTopic, compareVsMineLoading]
+    [blends, calibrationComplete, compareAllTopic, compareVsMineLoading]
   );
+
+  const handlePreviewOriginalVsStyled = useCallback(async () => {
+    if (originalVsStyledLoading || !calibrationComplete || !selectedBlend) return;
+    const topic = compareAllTopic.trim();
+    if (!topic) return;
+
+    setOriginalVsStyledLoading(true);
+    setOriginalVsStyledResult(null);
+
+    try {
+      const response = await api.drafts.generate({
+        sourceContent: topic,
+        sourceType: "MANUAL",
+        blendId: selectedBlend.id,
+      });
+      setOriginalVsStyledResult({
+        label: selectedBlend.name,
+        original: topic,
+        text: response.draft.content,
+        error: null,
+      });
+    } catch (previewError: unknown) {
+      setOriginalVsStyledResult({
+        label: selectedBlend.name,
+        original: topic,
+        text: null,
+        error:
+          previewError instanceof Error
+            ? previewError.message
+            : "Generation failed",
+      });
+    } finally {
+      setOriginalVsStyledLoading(false);
+    }
+  }, [calibrationComplete, compareAllTopic, originalVsStyledLoading, selectedBlend]);
 
   const handleUseVoice = (voiceId: string) => {
     setActiveVoiceId(voiceId);
@@ -963,6 +1022,15 @@ export default function VoiceProfilesPage() {
               saved voice simultaneously so you can pick the version that lands
               best.
             </p>
+            {!calibrationComplete && (
+              <p
+                role="status"
+                className="mt-3 rounded-lg border border-atlas-warning/30 bg-atlas-warning/10 px-3 py-2 text-xs font-medium text-atlas-warning"
+              >
+                Finish voice calibration to unlock tweet generation — previews
+                and comparisons stay disabled until your voice is calibrated.
+              </p>
+            )}
           </div>
 
           <div className="mt-5 space-y-3">
@@ -979,26 +1047,117 @@ export default function VoiceProfilesPage() {
               <span className="text-xs text-atlas-text-muted">
                 {compareAllTopic.length}/1000
               </span>
-              <button
-                type="button"
-                onClick={() => void handleCompareAll()}
-                disabled={compareAllLoading || !compareAllTopic.trim()}
-                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {compareAllLoading ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                    Generating…
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    Generate in all voices
-                  </>
+              <div className="flex items-center gap-3">
+                {selectedBlend && (
+                  <button
+                    type="button"
+                    onClick={() => void handlePreviewOriginalVsStyled()}
+                    disabled={
+                      originalVsStyledLoading ||
+                      !calibrationComplete ||
+                      !compareAllTopic.trim()
+                    }
+                    className="flex items-center gap-2 rounded-lg border border-atlas-teal/30 bg-atlas-teal/10 px-5 py-2.5 text-sm font-semibold text-atlas-teal transition-colors hover:bg-atlas-teal/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {originalVsStyledLoading ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                        Generating…
+                      </>
+                    ) : (
+                      <>Original vs {selectedBlend.name}</>
+                    )}
+                  </button>
                 )}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => void handleCompareAll()}
+                  disabled={
+                    compareAllLoading ||
+                    !calibrationComplete ||
+                    !compareAllTopic.trim()
+                  }
+                  className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {compareAllLoading ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                      Generating…
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      Generate in all voices
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* Original vs styled — raw source text next to the voice-styled output */}
+          {(originalVsStyledLoading || originalVsStyledResult) && (
+            <div className="mt-6 rounded-2xl border border-atlas-teal/20 bg-atlas-teal/5 p-5">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-atlas-text">
+                  Before / after:{" "}
+                  <span className="text-atlas-text-secondary">
+                    Original vs.{" "}
+                    {originalVsStyledResult?.label ?? selectedBlend?.name ?? "Voice"}
+                  </span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOriginalVsStyledResult(null);
+                    setOriginalVsStyledLoading(false);
+                  }}
+                  aria-label="Dismiss original vs styled preview"
+                  className="rounded-lg p-1 text-atlas-text-muted transition-colors hover:bg-atlas-surface/60 hover:text-atlas-text"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {originalVsStyledLoading ? (
+                <div className="mt-4 flex items-center justify-center gap-2 py-8 text-sm text-atlas-text-muted">
+                  <Loader2 className="h-4 w-4 animate-spin text-atlas-teal" />
+                  Generating styled version...
+                </div>
+              ) : originalVsStyledResult ? (
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div
+                    className="rounded-2xl border border-glass-border bg-atlas-surface/60 p-4"
+                    aria-label="Original text"
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-wider text-atlas-text-muted">
+                      Original
+                    </p>
+                    <p className="mt-3 text-sm leading-6 text-atlas-text">
+                      {originalVsStyledResult.original}
+                    </p>
+                  </div>
+                  <div
+                    className="rounded-2xl border border-atlas-teal/30 bg-atlas-surface/60 p-4"
+                    aria-label={`With ${originalVsStyledResult.label}`}
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-wider text-atlas-teal">
+                      With {originalVsStyledResult.label}
+                    </p>
+                    {originalVsStyledResult.error ? (
+                      <p role="alert" className="mt-3 text-xs text-atlas-error">
+                        {originalVsStyledResult.error}
+                      </p>
+                    ) : originalVsStyledResult.text ? (
+                      <p className="mt-3 text-sm leading-6 text-atlas-text">
+                        {originalVsStyledResult.text}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
 
           {/* Compare vs Mine — focused 2-column comparison */}
           {(compareVsMineLoading || compareVsMineResults) && (

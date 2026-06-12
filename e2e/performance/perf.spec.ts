@@ -23,7 +23,10 @@ test.describe("Performance — no console errors", () => {
     const errors: string[] = [];
     authedPage.on("pageerror", (err) => errors.push(err.message));
 
-    await authedPage.goto("/dashboard", { waitUntil: "networkidle" });
+    // domcontentloaded, not networkidle: the dashboard polls continuously,
+    // so networkidle never fires against a live preview and the goto times
+    // out. The settle wait below gives late errors time to surface.
+    await authedPage.goto("/dashboard", { waitUntil: "domcontentloaded" });
     await authedPage.waitForTimeout(2000);
 
     expect(errors, `Console errors on dashboard: ${errors.join(", ")}`).toHaveLength(0);
@@ -44,7 +47,10 @@ test.describe("Performance — bundle size checks", () => {
       }
     });
 
-    await authedPage.goto("/dashboard", { waitUntil: "networkidle" });
+    // "load" waits for initial resources (the chunks this test measures)
+    // without requiring network silence the polling dashboard never gives.
+    await authedPage.goto("/dashboard", { waitUntil: "load" });
+    await authedPage.waitForTimeout(2000);
 
     const oversized = resources.filter((r) => r.size > 500_000);
     if (oversized.length > 0) {

@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { resolveVercelBypassHeaders } from "./e2e/playwright-env";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -14,6 +15,10 @@ export default defineConfig({
     baseURL:
       process.env.PLAYWRIGHT_BASE_URL ||
       "https://staging-delphi-atlas.vercel.app",
+    // Vercel deployment protection returns 401 without the bypass header;
+    // playwright-e2e.config.ts has had this since protection was enabled,
+    // this config never did (152/203 failures against any protected preview).
+    extraHTTPHeaders: resolveVercelBypassHeaders(),
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     actionTimeout: 10000,
