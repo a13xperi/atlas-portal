@@ -1,7 +1,9 @@
 import { test, expect, stubAuth, stubDataEndpoints, vercelBypassCookies } from "./fixtures";
 
 test.describe("Authentication flows", () => {
-  test("login form is visible on landing page", async ({ page }) => {
+  // FIXME(2123780): tests the removed email/password login — landing is
+  // X-OAuth-only now ("Continue with X", no inputs). Rewrite for OAuth UI.
+  test.fixme("login form is visible on landing page", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "ATLAS" })).toBeVisible();
     await expect(page.getByPlaceholder("you@example.com")).toBeVisible();
@@ -39,7 +41,9 @@ test.describe("Authentication flows", () => {
     await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
   });
 
-  test("failed login shows error message", async ({ page }) => {
+  // FIXME(2123780): drives the removed email/password form to provoke the
+  // error state. Rewrite against the X-OAuth failure path.
+  test.fixme("failed login shows error message", async ({ page }) => {
     // Stub /auth/me to return 401 (not logged in)
     await page.route("**/api/auth/me", (route) =>
       route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ error: "Missing authorization token" }) }),
