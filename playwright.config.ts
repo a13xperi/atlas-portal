@@ -7,7 +7,18 @@ export default defineConfig({
   // at playwright-qa.config.ts) — it logs in through the email/password UI,
   // which the X-OAuth-first login removed. It only ever passed here while
   // that UI existed; keep it scoped to the QA config it was written for.
-  testIgnore: ["**/integration.spec.ts"],
+  testIgnore: [
+    // Real-credentials QA suites (their own headers target playwright-qa /
+    // production): can never pass in the mocked main run.
+    "**/integration.spec.ts",
+    "**/session-qa.spec.ts",
+    // Snapshot suites are OWNED by playwright-e2e.config.ts (projects
+    // "responsive" and "visual", green in CI with correctly-named
+    // baselines). Collecting them here too runs them under project
+    // "chromium", which has no baselines of that name — 15 phantom fails.
+    "**/responsive/**",
+    "**/visual/**",
+  ],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
