@@ -157,9 +157,12 @@ test.describe("Tier 1 — Auth Gate", () => {
       // Do NOT set any cookies — visit the protected route directly
       const response = await page.goto(route, { waitUntil: "domcontentloaded" });
 
-      // Should redirect to / (login page) or show login content
-      // The middleware strips the path and sends to /
-      await expect(page).toHaveURL(/^\/$|\/\?/, { timeout: 10_000 });
+      // Should redirect to / (login page) or show login content.
+      // The middleware strips the path and sends to /. NOTE: toHaveURL
+      // matches the FULL URL ("https://host/"), so a ^\/-anchored regex can
+      // never pass — this battery shipped while the suite ran blind and the
+      // assertion was never exercised. Compare the pathname instead.
+      await expect(page).toHaveURL((url) => url.pathname === "/", { timeout: 10_000 });
     });
   }
 });
