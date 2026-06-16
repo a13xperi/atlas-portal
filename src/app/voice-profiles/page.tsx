@@ -186,6 +186,7 @@ export default function VoiceProfilesPage() {
   const [compareVsMineLoading, setCompareVsMineLoading] = useState(false);
   const comparisonSectionRef = useRef<HTMLDivElement>(null);
   const [calibrateHandle, setCalibrateHandle] = useState("");
+  const [calibrating, setCalibrating] = useState(false);
   const [blendSelectMode, setBlendSelectMode] = useState(false);
   const [blendSourceId, setBlendSourceId] = useState<string | null>(null);
   const setupPrompt = searchParams.get("prompt");
@@ -615,9 +616,12 @@ export default function VoiceProfilesPage() {
     const urlMatch = raw.match(/(?:twitter\.com|x\.com)\/([A-Za-z0-9_]+)/);
     const nextHandle = (urlMatch ? urlMatch[1] : raw).replace("@", "");
 
-    if (!nextHandle) {
+    if (!nextHandle || calibrating) {
       return;
     }
+
+    setCalibrating(true);
+    setError(null);
 
     try {
       const response = await api.voice.calibrate(nextHandle);
@@ -625,6 +629,7 @@ export default function VoiceProfilesPage() {
       setProfile(response.profile);
       setCalibrateHandle("");
       setShowCalibrationInput(false);
+      setDismissedRecalibrateNudge(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
       if (msg.includes("429") || msg.toLowerCase().includes("rate limit")) {
@@ -638,6 +643,8 @@ export default function VoiceProfilesPage() {
       } else {
         setError("Calibration failed. Check the handle and try again.");
       }
+    } finally {
+      setCalibrating(false);
     }
   };
 
@@ -732,6 +739,69 @@ export default function VoiceProfilesPage() {
                 ✕
               </button>
             </div>
+          </div>
+        )}
+
+        {showCalibrationInput && (
+          <div
+            role="region"
+            aria-label="Calibrate your voice"
+            className="mb-6 rounded-xl border border-atlas-teal/20 bg-atlas-teal/10 px-4 py-4 text-sm"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold text-atlas-teal">Calibrate your voice</p>
+                <p className="mt-1 text-atlas-text-secondary">
+                  Enter your X handle and Atlas will analyze your recent tweets to
+                  match your voice — takes about 30 seconds.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCalibrationInput(false);
+                  setCalibrateHandle("");
+                }}
+                aria-label="Dismiss calibration input"
+                className="text-atlas-text-secondary hover:text-atlas-text"
+              >
+                ✕
+              </button>
+            </div>
+            <form
+              className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void handleCalibrate();
+              }}
+            >
+              <input
+                type="text"
+                aria-label="X handle to calibrate from"
+                value={calibrateHandle}
+                onChange={(e) => setCalibrateHandle(e.target.value)}
+                disabled={calibrating}
+                placeholder="@yourhandle or x.com/yourhandle"
+                className="w-full flex-1 rounded-xl border border-glass-border bg-atlas-bg px-4 py-2.5 text-sm text-atlas-text placeholder:text-atlas-text-muted focus:border-atlas-teal focus:outline-none disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={calibrating || !calibrateHandle.trim()}
+                className="flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-atlas-teal to-atlas-teal/60 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {calibrating ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                    Calibrating…
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    Calibrate
+                  </>
+                )}
+              </button>
+            </form>
           </div>
         )}
 
