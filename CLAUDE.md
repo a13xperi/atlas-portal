@@ -161,3 +161,6 @@ Auth: `useAuth()` from `src/lib/auth.tsx` provides `{ user, token, login, regist
 1. Queue initiative (dedicated /queue page)
 2. Campaign engine
 3. Oracle as persistent copilot
+
+## Architecture doctrine
+Read `~/battlestation/docs/fable-manuals/atlas-architecture.md` before schema, auth, or deploy work. Load-bearing facts the repo docs get wrong or omit: deploys run `prisma db push --accept-data-loss` (NOT migrate) so schema changes must be additive-only; there are TWO draft-queue systems (TweetDraft vs DraftQueueItem) — check which one your feature reads; auth is three token paths (cookie + localStorage Bearer + atlas_session hint) and all are load-bearing; server-side JWT revocation is currently OUT of prod (twice-reverted — re-land only as a fresh PR through staging with the 3-path logout test, never a cherry-pick of 85fa18c). The three files that never lie: schema.prisma, services/api/src/index.ts, src/lib/api.ts.
