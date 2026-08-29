@@ -61,9 +61,20 @@ export function getContinueLabel(
   track: OracleState["track"],
 ): string {
   switch (step) {
-
+    case "SWIPE_OWN":
+      return "Lock these swipes in";
+    case "SWIPE_OWN_REASONS":
+      return "These reasons fit";
+    case "REFERENCE_HANDLES":
+      return "Use these handles";
+    case "SWIPE_REFS":
+      return "See what the swipes say";
+    case "TRACK_A_RESULT":
+      return "Looks right — continue";
     case "TRACK_B_STYLE":
       return "Use this as my starting point";
+    case "TRACK_B_DIMENSIONS":
+      return "Lock in these dimensions";
     case "REFERENCES":
       return track === "a"
         ? "These are my people"
@@ -80,7 +91,15 @@ const NEXT_STEP: Record<OracleStep, OracleStep | null> = {
   OWN_TWEET_TINDER: "TRACK_A_EVIDENCE",
   TRACK_A_EVIDENCE: "REFERENCE_TINDER",
   REFERENCE_TINDER: "REFERENCES",
+  TRACK_A_SCANNING: "SWIPE_OWN",
+  SWIPE_OWN: "SWIPE_OWN_REASONS",
+  SWIPE_OWN_REASONS: "REFERENCE_HANDLES",
+  REFERENCE_HANDLES: "SWIPE_REFS",
+  SWIPE_REFS: "TRACK_A_RESULT",
+  TRACK_A_RESULT: "REFERENCES",
   TRACK_B_STYLE: "REFERENCES",
+  TRACK_B_CONTENT: "TRACK_B_DIMENSIONS",
+  TRACK_B_DIMENSIONS: "REFERENCES",
   REFERENCES: "NAME_VOICE",
   BLEND: "HANDOFF",
   NAME_VOICE: "HANDOFF",
@@ -128,8 +147,24 @@ export function canAdvance(state: OracleState): boolean {
       return true;
     case "REFERENCE_TINDER":
       return true; // optional skip
+    case "TRACK_A_SCANNING":
+      return true;
+    case "SWIPE_OWN":
+      return state.swipeResults.own.length >= 5;
+    case "SWIPE_OWN_REASONS":
+      return true;
+    case "REFERENCE_HANDLES":
+      return state.referenceHandles.length >= 1;
+    case "SWIPE_REFS":
+      return true;
+    case "TRACK_A_RESULT":
+      return true;
     case "TRACK_B_STYLE":
       return state.selectedStyle !== null;
+    case "TRACK_B_CONTENT":
+      return true; // content signals are optional
+    case "TRACK_B_DIMENSIONS":
+      return true;
     case "REFERENCES":
       return state.selectedRefs.length >= 1;
     case "BLEND":
@@ -196,16 +231,11 @@ export function oracleReducer(
         messages: [...state.messages, userMsg],
         pendingMessages: prepareMessages(nextStep, track),
         selfPercentage: track === "a" ? 50 : 30,
-        swipeResults: { own: [], ref: [] },
-        referenceHandles: [],
       };
     }
 
     case "ADVANCE": {
-      let next = NEXT_STEP[state.currentStep];
-      if (state.currentStep === "REFERENCES" && state.track === "b") {
-        next = "NAME_VOICE";
-      }
+      const next = NEXT_STEP[state.currentStep];
       if (!next) return state;
       const userContent = action.payload;
       const userMsg = userContent
@@ -273,54 +303,6 @@ export function oracleReducer(
     case "SET_STYLE":
       return { ...state, selectedStyle: action.style };
 
-    case "RECORD_SWIPE": {
-      const nextSwipeResults = {
-        own: [...state.swipeResults.own],
-        ref: [...state.swipeResults.ref],
-      };
-
-      for (const signal of action.signals) {
-        const bucket = signal.source === "OWN" ? "own" : "ref";
-        const existingIndex = nextSwipeResults[bucket].findIndex(
-          (candidate) =>
-            candidate.tweetId === signal.tweetId &&
-            candidate.direction === signal.direction &&
-            (candidate.handle ?? null) === (signal.handle ?? null)
-        );
-
-        if (existingIndex >= 0) {
-          nextSwipeResults[bucket][existingIndex] = signal;
-        } else {
-          nextSwipeResults[bucket].push(signal);
-        }
-      }
-
-      return { ...state, swipeResults: nextSwipeResults };
-    }
-
-    case "SET_REF_HANDLES":
-      return {
-        ...state,
-        referenceHandles: Array.from(
-          new Set(
-            action.handles
-              .map((handle) => handle.replace(/^@/, "").trim().toLowerCase())
-              .filter(Boolean)
-          )
-        ).slice(0, 3),
-      };
-
-    case "RESET_SWIPES": {
-      const scope = action.scope ?? "all";
-      return {
-        ...state,
-        swipeResults: {
-          own: scope === "ref" ? state.swipeResults.own : [],
-          ref: scope === "own" ? state.swipeResults.ref : [],
-        },
-      };
-    }
-
     case "SET_REFS":
       return { ...state, selectedRefs: action.ids };
 
@@ -332,6 +314,29 @@ export function oracleReducer(
 
     case "SET_BLEND_NAME":
       return { ...state, blendName: action.name };
+
+    case "RECORD_SWIPE":
+      return {
+        ...state,
+        swipeResults: {
+          ...state.swipeResults,
+          [action.signals[0]?.source?.toLowerCase() || "own"]: action.signals,
+        },
+      };
+
+    case "SET_REF_HANDLES":
+      return { ...state, referenceHandles: action.handles };
+
+    case "RESET_SWIPES": {
+      const scope = action.scope || "all";
+      return {
+        ...state,
+        swipeResults: {
+          own: scope === "own" || scope === "all" ? [] : state.swipeResults.own,
+          ref: scope === "ref" || scope === "all" ? [] : state.swipeResults.ref,
+        },
+      };
+    }
 
     case "ENQUEUE_MESSAGES":
       return {
